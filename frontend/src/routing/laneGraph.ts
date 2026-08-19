@@ -132,4 +132,24 @@ export function buildLaneGraph(geometry: ParkingGeometry = PARKING_GEOMETRY): La
   return { nodes, edges, entranceNodeId, exitNodeId, spotEntryNodeIds };
 }
 
+export function updateGateNodesInGraph(
+  graph: LaneGraph,
+  gateRoi: {
+    entry_gate: { p1: Point; p2: Point };
+    exit_gate: { p1: Point; p2: Point };
+  }
+): void {
+  const entranceNode = graph.nodes.find((n) => n.id === graph.entranceNodeId);
+  if (entranceNode && gateRoi.entry_gate) {
+    entranceNode.x = (gateRoi.entry_gate.p1.x + gateRoi.entry_gate.p2.x) / 2;
+    entranceNode.y = (gateRoi.entry_gate.p1.y + gateRoi.entry_gate.p2.y) / 2;
+  }
+
+  const exitNode = graph.nodes.find((n) => n.id === graph.exitNodeId);
+  if (exitNode && gateRoi.exit_gate) {
+    exitNode.x = (gateRoi.exit_gate.p1.x + gateRoi.exit_gate.p2.x) / 2;
+    exitNode.y = (gateRoi.exit_gate.p1.y + gateRoi.exit_gate.p2.y) / 2;
+  }
+}
+
 export const LANE_GRAPH = buildLaneGraph();

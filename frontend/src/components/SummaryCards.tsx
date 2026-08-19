@@ -1,10 +1,10 @@
 import { CarFront, CircleHelp, CircleParking, RefreshCw } from "lucide-react";
-import type { CameraState, ParkingCounts } from "../domain/parking";
+import type { CameraId, CameraState, ParkingCounts } from "../domain/parking";
 import { CameraHealthIndicator } from "./CameraHealthIndicator";
 
 interface SummaryCardsProps {
   counts: ParkingCounts;
-  cameras: Record<string, CameraState>;
+  cameras: Record<CameraId, CameraState>;
 }
 
 export function SummaryCards({ counts, cameras }: SummaryCardsProps) {

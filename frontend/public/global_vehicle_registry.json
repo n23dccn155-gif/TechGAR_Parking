@@ -1,0 +1,6281 @@
+{
+  "timestamp": "2026-08-15T21:56:18.266+07:00",
+  "frame_index": 10461,
+  "map_coordinate_space": {
+    "name": "source_video_pixel",
+    "width": 1280,
+    "height": 720,
+    "description": "Common coordinate system used by all four virtual camera crops"
+  },
+  "parking_slots": {
+    "P001": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P002": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.366,
+      "stopped_for_ms": 799
+    },
+    "P003": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3634,
+      "stopped_for_ms": 1000
+    },
+    "P004": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5943,
+      "stopped_for_ms": 1000
+    },
+    "P005": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P006": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 70,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.6603,
+      "stopped_for_ms": 1000
+    },
+    "P007": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.7421,
+      "stopped_for_ms": 480
+    },
+    "P008": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.8168,
+      "stopped_for_ms": 1000
+    },
+    "P009": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 95,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.5881,
+      "stopped_for_ms": 1000
+    },
+    "P010": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.6024,
+      "stopped_for_ms": 799
+    },
+    "P011": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 62,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.5401,
+      "stopped_for_ms": 1000
+    },
+    "P012": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4084,
+      "stopped_for_ms": 1000
+    },
+    "P025": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5464,
+      "stopped_for_ms": 1000
+    },
+    "P027": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 5,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.3837,
+      "stopped_for_ms": 960
+    },
+    "P029": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5965,
+      "stopped_for_ms": 1000
+    },
+    "P031": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3547,
+      "stopped_for_ms": 400
+    },
+    "P033": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3832,
+      "stopped_for_ms": 720
+    },
+    "P035": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.7571,
+      "stopped_for_ms": 280
+    },
+    "P026": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4458,
+      "stopped_for_ms": 1000
+    },
+    "P028": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 113,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.569,
+      "stopped_for_ms": 1000
+    },
+    "P030": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P032": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 87,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.4821,
+      "stopped_for_ms": 1000
+    },
+    "P034": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5287,
+      "stopped_for_ms": 919
+    },
+    "P036": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 16,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.3664,
+      "stopped_for_ms": 999
+    },
+    "P047": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P048": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 82,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.9215,
+      "stopped_for_ms": 1000
+    },
+    "P049": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P050": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P051": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P052": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5801,
+      "stopped_for_ms": 919
+    },
+    "P053": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P054": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4682,
+      "stopped_for_ms": 720
+    },
+    "P055": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.374,
+      "stopped_for_ms": 1000
+    },
+    "P056": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 41,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.6594,
+      "stopped_for_ms": 1000
+    },
+    "P057": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4062,
+      "stopped_for_ms": 0
+    },
+    "P013": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 133,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.3916,
+      "stopped_for_ms": 1000
+    },
+    "P014": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 141,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.6477,
+      "stopped_for_ms": 999
+    },
+    "P015": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P016": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4591,
+      "stopped_for_ms": 0
+    },
+    "P017": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5237,
+      "stopped_for_ms": 720
+    },
+    "P018": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 105,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 1.0,
+      "stopped_for_ms": 1000
+    },
+    "P019": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.6328,
+      "stopped_for_ms": 1000
+    },
+    "P020": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.7317,
+      "stopped_for_ms": 0
+    },
+    "P021": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3601,
+      "stopped_for_ms": 0
+    },
+    "P022": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4559,
+      "stopped_for_ms": 0
+    },
+    "P023": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5317,
+      "stopped_for_ms": 1000
+    },
+    "P024": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 43,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.6037,
+      "stopped_for_ms": 1000
+    },
+    "P037": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4817,
+      "stopped_for_ms": 1000
+    },
+    "P039": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 8,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.3953,
+      "stopped_for_ms": 999
+    },
+    "P041": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 11,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.7417,
+      "stopped_for_ms": 1000
+    },
+    "P043": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P045": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P038": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 30,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.3674,
+      "stopped_for_ms": 1000
+    },
+    "P040": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5735,
+      "stopped_for_ms": 1000
+    },
+    "P042": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 61,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.6667,
+      "stopped_for_ms": 1000
+    },
+    "P044": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4668,
+      "stopped_for_ms": 1000
+    },
+    "P046": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.6405,
+      "stopped_for_ms": 1000
+    },
+    "P058": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 81,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.521,
+      "stopped_for_ms": 1000
+    },
+    "P059": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3624,
+      "stopped_for_ms": 0
+    },
+    "P060": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4008,
+      "stopped_for_ms": 0
+    },
+    "P061": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.5567,
+      "stopped_for_ms": 0
+    },
+    "P062": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P063": {
+      "occupied": true,
+      "status": "occupied",
+      "vehicle_id": 77,
+      "vision_occupied": false,
+      "tracking_occupied": true,
+      "decision_source": "tracking_override",
+      "tracking_state": "parked",
+      "vehicle_overlap": 0.8322,
+      "stopped_for_ms": 1000
+    },
+    "P064": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4173,
+      "stopped_for_ms": 0
+    },
+    "P065": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "moving",
+      "vehicle_overlap": 0.0,
+      "stopped_for_ms": 0
+    },
+    "P066": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4644,
+      "stopped_for_ms": 480
+    },
+    "P067": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.3528,
+      "stopped_for_ms": 599
+    },
+    "P068": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.4659,
+      "stopped_for_ms": 0
+    },
+    "P069": {
+      "occupied": false,
+      "status": "empty",
+      "vehicle_id": null,
+      "vision_occupied": false,
+      "tracking_occupied": false,
+      "decision_source": "none",
+      "tracking_state": "stop_candidate",
+      "vehicle_overlap": 0.7806,
+      "stopped_for_ms": 0
+    }
+  },
+  "parking_events": [
+    {
+      "type": "slot_candidate_started",
+      "frame": 72,
+      "timestamp_s": 2.88,
+      "global_id": 24,
+      "slot_id": "P057"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 72,
+      "timestamp_s": 2.88,
+      "global_id": 11,
+      "slot_id": "P041",
+      "overlap": 0.7417
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 72,
+      "timestamp_s": 2.88,
+      "global_id": 11,
+      "slot_id": "P041"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 73,
+      "timestamp_s": 2.92,
+      "global_id": 56,
+      "slot_id": "P003"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 73,
+      "timestamp_s": 2.92,
+      "global_id": 24,
+      "slot_id": "P057",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 74,
+      "timestamp_s": 2.96,
+      "global_id": 56,
+      "slot_id": "P003",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 74,
+      "timestamp_s": 2.96,
+      "global_id": 39,
+      "slot_id": "P043",
+      "overlap": 0.5423
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 74,
+      "timestamp_s": 2.96,
+      "global_id": 39,
+      "slot_id": "P043"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 74,
+      "timestamp_s": 2.96,
+      "global_id": 58,
+      "slot_id": "P022"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 75,
+      "timestamp_s": 3.0,
+      "global_id": 21,
+      "slot_id": "P008"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 75,
+      "timestamp_s": 3.0,
+      "global_id": 21,
+      "slot_id": "P008",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 75,
+      "timestamp_s": 3.0,
+      "global_id": 48,
+      "slot_id": "P037",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 75,
+      "timestamp_s": 3.0,
+      "global_id": 48,
+      "slot_id": "P038"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 75,
+      "timestamp_s": 3.0,
+      "global_id": 64,
+      "slot_id": "P040",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 76,
+      "timestamp_s": 3.04,
+      "global_id": 48,
+      "slot_id": "P038",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 76,
+      "timestamp_s": 3.04,
+      "global_id": 48,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 77,
+      "timestamp_s": 3.08,
+      "global_id": 30,
+      "slot_id": "P014"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 77,
+      "timestamp_s": 3.08,
+      "global_id": 58,
+      "slot_id": "P022",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 78,
+      "timestamp_s": 3.12,
+      "global_id": 24,
+      "slot_id": "P057"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 78,
+      "timestamp_s": 3.12,
+      "global_id": 59,
+      "slot_id": "P023",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 78,
+      "timestamp_s": 3.12,
+      "global_id": 45,
+      "slot_id": "P038"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 78,
+      "timestamp_s": 3.12,
+      "global_id": 45,
+      "slot_id": "P038",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 79,
+      "timestamp_s": 3.16,
+      "global_id": 21,
+      "slot_id": "P008",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 79,
+      "timestamp_s": 3.16,
+      "global_id": 21,
+      "slot_id": "P007"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 79,
+      "timestamp_s": 3.16,
+      "global_id": 24,
+      "slot_id": "P057",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 79,
+      "timestamp_s": 3.16,
+      "global_id": 45,
+      "slot_id": "P038",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 80,
+      "timestamp_s": 3.2,
+      "global_id": 61,
+      "slot_id": "P042",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 81,
+      "timestamp_s": 3.24,
+      "global_id": 21,
+      "slot_id": "P007",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 26,
+      "slot_id": "P029"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 26,
+      "slot_id": "P029",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 34,
+      "slot_id": "P032",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 42,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 30,
+      "slot_id": "P014",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 30,
+      "slot_id": "P012"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 48,
+      "slot_id": "P037",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 48,
+      "slot_id": "P038"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 59,
+      "slot_id": "P023",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 82,
+      "timestamp_s": 3.28,
+      "global_id": 63,
+      "slot_id": "P013"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 83,
+      "timestamp_s": 3.32,
+      "global_id": 43,
+      "slot_id": "P024",
+      "overlap": 0.6037
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 83,
+      "timestamp_s": 3.32,
+      "global_id": 43,
+      "slot_id": "P024"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 83,
+      "timestamp_s": 3.32,
+      "global_id": 62,
+      "slot_id": "P019",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 85,
+      "timestamp_s": 3.4,
+      "global_id": 21,
+      "slot_id": "P003"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 85,
+      "timestamp_s": 3.4,
+      "global_id": 42,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 85,
+      "timestamp_s": 3.4,
+      "global_id": 68,
+      "slot_id": "P069"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 86,
+      "timestamp_s": 3.44,
+      "global_id": 21,
+      "slot_id": "P003",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 86,
+      "timestamp_s": 3.44,
+      "global_id": 42,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 86,
+      "timestamp_s": 3.44,
+      "global_id": 54,
+      "slot_id": "P028"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 86,
+      "timestamp_s": 3.44,
+      "global_id": 54,
+      "slot_id": "P028",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 87,
+      "timestamp_s": 3.48,
+      "global_id": 63,
+      "slot_id": "P013",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 87,
+      "timestamp_s": 3.48,
+      "global_id": 61,
+      "slot_id": "P042",
+      "overlap": 0.6667
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 87,
+      "timestamp_s": 3.48,
+      "global_id": 61,
+      "slot_id": "P042"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 88,
+      "timestamp_s": 3.52,
+      "global_id": 41,
+      "slot_id": "P056",
+      "overlap": 0.6594
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 88,
+      "timestamp_s": 3.52,
+      "global_id": 30,
+      "slot_id": "P012",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 88,
+      "timestamp_s": 3.52,
+      "global_id": 63,
+      "slot_id": "P013",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 89,
+      "timestamp_s": 3.56,
+      "global_id": 42,
+      "slot_id": "P054"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 90,
+      "timestamp_s": 3.6,
+      "global_id": 21,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 90,
+      "timestamp_s": 3.6,
+      "global_id": 68,
+      "slot_id": "P069",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 91,
+      "timestamp_s": 3.64,
+      "global_id": 21,
+      "slot_id": "P037",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 91,
+      "timestamp_s": 3.64,
+      "global_id": 42,
+      "slot_id": "P054",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 91,
+      "timestamp_s": 3.64,
+      "global_id": 54,
+      "slot_id": "P028",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 91,
+      "timestamp_s": 3.64,
+      "global_id": 58,
+      "slot_id": "P022",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 91,
+      "timestamp_s": 3.64,
+      "global_id": 63,
+      "slot_id": "P013"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 94,
+      "timestamp_s": 3.76,
+      "global_id": 48,
+      "slot_id": "P038",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "global_id": 70,
+      "slot_id": "P012"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "global_id": 30,
+      "slot_id": "P012",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "global_id": 48,
+      "slot_id": "P038",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "global_id": 62,
+      "slot_id": "P019",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "global_id": 62,
+      "slot_id": "P020"
+    },
+    {
+      "type": "parked_global_id_remapped",
+      "frame": 95,
+      "timestamp_s": 3.8,
+      "old_global_id": 39,
+      "global_id": 29,
+      "slot_id": "P043"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 96,
+      "timestamp_s": 3.84,
+      "global_id": 24,
+      "slot_id": "P032"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 96,
+      "timestamp_s": 3.84,
+      "global_id": 24,
+      "slot_id": "P032",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 96,
+      "timestamp_s": 3.84,
+      "global_id": 42,
+      "slot_id": "P054",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 97,
+      "timestamp_s": 3.88,
+      "global_id": 70,
+      "slot_id": "P012",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 98,
+      "timestamp_s": 3.92,
+      "global_id": 24,
+      "slot_id": "P032",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 99,
+      "timestamp_s": 3.96,
+      "global_id": 42,
+      "slot_id": "P057"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 99,
+      "timestamp_s": 3.96,
+      "global_id": 62,
+      "slot_id": "P020",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 99,
+      "timestamp_s": 3.96,
+      "global_id": 62,
+      "slot_id": "P016"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 100,
+      "timestamp_s": 4.0,
+      "global_id": 42,
+      "slot_id": "P057",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 100,
+      "timestamp_s": 4.0,
+      "global_id": 42,
+      "slot_id": "P032"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 100,
+      "timestamp_s": 4.0,
+      "global_id": 45,
+      "slot_id": "P061"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 101,
+      "timestamp_s": 4.04,
+      "global_id": 26,
+      "slot_id": "P029",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 101,
+      "timestamp_s": 4.04,
+      "global_id": 24,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 101,
+      "timestamp_s": 4.04,
+      "global_id": 42,
+      "slot_id": "P032",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 101,
+      "timestamp_s": 4.04,
+      "global_id": 42,
+      "slot_id": "P057"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 101,
+      "timestamp_s": 4.04,
+      "global_id": 45,
+      "slot_id": "P061",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 102,
+      "timestamp_s": 4.08,
+      "global_id": 24,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 102,
+      "timestamp_s": 4.08,
+      "global_id": 42,
+      "slot_id": "P057",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 102,
+      "timestamp_s": 4.08,
+      "global_id": 42,
+      "slot_id": "P032"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 102,
+      "timestamp_s": 4.08,
+      "global_id": 48,
+      "slot_id": "P043",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 102,
+      "timestamp_s": 4.08,
+      "global_id": 62,
+      "slot_id": "P016",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 79,
+      "slot_id": "P035"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 24,
+      "slot_id": "P054"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 45,
+      "slot_id": "P061"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 45,
+      "slot_id": "P061",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 77,
+      "slot_id": "P063"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 81,
+      "slot_id": "P060"
+    },
+    {
+      "type": "parked_id_recovered",
+      "frame": 103,
+      "timestamp_s": 4.12,
+      "global_id": 8,
+      "slot_id": "P039"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 104,
+      "timestamp_s": 4.16,
+      "global_id": 70,
+      "slot_id": "P006"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 104,
+      "timestamp_s": 4.16,
+      "global_id": 24,
+      "slot_id": "P054",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 104,
+      "timestamp_s": 4.16,
+      "global_id": 42,
+      "slot_id": "P032",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 104,
+      "timestamp_s": 4.16,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 104,
+      "timestamp_s": 4.16,
+      "global_id": 45,
+      "slot_id": "P061",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 105,
+      "timestamp_s": 4.2,
+      "global_id": 21,
+      "slot_id": "P007"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 105,
+      "timestamp_s": 4.2,
+      "global_id": 21,
+      "slot_id": "P007",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 105,
+      "timestamp_s": 4.2,
+      "global_id": 79,
+      "slot_id": "P035",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 105,
+      "timestamp_s": 4.2,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 105,
+      "timestamp_s": 4.2,
+      "global_id": 62,
+      "slot_id": "P011"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 106,
+      "timestamp_s": 4.24,
+      "global_id": 21,
+      "slot_id": "P007",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 106,
+      "timestamp_s": 4.24,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 106,
+      "timestamp_s": 4.24,
+      "global_id": 45,
+      "slot_id": "P040"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 107,
+      "timestamp_s": 4.28,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 107,
+      "timestamp_s": 4.28,
+      "global_id": 45,
+      "slot_id": "P040",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 108,
+      "timestamp_s": 4.32,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 108,
+      "timestamp_s": 4.32,
+      "global_id": 62,
+      "slot_id": "P011",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 108,
+      "timestamp_s": 4.32,
+      "global_id": 61,
+      "slot_id": "P042",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "vehicle_left_slot",
+      "frame": 109,
+      "timestamp_s": 4.36,
+      "global_id": 29,
+      "slot_id": "P043",
+      "reason": "left_roi"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 109,
+      "timestamp_s": 4.36,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "parked_id_recovered",
+      "frame": 109,
+      "timestamp_s": 4.36,
+      "global_id": 29,
+      "slot_id": "P043"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 110,
+      "timestamp_s": 4.4,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 110,
+      "timestamp_s": 4.4,
+      "global_id": 63,
+      "slot_id": "P013",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 110,
+      "timestamp_s": 4.4,
+      "global_id": 81,
+      "slot_id": "P060",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 110,
+      "timestamp_s": 4.4,
+      "global_id": 81,
+      "slot_id": "P058"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 111,
+      "timestamp_s": 4.44,
+      "global_id": 24,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 111,
+      "timestamp_s": 4.44,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 112,
+      "timestamp_s": 4.48,
+      "global_id": 30,
+      "slot_id": "P038"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 112,
+      "timestamp_s": 4.48,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 113,
+      "timestamp_s": 4.52,
+      "global_id": 24,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 113,
+      "timestamp_s": 4.52,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 114,
+      "timestamp_s": 4.56,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 114,
+      "timestamp_s": 4.56,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 114,
+      "timestamp_s": 4.56,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 115,
+      "timestamp_s": 4.6,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 116,
+      "timestamp_s": 4.64,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 117,
+      "timestamp_s": 4.68,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 118,
+      "timestamp_s": 4.72,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 118,
+      "timestamp_s": 4.72,
+      "global_id": 77,
+      "slot_id": "P063",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 119,
+      "timestamp_s": 4.76,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 120,
+      "timestamp_s": 4.8,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 121,
+      "timestamp_s": 4.84,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 122,
+      "timestamp_s": 4.88,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 123,
+      "timestamp_s": 4.92,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 124,
+      "timestamp_s": 4.96,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 125,
+      "timestamp_s": 5.0,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 126,
+      "timestamp_s": 5.04,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 126,
+      "timestamp_s": 5.04,
+      "global_id": 81,
+      "slot_id": "P058",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 127,
+      "timestamp_s": 5.08,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 128,
+      "timestamp_s": 5.12,
+      "global_id": 6,
+      "slot_id": "P007"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 128,
+      "timestamp_s": 5.12,
+      "global_id": 6,
+      "slot_id": "P007",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 128,
+      "timestamp_s": 5.12,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 129,
+      "timestamp_s": 5.16,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 130,
+      "timestamp_s": 5.2,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 131,
+      "timestamp_s": 5.24,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 132,
+      "timestamp_s": 5.28,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 132,
+      "timestamp_s": 5.28,
+      "global_id": 77,
+      "slot_id": "P063",
+      "overlap": 0.8322
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 132,
+      "timestamp_s": 5.28,
+      "global_id": 77,
+      "slot_id": "P063"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 133,
+      "timestamp_s": 5.32,
+      "global_id": 70,
+      "slot_id": "P006",
+      "overlap": 0.6603
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 133,
+      "timestamp_s": 5.32,
+      "global_id": 70,
+      "slot_id": "P006"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 133,
+      "timestamp_s": 5.32,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 133,
+      "timestamp_s": 5.32,
+      "global_id": 62,
+      "slot_id": "P011",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 134,
+      "timestamp_s": 5.36,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 134,
+      "timestamp_s": 5.36,
+      "global_id": 62,
+      "slot_id": "P011",
+      "overlap": 0.5401
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 134,
+      "timestamp_s": 5.36,
+      "global_id": 62,
+      "slot_id": "P011"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 135,
+      "timestamp_s": 5.4,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 136,
+      "timestamp_s": 5.44,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 137,
+      "timestamp_s": 5.48,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 138,
+      "timestamp_s": 5.52,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 139,
+      "timestamp_s": 5.56,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 139,
+      "timestamp_s": 5.56,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 139,
+      "timestamp_s": 5.56,
+      "global_id": 81,
+      "slot_id": "P058",
+      "overlap": 0.521
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 139,
+      "timestamp_s": 5.56,
+      "global_id": 81,
+      "slot_id": "P058"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 140,
+      "timestamp_s": 5.6,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 141,
+      "timestamp_s": 5.64,
+      "global_id": 30,
+      "slot_id": "P038",
+      "overlap": 0.3674
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 141,
+      "timestamp_s": 5.64,
+      "global_id": 30,
+      "slot_id": "P038"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 141,
+      "timestamp_s": 5.64,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 142,
+      "timestamp_s": 5.68,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 143,
+      "timestamp_s": 5.72,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 144,
+      "timestamp_s": 5.76,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 145,
+      "timestamp_s": 5.8,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 146,
+      "timestamp_s": 5.84,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 147,
+      "timestamp_s": 5.88,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 148,
+      "timestamp_s": 5.92,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 149,
+      "timestamp_s": 5.96,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 150,
+      "timestamp_s": 6.0,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 151,
+      "timestamp_s": 6.04,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 152,
+      "timestamp_s": 6.08,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 153,
+      "timestamp_s": 6.12,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 154,
+      "timestamp_s": 6.16,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 155,
+      "timestamp_s": 6.2,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 156,
+      "timestamp_s": 6.24,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 157,
+      "timestamp_s": 6.28,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 158,
+      "timestamp_s": 6.32,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 159,
+      "timestamp_s": 6.36,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 160,
+      "timestamp_s": 6.4,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 161,
+      "timestamp_s": 6.44,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 162,
+      "timestamp_s": 6.48,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 163,
+      "timestamp_s": 6.52,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 164,
+      "timestamp_s": 6.56,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 165,
+      "timestamp_s": 6.6,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 166,
+      "timestamp_s": 6.64,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 167,
+      "timestamp_s": 6.68,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 168,
+      "timestamp_s": 6.72,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 169,
+      "timestamp_s": 6.76,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 170,
+      "timestamp_s": 6.8,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 171,
+      "timestamp_s": 6.84,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 172,
+      "timestamp_s": 6.88,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 173,
+      "timestamp_s": 6.92,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 174,
+      "timestamp_s": 6.96,
+      "global_id": 52,
+      "slot_id": "P039",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 198,
+      "timestamp_s": 7.92,
+      "global_id": 24,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 198,
+      "timestamp_s": 7.92,
+      "global_id": 24,
+      "slot_id": "P034",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 325,
+      "timestamp_s": 13.0,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 326,
+      "timestamp_s": 13.04,
+      "global_id": 41,
+      "slot_id": "P056",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 327,
+      "timestamp_s": 13.08,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 327,
+      "timestamp_s": 13.08,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 328,
+      "timestamp_s": 13.12,
+      "global_id": 5,
+      "slot_id": "P027",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 328,
+      "timestamp_s": 13.12,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 330,
+      "timestamp_s": 13.2,
+      "global_id": 82,
+      "slot_id": "P048"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 332,
+      "timestamp_s": 13.28,
+      "global_id": 87,
+      "slot_id": "P032"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 332,
+      "timestamp_s": 13.28,
+      "global_id": 92,
+      "slot_id": "P061"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 333,
+      "timestamp_s": 13.32,
+      "global_id": 95,
+      "slot_id": "P009"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 333,
+      "timestamp_s": 13.32,
+      "global_id": 92,
+      "slot_id": "P061",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 333,
+      "timestamp_s": 13.32,
+      "global_id": 61,
+      "slot_id": "P042",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 334,
+      "timestamp_s": 13.36,
+      "global_id": 84,
+      "slot_id": "P031"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 334,
+      "timestamp_s": 13.36,
+      "global_id": 90,
+      "slot_id": "P054"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 335,
+      "timestamp_s": 13.4,
+      "global_id": 98,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 336,
+      "timestamp_s": 13.44,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 337,
+      "timestamp_s": 13.48,
+      "global_id": 104,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 337,
+      "timestamp_s": 13.48,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 338,
+      "timestamp_s": 13.52,
+      "global_id": 90,
+      "slot_id": "P054",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 339,
+      "timestamp_s": 13.56,
+      "global_id": 95,
+      "slot_id": "P009",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 339,
+      "timestamp_s": 13.56,
+      "global_id": 95,
+      "slot_id": "P007"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 339,
+      "timestamp_s": 13.56,
+      "global_id": 98,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 339,
+      "timestamp_s": 13.56,
+      "global_id": 106,
+      "slot_id": "P057"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 339,
+      "timestamp_s": 13.56,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 340,
+      "timestamp_s": 13.6,
+      "global_id": 111,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 340,
+      "timestamp_s": 13.6,
+      "global_id": 97,
+      "slot_id": "P064"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 341,
+      "timestamp_s": 13.64,
+      "global_id": 84,
+      "slot_id": "P031",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 341,
+      "timestamp_s": 13.64,
+      "global_id": 97,
+      "slot_id": "P064",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 341,
+      "timestamp_s": 13.64,
+      "global_id": 5,
+      "slot_id": "P027",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 341,
+      "timestamp_s": 13.64,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 84,
+      "slot_id": "P029"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 113,
+      "slot_id": "P035"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 104,
+      "slot_id": "P037",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 16,
+      "slot_id": "P036",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 342,
+      "timestamp_s": 13.68,
+      "global_id": 43,
+      "slot_id": "P024",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 113,
+      "slot_id": "P035",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 105,
+      "slot_id": "P020"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 115,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 16,
+      "slot_id": "P036",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 43,
+      "slot_id": "P024",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 343,
+      "timestamp_s": 13.72,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 344,
+      "timestamp_s": 13.76,
+      "global_id": 105,
+      "slot_id": "P020",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 344,
+      "timestamp_s": 13.76,
+      "global_id": 105,
+      "slot_id": "P018"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 344,
+      "timestamp_s": 13.76,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 344,
+      "timestamp_s": 13.76,
+      "global_id": 16,
+      "slot_id": "P036",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 344,
+      "timestamp_s": 13.76,
+      "global_id": 43,
+      "slot_id": "P024",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 345,
+      "timestamp_s": 13.8,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 345,
+      "timestamp_s": 13.8,
+      "global_id": 30,
+      "slot_id": "P038",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 84,
+      "slot_id": "P029",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 93,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 94,
+      "slot_id": "P010"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 95,
+      "slot_id": "P007",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 106,
+      "slot_id": "P057",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 346,
+      "timestamp_s": 13.84,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 347,
+      "timestamp_s": 13.88,
+      "global_id": 94,
+      "slot_id": "P010",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 347,
+      "timestamp_s": 13.88,
+      "global_id": 95,
+      "slot_id": "P011",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 347,
+      "timestamp_s": 13.88,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 347,
+      "timestamp_s": 13.88,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 93,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 94,
+      "slot_id": "P010"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 113,
+      "slot_id": "P035"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 95,
+      "slot_id": "P009"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 348,
+      "timestamp_s": 13.92,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 349,
+      "timestamp_s": 13.96,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 349,
+      "timestamp_s": 13.96,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 113,
+      "slot_id": "P035",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 113,
+      "slot_id": "P033"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 106,
+      "slot_id": "P054"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 118,
+      "slot_id": "P034"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 112,
+      "slot_id": "P013"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 350,
+      "timestamp_s": 14.0,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 351,
+      "timestamp_s": 14.04,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 351,
+      "timestamp_s": 14.04,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 351,
+      "timestamp_s": 14.04,
+      "global_id": 112,
+      "slot_id": "P013",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 351,
+      "timestamp_s": 14.04,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 352,
+      "timestamp_s": 14.08,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 352,
+      "timestamp_s": 14.08,
+      "global_id": 82,
+      "slot_id": "P048",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 352,
+      "timestamp_s": 14.08,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 352,
+      "timestamp_s": 14.08,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 353,
+      "timestamp_s": 14.12,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 353,
+      "timestamp_s": 14.12,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 353,
+      "timestamp_s": 14.12,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 354,
+      "timestamp_s": 14.16,
+      "global_id": 87,
+      "slot_id": "P032",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 354,
+      "timestamp_s": 14.16,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 354,
+      "timestamp_s": 14.16,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 354,
+      "timestamp_s": 14.16,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 355,
+      "timestamp_s": 14.2,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 355,
+      "timestamp_s": 14.2,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 355,
+      "timestamp_s": 14.2,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 356,
+      "timestamp_s": 14.24,
+      "global_id": 95,
+      "slot_id": "P009",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 356,
+      "timestamp_s": 14.24,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 356,
+      "timestamp_s": 14.24,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 356,
+      "timestamp_s": 14.24,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 121,
+      "slot_id": "P006",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 98,
+      "slot_id": "P028"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 106,
+      "slot_id": "P054",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 106,
+      "slot_id": "P052"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 357,
+      "timestamp_s": 14.28,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 358,
+      "timestamp_s": 14.32,
+      "global_id": 98,
+      "slot_id": "P028",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 358,
+      "timestamp_s": 14.32,
+      "global_id": 104,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 358,
+      "timestamp_s": 14.32,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 358,
+      "timestamp_s": 14.32,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 359,
+      "timestamp_s": 14.36,
+      "global_id": 82,
+      "slot_id": "P048",
+      "overlap": 0.9215
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 359,
+      "timestamp_s": 14.36,
+      "global_id": 104,
+      "slot_id": "P037",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 359,
+      "timestamp_s": 14.36,
+      "global_id": 130,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 359,
+      "timestamp_s": 14.36,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 360,
+      "timestamp_s": 14.4,
+      "global_id": 105,
+      "slot_id": "P018",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 360,
+      "timestamp_s": 14.4,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 360,
+      "timestamp_s": 14.4,
+      "global_id": 11,
+      "slot_id": "P041",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 87,
+      "slot_id": "P032",
+      "overlap": 0.4821
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 87,
+      "slot_id": "P032"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 113,
+      "slot_id": "P033",
+      "reason": "competing_slot"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 113,
+      "slot_id": "P028"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 98,
+      "slot_id": "P028",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 106,
+      "slot_id": "P052",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 132,
+      "slot_id": "P016"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 361,
+      "timestamp_s": 14.44,
+      "global_id": 134,
+      "slot_id": "P068"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 362,
+      "timestamp_s": 14.48,
+      "global_id": 104,
+      "slot_id": "P037"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 362,
+      "timestamp_s": 14.48,
+      "global_id": 104,
+      "slot_id": "P037",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 362,
+      "timestamp_s": 14.48,
+      "global_id": 130,
+      "slot_id": "P037",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 362,
+      "timestamp_s": 14.48,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 362,
+      "timestamp_s": 14.48,
+      "global_id": 134,
+      "slot_id": "P068",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 363,
+      "timestamp_s": 14.52,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 364,
+      "timestamp_s": 14.56,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 84,
+      "slot_id": "P029"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 84,
+      "slot_id": "P029",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 113,
+      "slot_id": "P028",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 121,
+      "slot_id": "P002"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 88,
+      "slot_id": "P055"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 88,
+      "slot_id": "P055",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 365,
+      "timestamp_s": 14.6,
+      "global_id": 81,
+      "slot_id": "P058",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 366,
+      "timestamp_s": 14.64,
+      "global_id": 88,
+      "slot_id": "P055",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 366,
+      "timestamp_s": 14.64,
+      "global_id": 98,
+      "slot_id": "P026"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 366,
+      "timestamp_s": 14.64,
+      "global_id": 104,
+      "slot_id": "P038",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 366,
+      "timestamp_s": 14.64,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 366,
+      "timestamp_s": 14.64,
+      "global_id": 81,
+      "slot_id": "P058",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 367,
+      "timestamp_s": 14.68,
+      "global_id": 104,
+      "slot_id": "P037",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 367,
+      "timestamp_s": 14.68,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 367,
+      "timestamp_s": 14.68,
+      "global_id": 81,
+      "slot_id": "P058",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 368,
+      "timestamp_s": 14.72,
+      "global_id": 127,
+      "slot_id": "P025"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 368,
+      "timestamp_s": 14.72,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 369,
+      "timestamp_s": 14.76,
+      "global_id": 84,
+      "slot_id": "P029",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 369,
+      "timestamp_s": 14.76,
+      "global_id": 118,
+      "slot_id": "P034",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 369,
+      "timestamp_s": 14.76,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 370,
+      "timestamp_s": 14.8,
+      "global_id": 121,
+      "slot_id": "P002",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 370,
+      "timestamp_s": 14.8,
+      "global_id": 127,
+      "slot_id": "P025",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 370,
+      "timestamp_s": 14.8,
+      "global_id": 98,
+      "slot_id": "P026",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 370,
+      "timestamp_s": 14.8,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 371,
+      "timestamp_s": 14.84,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 372,
+      "timestamp_s": 14.88,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 373,
+      "timestamp_s": 14.92,
+      "global_id": 140,
+      "slot_id": "P004"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 373,
+      "timestamp_s": 14.92,
+      "global_id": 105,
+      "slot_id": "P018",
+      "overlap": 1.0
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 373,
+      "timestamp_s": 14.92,
+      "global_id": 105,
+      "slot_id": "P018"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 373,
+      "timestamp_s": 14.92,
+      "global_id": 141,
+      "slot_id": "P014"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 373,
+      "timestamp_s": 14.92,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 374,
+      "timestamp_s": 14.96,
+      "global_id": 118,
+      "slot_id": "P034",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 374,
+      "timestamp_s": 14.96,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 374,
+      "timestamp_s": 14.96,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 375,
+      "timestamp_s": 15.0,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 375,
+      "timestamp_s": 15.0,
+      "global_id": 70,
+      "slot_id": "P006",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 376,
+      "timestamp_s": 15.04,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 95,
+      "slot_id": "P009",
+      "overlap": 0.5881
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 95,
+      "slot_id": "P009"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 104,
+      "slot_id": "P023"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 97,
+      "slot_id": "P044"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 97,
+      "slot_id": "P044",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 377,
+      "timestamp_s": 15.08,
+      "global_id": 77,
+      "slot_id": "P063",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 378,
+      "timestamp_s": 15.12,
+      "global_id": 104,
+      "slot_id": "P023",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 378,
+      "timestamp_s": 15.12,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 378,
+      "timestamp_s": 15.12,
+      "global_id": 97,
+      "slot_id": "P044",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 378,
+      "timestamp_s": 15.12,
+      "global_id": 77,
+      "slot_id": "P063",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 379,
+      "timestamp_s": 15.16,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 379,
+      "timestamp_s": 15.16,
+      "global_id": 77,
+      "slot_id": "P063",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 380,
+      "timestamp_s": 15.2,
+      "global_id": 84,
+      "slot_id": "P004"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 380,
+      "timestamp_s": 15.2,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 381,
+      "timestamp_s": 15.24,
+      "global_id": 84,
+      "slot_id": "P004",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 381,
+      "timestamp_s": 15.24,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 382,
+      "timestamp_s": 15.28,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 383,
+      "timestamp_s": 15.32,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 383,
+      "timestamp_s": 15.32,
+      "global_id": 43,
+      "slot_id": "P024",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 384,
+      "timestamp_s": 15.36,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 385,
+      "timestamp_s": 15.4,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 386,
+      "timestamp_s": 15.44,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 387,
+      "timestamp_s": 15.48,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 387,
+      "timestamp_s": 15.48,
+      "global_id": 82,
+      "slot_id": "P048",
+      "reason": "appearance_mismatch"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 388,
+      "timestamp_s": 15.52,
+      "global_id": 128,
+      "slot_id": "P025"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 388,
+      "timestamp_s": 15.52,
+      "global_id": 128,
+      "slot_id": "P025",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 388,
+      "timestamp_s": 15.52,
+      "global_id": 88,
+      "slot_id": "P032",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 388,
+      "timestamp_s": 15.52,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 389,
+      "timestamp_s": 15.56,
+      "global_id": 128,
+      "slot_id": "P025",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 389,
+      "timestamp_s": 15.56,
+      "global_id": 133,
+      "slot_id": "P012"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 389,
+      "timestamp_s": 15.56,
+      "global_id": 133,
+      "slot_id": "P012",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 389,
+      "timestamp_s": 15.56,
+      "global_id": 150,
+      "slot_id": "P022"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 389,
+      "timestamp_s": 15.56,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 84,
+      "slot_id": "P004"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 84,
+      "slot_id": "P004",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 113,
+      "slot_id": "P028",
+      "overlap": 0.569
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 113,
+      "slot_id": "P028"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 133,
+      "slot_id": "P012",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 390,
+      "timestamp_s": 15.6,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 391,
+      "timestamp_s": 15.64,
+      "global_id": 84,
+      "slot_id": "P004",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 391,
+      "timestamp_s": 15.64,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 392,
+      "timestamp_s": 15.68,
+      "global_id": 128,
+      "slot_id": "P025"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 392,
+      "timestamp_s": 15.68,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 393,
+      "timestamp_s": 15.72,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 394,
+      "timestamp_s": 15.76,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 395,
+      "timestamp_s": 15.8,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 396,
+      "timestamp_s": 15.84,
+      "global_id": 141,
+      "slot_id": "P014",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 396,
+      "timestamp_s": 15.84,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 397,
+      "timestamp_s": 15.88,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 398,
+      "timestamp_s": 15.92,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 399,
+      "timestamp_s": 15.96,
+      "global_id": 84,
+      "slot_id": "P025"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 399,
+      "timestamp_s": 15.96,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 400,
+      "timestamp_s": 16.0,
+      "global_id": 84,
+      "slot_id": "P025",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 400,
+      "timestamp_s": 16.0,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_cancelled",
+      "frame": 400,
+      "timestamp_s": 16.0,
+      "global_id": 150,
+      "slot_id": "P022",
+      "reason": "insufficient_overlap"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 400,
+      "timestamp_s": 16.0,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 401,
+      "timestamp_s": 16.04,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 401,
+      "timestamp_s": 16.04,
+      "global_id": 133,
+      "slot_id": "P013"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 401,
+      "timestamp_s": 16.04,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 402,
+      "timestamp_s": 16.08,
+      "global_id": 141,
+      "slot_id": "P014",
+      "overlap": 0.6477
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 402,
+      "timestamp_s": 16.08,
+      "global_id": 141,
+      "slot_id": "P014"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 402,
+      "timestamp_s": 16.08,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 403,
+      "timestamp_s": 16.12,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 404,
+      "timestamp_s": 16.16,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 405,
+      "timestamp_s": 16.2,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 406,
+      "timestamp_s": 16.24,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 407,
+      "timestamp_s": 16.28,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 408,
+      "timestamp_s": 16.32,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 409,
+      "timestamp_s": 16.36,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 410,
+      "timestamp_s": 16.4,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 411,
+      "timestamp_s": 16.44,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 412,
+      "timestamp_s": 16.48,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 413,
+      "timestamp_s": 16.52,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 414,
+      "timestamp_s": 16.56,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 415,
+      "timestamp_s": 16.6,
+      "global_id": 133,
+      "slot_id": "P013",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 415,
+      "timestamp_s": 16.6,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 416,
+      "timestamp_s": 16.64,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 417,
+      "timestamp_s": 16.68,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 418,
+      "timestamp_s": 16.72,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 419,
+      "timestamp_s": 16.76,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 420,
+      "timestamp_s": 16.8,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 421,
+      "timestamp_s": 16.84,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 422,
+      "timestamp_s": 16.88,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 423,
+      "timestamp_s": 16.92,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 424,
+      "timestamp_s": 16.96,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 425,
+      "timestamp_s": 17.0,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 426,
+      "timestamp_s": 17.04,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 427,
+      "timestamp_s": 17.08,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 428,
+      "timestamp_s": 17.12,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 429,
+      "timestamp_s": 17.16,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "vehicle_stopped_in_slot",
+      "frame": 430,
+      "timestamp_s": 17.2,
+      "global_id": 133,
+      "slot_id": "P013",
+      "overlap": 0.3916
+    },
+    {
+      "type": "tracking_occupied_override",
+      "frame": 430,
+      "timestamp_s": 17.2,
+      "global_id": 133,
+      "slot_id": "P013"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 430,
+      "timestamp_s": 17.2,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 431,
+      "timestamp_s": 17.24,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 432,
+      "timestamp_s": 17.28,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 433,
+      "timestamp_s": 17.32,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 434,
+      "timestamp_s": 17.36,
+      "global_id": 111,
+      "slot_id": "P042",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 475,
+      "timestamp_s": 19.0,
+      "global_id": 88,
+      "slot_id": "P032",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 475,
+      "timestamp_s": 19.0,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 476,
+      "timestamp_s": 19.04,
+      "global_id": 88,
+      "slot_id": "P032",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 476,
+      "timestamp_s": 19.04,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 477,
+      "timestamp_s": 19.08,
+      "global_id": 88,
+      "slot_id": "P032",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 477,
+      "timestamp_s": 19.08,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 478,
+      "timestamp_s": 19.12,
+      "global_id": 88,
+      "slot_id": "P032",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 478,
+      "timestamp_s": 19.12,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 479,
+      "timestamp_s": 19.16,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 480,
+      "timestamp_s": 19.2,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 481,
+      "timestamp_s": 19.24,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 482,
+      "timestamp_s": 19.28,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 483,
+      "timestamp_s": 19.32,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 484,
+      "timestamp_s": 19.36,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 485,
+      "timestamp_s": 19.4,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 486,
+      "timestamp_s": 19.44,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 487,
+      "timestamp_s": 19.48,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_candidate_started",
+      "frame": 488,
+      "timestamp_s": 19.52,
+      "global_id": 84,
+      "slot_id": "P025"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 488,
+      "timestamp_s": 19.52,
+      "global_id": 84,
+      "slot_id": "P025",
+      "reason": "unstable_position"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 488,
+      "timestamp_s": 19.52,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 489,
+      "timestamp_s": 19.56,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 490,
+      "timestamp_s": 19.6,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    },
+    {
+      "type": "slot_assignment_rejected",
+      "frame": 491,
+      "timestamp_s": 19.64,
+      "global_id": 104,
+      "slot_id": "P041",
+      "reason": "competing_vehicle"
+    }
+  ],
+  "next_global_id": 151,
+  "retired_global_ids": {
+    "7": 6,
+    "31": 24,
+    "33": 24,
+    "35": 31,
+    "36": 29,
+    "39": 29,
+    "40": 31,
+    "44": 42,
+    "46": 45,
+    "47": 21,
+    "48": 29,
+    "50": 24,
+    "51": 45,
+    "53": 45,
+    "56": 47,
+    "57": 56,
+    "59": 55,
+    "60": 45,
+    "64": 45,
+    "65": 24,
+    "67": 39,
+    "73": 45,
+    "76": 45,
+    "90": 88,
+    "93": 84,
+    "94": 93,
+    "99": 97,
+    "100": 90,
+    "103": 88,
+    "106": 88,
+    "107": 104,
+    "108": 97,
+    "109": 99,
+    "110": 107,
+    "112": 107,
+    "114": 88,
+    "115": 107,
+    "116": 107,
+    "117": 112,
+    "120": 93,
+    "121": 84,
+    "123": 120,
+    "124": 97,
+    "125": 112,
+    "126": 107,
+    "127": 84,
+    "128": 84,
+    "129": 102,
+    "130": 107,
+    "132": 107,
+    "134": 97,
+    "138": 93,
+    "140": 84,
+    "142": 84
+  },
+  "active_global_vehicles": {},
+  "map_vehicles": {},
+  "pending_handoffs": [],
+  "recent_events": [
+    {
+      "type": "handoff_rejected",
+      "frame": 379,
+      "global_id": 139,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 50,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 723.3,
+      "entry_depth": 522.0
+    },
+    {
+      "type": "global_id_created",
+      "frame": 379,
+      "global_id": 143,
+      "camera": "cam1",
+      "local_track_id": 50
+    },
+    {
+      "type": "global_id_created",
+      "frame": 379,
+      "global_id": 144,
+      "camera": "cam1",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 380,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 29
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 380,
+      "global_id": 143,
+      "camera": "cam1",
+      "local_track_id": 50
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 380,
+      "global_id": 144,
+      "camera": "cam1",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 380,
+      "global_id": 102,
+      "camera": "cam4",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 380,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 44
+    },
+    {
+      "type": "global_id_created",
+      "frame": 380,
+      "global_id": 145,
+      "camera": "cam2",
+      "local_track_id": 51
+    },
+    {
+      "type": "global_id_created",
+      "frame": 380,
+      "global_id": 146,
+      "camera": "cam4",
+      "local_track_id": 54
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 381,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 25
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 381,
+      "global_id": 145,
+      "camera": "cam2",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 381,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 381,
+      "global_id": 146,
+      "camera": "cam4",
+      "local_track_id": 54
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 381,
+      "global_id": 139,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "edge": "bottom",
+      "velocity": {
+        "x": -8.0,
+        "y": 17.5
+      }
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 102,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 193.57,
+      "entry_depth": 333.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 113,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 740.85,
+      "entry_depth": 582.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 97,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 566.77,
+      "entry_depth": 333.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 92,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 2319.85,
+      "entry_depth": 333.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 119,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 487.61,
+      "entry_depth": 582.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 136,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 363.53,
+      "entry_depth": 333.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 381,
+      "global_id": 131,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 524.07,
+      "entry_depth": 333.0
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 382,
+      "global_id": 128,
+      "camera": "cam1",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 382,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 38
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 382,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 46
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 382,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 42
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 382,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 44
+    },
+    {
+      "type": "global_id_created",
+      "frame": 382,
+      "global_id": 147,
+      "camera": "cam2",
+      "local_track_id": 46
+    },
+    {
+      "type": "global_id_created",
+      "frame": 382,
+      "global_id": 148,
+      "camera": "cam2",
+      "local_track_id": 47
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 383,
+      "global_id": 148,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "edge": "left",
+      "velocity": {
+        "x": -24.25,
+        "y": 3.5
+      }
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 84,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 371.27,
+      "entry_depth": 275.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 97,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 353.83,
+      "entry_depth": 437.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 83,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 1948.6,
+      "entry_depth": 275.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 95,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 235.09,
+      "entry_depth": 275.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 111,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 1108.85,
+      "entry_depth": 437.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 383,
+      "global_id": 102,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "target_local_id": 55,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 287.04,
+      "entry_depth": 437.0
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 384,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 30
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 384,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 32
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 384,
+      "global_id": 139,
+      "camera": "cam2",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 384,
+      "global_id": 147,
+      "camera": "cam2",
+      "local_track_id": 46
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 384,
+      "global_id": 128,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 616.75,
+      "entry_depth": 480.0
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 28
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 42
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 148,
+      "camera": "cam2",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 385,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 47
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 385,
+      "global_id": 98,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 40
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 386,
+      "global_id": 144,
+      "camera": "cam1",
+      "local_track_id": 51
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 386,
+      "global_id": 137,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "edge": "left",
+      "velocity": {
+        "x": -74.5,
+        "y": -11.5
+      }
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 387,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 25
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 387,
+      "global_id": 128,
+      "camera": "cam1",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 387,
+      "global_id": 137,
+      "camera": "cam2",
+      "local_track_id": 44
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 388,
+      "global_id": 84,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 377.08,
+      "entry_depth": 357.0
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 389,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 389,
+      "global_id": 118,
+      "camera": "cam1",
+      "local_track_id": 48
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 389,
+      "global_id": 143,
+      "camera": "cam1",
+      "local_track_id": 50
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 389,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 389,
+      "global_id": 145,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "edge": "bottom",
+      "velocity": {
+        "x": 0.0,
+        "y": 34.75
+      }
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 102,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 231.81,
+      "entry_depth": 151.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 113,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 1132.36,
+      "entry_depth": 420.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 97,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "prediction_distance",
+      "predicted_distance": 504.42,
+      "entry_depth": 151.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 92,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "prediction_distance",
+      "predicted_distance": 2970.33,
+      "entry_depth": 151.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 119,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 310.16,
+      "entry_depth": 420.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 136,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 257.28,
+      "entry_depth": 151.0
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 389,
+      "global_id": 131,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "target_local_id": 53,
+      "reason": "outside_entry_corridor",
+      "predicted_distance": 169.74,
+      "entry_depth": 151.0
+    },
+    {
+      "type": "global_id_created",
+      "frame": 389,
+      "global_id": 149,
+      "camera": "cam2",
+      "local_track_id": 53
+    },
+    {
+      "type": "global_id_created",
+      "frame": 389,
+      "global_id": 150,
+      "camera": "cam3",
+      "local_track_id": 55
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 390,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 25
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 390,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 30
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 390,
+      "global_id": 149,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "edge": "bottom",
+      "velocity": {
+        "x": -43.25,
+        "y": 44.75
+      }
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 390,
+      "global_id": 105,
+      "source_camera": "cam3",
+      "target_camera": "cam1",
+      "source_local_id": 41
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 390,
+      "global_id": 111,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "source_local_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 391,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 391,
+      "global_id": 118,
+      "camera": "cam2",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 391,
+      "global_id": 145,
+      "camera": "cam2",
+      "local_track_id": 51
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 391,
+      "global_id": 128,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "edge": "bottom",
+      "velocity": {
+        "x": 2.75,
+        "y": 20.25
+      }
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 392,
+      "global_id": 149,
+      "camera": "cam2",
+      "local_track_id": 53
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 393,
+      "global_id": 133,
+      "camera": "cam3",
+      "local_track_id": 52
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 394,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 394,
+      "global_id": 83,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "source_local_id": 26
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 395,
+      "global_id": 118,
+      "camera": "cam2",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 395,
+      "global_id": 148,
+      "camera": "cam2",
+      "local_track_id": 47
+    },
+    {
+      "type": "global_id_merged",
+      "frame": 395,
+      "global_id": 84,
+      "superseded_global_id": 128,
+      "reason": "nearby_boxes_same_camera"
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 395,
+      "global_id": 95,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "source_local_id": 35
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 397,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 398,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 25
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 398,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 398,
+      "global_id": 118,
+      "camera": "cam2",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 398,
+      "global_id": 133,
+      "camera": "cam3",
+      "local_track_id": 52
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 399,
+      "global_id": 92,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "source_local_id": 42
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 400,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 400,
+      "global_id": 118,
+      "camera": "cam2",
+      "local_track_id": 43
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 400,
+      "global_id": 148,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "edge": "bottom",
+      "velocity": {
+        "x": 13.25,
+        "y": 21.0
+      }
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 401,
+      "global_id": 102,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "source_local_id": 43
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 402,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 38
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 403,
+      "global_id": 148,
+      "camera": "cam2",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 403,
+      "global_id": 133,
+      "camera": "cam3",
+      "local_track_id": 52
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 403,
+      "global_id": 150,
+      "camera": "cam3",
+      "local_track_id": 55
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 404,
+      "global_id": 122,
+      "source_camera": "cam3",
+      "target_camera": "cam4",
+      "source_local_id": 48
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 407,
+      "global_id": 113,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 34
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 411,
+      "global_id": 135,
+      "source_camera": "cam3",
+      "target_camera": "cam4",
+      "source_local_id": 53
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 414,
+      "global_id": 119,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 32
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 418,
+      "global_id": 136,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "source_local_id": 53
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 419,
+      "global_id": 97,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "source_local_id": 39
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 419,
+      "global_id": 102,
+      "source_camera": "cam4",
+      "target_camera": "cam3",
+      "source_local_id": 43
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 419,
+      "global_id": 131,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "source_local_id": 48
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 420,
+      "global_id": 84,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 25
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 421,
+      "global_id": 85,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 421,
+      "global_id": 82,
+      "camera": "cam2",
+      "local_track_id": 31
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 422,
+      "global_id": 86,
+      "camera": "cam2",
+      "local_track_id": 33
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 422,
+      "global_id": 89,
+      "camera": "cam2",
+      "local_track_id": 36
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 423,
+      "global_id": 87,
+      "camera": "cam1",
+      "local_track_id": 27
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 425,
+      "global_id": 97,
+      "source_camera": "cam4",
+      "target_camera": "cam2",
+      "source_local_id": 45
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 427,
+      "global_id": 139,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 45
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 429,
+      "global_id": 88,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 38
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 429,
+      "global_id": 139,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 45
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 429,
+      "global_id": 148,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 47
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 430,
+      "global_id": 104,
+      "source_camera": "cam3",
+      "target_camera": "cam4",
+      "source_local_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 431,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 432,
+      "global_id": 91,
+      "camera": "cam4",
+      "local_track_id": 38
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 432,
+      "global_id": 137,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 44
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 433,
+      "global_id": 96,
+      "camera": "cam3",
+      "local_track_id": 40
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 433,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 40
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 434,
+      "global_id": 88,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 435,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 38
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 435,
+      "global_id": 105,
+      "camera": "cam3",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 435,
+      "global_id": 111,
+      "camera": "cam4",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 435,
+      "global_id": 133,
+      "source_camera": "cam3",
+      "target_camera": "cam1",
+      "source_local_id": 52
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 436,
+      "global_id": 145,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 51
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 437,
+      "global_id": 149,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 53
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 440,
+      "global_id": 95,
+      "camera": "cam1",
+      "local_track_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 440,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 440,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 47
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 441,
+      "global_id": 84,
+      "source_camera": "cam1",
+      "target_camera": "cam3",
+      "source_local_id": 28
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 444,
+      "global_id": 92,
+      "camera": "cam4",
+      "local_track_id": 42
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 445,
+      "global_id": 118,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 43
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 447,
+      "global_id": 104,
+      "source_camera": "cam3",
+      "target_camera": "cam1",
+      "source_local_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 448,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 50
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 448,
+      "global_id": 148,
+      "source_camera": "cam2",
+      "target_camera": "cam4",
+      "source_local_id": 47
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 449,
+      "global_id": 122,
+      "camera": "cam3",
+      "local_track_id": 48
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 452,
+      "global_id": 113,
+      "camera": "cam1",
+      "local_track_id": 34
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 452,
+      "global_id": 101,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 453,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 456,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 456,
+      "global_id": 135,
+      "camera": "cam3",
+      "local_track_id": 53
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 459,
+      "global_id": 119,
+      "camera": "cam1",
+      "local_track_id": 32
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 460,
+      "global_id": 83,
+      "camera": "cam1",
+      "local_track_id": 26
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 460,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 463,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 49
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 464,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 36
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 464,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 464,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 50
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 464,
+      "global_id": 141,
+      "camera": "cam3",
+      "local_track_id": 54
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 464,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 52
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 465,
+      "global_id": 98,
+      "camera": "cam2",
+      "local_track_id": 40
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 465,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 42
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 466,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 42
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 466,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 46
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 467,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 467,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 35
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 467,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 468,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 468,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 40
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 468,
+      "global_id": 102,
+      "camera": "cam4",
+      "local_track_id": 49
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 468,
+      "global_id": 136,
+      "camera": "cam4",
+      "local_track_id": 53
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 469,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 469,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 470,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 29
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 470,
+      "global_id": 102,
+      "camera": "cam4",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 470,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 44
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 471,
+      "global_id": 97,
+      "camera": "cam4",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 471,
+      "global_id": 146,
+      "camera": "cam4",
+      "local_track_id": 54
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 472,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 38
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 472,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 46
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 472,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 44
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 474,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 32
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 474,
+      "global_id": 139,
+      "camera": "cam2",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 474,
+      "global_id": 147,
+      "camera": "cam2",
+      "local_track_id": 46
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 475,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 28
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 475,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 42
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 475,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 475,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 476,
+      "global_id": 144,
+      "camera": "cam1",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 477,
+      "global_id": 137,
+      "camera": "cam2",
+      "local_track_id": 44
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 479,
+      "global_id": 118,
+      "camera": "cam1",
+      "local_track_id": 48
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 479,
+      "global_id": 143,
+      "camera": "cam1",
+      "local_track_id": 50
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 479,
+      "global_id": 88,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 480,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 30
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 481,
+      "global_id": 145,
+      "camera": "cam2",
+      "local_track_id": 51
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 482,
+      "global_id": 149,
+      "camera": "cam2",
+      "local_track_id": 53
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 487,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 488,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 25
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 490,
+      "global_id": 84,
+      "camera": "cam1",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 490,
+      "global_id": 118,
+      "camera": "cam2",
+      "local_track_id": 43
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 492,
+      "global_id": 104,
+      "camera": "cam3",
+      "local_track_id": 38
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 493,
+      "global_id": 148,
+      "camera": "cam2",
+      "local_track_id": 47
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 493,
+      "global_id": 133,
+      "camera": "cam3",
+      "local_track_id": 52
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 493,
+      "global_id": 150,
+      "camera": "cam3",
+      "local_track_id": 55
+    }
+  ]
+}

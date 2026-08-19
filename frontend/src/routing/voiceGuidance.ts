@@ -25,7 +25,9 @@ class VoiceManager {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
-      } catch (_) {}
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -48,7 +50,9 @@ class VoiceManager {
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
-      } catch (_) {}
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -97,7 +101,9 @@ export function checkIsOffRoute(
 }
 
 /**
- * Tính toán câu lệnh rẽ trái / rẽ phải / đi thẳng dựa trên điểm tiếp theo của lộ trình
+ * Tính toán câu lệnh rẽ trái / rẽ phải / đi thẳng dựa trên điểm tiếp theo của lộ trình.
+ * Dùng tích có hướng (cross product) giữa hướng xe đang đi và đoạn đường tiếp theo
+ * để xác định trái/phải chính xác trong hệ tọa độ SVG (Y tăng xuống dưới).
  */
 export function getNavigationInstruction(
   vehiclePos: { x: number; y: number },
@@ -122,7 +128,7 @@ export function getNavigationInstruction(
     }
   }
 
-  // 2. Tìm điểm nút tiếp theo gần xe nhất
+  // 2. Tìm điểm nút gần xe nhất (= điểm xe đang ở)
   let closestIndex = 0;
   let minDist = Number.POSITIVE_INFINITY;
   for (let i = 0; i < routePoints.length; i++) {
@@ -136,31 +142,73 @@ export function getNavigationInstruction(
     }
   }
 
-  // Nếu còn điểm tiếp theo trên tuyến đường
-  if (closestIndex < routePoints.length - 1) {
-    const pCurrent = routePoints[closestIndex];
-    const pNext = routePoints[closestIndex + 1];
+  // 3. Cần ít nhất 3 điểm: prev → current → next để tính góc lệch trái/phải
+  if (closestIndex >= 1 && closestIndex < routePoints.length - 1) {
+    const pPrev    = routePoints[closestIndex - 1]!;
+    const pCurrent = routePoints[closestIndex]!;
+    const pNext    = routePoints[closestIndex + 1]!;
 
-    if (!pCurrent || !pNext) return null;
+    // Vector hướng xe đang đi (từ prev → current)
+    const curDx = pCurrent.x - pPrev.x;
+    const curDy = pCurrent.y - pPrev.y;
 
-    // Tính hướng góc đi của đoạn đường tiếp theo
-    const angleRad = Math.atan2(pNext.y - pCurrent.y, pNext.x - pCurrent.x);
-    const angleDeg = (angleRad * 180) / Math.PI;
+    // Vector hướng đường tiếp theo (từ current → next)
+    const nextDx = pNext.x - pCurrent.x;
+    const nextDy = pNext.y - pCurrent.y;
 
-    // Phân tích hướng cơ bản
-    if (isExit) {
-      return "Tiếp tục đi theo đường dẫn ra cổng xuất bãi.";
+    // Tích vô hướng (dot product) để đo độ thẳng
+    const dot = curDx * nextDx + curDy * nextDy;
+    const lenCur  = Math.hypot(curDx, curDy);
+    const lenNext = Math.hypot(nextDx, nextDy);
+    const cosAngle = lenCur > 0 && lenNext > 0 ? dot / (lenCur * lenNext) : 1;
+
+    // Tích có hướng 2D (cross product): dương = rẽ phải (SVG Y↓), âm = rẽ trái
+    // cross = curDx * nextDy - curDy * nextDx
+    const cross = curDx * nextDy - curDy * nextDx;
+
+    // Nếu cos ≈ 1 (góc < ~20°) → đi thẳng
+    if (cosAngle > 0.93) {
+      return "Phía trước đi thẳng.";
     }
 
-    if (angleDeg > -45 && angleDeg <= 45) {
-      return "Phía trước rẽ phải vào làn đỗ.";
-    } else if (angleDeg > 45 && angleDeg <= 135) {
-      return "Phía trước đi thẳng.";
-    } else if (angleDeg < -45 && angleDeg >= -135) {
-      return "Phía trước đi thẳng.";
+    if (cross > 0) {
+      // Trong SVG (Y tăng xuống): cross > 0 → rẽ phải theo chiều thực tế
+      return isExit ? "Phía trước rẽ phải ra cổng." : "Phía trước rẽ phải vào làn đỗ.";
     } else {
-      return "Phía trước rẽ trái vào làn đỗ.";
+      return isExit ? "Phía trước rẽ trái ra cổng." : "Phía trước rẽ trái vào làn đỗ.";
     }
+  }
+
+  // 4. Fallback khi ở đầu đường (chưa có prev):
+  //    Đọc 2 đoạn đầu của route để phát hiện hướng rẽ đầu tiên
+  if (closestIndex < routePoints.length - 1) {
+    // Tìm đoạn thứ nhất không song song với đoạn gốc (phần thẳng đầu tiên)
+    for (let i = 0; i < routePoints.length - 2; i++) {
+      const pA = routePoints[i]!;
+      const pB = routePoints[i + 1]!;
+      const pC = routePoints[i + 2]!;
+
+      const abDx = pB.x - pA.x;
+      const abDy = pB.y - pA.y;
+      const bcDx = pC.x - pB.x;
+      const bcDy = pC.y - pB.y;
+
+      const dot = abDx * bcDx + abDy * bcDy;
+      const lenAB = Math.hypot(abDx, abDy);
+      const lenBC = Math.hypot(bcDx, bcDy);
+      const cosA = lenAB > 0 && lenBC > 0 ? dot / (lenAB * lenBC) : 1;
+
+      // Nếu đây là khúc cua thực sự (góc > ~20°)
+      if (cosA < 0.93) {
+        const cross = abDx * bcDy - abDy * bcDx;
+        if (cross > 0) {
+          return isExit ? "Phía trước rẽ phải ra cổng." : "Phía trước rẽ phải vào làn đỗ.";
+        } else {
+          return isExit ? "Phía trước rẽ trái ra cổng." : "Phía trước rẽ trái vào làn đỗ.";
+        }
+      }
+    }
+    return "Phía trước đi thẳng.";
   }
 
   return "Tiếp tục di chuyển theo đường chỉ dẫn.";

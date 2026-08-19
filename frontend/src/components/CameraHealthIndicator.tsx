@@ -1,8 +1,8 @@
 import { Camera, CircleAlert } from "lucide-react";
-import type { CameraState } from "../domain/parking";
+import type { CameraId, CameraState } from "../domain/parking";
 
 interface CameraHealthIndicatorProps {
-  cameras: Record<string, CameraState>;
+  cameras: Record<CameraId, CameraState>;
   compact?: boolean;
 }
 

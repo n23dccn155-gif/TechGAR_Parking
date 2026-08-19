@@ -21,7 +21,7 @@ export function SpotDetailSheet({ spot, onClose, onNavigate }: SpotDetailSheetPr
           <p>Khu {spot.zone} · {STATUS_LABELS[spot.status]}</p>
         </div>
       </div>
-      <p className="spot-camera">Độ tin cậy {Math.round(spot.confidence * 100)}%</p>
+      <p className="spot-camera">Dữ liệu từ {spot.owner === "cam-left" ? "camera trái" : "camera phải"} · độ tin cậy {Math.round(spot.confidence * 100)}%</p>
       {selectable ? (
         <button type="button" className="primary-action" onClick={onNavigate} data-testid="spot-navigate">
           <Navigation size={19} />

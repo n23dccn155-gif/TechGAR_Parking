@@ -107,6 +107,71 @@ export function findExitRoute(graph: LaneGraph, spotId: SpotId): RouteResult | n
   return findRoute(exitGraph, startNodeId, graph.exitNodeId);
 }
 
+/**
+ * Tìm nút (node) trong đồ thị gần nhất với tọa độ (x, y) hiện tại của xe.
+ * Dùng để tính điểm xuất phát động khi xe đang di chuyển.
+ */
+export function findNearestNode(graph: LaneGraph, x: number, y: number): string | null {
+  let nearestId: string | null = null;
+  let minDist = Number.POSITIVE_INFINITY;
+  graph.nodes.forEach((node) => {
+    const d = Math.hypot(node.x - x, node.y - y);
+    if (d < minDist) {
+      minDist = d;
+      nearestId = node.id;
+    }
+  });
+  return nearestId;
+}
+
+/**
+ * Tính đường từ tọa độ HIỆN TẠI của xe (x, y) ra CỔNG RA.
+ * Nếu xe đang di chuyển, dùng hàm này để tính lại đường động (Re-routing).
+ * Nếu không tìm thấy nút gần nhất, fallback về findExitRoute dựa trên ô đỗ.
+ */
+export function findExitRouteFromPos(
+  graph: LaneGraph,
+  vehicleX: number,
+  vehicleY: number,
+  fallbackSpotId?: SpotId,
+): RouteResult | null {
+  const exitGraph: LaneGraph = {
+    ...graph,
+    edges: graph.edges.map((e) => ({ ...e, direction: "two-way" })),
+  };
+  const nearestNodeId = findNearestNode(exitGraph, vehicleX, vehicleY);
+  if (nearestNodeId) {
+    const result = findRoute(exitGraph, nearestNodeId, graph.exitNodeId);
+    if (result) return result;
+  }
+  // Fallback: tính từ ô đỗ ban đầu nếu không tìm được nút gần xe
+  if (fallbackSpotId) {
+    return findExitRoute(graph, fallbackSpotId);
+  }
+  return null;
+}
+
+/**
+ * Tính đường từ tọa độ HIỆN TẠI của xe (x, y) đến ô đỗ đích (spotId).
+ * Dùng để cập nhật đường vào thời gian thực khi xe đang di chuyển trong bãi.
+ */
+export function findInboundRouteFromPos(
+  graph: LaneGraph,
+  vehicleX: number,
+  vehicleY: number,
+  spotId: SpotId,
+): RouteResult | null {
+  const targetNodeId = graph.spotEntryNodeIds[spotId];
+  if (!targetNodeId) return null;
+  const nearestNodeId = findNearestNode(graph, vehicleX, vehicleY);
+  if (nearestNodeId && nearestNodeId !== targetNodeId) {
+    const result = findRoute(graph, nearestNodeId, targetNodeId);
+    if (result) return result;
+  }
+  // Fallback: tính từ Cổng Vào nếu không tìm được nút gần xe
+  return findVehicleRoute(graph, spotId);
+}
+
 export function routeUsesOnlyValidEdges(graph: LaneGraph, route: RouteResult): boolean {
   const edgeById = new Map<string, LaneEdge>(graph.edges.map((edge) => [edge.id, edge]));
   return route.edgeIds.every((edgeId, index) => {

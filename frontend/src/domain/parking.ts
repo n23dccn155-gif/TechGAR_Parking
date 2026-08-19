@@ -1,19 +1,11 @@
-/**
- * Domain types for TechGAR Parking System.
- *
- * Review fixes:
- *   #14 — Removed hardcoded cam-left/cam-right camera ownership
- *   #22 — Frontend does not own camera IDs; backend/vision manages coverage
- *   #12 — Spot IDs are consistent across all layers (A01..F10)
- *   #30 — Frontend derives mode from backend session state
- */
-
-export const ALL_ZONE_IDS = ["A", "B", "C", "D", "E", "F"] as const;
 export const MAIN_ZONE_ORDER = ["E", "D", "C", "B", "A"] as const;
+export const ALL_ZONE_IDS = ["A", "B", "C", "D", "E", "F"] as const;
+export const CAMERA_IDS = ["cam-left", "cam-right"] as const;
 export const PARKING_STATUSES = ["empty", "occupied", "transitioning", "unknown"] as const;
 
 export type MainZoneId = (typeof MAIN_ZONE_ORDER)[number];
 export type ZoneId = (typeof ALL_ZONE_IDS)[number];
+export type CameraId = (typeof CAMERA_IDS)[number];
 export type ParkingStatus = (typeof PARKING_STATUSES)[number];
 export type CameraHealth = "online" | "offline";
 export type ParkingRow = "top" | "bottom" | "vertical";
@@ -22,39 +14,27 @@ export type DestinationNeed = "shopping" | "services" | "entertainment";
 export type BrowseFilter = "all" | "empty";
 export type SpotId = `${ZoneId}${number}`;
 
-/**
- * Session states from backend (the authority).
- * Frontend derives its UI mode from this.
- */
-export type SessionState =
-  | "WAITING_FOR_SCAN"
-  | "SELECTING_SPOT"
-  | "NAVIGATING_TO_SPOT"
-  | "PARKED"
-  | "EXIT_NAVIGATION"
-  | "CLOSED";
-
 export interface ParkingSpotState {
   id: SpotId;
   zone: ZoneId;
   number: number;
   row: ParkingRow;
+  owner: CameraId;
   status: ParkingStatus;
   confidence: number;
   revision: number;
   updatedAt: string;
-  /** vehicleId bound to this spot (from vision Binder) */
-  vehicleId?: number | null;
 }
 
 export interface CameraState {
-  cameraId: string;
+  cameraId: CameraId;
   health: CameraHealth;
   updatedAt: string;
 }
 
 export interface SpotStatusEvent {
   type: "spot.status.changed";
+  cameraId: CameraId;
   spotId: SpotId;
   status: ParkingStatus;
   confidence: number;
@@ -64,7 +44,7 @@ export interface SpotStatusEvent {
 
 export interface CameraHealthEvent {
   type: "camera.health.changed";
-  cameraId: string;
+  cameraId: CameraId;
   health: CameraHealth;
   updatedAt: string;
 }
@@ -73,7 +53,7 @@ export type ParkingEvent = SpotStatusEvent | CameraHealthEvent;
 
 export interface ParkingSnapshot {
   spots: ParkingSpotState[];
-  cameras: Record<string, CameraState>;
+  cameras: Record<CameraId, CameraState>;
   capturedAt: string;
 }
 
@@ -115,27 +95,6 @@ export interface InvalidSpotWarning {
   alternativeSpotId?: SpotId;
 }
 
-/** Backend session data */
-export interface BackendSession {
-  sessionId: string;
-  globalVehicleId: number | null;
-  state: SessionState;
-  targetSpotId: string | null;
-  parkedSpotId: string | null;
-  entryGateId: string | null;
-  createdAt: string;
-  claimedAt: string | null;
-  parkedAt: string | null;
-  exitStartedAt: string | null;
-  closedAt: string | null;
-  vehicle?: {
-    globalVehicleId: number;
-    trackingState: string;
-    position: { x: number; y: number } | null;
-    parkedSpotId: string | null;
-  };
-}
-
 export const DESTINATION_LABELS: Record<DestinationNeed, string> = {
   shopping: "Shopping",
   services: "Dịch vụ",
@@ -160,6 +119,18 @@ export function parseSpotId(spotId: SpotId): { zone: ZoneId; number: number } {
   };
 }
 
+export function getSpotOwner(spotId: SpotId): CameraId {
+  const { zone, number } = parseSpotId(spotId);
+  if (zone === "F") return "cam-right";
+  return (number >= 1 && number <= 8) || (number >= 16 && number <= 23)
+    ? "cam-left"
+    : "cam-right";
+}
+
+export function cameraOwnsSpot(cameraId: CameraId, spotId: SpotId): boolean {
+  return getSpotOwner(spotId) === cameraId;
+}
+
 export function isSelectableStatus(status: ParkingStatus): boolean {
   return status === "empty";
 }
@@ -172,25 +143,4 @@ export function getInvalidSpotWarningText(spotId: SpotId, status: Exclude<Parkin
     return `Ô ${spotId} hiện không còn trống.`;
   }
   return `Trạng thái ô ${spotId} hiện chưa xác định.`;
-}
-
-/**
- * Derive frontend DriverMode from backend SessionState.
- * Review fix #22: Backend session is the authority; frontend mode is derived.
- */
-export function deriveDriverMode(sessionState: SessionState | null): DriverMode {
-  switch (sessionState) {
-    case "WAITING_FOR_SCAN":
-      return "entry";
-    case "SELECTING_SPOT":
-      return "browse";
-    case "NAVIGATING_TO_SPOT":
-      return "navigation";
-    case "PARKED":
-      return "browse"; // show parked UI overlay
-    case "EXIT_NAVIGATION":
-      return "navigation"; // exit navigation
-    default:
-      return "entry";
-  }
 }

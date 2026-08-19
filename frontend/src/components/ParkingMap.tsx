@@ -1,8 +1,10 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
 import {
   DESTINATION_LABELS,
   STATUS_LABELS,
   type BrowseFilter,
+  type CameraId,
+  type CameraState,
   type DestinationNeed,
   type ParkingSpotState,
   type RecommendationResult,
@@ -33,6 +35,7 @@ interface ViewBoxState {
 
 interface ParkingMapProps {
   spots: readonly ParkingSpotState[];
+  cameras: Record<CameraId, CameraState>;
   filter: BrowseFilter;
   recommendation?: RecommendationResult;
   inspectedSpotId?: SpotId;
@@ -120,8 +123,19 @@ function createRouteArrows(points: Point[]): RouteArrowPoint[] {
   return arrows;
 }
 
+interface GateRoiData {
+  entry_gate: { name: string; p1: Point; p2: Point };
+  exit_gate: { name: string; p1: Point; p2: Point };
+}
+
+const DEFAULT_GATE_ROI: GateRoiData = {
+  entry_gate: { name: "Cổng Vào", p1: { x: 880, y: 820 }, p2: { x: 1120, y: 820 } },
+  exit_gate: { name: "Cổng Ra", p1: { x: 880, y: 80 }, p2: { x: 1120, y: 80 } },
+};
+
 export function ParkingMap({
   spots,
+  cameras,
   filter,
   recommendation,
   inspectedSpotId,
@@ -134,10 +148,32 @@ export function ParkingMap({
   onSpotClick,
 }: ParkingMapProps) {
   const [view, setView] = useState(INITIAL_VIEW);
+  const [gateRoi, setGateRoi] = useState<GateRoiData>(DEFAULT_GATE_ROI);
   const pointers = useRef(new Map<number, Point>());
   const svgRef = useRef<SVGSVGElement>(null);
   const spotById = new Map(spots.map((spot) => [spot.id, spot]));
   const recommendedIds = new Set(recommendation ? [recommendation.best.spotId, ...recommendation.alternatives.map((spot) => spot.spotId)] : []);
+
+  // Poll gate_roi.json liên tục để vẽ vạch cổng thời gian thực
+  useEffect(() => {
+    const fetchGateRoi = async () => {
+      try {
+        const res = await fetch("/gate_roi.json");
+        if (res.ok) {
+          const data = (await res.json()) as GateRoiData;
+          if (data.entry_gate && data.exit_gate) {
+            setGateRoi(data);
+          }
+        }
+      } catch {
+        /* fallback */
+      }
+    };
+
+    void fetchGateRoi();
+    const interval = setInterval(() => void fetchGateRoi(), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const zoomAt = (factor: number, ratioX = 0.5, ratioY = 0.5): void => {
     setView((current) => {
@@ -331,7 +367,7 @@ export function ParkingMap({
                   geometry={geometry}
                   spot={spot}
                   highlight={highlight}
-                  staleCamera={false}
+                  staleCamera={cameras[spot.owner].health === "offline"}
                   dimmed={dimmed}
                 />
               );
@@ -371,6 +407,69 @@ export function ParkingMap({
             return geometry ? <MapPinMarker point={{ x: geometry.x + geometry.width / 2, y: geometry.y }} /> : null;
           })()}
 
+          {/* ── TRẠM RÀO CHẮN / TRIPWIRE GATE LINES (Tự động đọc từ gate_roi.json) ── */}
+          {/* Vạch Cổng Vào */}
+          <g key="gate-entry-line">
+            <line
+              x1={gateRoi.entry_gate.p1.x}
+              y1={gateRoi.entry_gate.p1.y}
+              x2={gateRoi.entry_gate.p2.x}
+              y2={gateRoi.entry_gate.p2.y}
+              stroke="#0284c7"
+              strokeWidth={4}
+              strokeDasharray="8 4"
+            />
+            <rect
+              x={(gateRoi.entry_gate.p1.x + gateRoi.entry_gate.p2.x) / 2 - 40}
+              y={(gateRoi.entry_gate.p1.y + gateRoi.entry_gate.p2.y) / 2 - 10}
+              width={80}
+              height={20}
+              rx={6}
+              fill="#0284c7"
+            />
+            <text
+              x={(gateRoi.entry_gate.p1.x + gateRoi.entry_gate.p2.x) / 2}
+              y={(gateRoi.entry_gate.p1.y + gateRoi.entry_gate.p2.y) / 2 + 4}
+              fill="#fff"
+              fontSize={11}
+              fontWeight="bold"
+              textAnchor="middle"
+            >
+              CỔNG VÀO
+            </text>
+          </g>
+
+          {/* Vạch Cổng Ra */}
+          <g key="gate-exit-line">
+            <line
+              x1={gateRoi.exit_gate.p1.x}
+              y1={gateRoi.exit_gate.p1.y}
+              x2={gateRoi.exit_gate.p2.x}
+              y2={gateRoi.exit_gate.p2.y}
+              stroke="#eab308"
+              strokeWidth={4}
+              strokeDasharray="8 4"
+            />
+            <rect
+              x={(gateRoi.exit_gate.p1.x + gateRoi.exit_gate.p2.x) / 2 - 40}
+              y={(gateRoi.exit_gate.p1.y + gateRoi.exit_gate.p2.y) / 2 - 10}
+              width={80}
+              height={20}
+              rx={6}
+              fill="#eab308"
+            />
+            <text
+              x={(gateRoi.exit_gate.p1.x + gateRoi.exit_gate.p2.x) / 2}
+              y={(gateRoi.exit_gate.p1.y + gateRoi.exit_gate.p2.y) / 2 + 4}
+              fill="#000"
+              fontSize={11}
+              fontWeight="bold"
+              textAnchor="middle"
+            >
+              CỔNG RA
+            </text>
+          </g>
+
           {/* ── Icon xe di chuyển thời gian thực (từ tracker của An) ────────── */}
           {activeVehicles.map((vehicle) => {
             const pos = camToMap(vehicle.x, vehicle.y, frameSize);
@@ -398,7 +497,7 @@ export function ParkingMap({
                 <g
                   style={{
                     transform: `translate(${pos.x}px, ${pos.y}px)`,
-                    transition: "transform 0.25s linear",
+                    transition: "transform 0.35s linear",
                     willChange: "transform",
                   }}
                 >

@@ -1,56 +1,43 @@
-/**
- * Parking Store — manages parking spot states.
- *
- * Review fixes:
- *   #14 — Removed hardcoded cam-left/cam-right
- *   #22 — Camera coverage managed by backend/vision, not frontend
- *   #17 — Data comes from backend API, not JSON files
- */
-
 import { create } from "zustand";
-import type {
-  CameraState,
-  ParkingCounts,
-  ParkingSnapshot,
-  ParkingSpotState,
-  SpotId,
+import {
+  CAMERA_IDS,
+  cameraOwnsSpot,
+  type CameraId,
+  type CameraState,
+  type ParkingCounts,
+  type ParkingEvent,
+  type ParkingSnapshot,
+  type ParkingSpotState,
+  type SpotId,
 } from "../domain/parking";
-import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
 
-export type EventApplyResult = "applied" | "stale" | "unknown-spot";
+export type EventApplyResult = "applied" | "stale" | "unauthorized" | "unknown-spot";
 
 export interface ParkingStoreState {
   spots: Partial<Record<SpotId, ParkingSpotState>>;
-  cameras: Record<string, CameraState>;
+  cameras: Record<CameraId, CameraState>;
   lastEventTime?: string;
+  rejectedEvents: number;
   staleEvents: number;
+  trackingSource: "opencv" | "sample";
+  setTrackingSource: (source: "opencv" | "sample") => void;
   applySnapshot: (snapshot: ParkingSnapshot) => void;
-  applySpotUpdate: (spotId: SpotId, status: string, vehicleId?: number | null) => void;
-  applyBulkSpots: (spotsData: Record<string, any>) => void;
+  applyEvent: (event: ParkingEvent) => EventApplyResult;
   reset: () => void;
 }
 
-const initialSpots = Object.fromEntries(
-  PARKING_GEOMETRY.spots.map((geom) => [
-    geom.id,
-    {
-      id: geom.id,
-      zone: geom.zone,
-      number: geom.number,
-      row: geom.row,
-      status: "empty",
-      confidence: 1,
-      revision: 0,
-      updatedAt: new Date().toISOString(),
-    } as ParkingSpotState
-  ])
-) as Record<SpotId, ParkingSpotState>;
+const initialCameras: Record<CameraId, CameraState> = {
+  "cam-left": { cameraId: "cam-left", health: "offline", updatedAt: "" },
+  "cam-right": { cameraId: "cam-right", health: "offline", updatedAt: "" },
+};
 
 const initialState = {
-  spots: initialSpots,
-  cameras: {} as Record<string, CameraState>,
+  spots: {} as Partial<Record<SpotId, ParkingSpotState>>,
+  cameras: initialCameras,
   lastEventTime: undefined,
+  rejectedEvents: 0,
   staleEvents: 0,
+  trackingSource: "sample" as const,
 };
 
 export function deriveParkingCounts(spots: readonly ParkingSpotState[]): ParkingCounts {
@@ -66,79 +53,75 @@ export function deriveParkingCounts(spots: readonly ParkingSpotState[]): Parking
 
 export const useParkingStore = create<ParkingStoreState>((set) => ({
   ...initialState,
-
+  setTrackingSource: (source) => set({ trackingSource: source }),
   applySnapshot: (snapshot) => {
-    const spots = Object.fromEntries(
-      snapshot.spots.map((spot) => [spot.id, spot]),
-    ) as Record<SpotId, ParkingSpotState>;
+    const spots = Object.fromEntries(snapshot.spots.map((spot) => [spot.id, spot])) as Record<SpotId, ParkingSpotState>;
     set({
       spots,
       cameras: snapshot.cameras,
       lastEventTime: snapshot.capturedAt,
+      rejectedEvents: 0,
       staleEvents: 0,
     });
   },
-
-  applySpotUpdate: (spotId, status, vehicleId) => {
+  applyEvent: (event) => {
+    let result: EventApplyResult = "applied";
     set((state) => {
-      const current = state.spots[spotId];
-      const now = new Date().toISOString();
+      if (event.type === "camera.health.changed") {
+        return {
+          cameras: {
+            ...state.cameras,
+            [event.cameraId]: {
+              cameraId: event.cameraId,
+              health: event.health,
+              updatedAt: event.updatedAt,
+            },
+          },
+          lastEventTime: event.updatedAt,
+        };
+      }
+
+      const current = state.spots[event.spotId];
+      if (!current) {
+        result = "unknown-spot";
+        return { rejectedEvents: state.rejectedEvents + 1 };
+      }
+      if (!cameraOwnsSpot(event.cameraId, event.spotId) || current.owner !== event.cameraId) {
+        result = "unauthorized";
+        if (import.meta.env.DEV) {
+          console.warn(`[parkingStore] Từ chối ${event.cameraId} cập nhật ${event.spotId}.`);
+        }
+        return { rejectedEvents: state.rejectedEvents + 1 };
+      }
+      if (event.revision <= current.revision) {
+        result = "stale";
+        return { staleEvents: state.staleEvents + 1 };
+      }
       return {
         spots: {
           ...state.spots,
-          [spotId]: {
-            ...(current ?? {
-              id: spotId,
-              zone: spotId.slice(0, 1),
-              number: Number(spotId.slice(1)),
-              row: "top" as const,
-              confidence: 0.99,
-              revision: 0,
-            }),
-            status: status as any,
-            vehicleId: vehicleId ?? null,
-            updatedAt: now,
-            revision: Date.now(),
+          [event.spotId]: {
+            ...current,
+            status: event.status,
+            confidence: event.confidence,
+            revision: event.revision,
+            updatedAt: event.updatedAt,
           },
         },
-        lastEventTime: now,
+        lastEventTime: event.updatedAt,
       };
     });
+    return result;
   },
-
-  applyBulkSpots: (spotsData) => {
-    set((state) => {
-      const newSpots = { ...state.spots };
-      const now = new Date().toISOString();
-
-      for (const [spotId, spotData] of Object.entries(spotsData)) {
-        const status = spotData.occupied ? "occupied" : "empty";
-        const current = newSpots[spotId as SpotId];
-        newSpots[spotId as SpotId] = {
-          ...(current ?? {
-            id: spotId as SpotId,
-            zone: spotId.slice(0, 1) as any,
-            number: Number(spotId.slice(1)),
-            row: "top" as const,
-            confidence: 0.99,
-            revision: 0,
-          }),
-          status,
-          vehicleId: spotData.vehicleId ?? null,
-          updatedAt: now,
-          revision: Date.now(),
-        } as ParkingSpotState;
-      }
-
-      return { spots: newSpots, lastEventTime: now };
-    });
-  },
-
-  reset: () => set({ ...initialState, cameras: {} }),
+  reset: () => set({ ...initialState, cameras: { ...initialCameras } }),
 }));
 
 export function getParkingSpots(): ParkingSpotState[] {
   return Object.values(useParkingStore.getState().spots).filter(
     (spot): spot is ParkingSpotState => spot !== undefined,
   );
+}
+
+export function areAllCamerasOnline(cameras: Record<CameraId, CameraState>): boolean {
+  return CAMERA_IDS.every((cameraId) => cameras[cameraId].health === "online");
 }

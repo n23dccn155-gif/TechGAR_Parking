@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-08-06 15:57:03",
-  "mode": "yolo",
+  "timestamp": "2026-08-14 22:24:49",
+  "mode": "threshold",
   "total": 283,
-  "free": 283,
-  "occupied": 0,
+  "free": 272,
+  "occupied": 11,
   "slots": {
     "D01": {
       "occupied": false,
@@ -618,48 +618,48 @@
       "status": "empty"
     },
     "C30": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C31": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C32": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C33": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C34": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C35": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C36": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C37": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C38": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C39": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C40": {
-      "occupied": false,
-      "status": "empty"
+      "occupied": true,
+      "status": "occupied"
     },
     "C41": {
       "occupied": false,
