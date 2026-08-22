@@ -1,24 +1,48 @@
 {
-  "timestamp": "2026-08-22T18:15:14+07:00",
+  "timestamp": "2026-08-22T18:21:08.905+07:00",
   "source": "sample_simulator",
   "slots": {
-    "C19": {
-      "status": "occupied",
-      "confidence": 0.99
-    },
-    "C18": {
-      "status": "occupied",
-      "confidence": 0.99
-    },
-    "B12": {
-      "status": "occupied",
-      "confidence": 0.99
-    },
-    "C04": {
+    "A01": {
       "status": "empty",
       "confidence": 0.99
     },
-    "D08": {
+    "A02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A03": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A05": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B01": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B03": {
       "status": "empty",
       "confidence": 0.99
     },
@@ -26,11 +50,147 @@
       "status": "empty",
       "confidence": 0.99
     },
-    "E02": {
+    "B05": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C01": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C03": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C05": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D01": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D03": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D05": {
       "status": "empty",
       "confidence": 0.99
     },
     "D06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E01": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E03": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E05": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F01": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F02": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F03": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F05": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F06": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F07": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F08": {
       "status": "empty",
       "confidence": 0.99
     }

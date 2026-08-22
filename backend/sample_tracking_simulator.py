@@ -22,6 +22,7 @@ except Exception:
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_JSON = BASE_DIR.parent / "frontend" / "public" / "vehicle_positions_sample.json"
+OUTPUT_STATUS_JSON = BASE_DIR.parent / "frontend" / "public" / "parking_status_sample.json"
 
 # ── Cấu hình kịch bản di chuyển thực tế của các xe ──
 SCENARIO = [
@@ -34,8 +35,8 @@ SCENARIO = [
         "exit_time": 25.0,
         "spot_destination": "D06",
         # Đi vào (entrance y=790) → đỗ D06
-        "inbound": [(1100, 790), (870, 790), (870, 440), (550, 440), (550, 220), (457, 220)],
-        "outbound": [(457, 220), (550, 220), (550, 90), (870, 90), (1100, 90)]
+        "inbound": [(1100, 790), (1100, 775), (540, 775), (540, 274), (488, 274)],
+        "outbound": [(488, 274), (540, 274), (540, 75), (1100, 75), (1100, 90)]
     },
     {
         "track_id": 2,
@@ -46,8 +47,8 @@ SCENARIO = [
         "exit_time": 25.0,
         "spot_destination": "B04",
         # Đi vào (entrance y=790) → đỗ B04
-        "inbound": [(1100, 790), (870, 790), (870, 300), (807, 300)],
-        "outbound": [(807, 300), (870, 300), (870, 90), (1100, 90)]
+        "inbound": [(1100, 790), (1100, 775), (840, 775), (840, 438), (788, 438)],
+        "outbound": [(788, 438), (840, 438), (840, 75), (1100, 75), (1100, 90)]
     },
     {
         "track_id": 3,
@@ -58,8 +59,8 @@ SCENARIO = [
         "exit_time": 25.0,
         "spot_destination": "E02",
         # Đi vào (entrance y=790) → đỗ E02
-        "inbound": [(1100, 790), (870, 790), (870, 440), (230, 440), (230, 380), (292, 380)],
-        "outbound": [(292, 380), (230, 380), (230, 90), (870, 90), (1100, 90)]
+        "inbound": [(1100, 790), (1100, 775), (250, 775), (250, 602), (292, 602)],
+        "outbound": [(292, 602), (250, 602), (250, 75), (1100, 75), (1100, 90)]
     }
 ]
 
@@ -196,6 +197,23 @@ def main():
                 "active_vehicles": active_vehicles,
             }
             save_json_atomic(json_data, OUTPUT_JSON)
+            
+            # Ghi đồng bộ trạng thái đỗ xe để đè lên MockParkingDataSource
+            all_spots = {}
+            for zone in ["A", "B", "C", "D", "E", "F"]:
+                for i in range(1, 9):
+                    all_spots[f"{zone}{i:02d}"] = {"status": "empty", "confidence": 0.99}
+            
+            for v in active_vehicles.values():
+                if v.get("status") == "parked" and v.get("parked_spot_id"):
+                    all_spots[v["parked_spot_id"]]["status"] = "occupied"
+                    
+            status_data = {
+                "timestamp": json_data["timestamp"],
+                "source": "sample_simulator",
+                "slots": all_spots
+            }
+            save_json_atomic(status_data, OUTPUT_STATUS_JSON)
             
             if all_done:
                 print("Tat ca xe da roi bai. Lap lai kich ban sau 4 giay...")
