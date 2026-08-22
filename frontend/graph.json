@@ -1,0 +1,1823 @@
+{
+  "nodes": [
+    {
+      "id": "entrance",
+      "kind": "entrance",
+      "x": 1100,
+      "y": 790
+    },
+    {
+      "id": "exit",
+      "kind": "exit",
+      "x": 1100,
+      "y": 90
+    },
+    {
+      "id": "center-90",
+      "kind": "junction",
+      "x": 540,
+      "y": 90
+    },
+    {
+      "id": "center-145",
+      "kind": "junction",
+      "x": 540,
+      "y": 145
+    },
+    {
+      "id": "center-227",
+      "kind": "junction",
+      "x": 540,
+      "y": 227
+    },
+    {
+      "id": "center-309",
+      "kind": "junction",
+      "x": 540,
+      "y": 309
+    },
+    {
+      "id": "center-391",
+      "kind": "junction",
+      "x": 540,
+      "y": 391
+    },
+    {
+      "id": "center-473",
+      "kind": "junction",
+      "x": 540,
+      "y": 473
+    },
+    {
+      "id": "center-555",
+      "kind": "junction",
+      "x": 540,
+      "y": 555
+    },
+    {
+      "id": "center-637",
+      "kind": "junction",
+      "x": 540,
+      "y": 637
+    },
+    {
+      "id": "center-719",
+      "kind": "junction",
+      "x": 540,
+      "y": 719
+    },
+    {
+      "id": "center-790",
+      "kind": "junction",
+      "x": 540,
+      "y": 790
+    },
+    {
+      "id": "left-90",
+      "kind": "junction",
+      "x": 250,
+      "y": 90
+    },
+    {
+      "id": "left-145",
+      "kind": "junction",
+      "x": 250,
+      "y": 145
+    },
+    {
+      "id": "left-227",
+      "kind": "junction",
+      "x": 250,
+      "y": 227
+    },
+    {
+      "id": "left-309",
+      "kind": "junction",
+      "x": 250,
+      "y": 309
+    },
+    {
+      "id": "left-391",
+      "kind": "junction",
+      "x": 250,
+      "y": 391
+    },
+    {
+      "id": "left-473",
+      "kind": "junction",
+      "x": 250,
+      "y": 473
+    },
+    {
+      "id": "left-555",
+      "kind": "junction",
+      "x": 250,
+      "y": 555
+    },
+    {
+      "id": "left-637",
+      "kind": "junction",
+      "x": 250,
+      "y": 637
+    },
+    {
+      "id": "left-719",
+      "kind": "junction",
+      "x": 250,
+      "y": 719
+    },
+    {
+      "id": "left-790",
+      "kind": "junction",
+      "x": 250,
+      "y": 790
+    },
+    {
+      "id": "right-90",
+      "kind": "junction",
+      "x": 840,
+      "y": 90
+    },
+    {
+      "id": "right-145",
+      "kind": "junction",
+      "x": 840,
+      "y": 145
+    },
+    {
+      "id": "right-227",
+      "kind": "junction",
+      "x": 840,
+      "y": 227
+    },
+    {
+      "id": "right-309",
+      "kind": "junction",
+      "x": 840,
+      "y": 309
+    },
+    {
+      "id": "right-391",
+      "kind": "junction",
+      "x": 840,
+      "y": 391
+    },
+    {
+      "id": "right-473",
+      "kind": "junction",
+      "x": 840,
+      "y": 473
+    },
+    {
+      "id": "right-555",
+      "kind": "junction",
+      "x": 840,
+      "y": 555
+    },
+    {
+      "id": "right-637",
+      "kind": "junction",
+      "x": 840,
+      "y": 637
+    },
+    {
+      "id": "right-719",
+      "kind": "junction",
+      "x": 840,
+      "y": 719
+    },
+    {
+      "id": "right-790",
+      "kind": "junction",
+      "x": 840,
+      "y": 790
+    },
+    {
+      "id": "entrance-corner",
+      "kind": "junction",
+      "x": 840,
+      "y": 790
+    },
+    {
+      "id": "exit-corner",
+      "kind": "junction",
+      "x": 840,
+      "y": 90
+    },
+    {
+      "id": "spot-F01",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 719
+    },
+    {
+      "id": "spot-F02",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 637
+    },
+    {
+      "id": "spot-F03",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 555
+    },
+    {
+      "id": "spot-F04",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 473
+    },
+    {
+      "id": "spot-F05",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 391
+    },
+    {
+      "id": "spot-F06",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 309
+    },
+    {
+      "id": "spot-F07",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 227
+    },
+    {
+      "id": "spot-F08",
+      "kind": "spot-entry",
+      "x": 208,
+      "y": 145
+    },
+    {
+      "id": "spot-E01",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 719
+    },
+    {
+      "id": "spot-E02",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 637
+    },
+    {
+      "id": "spot-E03",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 555
+    },
+    {
+      "id": "spot-E04",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 473
+    },
+    {
+      "id": "spot-E05",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 391
+    },
+    {
+      "id": "spot-E06",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 309
+    },
+    {
+      "id": "spot-E07",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 227
+    },
+    {
+      "id": "spot-E08",
+      "kind": "spot-entry",
+      "x": 292,
+      "y": 145
+    },
+    {
+      "id": "spot-D01",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 719
+    },
+    {
+      "id": "spot-D02",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 637
+    },
+    {
+      "id": "spot-D03",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 555
+    },
+    {
+      "id": "spot-D04",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 473
+    },
+    {
+      "id": "spot-D05",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 391
+    },
+    {
+      "id": "spot-D06",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 309
+    },
+    {
+      "id": "spot-D07",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 227
+    },
+    {
+      "id": "spot-D08",
+      "kind": "spot-entry",
+      "x": 488,
+      "y": 145
+    },
+    {
+      "id": "spot-C01",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 719
+    },
+    {
+      "id": "spot-C02",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 637
+    },
+    {
+      "id": "spot-C03",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 555
+    },
+    {
+      "id": "spot-C04",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 473
+    },
+    {
+      "id": "spot-C05",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 391
+    },
+    {
+      "id": "spot-C06",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 309
+    },
+    {
+      "id": "spot-C07",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 227
+    },
+    {
+      "id": "spot-C08",
+      "kind": "spot-entry",
+      "x": 592,
+      "y": 145
+    },
+    {
+      "id": "spot-B01",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 719
+    },
+    {
+      "id": "spot-B02",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 637
+    },
+    {
+      "id": "spot-B03",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 555
+    },
+    {
+      "id": "spot-B04",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 473
+    },
+    {
+      "id": "spot-B05",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 391
+    },
+    {
+      "id": "spot-B06",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 309
+    },
+    {
+      "id": "spot-B07",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 227
+    },
+    {
+      "id": "spot-B08",
+      "kind": "spot-entry",
+      "x": 788,
+      "y": 145
+    },
+    {
+      "id": "spot-A01",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 719
+    },
+    {
+      "id": "spot-A02",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 637
+    },
+    {
+      "id": "spot-A03",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 555
+    },
+    {
+      "id": "spot-A04",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 473
+    },
+    {
+      "id": "spot-A05",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 391
+    },
+    {
+      "id": "spot-A06",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 309
+    },
+    {
+      "id": "spot-A07",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 227
+    },
+    {
+      "id": "spot-A08",
+      "kind": "spot-entry",
+      "x": 882,
+      "y": 145
+    },
+    {
+      "id": "anchor-shopping",
+      "kind": "access-anchor",
+      "x": 1000,
+      "y": 810
+    },
+    {
+      "id": "anchor-services",
+      "kind": "access-anchor",
+      "x": 50,
+      "y": 450
+    },
+    {
+      "id": "anchor-entertainment",
+      "kind": "access-anchor",
+      "x": 1000,
+      "y": 80
+    }
+  ],
+  "edges": [
+    {
+      "id": "entrance=>entrance-corner",
+      "from": "entrance",
+      "to": "entrance-corner",
+      "distance": 260,
+      "direction": "one-way"
+    },
+    {
+      "id": "entrance-corner=>right-790",
+      "from": "entrance-corner",
+      "to": "right-790",
+      "distance": 0,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-790=>right-719",
+      "from": "right-790",
+      "to": "right-719",
+      "distance": 71,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-719=>right-637",
+      "from": "right-719",
+      "to": "right-637",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-637=>right-555",
+      "from": "right-637",
+      "to": "right-555",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-555=>right-473",
+      "from": "right-555",
+      "to": "right-473",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-473=>right-391",
+      "from": "right-473",
+      "to": "right-391",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-391=>right-309",
+      "from": "right-391",
+      "to": "right-309",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-309=>right-227",
+      "from": "right-309",
+      "to": "right-227",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-227=>right-145",
+      "from": "right-227",
+      "to": "right-145",
+      "distance": 82,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-145=>right-90",
+      "from": "right-145",
+      "to": "right-90",
+      "distance": 55,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-90=>exit-corner",
+      "from": "right-90",
+      "to": "exit-corner",
+      "distance": 0,
+      "direction": "one-way"
+    },
+    {
+      "id": "exit-corner=>exit",
+      "from": "exit-corner",
+      "to": "exit",
+      "distance": 260,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-90=>left-145",
+      "from": "left-90",
+      "to": "left-145",
+      "distance": 55,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-90=>center-145",
+      "from": "center-90",
+      "to": "center-145",
+      "distance": 55,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-145=>left-227",
+      "from": "left-145",
+      "to": "left-227",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-145=>center-227",
+      "from": "center-145",
+      "to": "center-227",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-227=>left-309",
+      "from": "left-227",
+      "to": "left-309",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-227=>center-309",
+      "from": "center-227",
+      "to": "center-309",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-309=>left-391",
+      "from": "left-309",
+      "to": "left-391",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-309=>center-391",
+      "from": "center-309",
+      "to": "center-391",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-391=>left-473",
+      "from": "left-391",
+      "to": "left-473",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-391=>center-473",
+      "from": "center-391",
+      "to": "center-473",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-473=>left-555",
+      "from": "left-473",
+      "to": "left-555",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-473=>center-555",
+      "from": "center-473",
+      "to": "center-555",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-555=>left-637",
+      "from": "left-555",
+      "to": "left-637",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-555=>center-637",
+      "from": "center-555",
+      "to": "center-637",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-637=>left-719",
+      "from": "left-637",
+      "to": "left-719",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-637=>center-719",
+      "from": "center-637",
+      "to": "center-719",
+      "distance": 82,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-719=>left-790",
+      "from": "left-719",
+      "to": "left-790",
+      "distance": 71,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-719=>center-790",
+      "from": "center-719",
+      "to": "center-790",
+      "distance": 71,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-90=>left-90",
+      "from": "center-90",
+      "to": "left-90",
+      "distance": 290,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-90=>right-90",
+      "from": "center-90",
+      "to": "right-90",
+      "distance": 300,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-790=>left-790",
+      "from": "center-790",
+      "to": "left-790",
+      "distance": 290,
+      "direction": "two-way"
+    },
+    {
+      "id": "center-790=>right-790",
+      "from": "center-790",
+      "to": "right-790",
+      "distance": 300,
+      "direction": "two-way"
+    },
+    {
+      "id": "left-719=>spot-F01",
+      "from": "left-719",
+      "to": "spot-F01",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-637=>spot-F02",
+      "from": "left-637",
+      "to": "spot-F02",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-555=>spot-F03",
+      "from": "left-555",
+      "to": "spot-F03",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-473=>spot-F04",
+      "from": "left-473",
+      "to": "spot-F04",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-391=>spot-F05",
+      "from": "left-391",
+      "to": "spot-F05",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-309=>spot-F06",
+      "from": "left-309",
+      "to": "spot-F06",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-227=>spot-F07",
+      "from": "left-227",
+      "to": "spot-F07",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-145=>spot-F08",
+      "from": "left-145",
+      "to": "spot-F08",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-719=>spot-E01",
+      "from": "left-719",
+      "to": "spot-E01",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-637=>spot-E02",
+      "from": "left-637",
+      "to": "spot-E02",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-555=>spot-E03",
+      "from": "left-555",
+      "to": "spot-E03",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-473=>spot-E04",
+      "from": "left-473",
+      "to": "spot-E04",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-391=>spot-E05",
+      "from": "left-391",
+      "to": "spot-E05",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-309=>spot-E06",
+      "from": "left-309",
+      "to": "spot-E06",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-227=>spot-E07",
+      "from": "left-227",
+      "to": "spot-E07",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "left-145=>spot-E08",
+      "from": "left-145",
+      "to": "spot-E08",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-719=>spot-D01",
+      "from": "center-719",
+      "to": "spot-D01",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-637=>spot-D02",
+      "from": "center-637",
+      "to": "spot-D02",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-555=>spot-D03",
+      "from": "center-555",
+      "to": "spot-D03",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-473=>spot-D04",
+      "from": "center-473",
+      "to": "spot-D04",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-391=>spot-D05",
+      "from": "center-391",
+      "to": "spot-D05",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-309=>spot-D06",
+      "from": "center-309",
+      "to": "spot-D06",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-227=>spot-D07",
+      "from": "center-227",
+      "to": "spot-D07",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-145=>spot-D08",
+      "from": "center-145",
+      "to": "spot-D08",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-719=>spot-C01",
+      "from": "center-719",
+      "to": "spot-C01",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-637=>spot-C02",
+      "from": "center-637",
+      "to": "spot-C02",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-555=>spot-C03",
+      "from": "center-555",
+      "to": "spot-C03",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-473=>spot-C04",
+      "from": "center-473",
+      "to": "spot-C04",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-391=>spot-C05",
+      "from": "center-391",
+      "to": "spot-C05",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-309=>spot-C06",
+      "from": "center-309",
+      "to": "spot-C06",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-227=>spot-C07",
+      "from": "center-227",
+      "to": "spot-C07",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "center-145=>spot-C08",
+      "from": "center-145",
+      "to": "spot-C08",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-719=>spot-B01",
+      "from": "right-719",
+      "to": "spot-B01",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-637=>spot-B02",
+      "from": "right-637",
+      "to": "spot-B02",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-555=>spot-B03",
+      "from": "right-555",
+      "to": "spot-B03",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-473=>spot-B04",
+      "from": "right-473",
+      "to": "spot-B04",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-391=>spot-B05",
+      "from": "right-391",
+      "to": "spot-B05",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-309=>spot-B06",
+      "from": "right-309",
+      "to": "spot-B06",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-227=>spot-B07",
+      "from": "right-227",
+      "to": "spot-B07",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-145=>spot-B08",
+      "from": "right-145",
+      "to": "spot-B08",
+      "distance": 52,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-719=>spot-A01",
+      "from": "right-719",
+      "to": "spot-A01",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-637=>spot-A02",
+      "from": "right-637",
+      "to": "spot-A02",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-555=>spot-A03",
+      "from": "right-555",
+      "to": "spot-A03",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-473=>spot-A04",
+      "from": "right-473",
+      "to": "spot-A04",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-391=>spot-A05",
+      "from": "right-391",
+      "to": "spot-A05",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-309=>spot-A06",
+      "from": "right-309",
+      "to": "spot-A06",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-227=>spot-A07",
+      "from": "right-227",
+      "to": "spot-A07",
+      "distance": 42,
+      "direction": "one-way"
+    },
+    {
+      "id": "right-145=>spot-A08",
+      "from": "right-145",
+      "to": "spot-A08",
+      "distance": 42,
+      "direction": "one-way"
+    }
+  ],
+  "entranceNodeId": "entrance",
+  "exitNodeId": "exit",
+  "spotEntryNodeIds": {
+    "F01": "spot-F01",
+    "F02": "spot-F02",
+    "F03": "spot-F03",
+    "F04": "spot-F04",
+    "F05": "spot-F05",
+    "F06": "spot-F06",
+    "F07": "spot-F07",
+    "F08": "spot-F08",
+    "E01": "spot-E01",
+    "E02": "spot-E02",
+    "E03": "spot-E03",
+    "E04": "spot-E04",
+    "E05": "spot-E05",
+    "E06": "spot-E06",
+    "E07": "spot-E07",
+    "E08": "spot-E08",
+    "D01": "spot-D01",
+    "D02": "spot-D02",
+    "D03": "spot-D03",
+    "D04": "spot-D04",
+    "D05": "spot-D05",
+    "D06": "spot-D06",
+    "D07": "spot-D07",
+    "D08": "spot-D08",
+    "C01": "spot-C01",
+    "C02": "spot-C02",
+    "C03": "spot-C03",
+    "C04": "spot-C04",
+    "C05": "spot-C05",
+    "C06": "spot-C06",
+    "C07": "spot-C07",
+    "C08": "spot-C08",
+    "B01": "spot-B01",
+    "B02": "spot-B02",
+    "B03": "spot-B03",
+    "B04": "spot-B04",
+    "B05": "spot-B05",
+    "B06": "spot-B06",
+    "B07": "spot-B07",
+    "B08": "spot-B08",
+    "A01": "spot-A01",
+    "A02": "spot-A02",
+    "A03": "spot-A03",
+    "A04": "spot-A04",
+    "A05": "spot-A05",
+    "A06": "spot-A06",
+    "A07": "spot-A07",
+    "A08": "spot-A08"
+  },
+  "spots": [
+    {
+      "id": "F01",
+      "zone": "F",
+      "number": 1,
+      "row": "left",
+      "x": 110,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 719
+      }
+    },
+    {
+      "id": "F02",
+      "zone": "F",
+      "number": 2,
+      "row": "left",
+      "x": 110,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 637
+      }
+    },
+    {
+      "id": "F03",
+      "zone": "F",
+      "number": 3,
+      "row": "left",
+      "x": 110,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 555
+      }
+    },
+    {
+      "id": "F04",
+      "zone": "F",
+      "number": 4,
+      "row": "left",
+      "x": 110,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 473
+      }
+    },
+    {
+      "id": "F05",
+      "zone": "F",
+      "number": 5,
+      "row": "left",
+      "x": 110,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 391
+      }
+    },
+    {
+      "id": "F06",
+      "zone": "F",
+      "number": 6,
+      "row": "left",
+      "x": 110,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 309
+      }
+    },
+    {
+      "id": "F07",
+      "zone": "F",
+      "number": 7,
+      "row": "left",
+      "x": 110,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 227
+      }
+    },
+    {
+      "id": "F08",
+      "zone": "F",
+      "number": 8,
+      "row": "left",
+      "x": 110,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 208,
+        "y": 145
+      }
+    },
+    {
+      "id": "E01",
+      "zone": "E",
+      "number": 1,
+      "row": "left",
+      "x": 300,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 719
+      }
+    },
+    {
+      "id": "E02",
+      "zone": "E",
+      "number": 2,
+      "row": "left",
+      "x": 300,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 637
+      }
+    },
+    {
+      "id": "E03",
+      "zone": "E",
+      "number": 3,
+      "row": "left",
+      "x": 300,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 555
+      }
+    },
+    {
+      "id": "E04",
+      "zone": "E",
+      "number": 4,
+      "row": "left",
+      "x": 300,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 473
+      }
+    },
+    {
+      "id": "E05",
+      "zone": "E",
+      "number": 5,
+      "row": "left",
+      "x": 300,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 391
+      }
+    },
+    {
+      "id": "E06",
+      "zone": "E",
+      "number": 6,
+      "row": "left",
+      "x": 300,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 309
+      }
+    },
+    {
+      "id": "E07",
+      "zone": "E",
+      "number": 7,
+      "row": "left",
+      "x": 300,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 227
+      }
+    },
+    {
+      "id": "E08",
+      "zone": "E",
+      "number": 8,
+      "row": "left",
+      "x": 300,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 292,
+        "y": 145
+      }
+    },
+    {
+      "id": "D01",
+      "zone": "D",
+      "number": 1,
+      "row": "left",
+      "x": 390,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 719
+      }
+    },
+    {
+      "id": "D02",
+      "zone": "D",
+      "number": 2,
+      "row": "left",
+      "x": 390,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 637
+      }
+    },
+    {
+      "id": "D03",
+      "zone": "D",
+      "number": 3,
+      "row": "left",
+      "x": 390,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 555
+      }
+    },
+    {
+      "id": "D04",
+      "zone": "D",
+      "number": 4,
+      "row": "left",
+      "x": 390,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 473
+      }
+    },
+    {
+      "id": "D05",
+      "zone": "D",
+      "number": 5,
+      "row": "left",
+      "x": 390,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 391
+      }
+    },
+    {
+      "id": "D06",
+      "zone": "D",
+      "number": 6,
+      "row": "left",
+      "x": 390,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 309
+      }
+    },
+    {
+      "id": "D07",
+      "zone": "D",
+      "number": 7,
+      "row": "left",
+      "x": 390,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 227
+      }
+    },
+    {
+      "id": "D08",
+      "zone": "D",
+      "number": 8,
+      "row": "left",
+      "x": 390,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 488,
+        "y": 145
+      }
+    },
+    {
+      "id": "C01",
+      "zone": "C",
+      "number": 1,
+      "row": "right",
+      "x": 600,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 719
+      }
+    },
+    {
+      "id": "C02",
+      "zone": "C",
+      "number": 2,
+      "row": "right",
+      "x": 600,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 637
+      }
+    },
+    {
+      "id": "C03",
+      "zone": "C",
+      "number": 3,
+      "row": "right",
+      "x": 600,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 555
+      }
+    },
+    {
+      "id": "C04",
+      "zone": "C",
+      "number": 4,
+      "row": "right",
+      "x": 600,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 473
+      }
+    },
+    {
+      "id": "C05",
+      "zone": "C",
+      "number": 5,
+      "row": "right",
+      "x": 600,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 391
+      }
+    },
+    {
+      "id": "C06",
+      "zone": "C",
+      "number": 6,
+      "row": "right",
+      "x": 600,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 309
+      }
+    },
+    {
+      "id": "C07",
+      "zone": "C",
+      "number": 7,
+      "row": "right",
+      "x": 600,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 227
+      }
+    },
+    {
+      "id": "C08",
+      "zone": "C",
+      "number": 8,
+      "row": "right",
+      "x": 600,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 592,
+        "y": 145
+      }
+    },
+    {
+      "id": "B01",
+      "zone": "B",
+      "number": 1,
+      "row": "right",
+      "x": 690,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 719
+      }
+    },
+    {
+      "id": "B02",
+      "zone": "B",
+      "number": 2,
+      "row": "right",
+      "x": 690,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 637
+      }
+    },
+    {
+      "id": "B03",
+      "zone": "B",
+      "number": 3,
+      "row": "right",
+      "x": 690,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 555
+      }
+    },
+    {
+      "id": "B04",
+      "zone": "B",
+      "number": 4,
+      "row": "right",
+      "x": 690,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 473
+      }
+    },
+    {
+      "id": "B05",
+      "zone": "B",
+      "number": 5,
+      "row": "right",
+      "x": 690,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 391
+      }
+    },
+    {
+      "id": "B06",
+      "zone": "B",
+      "number": 6,
+      "row": "right",
+      "x": 690,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 309
+      }
+    },
+    {
+      "id": "B07",
+      "zone": "B",
+      "number": 7,
+      "row": "right",
+      "x": 690,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 227
+      }
+    },
+    {
+      "id": "B08",
+      "zone": "B",
+      "number": 8,
+      "row": "right",
+      "x": 690,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 788,
+        "y": 145
+      }
+    },
+    {
+      "id": "A01",
+      "zone": "A",
+      "number": 1,
+      "row": "right",
+      "x": 890,
+      "y": 684,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 719
+      }
+    },
+    {
+      "id": "A02",
+      "zone": "A",
+      "number": 2,
+      "row": "right",
+      "x": 890,
+      "y": 602,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 637
+      }
+    },
+    {
+      "id": "A03",
+      "zone": "A",
+      "number": 3,
+      "row": "right",
+      "x": 890,
+      "y": 520,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 555
+      }
+    },
+    {
+      "id": "A04",
+      "zone": "A",
+      "number": 4,
+      "row": "right",
+      "x": 890,
+      "y": 438,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 473
+      }
+    },
+    {
+      "id": "A05",
+      "zone": "A",
+      "number": 5,
+      "row": "right",
+      "x": 890,
+      "y": 356,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 391
+      }
+    },
+    {
+      "id": "A06",
+      "zone": "A",
+      "number": 6,
+      "row": "right",
+      "x": 890,
+      "y": 274,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 309
+      }
+    },
+    {
+      "id": "A07",
+      "zone": "A",
+      "number": 7,
+      "row": "right",
+      "x": 890,
+      "y": 192,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 227
+      }
+    },
+    {
+      "id": "A08",
+      "zone": "A",
+      "number": 8,
+      "row": "right",
+      "x": 890,
+      "y": 110,
+      "width": 90,
+      "height": 70,
+      "entryPoint": {
+        "x": 882,
+        "y": 145
+      }
+    }
+  ]
+}

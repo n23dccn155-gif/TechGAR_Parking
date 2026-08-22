@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ParkingSpotState } from "../domain/parking";
 
 interface KioskSession {
   sessionId: string;
@@ -17,7 +18,11 @@ interface KioskSession {
  * - Tự chuyển sang xe tiếp theo khi có xe mới vào cổng
  * - Chỉ hiển thị trên trang chung (không sessionId)
  */
-export function EntryQRKiosk() {
+interface EntryQRKioskProps {
+  spots: ParkingSpotState[];
+}
+
+export function EntryQRKiosk({ spots }: EntryQRKioskProps) {
   const [activeKiosk, setActiveKiosk] = useState<KioskSession | null>(null);
   const [minimized, setMinimized]     = useState<boolean>(false);
 
@@ -131,6 +136,26 @@ export function EntryQRKiosk() {
         >
           {minimized ? "▲" : "▼"}
         </button>
+      </div>
+
+      {/* ── Thống kê chỗ đỗ ── */}
+      <div style={{
+        display: "flex",
+        background: "#0f172a",
+        borderBottom: "1px solid #1e293b",
+      }}>
+        <div style={{ flex: 1, padding: "8px", textAlign: "center", borderRight: "1px solid #1e293b" }}>
+          <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "2px" }}>TRỐNG</div>
+          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#4ade80" }}>
+            {spots.filter((s) => s.status === "empty").length}
+          </div>
+        </div>
+        <div style={{ flex: 1, padding: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "2px" }}>ĐANG ĐỖ</div>
+          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#f87171" }}>
+            {spots.filter((s) => s.status === "occupied").length}
+          </div>
+        </div>
       </div>
 
       {!minimized && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EntryQRKiosk } from "../components/EntryQRKiosk";
 import { BrowseToolbar } from "../components/BrowseToolbar";
 import { EntryChoiceSheet } from "../components/EntryChoiceSheet";
@@ -15,7 +15,7 @@ import { getSpotOwner, type DestinationNeed, type ParkingSpotState, type Parking
 import { mockParkingDataSource } from "../mocks/MockParkingDataSource";
 import { recommendParkingSpots } from "../recommendation/recommendationEngine";
 import { LANE_GRAPH, updateGateNodesInGraph } from "../routing/laneGraph";
-import { type RouteResult, findVehicleRoute, findExitRoute, findExitRouteFromPos, findInboundRouteFromPos } from "../routing/routeEngine";
+import { findVehicleRoute, findExitRoute, findExitRouteFromPos, findInboundRouteFromPos } from "../routing/routeEngine";
 import { voiceManager, checkIsOffRoute, getNavigationInstruction } from "../routing/voiceGuidance";
 import { SPOT_GEOMETRY_BY_ID } from "../geometry/parkingGeometry";
 import { useDriverFlowStore } from "../stores/driverFlowStore";
@@ -23,7 +23,7 @@ import { deriveParkingCounts, useParkingStore } from "../stores/parkingStore";
 
 const NON_EMPTY_STATUSES: ReadonlySet<ParkingStatus> = new Set(["transitioning", "occupied", "unknown"]);
 
-// ── Kiểu dữ liệu vị trí xe từ tracker ─────────────────────────────────────
+// 鈹€鈹€ Ki峄僽 d峄?li峄噓 v峄?tr铆 xe t峄?tracker 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 export interface ActiveVehicle {
   trackId: number;
   x: number;
@@ -90,13 +90,13 @@ export function App({ sessionId }: AppProps = {}) {
   const inspectedSpot = inspectedSpotId ? spotsById[inspectedSpotId] : undefined;
   const confirmedSpot = confirmedSpotId ? spotsById[confirmedSpotId] : undefined;
 
-  // ── Session values ──
+  // 鈹€鈹€ Session values 鈹€鈹€
   const sessionState = sessionInfo?.state ?? null;
   const sessionTargetSpot = sessionInfo?.targetSpotId ?? null;
   const sessionParkedSpot = sessionInfo?.parkedSpotId ?? null;
   const targetVehicleId = sessionInfo?.activeTrackId ?? sessionInfo?.vehicleTrackId ?? (sessionId ? Number(sessionId) : null);
 
-  // ── Helper API call ──
+  // 鈹€鈹€ Helper API call 鈹€鈹€
   const callSessionApi = useCallback(async (endpoint: string, payload: object) => {
     try {
       const res = await fetch(`/api/session/${endpoint}`, {
@@ -120,7 +120,7 @@ export function App({ sessionId }: AppProps = {}) {
     return false;
   }, []);
 
-  // ── Auto-claim session khi mở trang cá nhân lần đầu ──
+  // 鈹€鈹€ Auto-claim session khi m峄?trang c谩 nh芒n l岷 膽岷 鈹€鈹€
   const claimedRef = useRef(false);
   useEffect(() => {
     if (!sessionId || claimedRef.current) return;
@@ -131,13 +131,13 @@ export function App({ sessionId }: AppProps = {}) {
     void doClaim();
   }, [sessionId, callSessionApi]);
 
-  // ── Cập nhật target spot khi user confirm ──
+  // 鈹€鈹€ C岷璸 nh岷璽 target spot khi user confirm 鈹€鈹€
   const updateSessionTarget = useCallback(async (spotId: SpotId) => {
     if (!sessionId) return;
     await callSessionApi("select", { sessionId, spotId });
   }, [sessionId, callSessionApi]);
 
-  // ── Fetch dữ liệu ô đỗ & tracking feed ──
+  // 鈹€鈹€ Fetch d峄?li峄噓 么 膽峄?& tracking feed 鈹€鈹€
   useEffect(() => {
     let active = true;
 
@@ -204,7 +204,7 @@ export function App({ sessionId }: AppProps = {}) {
     void fetchRealtimeStatus();
     const interval = setInterval(fetchRealtimeStatus, 1000);
 
-    // ── Cập nhật tọa độ CỔNG VÀO / CỔNG RA cho Đồ thị Dẫn đường từ gate_roi.json ──
+    // 鈹€鈹€ C岷璸 nh岷璽 t峄峚 膽峄?C峄擭G V脌O / C峄擭G RA cho 膼峄?th峄?D岷玭 膽瓢峄漬g t峄?gate_roi.json 鈹€鈹€
     const fetchGateRoi = async () => {
       try {
         const res = await fetch(`/gate_roi.json?t=${Date.now()}`);
@@ -220,7 +220,7 @@ export function App({ sessionId }: AppProps = {}) {
     void fetchGateRoi();
     const gateRoiInterval = setInterval(fetchGateRoi, 1000);
 
-    // ── Polling session info (500ms) ──
+    // 鈹€鈹€ Polling session info (500ms) 鈹€鈹€
     const fetchSessionInfo = async () => {
       if (!sessionId || !active) return;
       try {
@@ -250,7 +250,7 @@ export function App({ sessionId }: AppProps = {}) {
     }
     const sessionInterval = sessionId ? setInterval(fetchSessionInfo, 500) : null;
 
-    // ── Polling vehicle positions ──
+    // 鈹€鈹€ Polling vehicle positions 鈹€鈹€
     const STALE_THRESHOLD_MS = 5000;
 
     const fetchVehiclePositions = async () => {
@@ -277,13 +277,12 @@ export function App({ sessionId }: AppProps = {}) {
           trail: v.trail ?? [],
         }));
 
-        // 🎯 NẾU TRANG CÁ NHÂN (có sessionId) → CHỈ GIỮ LẠI DUY NHẤT XE CỦA SESSION ĐÓ
+        // 馃幆 N岷綰 TRANG C脕 NH脗N (c贸 sessionId) 鈫?CH峄?GI峄?L岷營 DUY NH岷 XE C峄 SESSION 膼脫
         if (sessionId) {
           const targetId = sessionTrackIdRef.current ?? Number(sessionId);
           vehicles = vehicles.filter((v) => v.trackId === targetId);
 
-          // 💡 Nếu xe đang đỗ/lái ra mà tắt máy (không có trong active_vehicles), lấy tọa độ tâm ô đỗ thực tế
-          if (vehicles.length === 0) {
+          // 馃挕 N岷縰 xe 膽ang 膽峄?l谩i ra m脿 t岷痶 m谩y (kh么ng c贸 trong active_vehicles), l岷 t峄峚 膽峄?t芒m 么 膽峄?th峄眂 t岷?          if (vehicles.length === 0) {
             const currentSpotId = (sessionInfo?.parkedSpotId || sessionInfo?.targetSpotId) as SpotId | null;
             if (currentSpotId) {
               const spotGeo = SPOT_GEOMETRY_BY_ID.get(currentSpotId);
@@ -332,11 +331,11 @@ export function App({ sessionId }: AppProps = {}) {
     if (mode !== "navigation" || !confirmedSpot || warning) return;
     if (!NON_EMPTY_STATUSES.has(confirmedSpot.status)) return;
 
-    // ── Bỏ qua cảnh báo nếu chính xe của người dùng đang đỗ ở ô đó ──
-    // Trường hợp 1: Session đã ghi nhận parkedSpotId = ô này
+    // 鈹€鈹€ B峄?qua c岷h b谩o n岷縰 ch铆nh xe c峄 ng瓢峄漣 d霉ng 膽ang 膽峄?峄?么 膽贸 鈹€鈹€
+    // Tr瓢峄漬g h峄 1: Session 膽茫 ghi nh岷璶 parkedSpotId = 么 n脿y
     if (sessionParkedSpot && sessionParkedSpot === confirmedSpot.id) return;
-    // Trường hợp 2: Session đang ở trạng thái PARKED hoặc EXIT_NAVIGATION
-    //   và targetSpot/confirmedSpot khớp → xe mình vừa đỗ xong
+    // Tr瓢峄漬g h峄 2: Session 膽ang 峄?tr岷g th谩i PARKED ho岷穋 EXIT_NAVIGATION
+    //   v脿 targetSpot/confirmedSpot kh峄沺 鈫?xe m矛nh v峄玜 膽峄?xong
     if ((sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") &&
         sessionTargetSpot === confirmedSpot.id) return;
 
@@ -354,140 +353,116 @@ export function App({ sessionId }: AppProps = {}) {
   }, [activeNeed, confirmedSpot, lastEventTime, mode, sessionParkedSpot, sessionState, sessionTargetSpot, showInvalidSpotWarning, spots, warning]);
 
   const [isRouteDismissed, setIsRouteDismissed] = useState<boolean>(false);
-  // isExitGuideActive: true = đang bật "Chỉ lối ra", false = ẩn đường lối ra khi PARKED
+  // isExitGuideActive: true = 膽ang b岷璽 "Ch峄?l峄慽 ra", false = 岷﹏ 膽瓢峄漬g l峄慽 ra khi PARKED
   const [isExitGuideActive, setIsExitGuideActive] = useState<boolean>(false);
-  // Hiển thị thông báo "Đỗ xe thành công" trong 5s
+  // Hi峄僴 th峄?th么ng b谩o "膼峄?xe th脿nh c么ng" trong 5s
   const [showParkedSuccess, setShowParkedSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     if (sessionState === "PARKED") {
       setShowParkedSuccess(true);
-      if (sessionParkedSpot) {
-        voiceManager.speak(`Đã đỗ xe thành công tại ô ${sessionParkedSpot}`, 6000, true);
-      }
       const timer = setTimeout(() => setShowParkedSuccess(false), 5000);
       return () => clearTimeout(timer);
     } else {
       setShowParkedSuccess(false);
     }
-  }, [sessionState, sessionParkedSpot]);
+  }, [sessionState]);
 
-  // Xác định mục tiêu và chế độ dẫn đường
-  const { goalSpot, isExitMode } = useMemo(() => {
-    let isExit = false;
-    let goal: SpotId | null = null;
-    if (sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") {
-      if (isExitGuideActive) {
-        isExit = true;
-        goal = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
+  // 鈹€鈹€ T铆nh 膽瓢峄漬g 膽i 膽峄檔g (Dynamic Route - Google Maps style) 鈹€鈹€
+  const route = useMemo(() => {
+    if (isRouteDismissed || sessionState === "CLOSED" || sessionState === "WAITING_FOR_SCAN") return null;
+
+    // A. Ch岷?膽峄?PARKED: Ch峄?v岷?膽瓢峄漬g l峄慽 ra khi ng瓢峄漣 d霉ng ch峄?膽峄檔g b岷 "Ch峄?l峄慽 ra"
+    if (sessionState === "PARKED") {
+      if (!isExitGuideActive) return null; // 岷╪ m岷穋 膽峄媙h khi 膽峄?      const exitSpot = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
+      if (!exitSpot) return null;
+      // N岷縰 xe 膽ang di chuy峄僴 -> T铆nh t峄?v峄?tr铆 th峄眂 t岷?c峄 xe (Re-routing)
+      const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+      if (targetVehicle) {
+        return findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, exitSpot);
       }
-    } else {
-      goal = (sessionId && sessionTargetSpot) ? (sessionTargetSpot as SpotId) : (confirmedSpotId || inspectedSpotId) as SpotId | null;
-      if (goal && spotsById[goal]?.status === "occupied") {
-        isExit = true;
+      return findExitRoute(LANE_GRAPH, exitSpot);
+    }
+
+    // B. Ch岷?膽峄?EXIT_NAVIGATION: Lu么n v岷?膽瓢峄漬g l峄慽 ra, t峄?膽峄檔g c岷璸 nh岷璽 theo xe
+    if (sessionState === "EXIT_NAVIGATION") {
+      if (!isExitGuideActive) return null;
+      const exitSpot = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
+      const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+      if (targetVehicle) {
+        return findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, exitSpot ?? undefined);
       }
+      if (exitSpot) return findExitRoute(LANE_GRAPH, exitSpot);
+      return null;
     }
-    if (isRouteDismissed || sessionState === "CLOSED" || sessionState === "WAITING_FOR_SCAN") {
-      goal = null;
+
+    // C. D岷玭 膽瓢峄漬g v脿o 么 膽峄?(Inbound) - T峄?膽峄檔g c岷璸 nh岷璽 theo xe (Re-routing)
+    const targetForRoute = (sessionId && sessionTargetSpot) ? sessionTargetSpot : (confirmedSpotId || inspectedSpotId);
+    if (targetForRoute) {
+      const spotState = spotsById[targetForRoute as SpotId];
+      if (spotState && spotState.status === "occupied") {
+        return findExitRoute(LANE_GRAPH, targetForRoute as SpotId);
+      }
+      // N岷縰 xe 膽ang di chuy峄僴 -> T铆nh t峄?v峄?tr铆 th峄眂 t岷?(Re-routing gi峄憂g Google Maps)
+      const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+      if (targetVehicle) {
+        return findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, targetForRoute as SpotId);
+      }
+      return findVehicleRoute(LANE_GRAPH, targetForRoute as SpotId);
     }
-    return { goalSpot: goal, isExitMode: isExit };
-  }, [sessionState, isExitGuideActive, sessionParkedSpot, confirmedSpotId, sessionId, sessionTargetSpot, inspectedSpotId, spotsById, isRouteDismissed]);
+
+    return null;
+  }, [isRouteDismissed, isExitGuideActive, sessionId, sessionState, sessionParkedSpot, sessionTargetSpot, confirmedSpotId, inspectedSpotId, spotsById, activeVehicles, targetVehicleId]);
 
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [route, setRoute] = useState<RouteResult | null>(null);
   const [isOffRoute, setIsOffRoute] = useState<boolean>(false);
   const [navInstruction, setNavInstruction] = useState<string | null>(null);
 
-  const currentGoalRef = useRef<{ spot: SpotId | null, exitMode: boolean }>({ spot: null, exitMode: false });
-  const routeRef = useRef<RouteResult | null>(null);
-
-  // ── Effect 1: Tính đường đi — CHỈ khi đích/mode thay đổi ──
+  // 鈹€鈹€ Theo d玫i Gi峄峮g n贸i D岷玭 膽瓢峄漬g & C岷h b谩o 膼i sai 膽瓢峄漬g 鈹€鈹€
   useEffect(() => {
-    if (!goalSpot) {
-      setRoute(null);
+    if (!route || route.points.length < 2 || isRouteDismissed) {
       setIsOffRoute(false);
       setNavInstruction(null);
       voiceManager.stop();
-      currentGoalRef.current = { spot: null, exitMode: false };
-      routeRef.current = null;
       return;
     }
 
     const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
     const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+    const isExit = sessionState === "EXIT_NAVIGATION";
 
-    let newRoute: RouteResult | null;
-    if (isExitMode) {
-      newRoute = targetVehicle
-        ? findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
-        : findExitRoute(LANE_GRAPH, goalSpot);
-    } else {
-      newRoute = targetVehicle
-        ? findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
-        : findVehicleRoute(LANE_GRAPH, goalSpot);
-    }
+    if (targetVehicle) {
+      // 1. Ki峄僲 tra xe 膽i sai 膽瓢峄漬g (ng瓢峄g 80px)
+      const offRoute = checkIsOffRoute({ x: targetVehicle.x, y: targetVehicle.y }, route.points, 80);
+      setIsOffRoute(offRoute);
 
-    routeRef.current = newRoute;
-    setRoute(newRoute);
-    currentGoalRef.current = { spot: goalSpot, exitMode: isExitMode };
-
-  }, [goalSpot, isExitMode, sessionId]); // Chỉ phụ thuộc đích — KHÔNG phụ thuộc activeVehicles
-
-  // ── Effect 2: Cập nhật hướng dẫn & giọng nói — theo vị trí xe (300ms) ──
-  useEffect(() => {
-    const activeRoute = routeRef.current;
-    if (!goalSpot || !activeRoute || activeRoute.points.length < 2) {
-      return;
-    }
-
-    const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
-    const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
-
-    if (!targetVehicle) return;
-
-    const currentOffRoute = checkIsOffRoute(
-      { x: targetVehicle.x, y: targetVehicle.y },
-      activeRoute.points,
-      80
-    );
-    setIsOffRoute(currentOffRoute);
-
-    // Tính toán route mới nhất từ toạ độ hiện tại của xe
-    let freshRoute: RouteResult | null = null;
-    if (isExitMode) {
-      freshRoute = findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
-    } else {
-      freshRoute = findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
-    }
-
-    if (currentOffRoute) {
-      voiceManager.speak("Cảnh báo: Bạn đang đi sai tuyến đường chỉ dẫn!", 7000, true);
-      setNavInstruction("⚠️ BẠN ĐANG ĐI SAI TUYẾN ĐƯỜNG CHỈ DẪN!");
-      // Tự động re-route đường mới nếu xe đi sai
-      if (freshRoute) {
-        setRoute(freshRoute);
-        routeRef.current = freshRoute;
+      if (offRoute) {
+        voiceManager.speak("C岷h b谩o: B岷 膽ang 膽i sai tuy岷縩 膽瓢峄漬g ch峄?d岷玭!", 7000);
+        setNavInstruction("鈿狅笍 B岷燦 膼ANG 膼I SAI TUY岷綨 膼漂峄淣G CH峄?D岷狽!");
+      } else {
+        const instruction = getNavigationInstruction(
+          { x: targetVehicle.x, y: targetVehicle.y },
+          route.points,
+          isExit,
+          sessionTargetSpot
+        );
+        setNavInstruction(instruction);
+        if (instruction) {
+          voiceManager.speak(instruction, 6000);
+        }
       }
     } else {
-      // Xe đi đúng đường: Cập nhật đường vẽ co ngắn dần theo xe
-      if (freshRoute) {
-        setRoute(freshRoute);
-        routeRef.current = freshRoute;
-      }
-      const instruction = getNavigationInstruction(
-        { x: targetVehicle.x, y: targetVehicle.y },
-        freshRoute ? freshRoute.points : activeRoute.points,
-        isExitMode,
-        goalSpot
-      );
+      // 2. Khi xe ch瓢a di chuy峄僴 / ng瓢峄漣 d霉ng xem tr瓢峄沜 tuy岷縩 膽瓢峄漬g
+      setIsOffRoute(false);
+      const destName = (sessionTargetSpot || sessionParkedSpot || confirmedSpotId || "么 膽峄?);
+      const instruction = isExit
+        ? `Tuy岷縩 膽瓢峄漬g xu岷 b茫i t峄?么 ${destName} ra C峄擭G RA`
+        : `Tuy岷縩 膽瓢峄漬g ch峄?d岷玭 t峄?C峄昻g V脿o 膽岷縩 么 ${destName}`;
       setNavInstruction(instruction);
-      if (instruction) {
-        voiceManager.speak(instruction, 6000, false);
-      }
     }
-  }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted]); // Theo vị trí xe
+  }, [route, activeVehicles, sessionId, isRouteDismissed, sessionState, sessionTargetSpot, sessionParkedSpot, confirmedSpotId, isMuted]);
 
-  // ── Xử lý khi bấm vào ô đỗ ──
+  // 鈹€鈹€ X峄?l媒 khi b岷 v脿o 么 膽峄?鈹€鈹€
   const handleConfirmSpot = useCallback((spotId: SpotId): void => {
     setIsRouteDismissed(false);
     confirmSpot(spotId);
@@ -540,13 +515,13 @@ export function App({ sessionId }: AppProps = {}) {
 
   const getSessionStatusLabel = () => {
     switch (sessionState) {
-      case "WAITING_FOR_SCAN": return "ĐANG KẾT NỐI";
-      case "SELECTING_SPOT":   return "ĐANG CHỌN Ô ĐỖ";
-      case "NAVIGATING_TO_SPOT": return "ĐANG DẪN ĐƯỜNG";
-      case "PARKED":           return "ĐÃ ĐỖ";
-      case "EXIT_NAVIGATION":  return "ĐANG RA CỔNG";
-      case "CLOSED":           return "ĐÃ HOÀN THÀNH";
-      default:                 return "ĐANG TẢI...";
+      case "WAITING_FOR_SCAN": return "膼ANG K岷綯 N峄怚";
+      case "SELECTING_SPOT":   return "膼ANG CH峄孨 脭 膼峄?;
+      case "NAVIGATING_TO_SPOT": return "膼ANG D岷狽 膼漂峄淣G";
+      case "PARKED":           return "膼脙 膼峄?;
+      case "EXIT_NAVIGATION":  return "膼ANG RA C峄擭G";
+      case "CLOSED":           return "膼脙 HO脌N TH脌NH";
+      default:                 return "膼ANG T岷...";
     }
   };
 
@@ -574,7 +549,7 @@ export function App({ sessionId }: AppProps = {}) {
           <NavigationStatusBar spotId={confirmedSpot.id} zone={confirmedSpot.zone} paused={Boolean(warning)} onCancel={cancelNavigation} />
         )}
 
-        {/* ── Bảng trạng thái phiên làm việc (Session Status Banner) ── */}
+        {/* 鈹€鈹€ B岷g tr岷g th谩i phi锚n l脿m vi峄嘽 (Session Status Banner) 鈹€鈹€ */}
         {sessionId && (
           <div style={{
             background: "rgba(15, 23, 42, 0.95)",
@@ -603,39 +578,39 @@ export function App({ sessionId }: AppProps = {}) {
                 color: "#fff",
                 flexShrink: 0,
               }}>
-                {sessionState === "PARKED" ? "✓" : "🚗"}
+                {sessionState === "PARKED" ? "鉁? : "馃殫"}
               </div>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <h3 style={{ margin: 0, fontSize: "16px", color: "#f8fafc" }}>
-                    Phiên xe #{targetVehicleId}
+                    Phi锚n xe #{targetVehicleId}
                   </h3>
                   <span style={{ fontSize: "12px", color: "#94a3b8", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "4px" }}>
-                    Mã session: {sessionId}
+                    M茫 session: {sessionId}
                   </span>
                 </div>
                 
                 {sessionState === "EXIT_NAVIGATION" && (
                   <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#fbbf24" }}>
-                    Đang hướng dẫn Xe #{targetVehicleId} rời bãi từ ô <strong>{sessionParkedSpot}</strong> ra CỔNG EXIT.
+                    膼ang h瓢峄沶g d岷玭 Xe #{targetVehicleId} r峄漣 b茫i t峄?么 <strong>{sessionParkedSpot}</strong> ra C峄擭G EXIT.
                   </p>
                 )}
 
                 {sessionState === "NAVIGATING_TO_SPOT" && sessionTargetSpot && (
                   <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#38bdf8" }}>
-                    Tuyến đường chỉ dẫn đang hướng Xe #{targetVehicleId} tới ô <strong>{sessionTargetSpot}</strong>.
+                    Tuy岷縩 膽瓢峄漬g ch峄?d岷玭 膽ang h瓢峄沶g Xe #{targetVehicleId} t峄沬 么 <strong>{sessionTargetSpot}</strong>.
                   </p>
                 )}
 
                 {sessionState === "SELECTING_SPOT" && (
                   <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#f59e0b" }}>
-                    Bản đồ đang định vị Xe #{targetVehicleId}. Bạn có thể chọn ô đỗ mong muốn trên bản đồ.
+                    B岷 膽峄?膽ang 膽峄媙h v峄?Xe #{targetVehicleId}. B岷 c贸 th峄?ch峄峮 么 膽峄?mong mu峄憂 tr锚n b岷 膽峄?
                   </p>
                 )}
 
                 {sessionState === "PARKED" && (
                   <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#4ade80" }}>
-                    Xe #{targetVehicleId} đang được đỗ an toàn tại ô <strong>{sessionParkedSpot}</strong>.
+                    Xe #{targetVehicleId} 膽ang 膽瓢峄 膽峄?an to脿n t岷 么 <strong>{sessionParkedSpot}</strong>.
                   </p>
                 )}
               </div>
@@ -662,10 +637,10 @@ export function App({ sessionId }: AppProps = {}) {
                   gap: "6px"
                 }}
               >
-                {isMuted ? "🔇 Tắt giọng nói" : "🔊 Giọng nói Bật"}
+                {isMuted ? "馃攪 T岷痶 gi峄峮g n贸i" : "馃攰 Gi峄峮g n贸i B岷璽"}
               </button>
 
-              {/* Nút Hủy chọn ô đỗ khi đang dẫn đường vào */}
+              {/* N煤t H峄 ch峄峮 么 膽峄?khi 膽ang d岷玭 膽瓢峄漬g v脿o */}
               {(sessionState === "NAVIGATING_TO_SPOT" || (sessionTargetSpot && sessionState !== "EXIT_NAVIGATION" && sessionState !== "PARKED")) && (
                 <button
                   onClick={handleDismissRoute}
@@ -680,11 +655,10 @@ export function App({ sessionId }: AppProps = {}) {
                     fontSize: "13px"
                   }}
                 >
-                  ❌ Hủy chọn ô đỗ
-                </button>
+                  鉂?H峄 ch峄峮 么 膽峄?                </button>
               )}
 
-              {/* Nút "Chỉ lối ra" / "Thoát chỉ dẫn" — hiện khi PARKED hoặc EXIT_NAVIGATION */}
+              {/* N煤t "Ch峄?l峄慽 ra" / "Tho谩t ch峄?d岷玭" 鈥?hi峄噉 khi PARKED ho岷穋 EXIT_NAVIGATION */}
               {(sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") && (
                 isExitGuideActive ? (
                   <button
@@ -706,7 +680,7 @@ export function App({ sessionId }: AppProps = {}) {
                       gap: "6px",
                     }}
                   >
-                    ❌ Thoát chỉ dẫn
+                    鉂?Tho谩t ch峄?d岷玭
                   </button>
                 ) : (
                   <button
@@ -732,7 +706,7 @@ export function App({ sessionId }: AppProps = {}) {
                       gap: "6px",
                     }}
                   >
-                    🧭 Chỉ lối ra
+                    馃Л Ch峄?l峄慽 ra
                   </button>
                 )
               )}
@@ -754,7 +728,7 @@ export function App({ sessionId }: AppProps = {}) {
           </div>
         )}
 
-        {/* ── Bảng Cảnh báo đi sai đường (Off-Route Warning) ── */}
+        {/* 鈹€鈹€ B岷g C岷h b谩o 膽i sai 膽瓢峄漬g (Off-Route Warning) 鈹€鈹€ */}
         {sessionId && isOffRoute && (
           <div style={{
             background: "rgba(220, 38, 38, 0.95)",
@@ -770,12 +744,12 @@ export function App({ sessionId }: AppProps = {}) {
             boxShadow: "0 0 20px rgba(220, 38, 38, 0.5)",
             border: "1px solid #ef4444"
           }}>
-            <span style={{ fontSize: "24px" }}>⚠️</span>
-            <span>CẢNH BÁO: BẠN ĐANG ĐI SAI TUYẾN ĐƯỜNG CHỈ DẪN! VUI LÒNG QUAN SÁT SƠ ĐỒ BÃI ĐỖ.</span>
+            <span style={{ fontSize: "24px" }}>鈿狅笍</span>
+            <span>C岷H B脕O: B岷燦 膼ANG 膼I SAI TUY岷綨 膼漂峄淣G CH峄?D岷狽! VUI L脪NG QUAN S脕T S茽 膼峄?B脙I 膼峄?</span>
           </div>
         )}
 
-        {/* ── Bảng Chỉ dẫn giọng nói realtime (Voice Instruction Status) ── */}
+        {/* 鈹€鈹€ B岷g Ch峄?d岷玭 gi峄峮g n贸i realtime (Voice Instruction Status) 鈹€鈹€ */}
         {sessionId && !isOffRoute && navInstruction && !isRouteDismissed && (
           <div style={{
             background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
@@ -790,7 +764,7 @@ export function App({ sessionId }: AppProps = {}) {
             fontSize: "14px",
             boxShadow: "0 4px 12px rgba(2, 132, 199, 0.3)"
           }}>
-            <span style={{ fontSize: "20px" }}>🗣</span>
+            <span style={{ fontSize: "20px" }}>馃棧</span>
             <span>{navInstruction}</span>
           </div>
         )}
@@ -834,7 +808,7 @@ export function App({ sessionId }: AppProps = {}) {
         </div>
       </main>
 
-      {/* ── Sheet lựa chọn nhu cầu "Bạn muốn tìm chỗ đỗ theo cách nào?" ── */}
+      {/* 鈹€鈹€ Sheet l峄盿 ch峄峮 nhu c岷 "B岷 mu峄憂 t矛m ch峄?膽峄?theo c谩ch n脿o?" 鈹€鈹€ */}
       {mode === "entry" && (
         <EntryChoiceSheet
           onRecommend={startRecommendation}
@@ -853,7 +827,7 @@ export function App({ sessionId }: AppProps = {}) {
         />
       )}
 
-      {/* ── Thông báo đỗ xe thành công (5s) ── */}
+      {/* 鈹€鈹€ Th么ng b谩o 膽峄?xe th脿nh c么ng (5s) 鈹€鈹€ */}
       {showParkedSuccess && (
         <div style={{
           position: "fixed",
@@ -885,8 +859,8 @@ export function App({ sessionId }: AppProps = {}) {
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <h2 style={{ margin: "0 0 8px 0", color: "#0f172a", fontSize: "28px" }}>Hoàn tất!</h2>
-          <p style={{ margin: 0, color: "#64748b", fontSize: "16px" }}>Xe đã được đỗ an toàn tại ô {sessionParkedSpot}</p>
+          <h2 style={{ margin: "0 0 8px 0", color: "#0f172a", fontSize: "28px" }}>Ho脿n t岷!</h2>
+          <p style={{ margin: 0, color: "#64748b", fontSize: "16px" }}>Xe 膽茫 膽瓢峄 膽峄?an to脿n t岷 么 {sessionParkedSpot}</p>
         </div>
       )}
       <style>{`
@@ -896,8 +870,8 @@ export function App({ sessionId }: AppProps = {}) {
         }
       `}</style>
 
-      {/* ── QR Kiosk chỉ hiển thị trên Trang Chung (không có sessionId) ── */}
-      {!sessionId && <EntryQRKiosk spots={spots} />}
+      {/* 鈹€鈹€ QR Kiosk ch峄?hi峄僴 th峄?tr锚n Trang Chung (kh么ng c贸 sessionId) 鈹€鈹€ */}
+      {!sessionId && <EntryQRKiosk />}
     </div>
   );
 }
