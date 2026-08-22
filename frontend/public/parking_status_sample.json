@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-22T16:58:06+07:00",
+  "timestamp": "2026-08-22T17:13:32+07:00",
   "source": "sample_simulator",
   "slots": {
     "C19": {
@@ -23,11 +23,11 @@
       "confidence": 0.99
     },
     "B04": {
-      "status": "occupied",
+      "status": "empty",
       "confidence": 0.99
     },
     "E02": {
-      "status": "occupied",
+      "status": "empty",
       "confidence": 0.99
     },
     "D06": {

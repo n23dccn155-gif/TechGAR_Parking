@@ -362,12 +362,15 @@ export function App({ sessionId }: AppProps = {}) {
   useEffect(() => {
     if (sessionState === "PARKED") {
       setShowParkedSuccess(true);
+      if (sessionParkedSpot) {
+        voiceManager.speak(`Đã đỗ xe thành công tại ô ${sessionParkedSpot}`, 6000, true);
+      }
       const timer = setTimeout(() => setShowParkedSuccess(false), 5000);
       return () => clearTimeout(timer);
     } else {
       setShowParkedSuccess(false);
     }
-  }, [sessionState]);
+  }, [sessionState, sessionParkedSpot]);
 
   // Xác định mục tiêu và chế độ dẫn đường
   const { goalSpot, isExitMode } = useMemo(() => {
