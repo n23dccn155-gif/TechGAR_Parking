@@ -416,19 +416,19 @@ export function ParkingMap({
                   }}
                 >
                   {/* Halo phát sáng */}
-                  <circle cx={0} cy={0} r={18} fill="#ef4444" opacity={0.18}>
-                    <animate attributeName="r" values="14;22;14" dur="1.6s" repeatCount="indefinite" />
+                  <circle cx={0} cy={0} r={35} fill="#ef4444" opacity={0.18}>
+                    <animate attributeName="r" values="30;42;30" dur="1.6s" repeatCount="indefinite" />
                     <animate attributeName="opacity" values="0.22;0.06;0.22" dur="1.6s" repeatCount="indefinite" />
                   </circle>
                   {/* Nền tròn xe */}
-                  <circle cx={0} cy={0} r={13} fill="#ef4444" stroke="#fff" strokeWidth={2.5} />
+                  <circle cx={0} cy={0} r={24} fill="#ef4444" stroke="#fff" strokeWidth={3} />
                   {/* Biểu tượng xe */}
                   <text
                     x={0}
                     y={0}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fontSize={12}
+                    fontSize={24}
                     fill="white"
                   >
                     {"\uD83D\uDE97"}
