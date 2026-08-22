@@ -387,7 +387,7 @@ export function App({ sessionId }: AppProps = {}) {
         isExit = true;
       }
     }
-    if (isRouteDismissed || sessionState === "CLOSED" || sessionState === "WAITING_FOR_SCAN") {
+    if (isRouteDismissed || sessionState === "CLOSED") {
       goal = null;
     }
     return { goalSpot: goal, isExitMode: isExit };
