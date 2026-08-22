@@ -452,14 +452,31 @@ export function App({ sessionId }: AppProps = {}) {
     );
     setIsOffRoute(currentOffRoute);
 
+    // Tính toán route mới nhất từ toạ độ hiện tại của xe
+    let freshRoute: RouteResult | null = null;
+    if (isExitMode) {
+      freshRoute = findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
+    } else {
+      freshRoute = findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
+    }
+
     if (currentOffRoute) {
       voiceManager.speak("Cảnh báo: Bạn đang đi sai tuyến đường chỉ dẫn!", 7000, true);
       setNavInstruction("⚠️ BẠN ĐANG ĐI SAI TUYẾN ĐƯỜNG CHỈ DẪN!");
+      // Tự động re-route đường mới nếu xe đi sai
+      if (freshRoute) {
+        setRoute(freshRoute);
+        routeRef.current = freshRoute;
+      }
     } else {
-      // Liên tục tính hướng dẫn dựa vào toạ độ hiện tại của xe
+      // Xe đi đúng đường: Cập nhật đường vẽ co ngắn dần theo xe
+      if (freshRoute) {
+        setRoute(freshRoute);
+        routeRef.current = freshRoute;
+      }
       const instruction = getNavigationInstruction(
         { x: targetVehicle.x, y: targetVehicle.y },
-        activeRoute.points,
+        freshRoute ? freshRoute.points : activeRoute.points,
         isExitMode,
         goalSpot
       );
