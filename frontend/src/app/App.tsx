@@ -376,11 +376,9 @@ export function App({ sessionId }: AppProps = {}) {
   const { goalSpot, isExitMode } = useMemo(() => {
     let isExit = false;
     let goal: SpotId | null = null;
-    if (sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") {
-      if (isExitGuideActive) {
-        isExit = true;
-        goal = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
-      }
+    if ((sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") && isExitGuideActive) {
+      isExit = true;
+      goal = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
     } else {
       goal = (sessionId && sessionTargetSpot) ? (sessionTargetSpot as SpotId) : (confirmedSpotId || inspectedSpotId) as SpotId | null;
       if (goal && spotsById[goal]?.status === "occupied") {
