@@ -23,6 +23,7 @@ except Exception:
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_JSON = BASE_DIR.parent / "frontend" / "public" / "vehicle_positions_sample.json"
 OUTPUT_STATUS_JSON = BASE_DIR.parent / "frontend" / "public" / "parking_status_sample.json"
+OUTPUT_SESSIONS_JSON = BASE_DIR.parent / "frontend" / "public" / "navigation_sessions.json"
 
 # ── Cấu hình kịch bản di chuyển thực tế của các xe ──
 SCENARIO = [
@@ -106,7 +107,8 @@ def main():
     print("=" * 60)
     print(f"Ghi du lieu vao: {OUTPUT_JSON.name}")
     print("Simulator phat chuyen dong thoi gian thuc doc lap. Khong cho Web.")
-    
+    print("Starting Simulator...")
+    save_json_atomic({}, OUTPUT_SESSIONS_JSON)
     sim_start_time = time.time()
     vehicle_states = {}
     for cfg in SCENARIO:
@@ -218,6 +220,7 @@ def main():
             if all_done:
                 print("Tat ca xe da roi bai. Lap lai kich ban sau 4 giay...")
                 time.sleep(4.0)
+                save_json_atomic({}, OUTPUT_SESSIONS_JSON)
                 sim_start_time = time.time()
                 for s in vehicle_states.values():
                     s["trail"] = []
