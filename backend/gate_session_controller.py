@@ -366,8 +366,8 @@ def main():
                         set_parked(session_id, real_parked_spot)
                         update_sample_parking_status(real_parked_spot, "occupied")
                 
-                # Sample source báo xe "exiting" -> giải phóng ô đỗ thực tế
-                elif v_data.get("status") == "exiting" and s_state in ("PARKED", "EXIT_NAVIGATION"):
+                # Sample source báo xe "exiting" -> chuyển PARKED → EXIT_NAVIGATION (CHỈ 1 LẦN)
+                elif v_data.get("status") == "exiting" and s_state == "PARKED":
                     real_parked_spot = session.get("parkedSpotId") or v_data.get("parked_spot_id")
                     print(f"[EXIT] Xe #{t_id} bat dau roi o do {real_parked_spot} -> EXIT_NAVIGATION")
                     set_exit_navigation(session_id, t_id)

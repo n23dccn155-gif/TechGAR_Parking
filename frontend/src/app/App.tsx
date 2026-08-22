@@ -440,15 +440,7 @@ export function App({ sessionId }: AppProps = {}) {
       // 2. Kiểm tra xem xe có đi sai đường không
       if (activeRoute && targetVehicle) {
         currentOffRoute = checkIsOffRoute({ x: targetVehicle.x, y: targetVehicle.y }, activeRoute.points, 80);
-        
-        // 3. CHỈ Re-route khi xe thực sự đi sai đường (và tránh tính lại nếu vừa đổi đích)
-        if (currentOffRoute && !needsRecalc) {
-          const freshRoute = calcFreshRoute();
-          // Nếu đường mới có khác biệt (tránh infinite state loop)
-          if (freshRoute && (!activeRoute || activeRoute.edgeIds.join() !== freshRoute.edgeIds.join())) {
-            activeRoute = freshRoute;
-          }
-        }
+        // KHÔNG re-route khi off-route → giữ nguyên đường cũ, chỉ cảnh báo giọng nói
       }
 
       setIsOffRoute(currentOffRoute);

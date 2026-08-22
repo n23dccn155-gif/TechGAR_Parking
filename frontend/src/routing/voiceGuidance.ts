@@ -190,7 +190,7 @@ export function getNavigationInstruction(
   // 4. Fallback khi ở đầu đường (chưa có prev):
   //    Đọc 2 đoạn đầu của route để phát hiện hướng rẽ đầu tiên
   if (closestIndex < routePoints.length - 1) {
-    // Tìm đoạn thứ nhất không song song với đoạn gốc (phần thẳng đầu tiên)
+    // Tính khoảng cách từ xe đến từng nút trên route để chỉ báo rẽ khi gần
     for (let i = 0; i < routePoints.length - 2; i++) {
       const pA = routePoints[i]!;
       const pB = routePoints[i + 1]!;
@@ -208,6 +208,12 @@ export function getNavigationInstruction(
 
       // Nếu đây là khúc cua thực sự (góc > ~20°)
       if (cosA < 0.93) {
+        // Kiểm tra khoảng cách từ xe đến điểm cua (pB)
+        const distToTurn = Math.hypot(vehiclePos.x - pB.x, vehiclePos.y - pB.y);
+        if (distToTurn > 150) {
+          // Khúc cua quá xa → báo đi thẳng trước
+          return "Phía trước đi thẳng.";
+        }
         const cross = abDx * bcDy - abDy * bcDx;
         if (cross > 0) {
           return isExit ? "Phía trước rẽ phải ra cổng." : "Phía trước rẽ phải vào làn đỗ.";
