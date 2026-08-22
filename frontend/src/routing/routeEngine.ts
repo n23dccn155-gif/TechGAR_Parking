@@ -115,7 +115,8 @@ export function findNearestNode(graph: LaneGraph, x: number, y: number): string 
   let nearestId: string | null = null;
   let minDist = Number.POSITIVE_INFINITY;
   graph.nodes.forEach((node) => {
-    if (node.kind === "access-anchor") return; // Bỏ qua các điểm neo đi bộ
+    // Bỏ qua các điểm neo đi bộ và điểm neo của ô đỗ
+    if (node.kind === "access-anchor" || node.kind === "spot-entry") return; 
     const d = Math.hypot(node.x - x, node.y - y);
     if (d < minDist) {
       minDist = d;
