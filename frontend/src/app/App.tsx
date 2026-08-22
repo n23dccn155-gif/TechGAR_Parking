@@ -329,29 +329,39 @@ export function App({ sessionId }: AppProps = {}) {
   }, [activeNeed, lastEventTime, mode, setRecommendation, spots]);
 
   useEffect(() => {
-    if (mode !== "navigation" || !confirmedSpot || warning) return;
-    if (!NON_EMPTY_STATUSES.has(confirmedSpot.status)) return;
+    const activeTargetId = sessionId ? sessionTargetSpot : (mode === "navigation" ? confirmedSpotId : null);
+    if (!activeTargetId || warning) return;
+
+    const targetSpot = spotsById[activeTargetId];
+    if (!targetSpot) return;
+
+    if (!NON_EMPTY_STATUSES.has(targetSpot.status)) return;
 
     // ── Bỏ qua cảnh báo nếu chính xe của người dùng đang đỗ ở ô đó ──
     // Trường hợp 1: Session đã ghi nhận parkedSpotId = ô này
-    if (sessionParkedSpot && sessionParkedSpot === confirmedSpot.id) return;
+    if (sessionParkedSpot && sessionParkedSpot === targetSpot.id) return;
     // Trường hợp 2: Session đang ở trạng thái PARKED hoặc EXIT_NAVIGATION
     //   và targetSpot/confirmedSpot khớp → xe mình vừa đỗ xong
     if ((sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") &&
-        sessionTargetSpot === confirmedSpot.id) return;
+        sessionTargetSpot === targetSpot.id) return;
 
     const need: DestinationNeed = activeNeed ?? "services";
     const alternatives = recommendParkingSpots(spots, need, {
       calculatedAt: lastEventTime ?? "2026-07-25T08:00:00.000Z",
     });
     const alternativeSpotId = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
-      .find((candidate) => candidate && candidate.spotId !== confirmedSpot.id)?.spotId;
+      .find((candidate) => candidate && candidate.spotId !== targetSpot.id)?.spotId;
+
+    if (sessionState !== "EXIT_NAVIGATION" && sessionState !== "PARKED") {
+      voiceManager.speak(`Cảnh báo, ô đỗ ${targetSpot.id} đã có xe đỗ. Vui lòng xác nhận để đổi hướng sang ô ${alternativeSpotId || 'khác'}.`, 6000, true);
+    }
+
     showInvalidSpotWarning({
-      spotId: confirmedSpot.id,
-      status: confirmedSpot.status as Exclude<ParkingStatus, "empty">,
+      spotId: targetSpot.id,
+      status: targetSpot.status as Exclude<ParkingStatus, "empty">,
       alternativeSpotId,
     });
-  }, [activeNeed, confirmedSpot, lastEventTime, mode, sessionParkedSpot, sessionState, sessionTargetSpot, showInvalidSpotWarning, spots, warning]);
+  }, [sessionId, sessionTargetSpot, confirmedSpotId, mode, warning, spotsById, sessionParkedSpot, sessionState, activeNeed, spots, lastEventTime, showInvalidSpotWarning]);
 
   const [isRouteDismissed, setIsRouteDismissed] = useState<boolean>(false);
   // isExitGuideActive: true = đang bật "Chỉ lối ra", false = ẩn đường lối ra khi PARKED
