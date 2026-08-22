@@ -8,11 +8,13 @@ class VoiceManager {
   private lastSpokenText: string = "";
   private lastSpokenTime: number = 0;
   private isMuted: boolean = false;
+  private isSpeaking: boolean = false;
 
   public setMuted(muted: boolean) {
     this.isMuted = muted;
     if (muted && typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+      this.isSpeaking = false;
     }
   }
 
@@ -22,6 +24,7 @@ class VoiceManager {
 
   public stop() {
     this.lastSpokenText = "";
+    this.isSpeaking = false;
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
@@ -34,32 +37,39 @@ class VoiceManager {
   public speak(text: string, cooldownMs: number = 6000, isUrgent: boolean = false) {
     if (this.isMuted) return;
     const now = Date.now();
-    
-    // 1. Tránh lặp lại chính xác câu cũ nếu chưa hết cooldown (luôn áp dụng)
+
+    // 1. Không phát lại cùng câu nếu chưa hết cooldown
     if (text === this.lastSpokenText && now - this.lastSpokenTime < cooldownMs) {
       return;
     }
 
-    // 2. Chống vấp (stuttering "cảnh cảnh"): Không cho phép phát câu mới 
-    // hoặc ngắt câu cũ nếu câu cũ vừa mới phát chưa được 2 giây!
-    // BỎ QUA nếu đây là câu CẢNH BÁO KHẨN CẤP (isUrgent)
-    if (!isUrgent && now - this.lastSpokenTime < 2000) {
+    // 2. Nếu câu cũ đang đọc dở và câu mới GIỐNG HỆT → không cancel, không phát lại
+    if (this.isSpeaking && text === this.lastSpokenText) {
+      return;
+    }
+
+    // 3. Nếu câu cũ đang đọc dở và câu mới KHÁC → chỉ cancel nếu urgent
+    //    hoặc câu cũ đã phát được ít nhất 2 giây
+    if (this.isSpeaking && !isUrgent && now - this.lastSpokenTime < 2000) {
       return;
     }
 
     this.lastSpokenText = text;
     this.lastSpokenTime = now;
+    this.isSpeaking = true;
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
-        window.speechSynthesis.cancel(); // Ngắt câu cũ trước khi phát câu mới khác
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "vi-VN";
-        utterance.rate = 1.0;
+        utterance.rate = 0.95;
         utterance.pitch = 1.0;
+        utterance.onend = () => { this.isSpeaking = false; };
+        utterance.onerror = () => { this.isSpeaking = false; };
         window.speechSynthesis.speak(utterance);
       } catch {
-        /* ignore */
+        this.isSpeaking = false;
       }
     }
   }

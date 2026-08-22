@@ -396,8 +396,9 @@ export function App({ sessionId }: AppProps = {}) {
   const [navInstruction, setNavInstruction] = useState<string | null>(null);
 
   const currentGoalRef = useRef<{ spot: SpotId | null, exitMode: boolean }>({ spot: null, exitMode: false });
+  const routeRef = useRef<RouteResult | null>(null);
 
-  // ── Quản lý Đường đi (Routing) & Giọng nói (Voice Guidance) ──
+  // ── Effect 1: Tính đường đi — CHỈ khi đích/mode thay đổi ──
   useEffect(() => {
     if (!goalSpot) {
       setRoute(null);
@@ -405,80 +406,66 @@ export function App({ sessionId }: AppProps = {}) {
       setNavInstruction(null);
       voiceManager.stop();
       currentGoalRef.current = { spot: null, exitMode: false };
+      routeRef.current = null;
       return;
     }
 
     const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
     const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
 
-    const calcFreshRoute = () => {
-      if (isExitMode) {
-        if (targetVehicle) return findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
-        return findExitRoute(LANE_GRAPH, goalSpot);
-      } else {
-        if (targetVehicle) return findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
-        return findVehicleRoute(LANE_GRAPH, goalSpot);
-      }
-    };
-
-    let needsRecalc = false;
-    if (currentGoalRef.current.spot !== goalSpot || currentGoalRef.current.exitMode !== isExitMode) {
-      needsRecalc = true;
-      currentGoalRef.current = { spot: goalSpot, exitMode: isExitMode };
+    let newRoute: RouteResult | null;
+    if (isExitMode) {
+      newRoute = targetVehicle
+        ? findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
+        : findExitRoute(LANE_GRAPH, goalSpot);
+    } else {
+      newRoute = targetVehicle
+        ? findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
+        : findVehicleRoute(LANE_GRAPH, goalSpot);
     }
 
-    setRoute((prevRoute: RouteResult | null) => {
-      let activeRoute = prevRoute;
-      
-      // 1. Tính toán đường nếu chưa có hoặc đích đến thay đổi
-      if (!activeRoute || needsRecalc) {
-        activeRoute = calcFreshRoute();
+    routeRef.current = newRoute;
+    setRoute(newRoute);
+    currentGoalRef.current = { spot: goalSpot, exitMode: isExitMode };
+
+  }, [goalSpot, isExitMode, sessionId]); // Chỉ phụ thuộc đích — KHÔNG phụ thuộc activeVehicles
+
+  // ── Effect 2: Cập nhật hướng dẫn & giọng nói — theo vị trí xe (300ms) ──
+  useEffect(() => {
+    const activeRoute = routeRef.current;
+    if (!goalSpot || !activeRoute || activeRoute.points.length < 2) {
+      return;
+    }
+
+    const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
+    const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+
+    if (!targetVehicle) return;
+
+    const currentOffRoute = checkIsOffRoute(
+      { x: targetVehicle.x, y: targetVehicle.y },
+      activeRoute.points,
+      80
+    );
+    setIsOffRoute(currentOffRoute);
+
+    if (currentOffRoute) {
+      voiceManager.speak("Cảnh báo: Bạn đang đi sai tuyến đường chỉ dẫn!", 7000, true);
+      setNavInstruction("⚠️ BẠN ĐANG ĐI SAI TUYẾN ĐƯỜNG CHỈ DẪN!");
+    } else {
+      // Liên tục tính hướng dẫn dựa vào toạ độ hiện tại của xe
+      const instruction = getNavigationInstruction(
+        { x: targetVehicle.x, y: targetVehicle.y },
+        activeRoute.points,
+        isExitMode,
+        goalSpot
+      );
+      setNavInstruction(instruction);
+      if (instruction) {
+        voiceManager.speak(instruction, 6000, false);
       }
-
-      let currentOffRoute = false;
-
-      // 2. Kiểm tra xem xe có đi sai đường không
-      if (activeRoute && targetVehicle) {
-        currentOffRoute = checkIsOffRoute({ x: targetVehicle.x, y: targetVehicle.y }, activeRoute.points, 80);
-        // KHÔNG re-route khi off-route → giữ nguyên đường cũ, chỉ cảnh báo giọng nói
-      }
-
-      setIsOffRoute(currentOffRoute);
-
-      if (!activeRoute || activeRoute.points.length < 2) {
-        setNavInstruction(null);
-        return activeRoute;
-      }
-
-      // -- Cập nhật Giọng nói & Text --
-      if (targetVehicle) {
-        if (currentOffRoute) {
-          voiceManager.speak("Cảnh báo: Bạn đang đi sai tuyến đường chỉ dẫn!", 7000, true);
-          setNavInstruction("⚠️ BẠN ĐANG ĐI SAI TUYẾN ĐƯỜNG CHỈ DẪN!");
-        } else {
-          const instruction = getNavigationInstruction(
-            { x: targetVehicle.x, y: targetVehicle.y },
-            activeRoute.points,
-            isExitMode,
-            goalSpot
-          );
-          setNavInstruction(instruction);
-          if (instruction) {
-            voiceManager.speak(instruction, 6000, false);
-          }
-        }
-      } else {
-        const destName = goalSpot;
-        const instruction = isExitMode
-          ? `Tuyến đường xuất bãi từ ô ${destName} ra CỔNG RA`
-          : `Tuyến đường chỉ dẫn từ Cổng Vào đến ô ${destName}`;
-        setNavInstruction(instruction);
-      }
-
-      return activeRoute;
-    });
-
-  }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted]);
+    }
+  }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted]); // Theo vị trí xe
 
   // ── Xử lý khi bấm vào ô đỗ ──
   const handleConfirmSpot = useCallback((spotId: SpotId): void => {
