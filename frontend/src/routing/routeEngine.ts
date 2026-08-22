@@ -115,6 +115,7 @@ export function findNearestNode(graph: LaneGraph, x: number, y: number): string 
   let nearestId: string | null = null;
   let minDist = Number.POSITIVE_INFINITY;
   graph.nodes.forEach((node) => {
+    if (node.kind === "access-anchor") return; // Bỏ qua các điểm neo đi bộ
     const d = Math.hypot(node.x - x, node.y - y);
     if (d < minDist) {
       minDist = d;
@@ -142,7 +143,11 @@ export function findExitRouteFromPos(
   const nearestNodeId = findNearestNode(exitGraph, vehicleX, vehicleY);
   if (nearestNodeId) {
     const result = findRoute(exitGraph, nearestNodeId, graph.exitNodeId);
-    if (result) return result;
+    if (result) {
+      // Nối trực tiếp từ tọa độ xe thực tế tới Nút gần nhất để đường không bị hụt
+      result.points.unshift({ x: vehicleX, y: vehicleY });
+      return result;
+    }
   }
   // Fallback: tính từ ô đỗ ban đầu nếu không tìm được nút gần xe
   if (fallbackSpotId) {
@@ -166,7 +171,11 @@ export function findInboundRouteFromPos(
   const nearestNodeId = findNearestNode(graph, vehicleX, vehicleY);
   if (nearestNodeId && nearestNodeId !== targetNodeId) {
     const result = findRoute(graph, nearestNodeId, targetNodeId);
-    if (result) return result;
+    if (result) {
+      // Nối trực tiếp từ tọa độ xe thực tế tới Nút gần nhất để đường không bị hụt
+      result.points.unshift({ x: vehicleX, y: vehicleY });
+      return result;
+    }
   }
   // Fallback: tính từ Cổng Vào nếu không tìm được nút gần xe
   return findVehicleRoute(graph, spotId);
