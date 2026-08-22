@@ -106,8 +106,8 @@ export class MockParkingDataSource implements ParkingDataSource {
       ["A02", "empty"],
     ];
     const rightCycle: Array<[SpotId, ParkingStatus]> = [
-      ["A28", "transitioning"],
-      ["A28", "empty"],
+      ["A08", "transitioning"],
+      ["A08", "empty"],
       ["F01", "occupied"],
       ["F01", "empty"],
     ];
@@ -171,19 +171,19 @@ export class MockParkingDataSource implements ParkingDataSource {
   }
 
   public queueScenario(id: MockScenarioId, context: MockScenarioContext = {}): number {
-    const recommended = context.recommendedSpotId ?? "E12";
+    const recommended = context.recommendedSpotId ?? "E08";
     const selected = context.selectedSpotId ?? "A01";
     const actions: Record<MockScenarioId, PendingAction[]> = {
       "normal-independent": [
         { kind: "status", spotId: "A01", status: "transitioning" },
-        { kind: "status", spotId: "A28", status: "transitioning" },
+        { kind: "status", spotId: "A08", status: "transitioning" },
         { kind: "status", spotId: "A01", status: "occupied" },
-        { kind: "status", spotId: "A28", status: "empty" },
+        { kind: "status", spotId: "A08", status: "empty" },
       ],
       "recommendation-transitioning": [{ kind: "status", spotId: recommended, status: "transitioning" }],
       "selected-transitioning": [{ kind: "status", spotId: selected, status: "transitioning" }],
       "recommendation-occupied": [{ kind: "status", spotId: recommended, status: "occupied" }],
-      "amber-to-empty": [{ kind: "status", spotId: "A11", status: "empty" }],
+      "amber-to-empty": [{ kind: "status", spotId: "A05", status: "empty" }],
       "cam-left-offline-recovery": [
         { kind: "health", cameraId: "cam-left", health: "offline" },
         { kind: "health", cameraId: "cam-left", health: "online" },

@@ -66,18 +66,11 @@ def now_iso() -> str:
 
 
 def atomic_write(path: Path, data: dict) -> None:
-    """Ghi file JSON an toàn (atomic) – tránh React đọc file đang ghi dở."""
+    """Ghi file JSON trực tiếp thay vì tmp.replace để tránh PermissionError trên Windows."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
     try:
-        with tmp.open("w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        for _ in range(5):
-            try:
-                tmp.replace(path)
-                return
-            except Exception:
-                time.sleep(0.05)
     except Exception:
         pass
 

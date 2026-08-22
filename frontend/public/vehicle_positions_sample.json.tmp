@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-08-22T14:27:20.550+07:00",
+  "source": "sample_simulator",
+  "frame_size": {
+    "width": 1200,
+    "height": 900
+  },
+  "active_count": 3,
+  "active_vehicles": {
+    "1": {
+      "track_id": 1,
+      "status": "parked",
+      "phase": "PARKED",
+      "position": {
+        "x": 572,
+        "y": 230
+      },
+      "trail": [],
+      "vehicle_class": "car",
+      "confidence": 0.99,
+      "parked_spot_id": "D08"
+    },
+    "2": {
+      "track_id": 2,
+      "status": "parked",
+      "phase": "PARKED",
+      "position": {
+        "x": 752,
+        "y": 660
+      },
+      "trail": [],
+      "vehicle_class": "car",
+      "confidence": 0.99,
+      "parked_spot_id": "B12"
+    },
+    "3": {
+      "track_id": 3,
+      "status": "moving",
+      "phase": "INBOUND",
+      "position": {
+        "x": 997.0,
+        "y": 490.7
+      },
+      "trail": [
+        {
+          "x": 997.0,
+          "y": 723.9
+        },
+        {
+          "x": 997.0,
+          "y": 711.7
+        },
+        {
+          "x": 997.0,
+          "y": 699.5
+        },
+        {
+          "x": 997.0,
+          "y": 687.2
+        },
+        {
+          "x": 997.0,
+          "y": 674.4
+        },
+        {
+          "x": 997.0,
+          "y": 662.0
+        },
+        {
+          "x": 997.0,
+          "y": 649.8
+        },
+        {
+          "x": 997.0,
+          "y": 637.5
+        },
+        {
+          "x": 997.0,
+          "y": 625.2
+        },
+        {
+          "x": 997.0,
+          "y": 613.0
+        },
+        {
+          "x": 997.0,
+          "y": 600.7
+        },
+        {
+          "x": 997.0,
+          "y": 588.5
+        },
+        {
+          "x": 997.0,
+          "y": 576.3
+        },
+        {
+          "x": 997.0,
+          "y": 564.0
+        },
+        {
+          "x": 997.0,
+          "y": 551.8
+        },
+        {
+          "x": 997.0,
+          "y": 539.6
+        },
+        {
+          "x": 997.0,
+          "y": 527.4
+        },
+        {
+          "x": 997.0,
+          "y": 515.1
+        },
+        {
+          "x": 997.0,
+          "y": 502.9
+        },
+        {
+          "x": 997.0,
+          "y": 490.7
+        }
+      ],
+      "vehicle_class": "car",
+      "confidence": 0.99,
+      "parked_spot_id": null
+    }
+  }
+}

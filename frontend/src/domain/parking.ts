@@ -1,14 +1,16 @@
-export const MAIN_ZONE_ORDER = ["E", "D", "C", "B", "A"] as const;
+export const MAIN_ZONE_ORDER = ["F", "E", "D", "C", "B", "A"] as const;
 export const ALL_ZONE_IDS = ["A", "B", "C", "D", "E", "F"] as const;
 export const CAMERA_IDS = ["cam-left", "cam-right"] as const;
 export const PARKING_STATUSES = ["empty", "occupied", "transitioning", "unknown"] as const;
+
+export const SPOTS_PER_ZONE = 8;
 
 export type MainZoneId = (typeof MAIN_ZONE_ORDER)[number];
 export type ZoneId = (typeof ALL_ZONE_IDS)[number];
 export type CameraId = (typeof CAMERA_IDS)[number];
 export type ParkingStatus = (typeof PARKING_STATUSES)[number];
 export type CameraHealth = "online" | "offline";
-export type ParkingRow = "top" | "bottom" | "vertical";
+export type ParkingRow = "left" | "right";
 export type DriverMode = "entry" | "browse" | "recommendation" | "navigation";
 export type DestinationNeed = "shopping" | "services" | "entertainment";
 export type BrowseFilter = "all" | "empty";
@@ -108,6 +110,9 @@ export const STATUS_LABELS: Record<ParkingStatus, string> = {
   unknown: "Không xác định",
 };
 
+/** Zones on the left side of center lane (owned by cam-left) */
+export const LEFT_ZONES: ReadonlySet<ZoneId> = new Set(["F", "E", "D"]);
+
 export function formatSpotId(zone: ZoneId, number: number): SpotId {
   return `${zone}${String(number).padStart(2, "0")}` as SpotId;
 }
@@ -120,11 +125,8 @@ export function parseSpotId(spotId: SpotId): { zone: ZoneId; number: number } {
 }
 
 export function getSpotOwner(spotId: SpotId): CameraId {
-  const { zone, number } = parseSpotId(spotId);
-  if (zone === "F") return "cam-right";
-  return (number >= 1 && number <= 8) || (number >= 16 && number <= 23)
-    ? "cam-left"
-    : "cam-right";
+  const { zone } = parseSpotId(spotId);
+  return LEFT_ZONES.has(zone) ? "cam-left" : "cam-right";
 }
 
 export function cameraOwnsSpot(cameraId: CameraId, spotId: SpotId): boolean {

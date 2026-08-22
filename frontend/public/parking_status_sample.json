@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-07T11:25:31+07:00",
+  "timestamp": "2026-08-22T16:14:29+07:00",
   "source": "sample_simulator",
   "slots": {
     "C19": {
@@ -11,7 +11,7 @@
       "confidence": 0.99
     },
     "B12": {
-      "status": "empty",
+      "status": "occupied",
       "confidence": 0.99
     },
     "C04": {
@@ -19,7 +19,19 @@
       "confidence": 0.99
     },
     "D08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B04": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E02": {
       "status": "occupied",
+      "confidence": 0.99
+    },
+    "D06": {
+      "status": "empty",
       "confidence": 0.99
     }
   }

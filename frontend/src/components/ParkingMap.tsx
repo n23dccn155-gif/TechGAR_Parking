@@ -232,91 +232,100 @@ export function ParkingMap({
         >
           <defs>
             <pattern id="landscape-pattern" width="26" height="26" patternUnits="userSpaceOnUse">
-              <rect width="26" height="26" fill="#1e6245" />
-              <circle cx="6" cy="8" r="2" fill="#327a52" />
-              <circle cx="20" cy="18" r="3" fill="#164f39" />
+              <rect width="26" height="26" fill="#1e293b" />
+              <circle cx="6" cy="8" r="2" fill="#334155" />
+              <circle cx="20" cy="18" r="3" fill="#0f172a" />
             </pattern>
           </defs>
 
           <rect width={PARKING_GEOMETRY.width} height={PARKING_GEOMETRY.height} rx="26" fill="url(#landscape-pattern)" />
-          <rect className="access-road" {...PARKING_GEOMETRY.accessRoad} />
+          
+          {/* Parking Islands (E+D on left, C+B on right) */}
+          <rect
+            className="parking-island"
+            x={PARKING_GEOMETRY.zones.find(z => z.id === "E")!.bounds.x - 10}
+            y={PARKING_GEOMETRY.zones.find(z => z.id === "E")!.bounds.y - 45}
+            width={180 + 20}
+            height={PARKING_GEOMETRY.zones.find(z => z.id === "E")!.bounds.height + 65}
+            rx="15"
+            fill="#0f172a"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+          <rect
+            className="parking-island"
+            x={PARKING_GEOMETRY.zones.find(z => z.id === "C")!.bounds.x - 10}
+            y={PARKING_GEOMETRY.zones.find(z => z.id === "C")!.bounds.y - 45}
+            width={180 + 20}
+            height={PARKING_GEOMETRY.zones.find(z => z.id === "C")!.bounds.height + 65}
+            rx="15"
+            fill="#0f172a"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+
+          {/* Aisles */}
+          {PARKING_GEOMETRY.aisles.map(aisle => (
+            <g key={aisle.id}>
+              <rect className="access-road" {...aisle.bounds} fill="#334155" opacity="0.6" />
+              <line
+                className="lane-centerline"
+                x1={aisle.centerX} x2={aisle.centerX}
+                y1={aisle.bounds.y} y2={aisle.bounds.y + aisle.bounds.height}
+              />
+            </g>
+          ))}
+
+          {/* Horizontal Connectors */}
+          {PARKING_GEOMETRY.horizontalConnectors.map(conn => (
+            <g key={conn.id}>
+              <rect className="access-road" {...conn.bounds} fill="#334155" opacity="0.6" />
+              <line
+                className="lane-centerline"
+                x1={conn.centerline.start.x} x2={conn.centerline.end.x}
+                y1={conn.centerline.start.y} y2={conn.centerline.end.y}
+              />
+            </g>
+          ))}
+
+          {/* Zone badges */}
           {PARKING_GEOMETRY.zones.map((zone) => (
             <g key={zone.id}>
-              <rect className="zone-road" {...zone.bounds} rx="34" />
-              <line className="lane-centerline" x1={zone.bounds.x + 28} x2={zone.bounds.x + zone.bounds.width} y1={zone.laneY} y2={zone.laneY} />
-              <g className="lane-arrow" transform={`translate(${zone.bounds.x + zone.bounds.width / 2} ${zone.laneY})`}>
-                <path d="M16 -5 H-4 V-12 L-20 0 L-4 12 V5 H16Z" />
-              </g>
-              <g className="zone-badge" transform={`translate(${zone.bounds.x + zone.bounds.width / 2 - 45} ${zone.bounds.y - 8})`}>
+              <g className="zone-badge" transform={`translate(${zone.bounds.x} ${zone.bounds.y - 30})`}>
                 <rect width="90" height="26" rx="13" />
                 <text x="45" y="18" textAnchor="middle">KHU {zone.id}</text>
               </g>
             </g>
           ))}
-          {PARKING_GEOMETRY.zoneConnectors.map((connector) => (
-            <g key={connector.id}>
-              <rect className="road-connector" {...connector.bounds} />
-              <line
-                className="road-connector-edge"
-                x1={PARKING_GEOMETRY.layout.zoneRightX - 4}
-                x2={PARKING_GEOMETRY.layout.mainRoadX + 4}
-                y1={connector.bounds.y}
-                y2={connector.bounds.y}
-              />
-              <line
-                className="road-connector-edge"
-                x1={PARKING_GEOMETRY.layout.zoneRightX - 4}
-                x2={PARKING_GEOMETRY.layout.mainRoadX + 4}
-                y1={connector.bounds.y + connector.bounds.height}
-                y2={connector.bounds.y + connector.bounds.height}
-              />
-              <line
-                className="lane-centerline"
-                x1={connector.centerline.start.x}
-                x2={connector.centerline.end.x}
-                y1={connector.centerline.start.y}
-                y2={connector.centerline.end.y}
-              />
-            </g>
-          ))}
-          <rect className="zone-road f-strip" {...PARKING_GEOMETRY.fStripBounds} rx="30" />
-          {PARKING_GEOMETRY.fAccessConnectors.map((connector) => (
-            <g key={connector.id}>
-              <rect className="road-connector road-connector--f" {...connector.bounds} />
-              <line
-                className="road-connector-edge road-connector-edge--f"
-                x1={PARKING_GEOMETRY.layout.mainRoadX + PARKING_GEOMETRY.layout.mainRoadWidth - 4}
-                x2={connector.centerline.end.x}
-                y1={connector.bounds.y}
-                y2={connector.bounds.y}
-              />
-              <line
-                className="road-connector-edge road-connector-edge--f"
-                x1={PARKING_GEOMETRY.layout.mainRoadX + PARKING_GEOMETRY.layout.mainRoadWidth - 4}
-                x2={connector.centerline.end.x}
-                y1={connector.bounds.y + connector.bounds.height}
-                y2={connector.bounds.y + connector.bounds.height}
-              />
-            </g>
-          ))}
-          <g className="zone-badge" transform={`translate(${PARKING_GEOMETRY.fStripBounds.x + 2} ${PARKING_GEOMETRY.fStripBounds.y - 27})`}>
-            <rect width="88" height="27" rx="13" />
-            <text x="44" y="18" textAnchor="middle">KHU F</text>
+
+          {/* Cổng Ra */}
+          <g transform={`translate(${PARKING_GEOMETRY.exit.x - 20} ${PARKING_GEOMETRY.exit.y}) rotate(90)`}>
+            {/* Booth */}
+            <rect x="-45" y="-10" width="20" height="20" rx="4" fill="#3b82f6" />
+            <rect x="-40" y="-5" width="10" height="10" rx="2" fill="#bfdbfe" />
+            {/* Barrier bar */}
+            <rect x="-25" y="0" width="70" height="4" rx="2" fill="#ef4444" />
+            {/* Striped pattern on barrier */}
+            <path d="M-20 0 L-15 4 M-10 0 L-5 4 M0 0 L5 4 M10 0 L15 4 M20 0 L25 4 M30 0 L35 4 M40 0 L45 4" stroke="#ffffff" strokeWidth="2" />
           </g>
-          <line
-            className="access-centerline"
-            x1={PARKING_GEOMETRY.layout.mainRoadCenterX}
-            x2={PARKING_GEOMETRY.layout.mainRoadCenterX}
-            y1={PARKING_GEOMETRY.exit.y + 27}
-            y2={PARKING_GEOMETRY.entrance.y - 22}
-          />
-          <g className="access-label" transform={`translate(${PARKING_GEOMETRY.layout.mainRoadCenterX} ${PARKING_GEOMETRY.exit.y + 14})`}>
-            <path d="M0 25 V-6 M-9 4 L0 -7 L9 4" />
-            <text x="0" y="45" textAnchor="middle">LỐI RA</text>
+          <g className="access-label" transform={`translate(${PARKING_GEOMETRY.exit.x + 15} ${PARKING_GEOMETRY.exit.y})`}>
+            <path d="M-15 0 H15 M5 -9 L16 0 L5 9" />
+            <text x="50" y="5" textAnchor="middle">LỐI RA</text>
           </g>
-          <g className="access-label" transform={`translate(${PARKING_GEOMETRY.layout.mainRoadCenterX} ${PARKING_GEOMETRY.entrance.y - 15})`}>
-            <path d="M0 -26 V4 M-9 -16 L0 -27 L9 -16" />
-            <text x="0" y="28" textAnchor="middle">LỐI VÀO</text>
+
+          {/* Cổng Vào */}
+          <g transform={`translate(${PARKING_GEOMETRY.entrance.x - 20} ${PARKING_GEOMETRY.entrance.y}) rotate(90)`}>
+            {/* Booth */}
+            <rect x="-45" y="-10" width="20" height="20" rx="4" fill="#3b82f6" />
+            <rect x="-40" y="-5" width="10" height="10" rx="2" fill="#bfdbfe" />
+            {/* Barrier bar */}
+            <rect x="-25" y="0" width="70" height="4" rx="2" fill="#ef4444" />
+            {/* Striped pattern on barrier */}
+            <path d="M-20 0 L-15 4 M-10 0 L-5 4 M0 0 L5 4 M10 0 L15 4 M20 0 L25 4 M30 0 L35 4 M40 0 L45 4" stroke="#ffffff" strokeWidth="2" />
+          </g>
+          <g className="access-label" transform={`translate(${PARKING_GEOMETRY.entrance.x + 15} ${PARKING_GEOMETRY.entrance.y})`}>
+            <path d="M25 0 H-5 M5 -9 L-6 0 L5 9" />
+            <text x="50" y="5" textAnchor="middle">LỐI VÀO</text>
           </g>
 
           <g aria-hidden="true">

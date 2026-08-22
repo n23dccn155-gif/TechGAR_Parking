@@ -3,32 +3,6 @@ import { PARKING_GEOMETRY, pointInsideRect } from "../geometry/parkingGeometry";
 import { LANE_GRAPH } from "../routing/laneGraph";
 import { findVehicleRoute, routeUsesOnlyValidEdges } from "../routing/routeEngine";
 
-function expectMainZoneRoute(spotId: "C10" | "A05" | "E12", zoneId: "C" | "A" | "E"): void {
-  const route = findVehicleRoute(LANE_GRAPH, spotId);
-  const zone = PARKING_GEOMETRY.zones.find((candidate) => candidate.id === zoneId);
-  const spot = PARKING_GEOMETRY.spots.find((candidate) => candidate.id === spotId);
-  expect(route).not.toBeNull();
-  expect(zone).toBeDefined();
-  expect(spot).toBeDefined();
-  if (!route || !zone || !spot) return;
-
-  const accessNodeIndex = route.nodeIds.indexOf(`access-${String(zone.laneY).replace(".", "-")}`);
-  expect(accessNodeIndex).toBeGreaterThan(0);
-  expect(route.points.slice(0, accessNodeIndex + 1).every((point) => point.x === PARKING_GEOMETRY.layout.mainRoadCenterX)).toBe(true);
-  expect(route.points[accessNodeIndex]).toEqual({ x: PARKING_GEOMETRY.layout.mainRoadCenterX, y: zone.laneY });
-
-  const lanePoints = route.points.slice(accessNodeIndex + 1, -1);
-  expect(lanePoints.length).toBeGreaterThan(0);
-  expect(lanePoints.every((point) => point.y === zone.laneY)).toBe(true);
-  expect(lanePoints.every((point) => point.x < PARKING_GEOMETRY.layout.mainRoadCenterX)).toBe(true);
-
-  const penultimate = route.points.at(-2);
-  const terminal = route.points.at(-1);
-  expect(penultimate?.x).toBe(terminal?.x);
-  expect(terminal).toEqual(spot.entryPoint);
-  expect(Math.abs((penultimate?.y ?? 0) - (terminal?.y ?? 0))).toBe(15);
-}
-
 describe("route engine", () => {
   it("connects the entrance to every spot using only valid directed edges", () => {
     PARKING_GEOMETRY.spots.forEach((spot) => {
@@ -51,28 +25,38 @@ describe("route engine", () => {
     });
   });
 
-  it("routes C10 up the main road, left through C, and stops beside C10", () => {
-    expectMainZoneRoute("C10", "C");
-  });
-
-  it("routes A05 only to the A junction before turning left", () => {
-    expectMainZoneRoute("A05", "A");
-  });
-
-  it("routes E12 along the full main road before turning left", () => {
-    expectMainZoneRoute("E12", "E");
-  });
-
-  it("routes F04 right from the main road without entering zones A-E", () => {
-    const route = findVehicleRoute(LANE_GRAPH, "F04");
-    const spot = PARKING_GEOMETRY.spots.find((candidate) => candidate.id === "F04");
+  it("routes D04 from the right aisle to the center lane", () => {
+    const route = findVehicleRoute(LANE_GRAPH, "D04");
     expect(route).not.toBeNull();
-    expect(spot).toBeDefined();
-    if (!route || !spot) return;
+    // Path: entrance (right) -> right junctions -> center lane junctions -> spot entry
+    expect(route!.nodeIds.some(id => id.startsWith("right-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("center-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("left-"))).toBe(false);
+  });
 
-    expect(route.points.slice(0, -1).every((point) => point.x === PARKING_GEOMETRY.layout.mainRoadCenterX)).toBe(true);
-    expect(route.points.at(-1)).toEqual(spot.entryPoint);
-    expect(route.points.at(-1)!.x).toBeGreaterThan(PARKING_GEOMETRY.layout.mainRoadCenterX);
-    expect(route.nodeIds.some((nodeId) => nodeId.startsWith("zone-"))).toBe(false);
+  it("routes C06 from the right aisle to the center lane", () => {
+    const route = findVehicleRoute(LANE_GRAPH, "C06");
+    expect(route).not.toBeNull();
+    // Path: entrance (right) -> right junctions -> center lane junctions -> spot entry
+    expect(route!.nodeIds.some(id => id.startsWith("right-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("center-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("left-"))).toBe(false);
+  });
+
+  it("routes E02 using the left aisle (via connector)", () => {
+    const route = findVehicleRoute(LANE_GRAPH, "E02");
+    expect(route).not.toBeNull();
+    // Path: entrance (right) -> right junctions -> center junctions -> left aisle
+    expect(route!.nodeIds.some(id => id.startsWith("right-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("left-"))).toBe(true);
+  });
+
+  it("routes B07 exclusively on the right aisle", () => {
+    const route = findVehicleRoute(LANE_GRAPH, "B07");
+    expect(route).not.toBeNull();
+    // Path: entrance (right) -> right aisle -> spot
+    expect(route!.nodeIds.some(id => id.startsWith("right-"))).toBe(true);
+    expect(route!.nodeIds.some(id => id.startsWith("center-"))).toBe(false);
+    expect(route!.nodeIds.some(id => id.startsWith("left-"))).toBe(false);
   });
 });

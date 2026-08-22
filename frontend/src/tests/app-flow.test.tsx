@@ -73,7 +73,7 @@ describe("driver application flows", () => {
     act(() => {
       useParkingStore.getState().applyEvent({
         type: "spot.status.changed",
-        cameraId: "cam-left",
+        cameraId: "cam-right",
         spotId: "A01",
         status: "transitioning",
         confidence: 0.93,

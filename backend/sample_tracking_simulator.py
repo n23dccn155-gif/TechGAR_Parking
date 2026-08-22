@@ -32,9 +32,10 @@ SCENARIO = [
         "travel_time": 15.0,
         "park_duration": 40.0,
         "exit_time": 12.0,
-        "spot_destination": "D08",
-        "inbound": [(997, 850), (997, 600), (997, 286), (850, 286), (572, 286), (572, 230)],
-        "outbound": [(572, 230), (572, 286), (850, 286), (997, 286), (997, 35)]
+        "spot_destination": "D06",
+        # Đi vào → đỗ D06
+        "inbound": [(1100, 760), (870, 760), (870, 440), (550, 440), (550, 220), (457, 220)],
+        "outbound": [(457, 220), (550, 220), (550, 120), (870, 120), (870, 160), (1100, 160)]
     },
     {
         "track_id": 2,
@@ -43,9 +44,10 @@ SCENARIO = [
         "travel_time": 15.0,
         "park_duration": 35.0,
         "exit_time": 12.0,
-        "spot_destination": "B12",
-        "inbound": [(997, 850), (997, 750), (997, 618), (850, 618), (752, 618), (752, 660)],
-        "outbound": [(752, 660), (752, 618), (850, 618), (997, 618), (997, 35)]
+        "spot_destination": "B04",
+        # Đi vào → đỗ B04
+        "inbound": [(1100, 760), (870, 760), (870, 300), (807, 300)],
+        "outbound": [(807, 300), (870, 300), (870, 160), (1100, 160)]
     },
     {
         "track_id": 3,
@@ -54,9 +56,10 @@ SCENARIO = [
         "travel_time": 15.0,
         "park_duration": 30.0,
         "exit_time": 12.0,
-        "spot_destination": "C04",
-        "inbound": [(997, 850), (997, 650), (997, 452), (600, 452), (320, 452), (320, 410)],
-        "outbound": [(320, 410), (320, 452), (600, 452), (997, 452), (997, 35)]
+        "spot_destination": "E02",
+        # Đi vào → đỗ E02
+        "inbound": [(1100, 760), (870, 760), (870, 440), (230, 440), (230, 380), (292, 380)],
+        "outbound": [(292, 380), (230, 380), (230, 120), (870, 120), (870, 160), (1100, 160)]
     }
 ]
 
@@ -87,18 +90,13 @@ def get_path_position(waypoints, progress: float):
 
 def save_json_atomic(data: dict, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    try:
-        with temp_path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        for _ in range(3):
-            try:
-                temp_path.replace(path)
-                return
-            except Exception:
-                time.sleep(0.02)
-    except Exception:
-        pass
+    for _ in range(5):
+        try:
+            with path.open("w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return
+        except Exception:
+            time.sleep(0.05)
 
 
 def main():

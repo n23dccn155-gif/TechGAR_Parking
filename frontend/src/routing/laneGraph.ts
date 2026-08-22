@@ -1,4 +1,4 @@
-import type { SpotId } from "../domain/parking";
+import { SPOTS_PER_ZONE, type SpotId } from "../domain/parking";
 import {
   PARKING_GEOMETRY,
   distanceBetween,
@@ -27,10 +27,6 @@ export interface LaneGraph {
   spotEntryNodeIds: Record<SpotId, string>;
 }
 
-function accessNodeId(y: number): string {
-  return `access-${String(y).replace(".", "-")}`;
-}
-
 export function buildLaneGraph(geometry: ParkingGeometry = PARKING_GEOMETRY): LaneGraph {
   const nodes: LaneNode[] = [];
   const edges: LaneEdge[] = [];
@@ -57,79 +53,132 @@ export function buildLaneGraph(geometry: ParkingGeometry = PARKING_GEOMETRY): La
     });
   };
 
+  const { layout } = geometry;
+  const centerX = layout.centerLaneCenterX;
+  const leftX = layout.leftAisleCenterX;
+  const rightX = layout.rightAisleCenterX;
+
+  // ── Entrance & Exit ────────────────────────────────────────────────────────
   const entranceNodeId = "entrance";
   const exitNodeId = "exit";
   addNode({ id: entranceNodeId, kind: "entrance", ...geometry.entrance });
   addNode({ id: exitNodeId, kind: "exit", ...geometry.exit });
 
-  const accessYValues = new Set<number>();
-  geometry.zones.forEach((zone) => accessYValues.add(zone.laneY));
-  geometry.spots.filter((spot) => spot.zone === "F").forEach((spot) => accessYValues.add(spot.entryPoint.y));
+  // ── Connector junction Y positions (top & bottom) ──────────────────────────
+  const connTopY = geometry.horizontalConnectors[0]!.centerline.start.y;
+  const connBottomY = geometry.horizontalConnectors[1]!.centerline.start.y;
 
-  const orderedAccessY = [...accessYValues].sort((a, b) => b - a);
-  orderedAccessY.forEach((y) => {
-    addNode({ id: accessNodeId(y), kind: "junction", x: geometry.entrance.x, y });
+  // ── Create junction nodes on all 3 aisles at connector Y + each row Y ──────
+  // Collect all relevant Y values: each spot row + connector top/bottom
+  const rowYValues: number[] = [];
+  for (let n = 1; n <= SPOTS_PER_ZONE; n++) {
+    const spot = geometry.spots.find((s) => s.number === n);
+    if (spot) rowYValues.push(spot.y + spot.height / 2);
+  }
+  const allY = [...new Set([connTopY, ...rowYValues, connBottomY])].sort((a, b) => a - b);
+
+  // Create junction nodes on center lane
+  allY.forEach((y) => {
+    addNode({ id: `center-${y}`, kind: "junction", x: centerX, y });
+  });
+  // Create junction nodes on left aisle
+  allY.forEach((y) => {
+    addNode({ id: `left-${y}`, kind: "junction", x: leftX, y });
+  });
+  // Create junction nodes on right aisle
+  allY.forEach((y) => {
+    addNode({ id: `right-${y}`, kind: "junction", x: rightX, y });
   });
 
-  const accessPath = [
+  // ── Connect entrance → right aisle junctions → exit (bottom to top) ────────
+  // Right aisle is the main road from entrance to exit
+  const sortedDescY = [...allY].sort((a, b) => b - a); // descending Y = bottom first
+  
+  // Add orthogonal corner nodes
+  const entranceCornerId = "entrance-corner";
+  addNode({ id: entranceCornerId, kind: "junction", x: rightX, y: geometry.entrance.y });
+  
+  const exitCornerId = "exit-corner";
+  addNode({ id: exitCornerId, kind: "junction", x: rightX, y: geometry.exit.y });
+
+  const rightPathCorrect = [
     entranceNodeId,
-    ...orderedAccessY.map(accessNodeId),
+    entranceCornerId,
+    ...sortedDescY.map((y) => `right-${y}`),
+    exitCornerId,
     exitNodeId,
   ];
-  for (let index = 0; index < accessPath.length - 1; index += 1) {
-    const from = accessPath[index];
-    const to = accessPath[index + 1];
-    if (from && to) addEdge(from, to);
+  for (let i = 0; i < rightPathCorrect.length - 1; i++) {
+    const from = rightPathCorrect[i]!;
+    const to = rightPathCorrect[i + 1]!;
+    addEdge(from, to);
   }
 
-  geometry.zones.forEach((zone) => {
-    const connector = geometry.zoneConnectors.find((candidate) => candidate.id === `connector-${zone.id}`);
-    if (!connector) throw new Error(`Thiếu đường nối cho khu ${zone.id}`);
-    const zoneStartId = `zone-${zone.id}-start`;
-    addNode({ id: zoneStartId, kind: "junction", ...connector.centerline.start });
-    addEdge(accessNodeId(zone.laneY), zoneStartId);
+  // ── Connect center lane and left aisle junctions vertically (bidirectional for flexibility) ──
+  const sortedAscY = [...allY].sort((a, b) => a - b);
+  for (let i = 0; i < sortedAscY.length - 1; i++) {
+    const y1 = sortedAscY[i]!;
+    const y2 = sortedAscY[i + 1]!;
+    addEdge(`left-${y1}`, `left-${y2}`, "two-way");
+    addEdge(`center-${y1}`, `center-${y2}`, "two-way");
+  }
 
-    const zoneSpots = geometry.spots.filter((spot) => spot.zone === zone.id && spot.row === "top");
-    const orderedColumns = [...zoneSpots].sort((a, b) => b.x - a.x);
-    let previousNodeId = zoneStartId;
-
-    orderedColumns.forEach((topSpot) => {
-      const columnNodeId = `zone-${zone.id}-column-${topSpot.number}`;
-      addNode({
-        id: columnNodeId,
-        kind: "lane",
-        x: topSpot.x + topSpot.width / 2,
-        y: zone.laneY,
-      });
-      addEdge(previousNodeId, columnNodeId);
-      previousNodeId = columnNodeId;
-
-      const bottomSpot = geometry.spots.find(
-        (candidate) => candidate.zone === zone.id && candidate.number === topSpot.number + 15,
-      );
-      if (!bottomSpot) throw new Error(`Thiếu hình học ô đối diện ${topSpot.id}`);
-
-      [topSpot, bottomSpot].forEach((spot) => {
-        const entryId = `spot-${spot.id}`;
-        spotEntryNodeIds[spot.id] = entryId;
-        addNode({ id: entryId, kind: "spot-entry", ...spot.entryPoint });
-        addEdge(columnNodeId, entryId);
-      });
-    });
+  // ── Horizontal connectors: connect center ↔ left ↔ right at top & bottom ──
+  [connTopY, connBottomY].forEach((y) => {
+    addEdge(`center-${y}`, `left-${y}`, "two-way");
+    addEdge(`center-${y}`, `right-${y}`, "two-way");
   });
 
-  geometry.spots.filter((spot) => spot.zone === "F").forEach((spot) => {
+  // ── Spot entry nodes ───────────────────────────────────────────────────────
+  geometry.spots.forEach((spot) => {
     const entryId = `spot-${spot.id}`;
     spotEntryNodeIds[spot.id] = entryId;
     addNode({ id: entryId, kind: "spot-entry", ...spot.entryPoint });
-    addEdge(accessNodeId(spot.entryPoint.y), entryId);
+
+    const spotCenterY = spot.y + spot.height / 2;
+
+    // Connect from the appropriate aisle junction to the spot entry
+    let aisleJunctionId: string;
+    if (spot.zone === "F" || spot.zone === "E") {
+      aisleJunctionId = `left-${spotCenterY}`;
+    } else if (spot.zone === "D" || spot.zone === "C") {
+      aisleJunctionId = `center-${spotCenterY}`;
+    } else {
+      // B, A
+      aisleJunctionId = `right-${spotCenterY}`;
+    }
+
+    if (nodeById.has(aisleJunctionId)) {
+      addEdge(aisleJunctionId, entryId);
+    }
   });
 
+  // ── Access anchors ─────────────────────────────────────────────────────────
   Object.values(geometry.anchors).forEach((anchor) => {
     addNode({ id: `anchor-${anchor.id}`, kind: "access-anchor", x: anchor.x, y: anchor.y });
   });
 
   return { nodes, edges, entranceNodeId, exitNodeId, spotEntryNodeIds };
+}
+
+export function updateGateNodesInGraph(
+  graph: LaneGraph,
+  gateRoi: {
+    entry_gate: { p1: { x: number; y: number }; p2: { x: number; y: number } };
+    exit_gate: { p1: { x: number; y: number }; p2: { x: number; y: number } };
+  }
+): void {
+  const entranceNode = graph.nodes.find((n) => n.id === graph.entranceNodeId);
+  if (entranceNode && gateRoi.entry_gate) {
+    entranceNode.x = (gateRoi.entry_gate.p1.x + gateRoi.entry_gate.p2.x) / 2;
+    entranceNode.y = (gateRoi.entry_gate.p1.y + gateRoi.entry_gate.p2.y) / 2;
+  }
+
+  const exitNode = graph.nodes.find((n) => n.id === graph.exitNodeId);
+  if (exitNode && gateRoi.exit_gate) {
+    exitNode.x = (gateRoi.exit_gate.p1.x + gateRoi.exit_gate.p2.x) / 2;
+    exitNode.y = (gateRoi.exit_gate.p1.y + gateRoi.exit_gate.p2.y) / 2;
+  }
 }
 
 export const LANE_GRAPH = buildLaneGraph();

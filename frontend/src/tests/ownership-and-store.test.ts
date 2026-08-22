@@ -10,15 +10,16 @@ import { deriveParkingCounts, getParkingSpots, useParkingStore } from "../stores
 describe("camera ownership", () => {
   it("is disjoint and matches all specified boundaries", () => {
     expect(validateOwnershipIsDisjoint()).toBe(true);
-    expect(cameraOwnsSpot("cam-left", "A01")).toBe(true);
-    expect(cameraOwnsSpot("cam-left", "A08")).toBe(true);
-    expect(cameraOwnsSpot("cam-right", "A09")).toBe(true);
-    expect(cameraOwnsSpot("cam-left", "A16")).toBe(true);
-    expect(cameraOwnsSpot("cam-left", "A23")).toBe(true);
-    expect(cameraOwnsSpot("cam-right", "A24")).toBe(true);
-    expect(cameraOwnsSpot("cam-right", "A30")).toBe(true);
-    expect(cameraOwnsSpot("cam-right", "F01")).toBe(true);
-    expect(cameraOwnsSpot("cam-left", "F10")).toBe(false);
+    expect(cameraOwnsSpot("cam-left", "F01")).toBe(true);
+    expect(cameraOwnsSpot("cam-left", "E05")).toBe(true);
+    expect(cameraOwnsSpot("cam-left", "D08")).toBe(true);
+    
+    expect(cameraOwnsSpot("cam-right", "C01")).toBe(true);
+    expect(cameraOwnsSpot("cam-right", "B04")).toBe(true);
+    expect(cameraOwnsSpot("cam-right", "A08")).toBe(true);
+    
+    expect(cameraOwnsSpot("cam-left", "C01")).toBe(false);
+    expect(cameraOwnsSpot("cam-right", "E01")).toBe(false);
   });
 
   it("rejects an unauthorized source event before notifying subscribers", () => {
@@ -26,7 +27,7 @@ describe("camera ownership", () => {
     const listener = vi.fn();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     source.subscribe(listener);
-    expect(source.emitSpotStatus("F01", "occupied", "cam-left", 2)).toBe(false);
+    expect(source.emitSpotStatus("C01", "occupied", "cam-left", 2)).toBe(false);
     expect(listener).not.toHaveBeenCalled();
     expect(source.getRejectedCount()).toBe(1);
     warn.mockRestore();
@@ -43,7 +44,7 @@ describe("canonical parking store", () => {
     const before = useParkingStore.getState().spots.A02;
     const event: SpotStatusEvent = {
       type: "spot.status.changed",
-      cameraId: "cam-left",
+      cameraId: "cam-right",
       spotId: "A02",
       status: "occupied",
       confidence: 0.99,
@@ -61,23 +62,23 @@ describe("canonical parking store", () => {
       useParkingStore.getState().applyEvent({
         type: "spot.status.changed",
         cameraId: "cam-right",
-        spotId: "A01",
+        spotId: "E01",
         status: "occupied",
         confidence: 0.9,
         revision: 2,
         updatedAt: "2026-07-25T08:01:01.000Z",
       }),
     ).toBe("unauthorized");
-    expect(useParkingStore.getState().spots.A01?.status).toBe("empty");
+    expect(useParkingStore.getState().spots.E01?.status).toBe("empty");
     warn.mockRestore();
   });
 
   it("derives counts from canonical state after every accepted event", () => {
     const before = deriveParkingCounts(getParkingSpots());
-    expect(before.total).toBe(160);
+    expect(before.total).toBe(48); // 6 zones * 8 spots
     useParkingStore.getState().applyEvent({
       type: "spot.status.changed",
-      cameraId: "cam-left",
+      cameraId: "cam-right",
       spotId: "A01",
       status: "occupied",
       confidence: 0.97,
@@ -85,7 +86,7 @@ describe("canonical parking store", () => {
       updatedAt: "2026-07-25T08:01:02.000Z",
     });
     const after = deriveParkingCounts(getParkingSpots());
-    expect(after.total).toBe(160);
+    expect(after.total).toBe(48);
     expect(after.empty).toBe(before.empty - 1);
     expect(after.occupied).toBe(before.occupied + 1);
     expect(after.total).toBe(after.empty + after.occupied + after.transitioning + after.unknown);
@@ -95,11 +96,11 @@ describe("canonical parking store", () => {
     const before = useParkingStore.getState().spots.A01;
     useParkingStore.getState().applyEvent({
       type: "camera.health.changed",
-      cameraId: "cam-left",
+      cameraId: "cam-right",
       health: "offline",
       updatedAt: "2026-07-25T08:02:00.000Z",
     });
-    expect(useParkingStore.getState().cameras["cam-left"].health).toBe("offline");
+    expect(useParkingStore.getState().cameras["cam-right"].health).toBe("offline");
     expect(useParkingStore.getState().spots.A01).toEqual(before);
   });
 });

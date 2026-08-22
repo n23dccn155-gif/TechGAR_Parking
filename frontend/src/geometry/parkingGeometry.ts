@@ -1,5 +1,7 @@
 import {
   MAIN_ZONE_ORDER,
+  SPOTS_PER_ZONE,
+  LEFT_ZONES,
   formatSpotId,
   type DestinationNeed,
   type MainZoneId,
@@ -29,12 +31,17 @@ export interface SpotGeometry extends Rect {
 export interface ZoneGeometry {
   id: MainZoneId;
   bounds: Rect;
-  laneY: number;
-  upperSpotIds: SpotId[];
-  lowerSpotIds: SpotId[];
+  side: "left" | "right";
+  spotIds: SpotId[];
 }
 
-export interface RoadConnectorGeometry {
+export interface AisleGeometry {
+  id: string;
+  bounds: Rect;
+  centerX: number;
+}
+
+export interface ConnectorGeometry {
   id: string;
   bounds: Rect;
   centerline: {
@@ -43,22 +50,19 @@ export interface RoadConnectorGeometry {
   };
 }
 
-export interface ParkingLayout {
-  zoneLeftX: number;
-  zoneRightX: number;
-  mainRoadX: number;
-  mainRoadWidth: number;
-  mainRoadCenterX: number;
-  zoneFLeftX: number;
-  zoneFWidth: number;
-  entranceY: number;
-  exitY: number;
-  zoneLaneY: Record<MainZoneId, number>;
-}
-
 export interface AccessAnchor extends Point {
   id: DestinationNeed;
   label: string;
+}
+
+export interface ParkingLayout {
+  centerLaneX: number;
+  centerLaneWidth: number;
+  centerLaneCenterX: number;
+  leftAisleCenterX: number;
+  rightAisleCenterX: number;
+  entranceY: number;
+  exitY: number;
 }
 
 export interface ParkingGeometry {
@@ -67,179 +71,200 @@ export interface ParkingGeometry {
   layout: ParkingLayout;
   spots: SpotGeometry[];
   zones: ZoneGeometry[];
-  zoneConnectors: RoadConnectorGeometry[];
-  fAccessConnectors: RoadConnectorGeometry[];
-  fStripBounds: Rect;
-  accessRoad: Rect;
+  aisles: AisleGeometry[];
+  horizontalConnectors: ConnectorGeometry[];
   entrance: Point;
   exit: Point;
   anchors: Record<DestinationNeed, AccessAnchor>;
 }
 
+// ── Layout constants ──────────────────────────────────────────────────────────
 const MAP_WIDTH = 1200;
 const MAP_HEIGHT = 900;
-const ZONE_X = 58;
-const ZONE_WIDTH = 870;
-const ZONE_HEIGHT = 142;
-const ZONE_GAP = 24;
-const FIRST_ZONE_Y = 34;
-const SPOT_X = 92;
-const SPOT_WIDTH = 50;
-const SPOT_HEIGHT = 34;
-const SPOT_GAP = 6;
-const MAIN_ROAD_X = 950;
-const MAIN_ROAD_WIDTH = 94;
-const MAIN_ROAD_CENTER_X = MAIN_ROAD_X + MAIN_ROAD_WIDTH / 2;
-const ZONE_F_LEFT_X = 1070;
-const ZONE_F_WIDTH = 92;
-const ENTRANCE_Y = 858;
-const EXIT_Y = 28;
-const CONNECTOR_HEIGHT = 46;
 
-function createMainZone(zone: MainZoneId, zoneIndex: number): { zone: ZoneGeometry; spots: SpotGeometry[] } {
-  const y = FIRST_ZONE_Y + zoneIndex * (ZONE_HEIGHT + ZONE_GAP);
-  const laneY = y + ZONE_HEIGHT / 2;
-  const upperY = y + 18;
-  const lowerY = y + ZONE_HEIGHT - 18 - SPOT_HEIGHT;
-  const spots: SpotGeometry[] = [];
-  const upperSpotIds: SpotId[] = [];
-  const lowerSpotIds: SpotId[] = [];
+const SPOT_WIDTH = 90;
+const SPOT_HEIGHT = 70;
+const SPOT_GAP = 12;    // vertical gap between spots
 
-  for (let column = 0; column < 15; column += 1) {
-    const x = SPOT_X + column * (SPOT_WIDTH + SPOT_GAP);
-    const topNumber = column + 1;
-    const bottomNumber = column + 16;
-    const topId = formatSpotId(zone, topNumber);
-    const bottomId = formatSpotId(zone, bottomNumber);
+const FIRST_SPOT_Y = 110;  // y of slot 08 (topmost)
 
-    upperSpotIds.push(topId);
-    lowerSpotIds.push(bottomId);
-    spots.push({
-      id: topId,
-      zone,
-      number: topNumber,
-      row: "top",
-      x,
-      y: upperY,
-      width: SPOT_WIDTH,
-      height: SPOT_HEIGHT,
-      entryPoint: { x: x + SPOT_WIDTH / 2, y: laneY - 15 },
-    });
-    spots.push({
-      id: bottomId,
-      zone,
-      number: bottomNumber,
-      row: "bottom",
-      x,
-      y: lowerY,
-      width: SPOT_WIDTH,
-      height: SPOT_HEIGHT,
-      entryPoint: { x: x + SPOT_WIDTH / 2, y: laneY + 15 },
-    });
-  }
+// X positions for each zone column
+const ZONE_COLUMNS: Record<MainZoneId, number> = {
+  F: 110,
+  E: 300,
+  D: 390,
+  C: 600,
+  B: 690,
+  A: 890,
+};
 
-  return {
-    zone: {
-      id: zone,
-      bounds: { x: ZONE_X, y, width: ZONE_WIDTH, height: ZONE_HEIGHT },
-      laneY,
-      upperSpotIds,
-      lowerSpotIds,
-    },
-    spots,
-  };
+// 3 aisles (driving lanes)
+const LEFT_AISLE_X = 210;
+const LEFT_AISLE_WIDTH = 80;
+const CENTER_LANE_X = 500;
+const CENTER_LANE_WIDTH = 80;
+const RIGHT_AISLE_X = 800;
+const RIGHT_AISLE_WIDTH = 80;
+
+const ENTRANCE_Y = 860;
+const EXIT_Y = 35;
+
+// Horizontal connector Y positions (above top slot & below bottom slot)
+const CONNECTOR_TOP_Y = 75;
+const CONNECTOR_BOTTOM_Y = 775;
+const CONNECTOR_HEIGHT = 30;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function spotY(slotNumber: number): number {
+  // Slot 08 at top (FIRST_SPOT_Y), slot 01 at bottom
+  const indexFromTop = SPOTS_PER_ZONE - slotNumber; // 08→0, 07→1, ..., 01→7
+  return FIRST_SPOT_Y + indexFromTop * (SPOT_HEIGHT + SPOT_GAP);
 }
 
+function getAisleCenterX(zone: ZoneId): number {
+  switch (zone) {
+    case "F":
+    case "E":
+      return LEFT_AISLE_X + LEFT_AISLE_WIDTH / 2;
+    case "D":
+    case "C":
+      return CENTER_LANE_X + CENTER_LANE_WIDTH / 2;
+    case "B":
+    case "A":
+      return RIGHT_AISLE_X + RIGHT_AISLE_WIDTH / 2;
+  }
+}
+
+function getEntryPoint(zone: ZoneId, spotX: number, spotCenterY: number): Point {
+  const aisleCenterX = getAisleCenterX(zone);
+  // Entry point is on the side of the spot facing its aisle
+  if (spotX < aisleCenterX) {
+    // Spot is to the LEFT of its aisle → entry on the right edge
+    return { x: spotX + SPOT_WIDTH + 8, y: spotCenterY };
+  } else {
+    // Spot is to the RIGHT of its aisle → entry on the left edge
+    return { x: spotX - 8, y: spotCenterY };
+  }
+}
+
+// ── Generator ─────────────────────────────────────────────────────────────────
 export function generateParkingGeometry(): ParkingGeometry {
   const zones: ZoneGeometry[] = [];
   const spots: SpotGeometry[] = [];
 
-  MAIN_ZONE_ORDER.forEach((zoneId, index) => {
-    const generated = createMainZone(zoneId, index);
-    zones.push(generated.zone);
-    spots.push(...generated.spots);
+  const centerLaneCenterX = CENTER_LANE_X + CENTER_LANE_WIDTH / 2;
+  const leftAisleCenterX = LEFT_AISLE_X + LEFT_AISLE_WIDTH / 2;
+  const rightAisleCenterX = RIGHT_AISLE_X + RIGHT_AISLE_WIDTH / 2;
+
+  // Generate spots for each zone
+  MAIN_ZONE_ORDER.forEach((zoneId) => {
+    const columnX = ZONE_COLUMNS[zoneId];
+    const side: ParkingRow = LEFT_ZONES.has(zoneId) ? "left" : "right";
+    const spotIds: SpotId[] = [];
+
+    for (let n = 1; n <= SPOTS_PER_ZONE; n++) {
+      const id = formatSpotId(zoneId, n);
+      const y = spotY(n);
+      const centerY = y + SPOT_HEIGHT / 2;
+
+      spotIds.push(id);
+      spots.push({
+        id,
+        zone: zoneId,
+        number: n,
+        row: side,
+        x: columnX,
+        y,
+        width: SPOT_WIDTH,
+        height: SPOT_HEIGHT,
+        entryPoint: getEntryPoint(zoneId, columnX, centerY),
+      });
+    }
+
+    // Zone bounds: enclosing rectangle for all 8 spots
+    const topY = spotY(SPOTS_PER_ZONE); // slot 08 (topmost)
+    const bottomY = spotY(1) + SPOT_HEIGHT; // slot 01 bottom edge
+    zones.push({
+      id: zoneId,
+      bounds: { x: columnX, y: topY, width: SPOT_WIDTH, height: bottomY - topY },
+      side,
+      spotIds,
+    });
   });
 
-  const fStripBounds: Rect = { x: ZONE_F_LEFT_X, y: 118, width: ZONE_F_WIDTH, height: 632 };
-  for (let index = 0; index < 10; index += 1) {
-    const number = index + 1;
-    const id = formatSpotId("F", number);
-    const y = fStripBounds.y + 18 + index * 59;
-    spots.push({
-      id,
-      zone: "F",
-      number,
-      row: "vertical",
-      x: fStripBounds.x + 13,
-      y,
-      width: 66,
-      height: 45,
-      entryPoint: { x: fStripBounds.x + 5, y: y + 22.5 },
-    });
-  }
+  // 3 aisles
+  const aisles: AisleGeometry[] = [
+    {
+      id: "left-aisle",
+      bounds: { x: LEFT_AISLE_X, y: 0, width: LEFT_AISLE_WIDTH, height: MAP_HEIGHT },
+      centerX: leftAisleCenterX,
+    },
+    {
+      id: "center-lane",
+      bounds: { x: CENTER_LANE_X, y: 0, width: CENTER_LANE_WIDTH, height: MAP_HEIGHT },
+      centerX: centerLaneCenterX,
+    },
+    {
+      id: "right-aisle",
+      bounds: { x: RIGHT_AISLE_X, y: 0, width: RIGHT_AISLE_WIDTH, height: MAP_HEIGHT },
+      centerX: rightAisleCenterX,
+    },
+  ];
 
-  const zoneConnectors: RoadConnectorGeometry[] = zones.map((zone) => {
-    const connectorStartX = zone.bounds.x + zone.bounds.width - 10;
-    return {
-      id: `connector-${zone.id}`,
+  // Horizontal connectors (top + bottom)
+  const ROAD_END_X = 1100;
+
+  const horizontalConnectors: ConnectorGeometry[] = [
+    {
+      id: "connector-top",
       bounds: {
-        x: connectorStartX,
-        y: zone.laneY - CONNECTOR_HEIGHT / 2,
-        width: MAIN_ROAD_CENTER_X - connectorStartX,
+        x: leftAisleCenterX,
+        y: CONNECTOR_TOP_Y,
+        width: ROAD_END_X - leftAisleCenterX,
         height: CONNECTOR_HEIGHT,
       },
       centerline: {
-        start: { x: connectorStartX, y: zone.laneY },
-        end: { x: MAIN_ROAD_CENTER_X, y: zone.laneY },
+        start: { x: leftAisleCenterX, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 },
+        end: { x: ROAD_END_X, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 },
       },
-    };
-  });
-
-  const fAccessConnectors: RoadConnectorGeometry[] = spots
-    .filter((spot) => spot.zone === "F")
-    .map((spot) => ({
-      id: `connector-${spot.id}`,
+    },
+    {
+      id: "connector-bottom",
       bounds: {
-        x: MAIN_ROAD_CENTER_X,
-        y: spot.entryPoint.y - 9,
-        width: spot.entryPoint.x - MAIN_ROAD_CENTER_X,
-        height: 18,
+        x: leftAisleCenterX,
+        y: CONNECTOR_BOTTOM_Y,
+        width: ROAD_END_X - leftAisleCenterX,
+        height: CONNECTOR_HEIGHT,
       },
       centerline: {
-        start: { x: MAIN_ROAD_CENTER_X, y: spot.entryPoint.y },
-        end: { ...spot.entryPoint },
+        start: { x: leftAisleCenterX, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 },
+        end: { x: ROAD_END_X, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 },
       },
-    }));
-
-  const zoneLaneY = Object.fromEntries(zones.map((zone) => [zone.id, zone.laneY])) as Record<MainZoneId, number>;
+    },
+  ];
 
   return {
     width: MAP_WIDTH,
     height: MAP_HEIGHT,
     layout: {
-      zoneLeftX: ZONE_X,
-      zoneRightX: ZONE_X + ZONE_WIDTH,
-      mainRoadX: MAIN_ROAD_X,
-      mainRoadWidth: MAIN_ROAD_WIDTH,
-      mainRoadCenterX: MAIN_ROAD_CENTER_X,
-      zoneFLeftX: ZONE_F_LEFT_X,
-      zoneFWidth: ZONE_F_WIDTH,
+      centerLaneX: CENTER_LANE_X,
+      centerLaneWidth: CENTER_LANE_WIDTH,
+      centerLaneCenterX,
+      leftAisleCenterX,
+      rightAisleCenterX,
       entranceY: ENTRANCE_Y,
       exitY: EXIT_Y,
-      zoneLaneY,
     },
     spots,
     zones,
-    zoneConnectors,
-    fAccessConnectors,
-    fStripBounds,
-    accessRoad: { x: MAIN_ROAD_X, y: 0, width: MAIN_ROAD_WIDTH, height: MAP_HEIGHT },
-    entrance: { x: MAIN_ROAD_CENTER_X, y: ENTRANCE_Y },
-    exit: { x: MAIN_ROAD_CENTER_X, y: EXIT_Y },
+    aisles,
+    horizontalConnectors,
+    entrance: { x: ROAD_END_X, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 },
+    exit: { x: ROAD_END_X, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 },
     anchors: {
-      shopping: { id: "shopping", label: "Shopping", x: 430, y: 882 },
-      services: { id: "services", label: "Dịch vụ", x: 30, y: 450 },
-      entertainment: { id: "entertainment", label: "Giải trí", x: 430, y: 18 },
+      shopping: { id: "shopping", label: "Shopping", x: ROAD_END_X - 100, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 + 20 },
+      services: { id: "services", label: "Dịch vụ", x: 50, y: MAP_HEIGHT / 2 },
+      entertainment: { id: "entertainment", label: "Giải trí", x: ROAD_END_X - 100, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 - 10 },
     },
   };
 }

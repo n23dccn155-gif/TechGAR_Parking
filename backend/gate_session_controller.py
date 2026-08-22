@@ -16,6 +16,7 @@ import json
 import time
 import argparse
 import threading
+import subprocess
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 import sys
@@ -36,9 +37,82 @@ except ImportError as e:
     print(f"Khong tim thay session_manager.py! Loi: {e}")
     sys.exit(1)
 
+# ── Quản lý Tiến trình AI Detection (main_detect) ──
+detection_process = None
+active_video_url = str(BASE_DIR / "main_detect" / "data" / "carPark.mp4")
+
+def start_detection_process(video_source: str):
+    global detection_process, active_video_url
+    stop_detection_process()
+    active_video_url = video_source
+    main_script = BASE_DIR / "main_detect" / "main.py"
+    output_dir = BASE_DIR.parent / "frontend" / "public"
+    
+    cmd = [
+        sys.executable,
+        str(main_script),
+        "--video", video_source,
+        "--output-dir", str(output_dir),
+        "--loop",
+        "--no-display"
+    ]
+    print(f"[AI ENGINE] Kich hoat main_detect voi nguon: {video_source}")
+    try:
+        detection_process = subprocess.Popen(cmd)
+    except Exception as e:
+        print(f"[AI ENGINE ERROR] Khong the khoi chay main_detect: {e}")
+
+def stop_detection_process():
+    global detection_process
+    if detection_process and detection_process.poll() is None:
+        print("[AI ENGINE] Dung luong main_detect hien tai...")
+        try:
+            detection_process.terminate()
+            detection_process.wait(timeout=2)
+        except Exception:
+            detection_process.kill()
+    detection_process = None
+
 # ── Đường dẫn file ──
 PARKING_STATUS_SAMPLE = BASE_DIR.parent / "frontend" / "public" / "parking_status_sample.json"
 SESSIONS_FILE = BASE_DIR.parent / "frontend" / "public" / "navigation_sessions.json"
+GATE_ROI_PATH = BASE_DIR.parent / "frontend" / "public" / "gate_roi.json"
+
+
+def load_gate_roi() -> dict:
+    if GATE_ROI_PATH.exists():
+        try:
+            with open(GATE_ROI_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "entry_gate": {"p1": {"x": 880, "y": 820}, "p2": {"x": 1120, "y": 820}},
+        "exit_gate": {"p1": {"x": 80, "y": 820}, "p2": {"x": 320, "y": 820}}
+    }
+
+
+def check_line_intersection(p1: dict, p2: dict, p3: dict, p4: dict) -> bool:
+    """
+    Kiểm tra xem đoạn thẳng p1-p2 (vệt xe chạy) có giao cắt với vạch rào chắn p3-p4 hay không.
+    p1..p4 là dict {"x": int, "y": int}
+    """
+    def ccw(A, B, C):
+        return (C["y"] - A["y"]) * (B["x"] - A["x"]) > (B["y"] - A["y"]) * (C["x"] - A["x"])
+
+    return (ccw(p1, p3, p4) != ccw(p2, p3, p4)) and (ccw(p1, p2, p3) != ccw(p1, p2, p4))
+
+
+def get_crossing_direction(p_old: dict, p_new: dict, p3: dict, p4: dict) -> float:
+    """
+    Tính tích hướng Vector Cross Product để phân biệt hướng xe cắt vạch.
+    """
+    vx = p_new["x"] - p_old["x"]
+    vy = p_new["y"] - p_old["y"]
+    gx = p4["x"] - p3["x"]
+    gy = p4["y"] - p3["y"]
+    return (vx * gy) - (vy * gx)
+
 
 
 def load_json_safe(path: Path) -> dict:
@@ -53,16 +127,9 @@ def load_json_safe(path: Path) -> dict:
 
 def save_json_atomic(data: dict, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
     try:
-        with temp_path.open("w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        for _ in range(3):
-            try:
-                temp_path.replace(path)
-                return
-            except Exception:
-                time.sleep(0.02)
     except Exception:
         pass
 
@@ -98,30 +165,6 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/" or self.path == "/health" or self.path.startswith("/api"):
-            if self.path == "/" or self.path == "/health":
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self._send_cors_headers()
-                self.end_headers()
-                html = """
-                <!DOCTYPE html>
-                <html lang="vi">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>TechGAR Parking Backend API</title>
-                </head>
-                <body style="font-family: system-ui, sans-serif; text-align: center; padding: 60px 20px; background: #0f172a; color: #f8fafc;">
-                    <div style="max-width: 500px; margin: 0 auto; background: #1e293b; padding: 32px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                        <h1 style="color: #22c55e; margin-bottom: 12px; font-size: 24px;">✅ TechGAR Backend Online</h1>
-                        <p style="color: #94a3b8; font-size: 15px; margin-bottom: 24px;">Hệ thống API Server điều khiển bãi đỗ xe thông minh đang hoạt động bình thường!</p>
-                        <a href="/api/sessions" style="display: inline-block; background: #0284c7; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;">🔍 Xem Session API Data</a>
-                    </div>
-                </body>
-                </html>
-                """
-                self.wfile.write(html.encode("utf-8"))
-                return
         if self.path.startswith("/api/sessions") or self.path.startswith("/navigation_sessions"):
             sessions = load_sessions()
             self.send_response(200)
@@ -129,43 +172,15 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
             self._send_cors_headers()
             self.end_headers()
             self.wfile.write(json.dumps(sessions, ensure_ascii=False, indent=2).encode("utf-8"))
-            return
-
-        if "/vehicle_positions" in self.path:
-            fname = "vehicle_positions_sample.json" if "sample" in self.path else "vehicle_positions.json"
-            fpath = BASE_DIR.parent / "frontend" / "public" / fname
-            if fpath.exists():
-                try:
-                    with open(fpath, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
-                    return
-                except Exception:
-                    pass
-
-        if "/parking_status" in self.path:
-            fname = "parking_status_sample.json" if "sample" in self.path else "parking_status.json"
-            fpath = BASE_DIR.parent / "frontend" / "public" / fname
-            if fpath.exists():
-                try:
-                    with open(fpath, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
-                    return
-                except Exception:
-                    pass
-
-        self.send_response(404)
-        self._send_cors_headers()
-        self.end_headers()
+        elif self.path == "/api/detection/status":
+            is_running = detection_process is not None and detection_process.poll() is None
+            self._respond_json({
+                "running": is_running,
+                "videoUrl": active_video_url,
+            })
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def do_POST(self):
         content_length = int(self.headers.get('Content-Length', 0))
@@ -180,7 +195,23 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
 
         print(f"[API HTTP] {self.path} - Payload: {payload}")
 
-        if self.path == "/api/session/claim":
+        if self.path == "/api/detection/start":
+            video_url = payload.get("videoUrl") or str(BASE_DIR / "main_detect" / "data" / "carPark.mp4")
+            start_detection_process(video_url)
+            self._respond_json({
+                "ok": True,
+                "status": "running",
+                "videoUrl": video_url
+            })
+
+        elif self.path == "/api/detection/stop":
+            stop_detection_process()
+            self._respond_json({
+                "ok": True,
+                "status": "stopped"
+            })
+
+        elif self.path == "/api/session/claim":
             if sid:
                 claim_session(sid)
                 self._respond_json({"ok": True, "sessionId": sid, "state": "SELECTING_SPOT"})
@@ -251,16 +282,6 @@ def main():
     # Khởi chạy HTTP API Server ở background thread
     api_thread = threading.Thread(target=start_api_server, args=(args.port,), daemon=True)
     api_thread.start()
-
-    # Tự động chạy Sample Tracking Simulator background thread nếu ở chế độ Dữ liệu mẫu
-    if args.source == "vehicle_positions_sample.json":
-        try:
-            import sample_tracking_simulator
-            sim_thread = threading.Thread(target=sample_tracking_simulator.main, daemon=True)
-            sim_thread.start()
-            print("[GATE] Khoi chay Sample Tracking Simulator (3 xe vao/ra) o background!")
-        except Exception as e:
-            print(f"[GATE] Loi khoi chay simulator: {e}")
     
     feed_path = BASE_DIR.parent / "frontend" / "public" / args.source
     print("=" * 60)
@@ -271,6 +292,7 @@ def main():
     
     # State tracking: track_id -> session_id
     active_tracks = {}
+    prev_positions = {}
     
     try:
         while True:
@@ -287,20 +309,43 @@ def main():
                 
             vehicles = data.get("active_vehicles", {})
             current_track_ids = set(int(k) for k in vehicles.keys())
-            
-            # ── Xử lý xe mới vào cổng ──
+            gate_roi = load_gate_roi()
+            entry_p1 = gate_roi["entry_gate"]["p1"]
+            entry_p2 = gate_roi["entry_gate"]["p2"]
+            exit_p1 = gate_roi["exit_gate"]["p1"]
+            exit_p2 = gate_roi["exit_gate"]["p2"]
+
+            # ── 1. Kiểm tra Vạch Cắt Cổng (Line Crossing Detection) ──
             for t_id_str, v_data in vehicles.items():
                 t_id = int(t_id_str)
                 pos = v_data.get("position", {"x": 0, "y": 0})
+                old_pos = prev_positions.get(t_id, pos)
+                prev_positions[t_id] = pos
+
+                # Kiểm tra cắt VẠCH CỔNG VÀO (Nhập bãi)
+                crossed_entry = check_line_intersection(old_pos, pos, entry_p1, entry_p2)
+                if crossed_entry and t_id not in active_tracks:
+                    cross_val = get_crossing_direction(old_pos, pos, entry_p1, entry_p2)
+                    session_id = create_session(track_id=t_id)
+                    print(f"[TRIPWIRE ENTRY] Xe #{t_id} VƯỢT VẠCH CỔNG VÀO (Hướng Vector Cross={cross_val:.1f})! "
+                          f"Tạo Session: {session_id} (WAITING_FOR_SCAN)")
+                    active_tracks[t_id] = session_id
                 
-                # Cổng vào khoảng (997, 850) – kiểm tra y > 700
-                if t_id not in active_tracks:
-                    if pos["y"] > 700:
-                        # Tạo session KHÔNG có target – chỉ track_id
-                        session_id = create_session(track_id=t_id)
-                        print(f"[GATE] Phat hien xe moi #{t_id} o cong! "
-                              f"Tao Session: {session_id} (WAITING_FOR_SCAN)")
-                        active_tracks[t_id] = session_id
+                # Fallback: Xe mới xuất hiện ở vùng cổng vào (y > 700) nếu chưa cắt vạch
+                elif t_id not in active_tracks and pos["y"] > 700:
+                    session_id = create_session(track_id=t_id)
+                    print(f"[GATE FALLBACK] Phát hiện xe #{t_id} tại vùng Cổng Vào! "
+                          f"Tạo Session: {session_id}")
+                    active_tracks[t_id] = session_id
+
+                # Kiểm tra cắt VẠCH CỔNG RA (Xuất bãi)
+                crossed_exit = check_line_intersection(old_pos, pos, exit_p1, exit_p2)
+                if crossed_exit and t_id in active_tracks:
+                    cross_val = get_crossing_direction(old_pos, pos, exit_p1, exit_p2)
+                    session_id = active_tracks[t_id]
+                    print(f"[TRIPWIRE EXIT] Xe #{t_id} VƯỢT VẠCH CỔNG RA (Hướng Vector Cross={cross_val:.1f})! Đóng Session {session_id}")
+                    close_session(session_id)
+                    del active_tracks[t_id]
 
             # ── [SAMPLE MODE] Xử lý cập nhật trạng thái từ simulated status ──
             for t_id_str, v_data in vehicles.items():
@@ -313,8 +358,8 @@ def main():
                 session = sessions.get(session_id, {})
                 s_state = session.get("state")
                 
-                # Sample source báo xe "parked" -> lấy ĐÚNG ô thực tế từ camera/simulator
-                if v_data.get("status") == "parked" and s_state != "PARKED" and s_state != "CLOSED":
+                # Sample source báo xe "parked" -> lấy ĐÚNG ô thực tế từ camera/simulator (Không ghi đè nếu đang EXIT_NAVIGATION)
+                if v_data.get("status") == "parked" and s_state not in ("PARKED", "EXIT_NAVIGATION", "CLOSED"):
                     real_parked_spot = v_data.get("parked_spot_id")
                     if real_parked_spot:
                         print(f"[PARK] Xe #{t_id} da do THUC TE tai o {real_parked_spot} -> PARKED")
@@ -328,6 +373,29 @@ def main():
                     set_exit_navigation(session_id, t_id)
                     if real_parked_spot:
                         update_sample_parking_status(real_parked_spot, "empty")
+
+            # ── [AI / DETECT MODE] Tự động đọc vehicle_id từ parking_status.json để gán parkedSpotId ──
+            status_file_name = "parking_status.json" if args.source == "vehicle_positions.json" else "parking_status_sample.json"
+            status_path = BASE_DIR.parent / "frontend" / "public" / status_file_name
+            status_data = load_json_safe(status_path)
+            slots_data = status_data.get("slots", {})
+
+            if isinstance(slots_data, dict):
+                for spot_id, s_info in slots_data.items():
+                    if isinstance(s_info, dict):
+                        v_id = s_info.get("vehicle_id")
+                        if v_id is not None:
+                            try:
+                                v_id_int = int(v_id)
+                                if v_id_int in active_tracks:
+                                    s_id = active_tracks[v_id_int]
+                                    sessions = load_sessions()
+                                    s_obj = sessions.get(s_id, {})
+                                    if s_obj.get("state") not in ("PARKED", "CLOSED") and s_obj.get("parkedSpotId") != spot_id:
+                                        print(f"[AI BINDER] Xe #{v_id_int} duoc phat hien tai o THUC TE {spot_id} -> set PARKED")
+                                        set_parked(s_id, spot_id)
+                            except (ValueError, TypeError):
+                                pass
                     
             # ── Xử lý xe đã đi khỏi bãi (mất track) ──
             lost_tracks = list(set(active_tracks.keys()) - current_track_ids)
