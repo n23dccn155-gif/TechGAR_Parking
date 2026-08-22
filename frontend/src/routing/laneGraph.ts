@@ -123,9 +123,9 @@ export function buildLaneGraph(geometry: ParkingGeometry = PARKING_GEOMETRY): La
     addEdge(`center-${y1}`, `center-${y2}`, "two-way");
   }
 
-  // ── Horizontal connectors: connect center ↔ left ↔ right at ALL row levels ──
-  // Cho phép xe di chuyển ngang giữa các aisle ở mọi hàng
-  allY.forEach((y) => {
+  // ── Horizontal connectors: connect center ↔ left ↔ right at top & bottom ──
+  // Chỉ kết nối ngang ở đỉnh và đáy bãi xe để tránh đâm xuyên qua các ô đỗ
+  [connTopY, connBottomY].forEach((y) => {
     addEdge(`center-${y}`, `left-${y}`, "two-way");
     addEdge(`center-${y}`, `right-${y}`, "two-way");
   });
