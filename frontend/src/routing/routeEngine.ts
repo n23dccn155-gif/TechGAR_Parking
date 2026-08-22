@@ -112,18 +112,40 @@ export function findExitRoute(graph: LaneGraph, spotId: SpotId): RouteResult | n
  * Dùng để tính điểm xuất phát động khi xe đang di chuyển.
  */
 export function findNearestNode(graph: LaneGraph, x: number, y: number): string | null {
-  let nearestId: string | null = null;
-  let minDist = Number.POSITIVE_INFINITY;
-  graph.nodes.forEach((node) => {
-    // Bỏ qua các điểm neo đi bộ và điểm neo của ô đỗ
-    if (node.kind === "access-anchor" || node.kind === "spot-entry") return; 
-    const d = Math.hypot(node.x - x, node.y - y);
-    if (d < minDist) {
-      minDist = d;
-      nearestId = node.id;
-    }
-  });
-  return nearestId;
+  const nodes = findKNearestNodes(graph, x, y, 1);
+  return nodes.length > 0 ? nodes[0].id : null;
+}
+
+function findKNearestNodes(graph: LaneGraph, x: number, y: number, k: number = 2): LaneNode[] {
+  const nodes = graph.nodes
+    .filter((n) => n.kind !== "access-anchor" && n.kind !== "spot-entry")
+    .map((n) => ({ node: n, d: Math.hypot(n.x - x, n.y - y) }))
+    .sort((a, b) => a.d - b.d);
+  return nodes.slice(0, k).map((item) => item.node);
+}
+
+function routeFromPos(graph: LaneGraph, vehicleX: number, vehicleY: number, targetNodeId: string): RouteResult | null {
+  const nearestNodes = findKNearestNodes(graph, vehicleX, vehicleY, 2);
+  if (nearestNodes.length === 0) return null;
+
+  const vehicleNodeId = "vehicle-pos";
+  const vehicleNode: LaneNode = { id: vehicleNodeId, kind: "junction", x: vehicleX, y: vehicleY };
+  
+  const tempEdges: LaneEdge[] = nearestNodes.map(node => ({
+    id: `vehicle=>${node.id}`,
+    from: vehicleNodeId,
+    to: node.id,
+    distance: Math.hypot(node.x - vehicleX, node.y - vehicleY),
+    direction: "one-way"
+  }));
+
+  const tempGraph: LaneGraph = {
+    ...graph,
+    nodes: [...graph.nodes, vehicleNode],
+    edges: [...graph.edges, ...tempEdges]
+  };
+
+  return findRoute(tempGraph, vehicleNodeId, targetNodeId);
 }
 
 /**
@@ -141,15 +163,10 @@ export function findExitRouteFromPos(
     ...graph,
     edges: graph.edges.map((e) => ({ ...e, direction: "two-way" })),
   };
-  const nearestNodeId = findNearestNode(exitGraph, vehicleX, vehicleY);
-  if (nearestNodeId) {
-    const result = findRoute(exitGraph, nearestNodeId, graph.exitNodeId);
-    if (result) {
-      // Nối trực tiếp từ tọa độ xe thực tế tới Nút gần nhất để đường không bị hụt
-      result.points.unshift({ x: vehicleX, y: vehicleY });
-      return result;
-    }
-  }
+  
+  const result = routeFromPos(exitGraph, vehicleX, vehicleY, graph.exitNodeId);
+  if (result) return result;
+
   // Fallback: tính từ ô đỗ ban đầu nếu không tìm được nút gần xe
   if (fallbackSpotId) {
     return findExitRoute(graph, fallbackSpotId);
@@ -169,15 +186,10 @@ export function findInboundRouteFromPos(
 ): RouteResult | null {
   const targetNodeId = graph.spotEntryNodeIds[spotId];
   if (!targetNodeId) return null;
-  const nearestNodeId = findNearestNode(graph, vehicleX, vehicleY);
-  if (nearestNodeId && nearestNodeId !== targetNodeId) {
-    const result = findRoute(graph, nearestNodeId, targetNodeId);
-    if (result) {
-      // Nối trực tiếp từ tọa độ xe thực tế tới Nút gần nhất để đường không bị hụt
-      result.points.unshift({ x: vehicleX, y: vehicleY });
-      return result;
-    }
-  }
+  
+  const result = routeFromPos(graph, vehicleX, vehicleY, targetNodeId);
+  if (result) return result;
+
   // Fallback: tính từ Cổng Vào nếu không tìm được nút gần xe
   return findVehicleRoute(graph, spotId);
 }
