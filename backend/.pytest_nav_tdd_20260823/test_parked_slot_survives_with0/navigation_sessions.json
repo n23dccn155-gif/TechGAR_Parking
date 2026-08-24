@@ -1,0 +1,18 @@
+{
+  "parked": {
+    "sessionId": "parked",
+    "state": "PARKED",
+    "targetSpotId": null,
+    "parkedSpotId": "D06",
+    "globalVehicleId": 42,
+    "vehicleTrackId": null,
+    "activeTrackId": null,
+    "claimed": false,
+    "lastKnownPosition": null,
+    "createdAt": "2026-08-23T18:09:47+07:00",
+    "claimedAt": null,
+    "spotSelectedAt": null,
+    "parkedAt": "2026-08-23T18:09:47+07:00",
+    "exitStartedAt": null
+  }
+}

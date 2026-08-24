@@ -1221,3 +1221,102 @@ main {
     animation-iteration-count: 1 !important;
   }
 }
+/* Entry gate QR board. QR generation stays local; no third-party image service is used. */
+.entry-qr-kiosk {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 50;
+  width: min(340px, calc(100vw - 32px));
+  overflow: hidden;
+  color: #f8fafc;
+  background: #0f172a;
+  border: 1px solid #38bdf8;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgb(0 0 0 / 45%);
+}
+
+.entry-qr-kiosk header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #0369a1;
+}
+
+.entry-qr-kiosk button {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.entry-qr-kiosk__content {
+  padding: 18px;
+  text-align: center;
+}
+
+.entry-qr-kiosk__content img {
+  display: block;
+  width: min(256px, 100%);
+  height: auto;
+  margin: 14px auto;
+  padding: 10px;
+  background: white;
+  border-radius: 12px;
+}
+
+.entry-qr-kiosk__content a {
+  display: block;
+  padding: 10px 14px;
+  color: #082f49;
+  font-weight: 700;
+  text-decoration: none;
+  background: #38bdf8;
+  border-radius: 8px;
+}
+
+.kiosk-page,
+.kiosk-empty {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f8fafc;
+  text-align: center;
+  background: #020617;
+}
+
+.entry-qr-kiosk--standalone {
+  position: static;
+  width: min(620px, 100%);
+}
+
+.session-ended {
+  margin: 16px 0;
+  padding: 20px;
+  color: #7f1d1d;
+  text-align: center;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+}
+
+.session-ended h2,
+.session-ended p {
+  margin: 0;
+}
+
+.runtime-source-alert {
+  margin: 12px 0;
+  padding: 12px 16px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+}
+
+.session-ended p {
+  margin-top: 6px;
+}

@@ -1,233 +1,109 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
+import { getWaitingSessions } from "../api/backendApi";
 import type { ParkingSpotState } from "../domain/parking";
+import type { VehicleSession } from "../domain/session";
 
-interface KioskSession {
-  sessionId: string;
-  trackId: number;
-  qrUrl: string;
-  createdAt: string;
-}
-
-/**
- * EntryQRKiosk – Hiển thị QR cho xe đang ở cổng (WAITING_FOR_SCAN).
- * 
- * Quy tắc:
- * - Hiển thị QR cho xe mới nhất đang chờ ở cổng (state === "WAITING_FOR_SCAN" & !claimed)
- * - Giữ mã QR hiển thị chừng nào xe còn ở trạng thái WAITING_FOR_SCAN tại cổng
- * - Khi xe được quét (claimed = true / state sang SELECTING/NAVIGATING) hoặc hết xe ở cổng -> Tự ẩn QR
- * - Tự chuyển sang xe tiếp theo khi có xe mới vào cổng
- * - Chỉ hiển thị trên trang chung (không sessionId)
- */
 interface EntryQRKioskProps {
-  spots: ParkingSpotState[];
+  spots?: readonly ParkingSpotState[];
+  standalone?: boolean;
 }
 
-export function EntryQRKiosk({ spots }: EntryQRKioskProps) {
-  const [activeKiosk, setActiveKiosk] = useState<KioskSession | null>(null);
-  const [minimized, setMinimized]     = useState<boolean>(false);
+const QR_DISPLAY_MS = 10_000;
+const WAITING_SESSIONS_POLL_MS = 250;
+
+function qrExpiryTime(session: VehicleSession): number {
+  const explicitExpiry = Date.parse(session.qrExpiresAt);
+  if (Number.isFinite(explicitExpiry)) return explicitExpiry;
+  return Date.parse(session.createdAt) + QR_DISPLAY_MS;
+}
+
+function isQrVisible(session: VehicleSession, now = Date.now()): boolean {
+  return qrExpiryTime(session) > now;
+}
+
+export function EntryQRKiosk({ spots = [], standalone = false }: EntryQRKioskProps) {
+  const [session, setSession] = useState<VehicleSession | null>(null);
+  const [generatedQr, setGeneratedQr] = useState<{ navigationUrl: string; dataUrl: string } | null>(null);
+  const [minimized, setMinimized] = useState(false);
+  const navigationUrl = useMemo(
+    () => session ? `${window.location.origin}/?session=${encodeURIComponent(session.sessionId)}` : null,
+    [session],
+  );
+  const qrDataUrl = generatedQr?.navigationUrl === navigationUrl ? generatedQr.dataUrl : null;
 
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
-
-    const checkGateSessions = async () => {
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing) return;
+      refreshing = true;
       try {
-        const res = await fetch(`/navigation_sessions.json?t=${Date.now()}`);
-        if (!res.ok || !active) return;
-        const sessions = await res.json() as Record<string, {
-          sessionId: string;
-          vehicleTrackId: number | null;
-          activeTrackId: number | null;
-          state: string;
-          claimed: boolean;
-        }>;
-
-        // Tìm tất cả các session đang chờ ở cổng (WAITING_FOR_SCAN và chưa claimed)
-        const waitingSessions = Object.values(sessions).filter(
-          (s) => s.state === "WAITING_FOR_SCAN"
-                 && s.vehicleTrackId !== undefined
-                 && s.vehicleTrackId !== null
-                 && !s.claimed
-        );
-
-        if (waitingSessions.length > 0) {
-          // Lấy xe mới nhất ở cổng (track_id lớn nhất hoặc xếp cuối)
-          const latestGateSession = waitingSessions[waitingSessions.length - 1];
-          if (latestGateSession) {
-            const trackId = latestGateSession.vehicleTrackId!;
-            const sid = latestGateSession.sessionId;
-
-            // Cập nhật kiosk nếu chưa hiển thị xe này
-            if (!activeKiosk || activeKiosk.sessionId !== sid) {
-              const fullUrl = `${window.location.origin}/?session=${sid}`;
-              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(fullUrl)}`;
-
-              setActiveKiosk({
-                sessionId: sid,
-                trackId: trackId,
-                qrUrl: qrImageUrl,
-                createdAt: new Date().toLocaleTimeString("vi-VN"),
-              });
-              setMinimized(false);
-            }
-          }
-        } else {
-          // Không còn xe nào ở cổng -> Ẩn Kiosk
-          if (activeKiosk) {
-            setActiveKiosk(null);
-          }
-        }
+        const waiting = await getWaitingSessions(controller.signal);
+        if (!active) return;
+        const next = waiting.filter((candidate) => isQrVisible(candidate)).at(-1) ?? null;
+        setSession((current) => current?.sessionId === next?.sessionId ? current : next);
+        if (!next) setGeneratedQr(null);
       } catch {
-        /* ignore */
+        // Kiosk remains idle while the session API is temporarily unavailable.
+      } finally {
+        refreshing = false;
       }
     };
-
-    void checkGateSessions();
-    const interval = setInterval(checkGateSessions, 500);
-
+    void refresh();
+    const interval = window.setInterval(refresh, WAITING_SESSIONS_POLL_MS);
     return () => {
       active = false;
-      clearInterval(interval);
+      controller.abort();
+      window.clearInterval(interval);
     };
-  }, [activeKiosk]);
+  }, []);
 
-  if (!activeKiosk) return null;
+  useEffect(() => {
+    if (!session) return;
+    const remainingMs = qrExpiryTime(session) - Date.now();
+    if (remainingMs <= 0) {
+      setSession(null);
+      setGeneratedQr(null);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setSession((current) => current?.sessionId === session.sessionId ? null : current);
+    }, remainingMs);
+    return () => window.clearTimeout(timeout);
+  }, [session]);
 
-  const targetNavUrl = `/?session=${activeKiosk.sessionId}`;
+  useEffect(() => {
+    setGeneratedQr(null);
+    if (!navigationUrl) return;
+    let active = true;
+    void QRCode.toDataURL(navigationUrl, { width: 256, margin: 2, errorCorrectionLevel: "M" })
+      .then((value) => active && setGeneratedQr({ navigationUrl, dataUrl: value }))
+      .catch((error: unknown) => console.warn("Không thể sinh QR cục bộ", error));
+    return () => { active = false; };
+  }, [navigationUrl]);
 
-  return (
-    <div style={{
-      position: "fixed",
-      bottom: "24px",
-      right: "24px",
-      zIndex: 9999,
-      background: "rgba(15, 23, 42, 0.95)",
-      backdropFilter: "blur(12px)",
-      border: "1px solid #38bdf8",
-      borderRadius: "16px",
-      boxShadow: "0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(56, 189, 248, 0.2)",
-      width: minimized ? "260px" : "320px",
-      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-      color: "#fff",
-      overflow: "hidden",
-      fontFamily: "system-ui, -apple-system, sans-serif"
-    }}>
-      {/* ── Header Kiosk ── */}
-      <div style={{
-        background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-        padding: "10px 16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "18px" }}>🚥</span>
-          <strong style={{ fontSize: "14px", letterSpacing: "0.5px" }}>CỔNG VÀO · QUÉT MÃ QR</strong>
-        </div>
-        <button
-          onClick={() => setMinimized(!minimized)}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "14px",
-            opacity: 0.8
-          }}
-        >
-          {minimized ? "▲" : "▼"}
-        </button>
-      </div>
+  if (!session || !navigationUrl) {
+    return standalone ? <main className="kiosk-empty" aria-live="polite"><h1>Cổng vào TechGAR</h1><p>Đang chờ xe đi qua vạch cổng vào…</p></main> : null;
+  }
 
-      {/* ── Thống kê chỗ đỗ ── */}
-      <div style={{
-        display: "flex",
-        background: "#0f172a",
-        borderBottom: "1px solid #1e293b",
-      }}>
-        <div style={{ flex: 1, padding: "8px", textAlign: "center", borderRight: "1px solid #1e293b" }}>
-          <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "2px" }}>TRỐNG</div>
-          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#4ade80" }}>
-            {spots.filter((s) => s.status === "empty").length}
-          </div>
-        </div>
-        <div style={{ flex: 1, padding: "8px", textAlign: "center" }}>
-          <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "2px" }}>ĐANG ĐỖ</div>
-          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#f87171" }}>
-            {spots.filter((s) => s.status === "occupied").length}
-          </div>
-        </div>
-      </div>
-
+  const content = (
+    <section className={standalone ? "entry-qr-kiosk entry-qr-kiosk--standalone" : "entry-qr-kiosk"} aria-live="polite">
+      <header>
+        <strong>CỔNG VÀO · QUÉT MÃ QR</strong>
+        {!standalone && <button type="button" onClick={() => setMinimized((value) => !value)} aria-label="Thu gọn bảng QR">{minimized ? "+" : "−"}</button>}
+      </header>
       {!minimized && (
-        <div style={{ padding: "16px", textAlign: "center" }}>
-          <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "8px" }}>
-            Phát hiện <strong>Xe #{activeKiosk.trackId}</strong> vào bãi đỗ ({activeKiosk.createdAt})
-          </div>
-
-          {/* Thông báo hướng dẫn */}
-          <div style={{
-            background: "rgba(245, 158, 11, 0.15)",
-            border: "1px solid #f59e0b",
-            borderRadius: "8px",
-            padding: "8px 12px",
-            marginBottom: "12px",
-            fontSize: "13px",
-            color: "#fbbf24"
-          }}>
-            📋 Quét mã để bắt đầu sử dụng hệ thống
-          </div>
-
-          {/* Khung Mã QR */}
-          <div style={{
-            background: "#fff",
-            padding: "12px",
-            borderRadius: "12px",
-            display: "inline-block",
-            marginBottom: "12px",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
-          }}>
-            <img
-              src={activeKiosk.qrUrl}
-              alt="Mã QR Dẫn đường"
-              style={{ width: "140px", height: "140px", display: "block" }}
-            />
-          </div>
-
-          {/* URL Session */}
-          <div style={{
-            fontSize: "11px",
-            color: "#64748b",
-            marginBottom: "12px",
-            fontFamily: "monospace",
-            wordBreak: "break-all",
-          }}>
-            {window.location.origin}{targetNavUrl}
-          </div>
-
-          {/* Nút Mở Trang Cá Nhân */}
-          <a
-            href={targetNavUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              width: "100%",
-              boxSizing: "border-box",
-              background: "#38bdf8",
-              color: "#0f172a",
-              fontWeight: 700,
-              padding: "10px 0",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontSize: "13px",
-              boxShadow: "0 4px 12px rgba(56, 189, 248, 0.3)",
-              transition: "transform 0.1s ease"
-            }}
-          >
-            📱 Mở giao diện riêng (Xe #{activeKiosk.trackId})
-          </a>
+        <div className="entry-qr-kiosk__content">
+          {spots.length > 0 && <p>Còn trống: <strong>{spots.filter((spot) => spot.status === "empty").length}</strong>{" · "}Đang đỗ: <strong>{spots.filter((spot) => spot.status === "occupied").length}</strong></p>}
+          <p>Đã phát hiện xe Global ID <strong>#{session.globalVehicleId}</strong></p>
+          <p>Quét mã để theo dõi vị trí xe trong bãi.</p>
+          {qrDataUrl ? <img src={qrDataUrl} width={256} height={256} alt={`QR phiên xe ${session.globalVehicleId}`} /> : <p>Đang sinh QR…</p>}
+          <a href={navigationUrl} target="_blank" rel="noreferrer">Mở trang theo dõi xe</a>
         </div>
       )}
-    </div>
+    </section>
   );
+  return standalone ? <main className="kiosk-page">{content}</main> : content;
 }

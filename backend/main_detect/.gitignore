@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+.ultralytics/
+runtime_output*/
+runtime_analysis*/
+experiment_test/output/
+data/*_reference.jpg
+models/*.pt
+*.tmp
+
+two_camera_*/
+data/*.mp4

@@ -113,7 +113,7 @@ export function findExitRoute(graph: LaneGraph, spotId: SpotId): RouteResult | n
  */
 export function findNearestNode(graph: LaneGraph, x: number, y: number): string | null {
   const nodes = findKNearestNodes(graph, x, y, 1);
-  return nodes.length > 0 ? nodes[0].id : null;
+  return nodes[0]?.id ?? null;
 }
 
 function findKNearestNodes(graph: LaneGraph, x: number, y: number, k: number = 2): LaneNode[] {

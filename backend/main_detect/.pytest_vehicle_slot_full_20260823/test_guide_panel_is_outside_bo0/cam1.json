@@ -1,0 +1,1 @@
+{"imageWidth": 100, "imageHeight": 80, "slots": [{"id": "A01", "type": "polygon", "polygon": [{"x": 10, "y": 10}, {"x": 40, "y": 10}, {"x": 40, "y": 60}, {"x": 10, "y": 60}], "center": {"x": 25, "y": 35}}]}

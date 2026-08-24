@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EntryQRKiosk } from "../components/EntryQRKiosk";
 import { BrowseToolbar } from "../components/BrowseToolbar";
 import { EntryChoiceSheet } from "../components/EntryChoiceSheet";
 import { InvalidSpotWarningSheet } from "../components/InvalidSpotWarningSheet";
@@ -11,7 +10,7 @@ import { RecommendationPanel } from "../components/RecommendationPanel";
 import { SmartParkingHeader } from "../components/SmartParkingHeader";
 import { SpotDetailSheet } from "../components/SpotDetailSheet";
 import { SummaryCards } from "../components/SummaryCards";
-import { getSpotOwner, type DestinationNeed, type ParkingSpotState, type ParkingStatus, type SpotId } from "../domain/parking";
+import { classifySpotOccupancy, type DestinationNeed, type ParkingSpotState, type ParkingStatus, type RankedSpot, type SpotId } from "../domain/parking";
 import { mockParkingDataSource } from "../mocks/MockParkingDataSource";
 import { recommendParkingSpots } from "../recommendation/recommendationEngine";
 import { LANE_GRAPH, updateGateNodesInGraph } from "../routing/laneGraph";
@@ -20,31 +19,16 @@ import { voiceManager, checkIsOffRoute, getNavigationInstruction } from "../rout
 import { SPOT_GEOMETRY_BY_ID } from "../geometry/parkingGeometry";
 import { useDriverFlowStore } from "../stores/driverFlowStore";
 import { deriveParkingCounts, useParkingStore } from "../stores/parkingStore";
+import { getRuntimeGateConfig, getRuntimeSnapshot } from "../api/runtimeApi";
+import { runtimeCameraStates, runtimeParkingSpots } from "../adapters/runtimeAdapter";
+import { createWorldToSvg, runtimeVehiclesOnSvg } from "../calibration/worldToSvg";
+import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
+import type { ActiveVehicle, FrameSize } from "../domain/runtime";
+import type { VehicleSession } from "../domain/session";
+import { BackendApiError, claimSession, getSession, selectSpot, SessionNotFoundError, startExit } from "../api/backendApi";
 
 const NON_EMPTY_STATUSES: ReadonlySet<ParkingStatus> = new Set(["transitioning", "occupied", "unknown"]);
-
-// ── Kiểu dữ liệu vị trí xe từ tracker ─────────────────────────────────────
-export interface ActiveVehicle {
-  trackId: number;
-  x: number;
-  y: number;
-  trail: Array<{ x: number; y: number }>;
-}
-
-export interface FrameSize {
-  width: number;
-  height: number;
-}
-
-interface SessionInfo {
-  sessionId: string;
-  state: string;
-  targetSpotId: string | null;
-  parkedSpotId: string | null;
-  vehicleTrackId: number | null;
-  activeTrackId: number | null;
-  claimed: boolean;
-}
+const OWNERSHIP_GRACE_MS = 2000;
 
 interface AppProps {
   sessionId?: string | null;
@@ -53,9 +37,20 @@ interface AppProps {
 export function App({ sessionId }: AppProps = {}) {
   const [activeVehicles, setActiveVehicles] = useState<ActiveVehicle[]>([]);
   const [frameSize, setFrameSize]           = useState<FrameSize>({ width: 1200, height: 900 });
-  const [sessionInfo, setSessionInfo]       = useState<SessionInfo | null>(null);
+  const [sessionInfo, setSessionInfo]       = useState<VehicleSession | null>(null);
+  const [sessionEnded, setSessionEnded]     = useState(false);
+  const [runtimeState, setRuntimeState]     = useState<"connecting" | "live" | "error">("connecting");
+  const [runtimeError, setRuntimeError]     = useState<string | null>(null);
+  const [, setOwnershipCheckTick]           = useState(0);
 
-  const sessionTrackIdRef = useRef<number | null>(sessionId ? Number(sessionId) : null);
+  const sessionTrackIdRef = useRef<number | null>(null);
+  const loadedSessionRef = useRef(false);
+  const activeVehiclesRef = useRef<ActiveVehicle[]>([]);
+  const unknownTargetRef = useRef<{ spotId: SpotId; since: number } | null>(null);
+
+  useEffect(() => {
+    activeVehiclesRef.current = activeVehicles;
+  }, [activeVehicles]);
 
   const spotsById = useParkingStore((state) => state.spots);
   const cameras = useParkingStore((state) => state.cameras);
@@ -63,6 +58,7 @@ export function App({ sessionId }: AppProps = {}) {
   const applySnapshot = useParkingStore((state) => state.applySnapshot);
   const applyEvent = useParkingStore((state) => state.applyEvent);
   const trackingSource = useParkingStore((state) => state.trackingSource);
+  const setTrackingSource = useParkingStore((state) => state.setTrackingSource);
 
   const mode = useDriverFlowStore((state) => state.mode);
   const browseFilter = useDriverFlowStore((state) => state.browseFilter);
@@ -80,6 +76,7 @@ export function App({ sessionId }: AppProps = {}) {
   const confirmSpot = useDriverFlowStore((state) => state.confirmSpot);
   const setBrowseFilter = useDriverFlowStore((state) => state.setBrowseFilter);
   const showInvalidSpotWarning = useDriverFlowStore((state) => state.showInvalidSpotWarning);
+  const clearWarning = useDriverFlowStore((state) => state.clearWarning);
   const cancelNavigation = useDriverFlowStore((state) => state.cancelNavigation);
 
   const spots = useMemo(
@@ -94,31 +91,24 @@ export function App({ sessionId }: AppProps = {}) {
   const sessionState = sessionInfo?.state ?? null;
   const sessionTargetSpot = sessionInfo?.targetSpotId ?? null;
   const sessionParkedSpot = sessionInfo?.parkedSpotId ?? null;
-  const targetVehicleId = sessionInfo?.activeTrackId ?? sessionInfo?.vehicleTrackId ?? (sessionId ? Number(sessionId) : null);
+  const targetVehicleId = sessionInfo?.globalVehicleId ?? sessionInfo?.activeTrackId ?? sessionInfo?.vehicleTrackId ?? null;
+  const runtimeParkedSpot = targetVehicleId === null
+    ? null
+    : activeVehicles.find((vehicle) => vehicle.trackId === targetVehicleId)?.parkedSlotId ?? null;
 
-  // ── Helper API call ──
-  const callSessionApi = useCallback(async (endpoint: string, payload: object) => {
-    try {
-      const res = await fetch(`/api/session/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) return true;
-    } catch {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/api/session/${endpoint}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) return true;
-      } catch (e) {
-        console.warn("Session API call failed:", e);
-      }
-    }
-    return false;
-  }, []);
+  useEffect(() => {
+    if (sessionId) setTrackingSource("opencv");
+  }, [sessionId, setTrackingSource]);
+
+  useEffect(() => {
+    if (trackingSource !== "sample") return;
+    const unsubscribe = mockParkingDataSource.subscribe(applyEvent);
+    mockParkingDataSource.start();
+    return () => {
+      unsubscribe();
+      mockParkingDataSource.stop();
+    };
+  }, [applyEvent, trackingSource]);
 
   // ── Auto-claim session khi mở trang cá nhân lần đầu ──
   const claimedRef = useRef(false);
@@ -126,87 +116,90 @@ export function App({ sessionId }: AppProps = {}) {
     if (!sessionId || claimedRef.current) return;
     const doClaim = async () => {
       claimedRef.current = true;
-      await callSessionApi("claim", { sessionId });
+      try {
+        setSessionInfo(await claimSession(sessionId));
+      } catch (error) {
+        console.warn("Không thể nhận phiên xe", error);
+      }
     };
     void doClaim();
-  }, [sessionId, callSessionApi]);
-
-  // ── Cập nhật target spot khi user confirm ──
-  const updateSessionTarget = useCallback(async (spotId: SpotId) => {
-    if (!sessionId) return;
-    await callSessionApi("select", { sessionId, spotId });
-  }, [sessionId, callSessionApi]);
+  }, [sessionId]);
 
   // ── Fetch dữ liệu ô đỗ & tracking feed ──
   useEffect(() => {
     let active = true;
+    const sourceIsCurrent = () => useParkingStore.getState().trackingSource === trackingSource;
 
-    void mockParkingDataSource.getSnapshot().then((snapshot) => {
-      if (active) applySnapshot(snapshot);
-    });
+    if (trackingSource === "sample") {
+      setRuntimeError(null);
+      void mockParkingDataSource.getSnapshot().then((snapshot) => {
+        if (active && sourceIsCurrent()) applySnapshot(snapshot);
+      });
+    } else {
+      setRuntimeState("connecting");
+      setRuntimeError(null);
+      setActiveVehicles([]);
+    }
+
+    const requireLiveRuntime = (runtime: Awaited<ReturnType<typeof getRuntimeSnapshot>>) => {
+      if (runtime.source_mode !== "live") {
+        throw new Error("Runtime OpenCV đang chạy dữ liệu replay, không phải camera realtime");
+      }
+      const dataAge = Date.now() - new Date(runtime.published_at).getTime();
+      if (!Number.isFinite(dataAge) || dataAge > 5000) {
+        throw new Error("Dữ liệu camera realtime đã quá hạn 5 giây");
+      }
+      return runtime;
+    };
 
     const fetchRealtimeStatus = async () => {
       try {
-        const statusFile = trackingSource === "sample"
-          ? "parking_status_sample.json"
-          : "parking_status.json";
-        
-        const res = await fetch(`/${statusFile}?t=${Date.now()}`);
-        if (!res.ok) {
-          if (trackingSource === "sample") {
-            const fallback = await fetch(`/parking_status.json?t=${Date.now()}`);
-            if (!fallback.ok || !active) return;
-            const data = await fallback.json();
-            applyParkingData(data);
-          }
-          return;
-        }
-        if (!active) return;
-        const data = await res.json();
-        applyParkingData(data);
-      } catch {
-        /* fetch failed */
-      }
-    };
-
-    const applyParkingData = (data: { timestamp?: string; slots?: Record<string, { status: ParkingStatus }> }) => {
-      if (!data) return;
-      applyEvent({
-        type: "camera.health.changed",
-        cameraId: "cam-left",
-        health: "online",
-        updatedAt: data.timestamp || new Date().toISOString(),
-      });
-      applyEvent({
-        type: "camera.health.changed",
-        cameraId: "cam-right",
-        health: "online",
-        updatedAt: data.timestamp || new Date().toISOString(),
-      });
-
-      if (data.slots) {
-        Object.keys(data.slots).forEach((spotId) => {
-          const slotData = data.slots![spotId];
-          if (!slotData) return;
-          applyEvent({
-            type: "spot.status.changed",
-            cameraId: getSpotOwner(spotId as SpotId),
-            spotId: spotId as SpotId,
-            status: slotData.status,
-            confidence: 0.99,
-            revision: Date.now(),
-            updatedAt: data.timestamp || new Date().toISOString(),
-          });
+        if (trackingSource !== "opencv") return;
+        const runtime = requireLiveRuntime(await getRuntimeSnapshot());
+        const runtimeSpots = runtimeParkingSpots(runtime);
+        if (!active || !sourceIsCurrent()) return;
+        applySnapshot({
+          spots: runtimeSpots,
+          cameras: runtimeCameraStates(runtime),
+          capturedAt: runtime.published_at,
         });
+        if (active) {
+          setRuntimeState("live");
+          setRuntimeError(null);
+        }
+      } catch (error) {
+        if (trackingSource === "opencv" && active && sourceIsCurrent()) {
+          setRuntimeState("error");
+          setRuntimeError(error instanceof Error ? error.message : "Không kết nối được Runtime API realtime");
+        }
       }
     };
 
     void fetchRealtimeStatus();
     const interval = setInterval(fetchRealtimeStatus, 1000);
 
-    // ── Cập nhật tọa độ CỔNG VÀO / CỔNG RA cho Đồ thị Dẫn đường từ gate_roi.json ──
+    // ── Đồng bộ CỔNG VÀO / CỔNG RA cho đồ thị dẫn đường ──
     const fetchGateRoi = async () => {
       try {
+        if (trackingSource === "opencv") {
+          const [gateConfig, runtime] = await Promise.all([
+            getRuntimeGateConfig(),
+            getRuntimeSnapshot(),
+          ]);
+          if (!gateConfig || !active || !sourceIsCurrent()) return;
+          const project = createWorldToSvg(runtime.slot_layout);
+          updateGateNodesInGraph(LANE_GRAPH, {
+            entry_gate: {
+              p1: project(gateConfig.entry_gate.p1),
+              p2: project(gateConfig.entry_gate.p2),
+            },
+            exit_gate: {
+              p1: project(gateConfig.exit_gate.p1),
+              p2: project(gateConfig.exit_gate.p2),
+            },
+          });
+          return;
+        }
         const res = await fetch(`/gate_roi.json?t=${Date.now()}`);
         if (!res.ok || !active) return;
         const data = await res.json();
@@ -223,25 +216,23 @@ export function App({ sessionId }: AppProps = {}) {
     // ── Polling session info (500ms) ──
     const fetchSessionInfo = async () => {
       if (!sessionId || !active) return;
+
       try {
-        const res = await fetch(`/navigation_sessions.json?t=${Date.now()}`);
-        if (!res.ok || !active) return;
-        const sessions = await res.json();
-        const s = sessions?.[sessionId];
-        if (s && active) {
-          setSessionInfo({
-            sessionId: s.sessionId ?? sessionId,
-            state: s.state ?? "WAITING_FOR_SCAN",
-            targetSpotId: s.targetSpotId ?? null,
-            parkedSpotId: s.parkedSpotId ?? null,
-            vehicleTrackId: s.vehicleTrackId ?? null,
-            activeTrackId: s.activeTrackId ?? null,
-            claimed: s.claimed ?? false,
-          });
-          sessionTrackIdRef.current = s.activeTrackId ?? s.vehicleTrackId ?? Number(sessionId);
+        const session = await getSession(sessionId);
+        if (!active || !sourceIsCurrent()) return;
+        loadedSessionRef.current = true;
+        setSessionEnded(false);
+        setSessionInfo(session);
+        sessionTrackIdRef.current = session.globalVehicleId ?? session.activeTrackId ?? session.vehicleTrackId;
+      } catch (error) {
+        if (error instanceof SessionNotFoundError && active) {
+          setSessionEnded(true);
+          setSessionInfo(null);
+          setActiveVehicles([]);
+          sessionTrackIdRef.current = null;
+        } else if (loadedSessionRef.current) {
+          console.warn("Tạm thời không đọc được phiên xe", error);
         }
-      } catch {
-        /* fetch failed */
       }
     };
 
@@ -255,15 +246,27 @@ export function App({ sessionId }: AppProps = {}) {
 
     const fetchVehiclePositions = async () => {
       try {
-        const file = trackingSource === "opencv" ? "vehicle_positions.json" : "vehicle_positions_sample.json";
+        if (trackingSource === "opencv") {
+          const runtime = requireLiveRuntime(await getRuntimeSnapshot());
+          const targetId = sessionId ? sessionTrackIdRef.current : null;
+          const vehicles = runtimeVehiclesOnSvg(runtime, targetId);
+          setFrameSize({ width: PARKING_GEOMETRY.width, height: PARKING_GEOMETRY.height });
+          if (active && sourceIsCurrent()) {
+            setActiveVehicles(vehicles);
+            setRuntimeState("live");
+            setRuntimeError(null);
+          }
+          return;
+        }
+        const file = "vehicle_positions_sample.json";
         const res = await fetch(`/${file}?t=${Date.now()}`);
-        if (!res.ok || !active) return;
+        if (!res.ok || !active || !sourceIsCurrent()) return;
         const data = await res.json();
 
         if (data?.timestamp) {
           const dataAge = Date.now() - new Date(data.timestamp).getTime();
           if (dataAge > STALE_THRESHOLD_MS) {
-            if (active) setActiveVehicles([]);
+            if (active && sourceIsCurrent()) setActiveVehicles([]);
             return;
           }
         }
@@ -279,11 +282,11 @@ export function App({ sessionId }: AppProps = {}) {
 
         // 🎯 NẾU TRANG CÁ NHÂN (có sessionId) → CHỈ GIỮ LẠI DUY NHẤT XE CỦA SESSION ĐÓ
         if (sessionId) {
-          const targetId = sessionTrackIdRef.current ?? Number(sessionId);
-          vehicles = vehicles.filter((v) => v.trackId === targetId);
+          const targetId = sessionTrackIdRef.current;
+          vehicles = targetId === null ? [] : vehicles.filter((v) => v.trackId === targetId);
 
           // 💡 Nếu xe đang đỗ/lái ra mà tắt máy (không có trong active_vehicles), lấy tọa độ tâm ô đỗ thực tế
-          if (vehicles.length === 0) {
+          if (vehicles.length === 0 && targetId !== null) {
             const currentSpotId = (sessionInfo?.parkedSpotId || sessionInfo?.targetSpotId) as SpotId | null;
             if (currentSpotId) {
               const spotGeo = SPOT_GEOMETRY_BY_ID.get(currentSpotId);
@@ -302,9 +305,13 @@ export function App({ sessionId }: AppProps = {}) {
         if (data?.frame_size?.width && data?.frame_size?.height) {
           setFrameSize({ width: data.frame_size.width, height: data.frame_size.height });
         }
-        if (active) setActiveVehicles(vehicles);
-      } catch {
-        /* fetch failed */
+        if (active && sourceIsCurrent()) setActiveVehicles(vehicles);
+      } catch (error) {
+        if (trackingSource === "opencv" && active && sourceIsCurrent()) {
+          setActiveVehicles([]);
+          setRuntimeState("error");
+          setRuntimeError(error instanceof Error ? error.message : "Không kết nối được Runtime API realtime");
+        }
       }
     };
 
@@ -330,44 +337,103 @@ export function App({ sessionId }: AppProps = {}) {
 
   useEffect(() => {
     const activeTargetId = sessionId ? sessionTargetSpot : (mode === "navigation" ? confirmedSpotId : null);
-    if (!activeTargetId || warning) return;
+    if (!activeTargetId) {
+      unknownTargetRef.current = null;
+      return;
+    }
 
-    const targetSpot = spotsById[activeTargetId];
+    const targetSpot = spotsById[activeTargetId as SpotId];
     if (!targetSpot) return;
 
-    if (!NON_EMPTY_STATUSES.has(targetSpot.status)) return;
+    const relation = sessionId
+      ? classifySpotOccupancy(targetSpot, targetVehicleId, sessionParkedSpot ?? runtimeParkedSpot)
+      : NON_EMPTY_STATUSES.has(targetSpot.status) ? "other" : "empty";
 
-    // ── Bỏ qua cảnh báo nếu chính xe của người dùng đang đỗ ở ô đó ──
-    // Trường hợp 1: Session đã ghi nhận parkedSpotId = ô này
-    if (sessionParkedSpot && sessionParkedSpot === targetSpot.id) return;
-    // Trường hợp 2: Session đang ở trạng thái PARKED hoặc EXIT_NAVIGATION
-    //   và targetSpot/confirmedSpot khớp → xe mình vừa đỗ xong
-    if ((sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") &&
-        sessionTargetSpot === targetSpot.id) return;
+    if (
+      relation === "empty"
+      || relation === "own"
+      || sessionState === "PARKED"
+      || sessionState === "EXIT_NAVIGATION"
+    ) {
+      unknownTargetRef.current = null;
+      if (warning?.spotId === targetSpot.id) clearWarning();
+      return;
+    }
+
+    if (relation === "unknown") {
+      const now = Date.now();
+      if (unknownTargetRef.current?.spotId !== targetSpot.id) {
+        unknownTargetRef.current = { spotId: targetSpot.id, since: now };
+      }
+      const elapsed = now - (unknownTargetRef.current?.since ?? now);
+      if (elapsed < OWNERSHIP_GRACE_MS) {
+        const timer = window.setTimeout(
+          () => setOwnershipCheckTick((value) => value + 1),
+          OWNERSHIP_GRACE_MS - elapsed,
+        );
+        return () => window.clearTimeout(timer);
+      }
+    } else {
+      unknownTargetRef.current = null;
+    }
+
+    const warningStatus = relation === "unknown" ? "unknown" : targetSpot.status;
+    if (
+      warning?.spotId === targetSpot.id
+      && warning.status === warningStatus
+    ) return;
 
     const need: DestinationNeed = activeNeed ?? "services";
+    const currentVehicle = targetVehicleId === null
+      ? undefined
+      : activeVehicles.find((vehicle) => vehicle.trackId === targetVehicleId);
     const alternatives = recommendParkingSpots(spots, need, {
       calculatedAt: lastEventTime ?? "2026-07-25T08:00:00.000Z",
+      startPosition: currentVehicle ? { x: currentVehicle.x, y: currentVehicle.y } : undefined,
     });
-    const alternativeSpotId = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
-      .find((candidate) => candidate && candidate.spotId !== targetSpot.id)?.spotId;
+    const alternativeSpotIds = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
+      .filter((candidate): candidate is RankedSpot => Boolean(candidate) && candidate?.spotId !== targetSpot.id)
+      .map((candidate) => candidate.spotId)
+      .slice(0, 3);
+    const alternativeSpotId = alternativeSpotIds[0];
 
-    if (sessionState !== "EXIT_NAVIGATION" && sessionState !== "PARKED") {
-      voiceManager.speak(`Cảnh báo, ô đỗ ${targetSpot.id} đã có xe đỗ. Vui lòng xác nhận để đổi hướng sang ô ${alternativeSpotId || 'khác'}.`, 6000, true);
-    }
+    const spokenStatus = relation === "unknown" ? "chưa xác định được xe đang chiếm ô" : "đã có xe khác đỗ";
+    voiceManager.speak(`Cảnh báo, ô đỗ ${targetSpot.id} ${spokenStatus}. Vui lòng xác nhận để đổi hướng sang ô ${alternativeSpotId || "khác"}.`, 6000, true);
 
     showInvalidSpotWarning({
       spotId: targetSpot.id,
-      status: targetSpot.status as Exclude<ParkingStatus, "empty">,
+      status: warningStatus as Exclude<ParkingStatus, "empty">,
       alternativeSpotId,
+      alternativeSpotIds,
     });
-  }, [sessionId, sessionTargetSpot, confirmedSpotId, mode, warning, spotsById, sessionParkedSpot, sessionState, activeNeed, spots, lastEventTime, showInvalidSpotWarning]);
+  }, [sessionId, sessionTargetSpot, confirmedSpotId, mode, warning, spotsById, sessionParkedSpot, runtimeParkedSpot, sessionState, activeNeed, spots, lastEventTime, targetVehicleId, activeVehicles, showInvalidSpotWarning, clearWarning]);
 
   const [isRouteDismissed, setIsRouteDismissed] = useState<boolean>(false);
   // isExitGuideActive: true = đang bật "Chỉ lối ra", false = ẩn đường lối ra khi PARKED
   const [isExitGuideActive, setIsExitGuideActive] = useState<boolean>(false);
   // Hiển thị thông báo "Đỗ xe thành công" trong 5s
   const [showParkedSuccess, setShowParkedSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (sessionState === "NAVIGATING_TO_SPOT" && sessionTargetSpot) {
+      setIsRouteDismissed(false);
+      if (confirmedSpotId !== sessionTargetSpot) {
+        confirmSpot(sessionTargetSpot as SpotId);
+      }
+      return;
+    }
+    if (sessionState === "SELECTING_SPOT" && mode === "entry") {
+      enterBrowse("all");
+      return;
+    }
+    if (sessionState === "PARKED") {
+      setIsRouteDismissed(true);
+      setIsExitGuideActive(false);
+      voiceManager.stop();
+      if (mode === "navigation" || confirmedSpotId || warning) cancelNavigation();
+    }
+  }, [sessionId, sessionState, sessionTargetSpot, confirmedSpotId, mode, warning, confirmSpot, enterBrowse, cancelNavigation]);
 
   useEffect(() => {
     if (sessionState === "PARKED") {
@@ -386,20 +452,19 @@ export function App({ sessionId }: AppProps = {}) {
   const { goalSpot, isExitMode } = useMemo(() => {
     let isExit = false;
     let goal: SpotId | null = null;
-    if ((sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") && isExitGuideActive) {
-      isExit = true;
-      goal = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
+    if (sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") {
+      if (isExitGuideActive) {
+        isExit = true;
+        goal = (sessionParkedSpot || confirmedSpotId) as SpotId | null;
+      }
     } else {
       goal = (sessionId && sessionTargetSpot) ? (sessionTargetSpot as SpotId) : (confirmedSpotId || inspectedSpotId) as SpotId | null;
-      if (goal && spotsById[goal]?.status === "occupied") {
-        isExit = true;
-      }
     }
-    if (isRouteDismissed || sessionState === "CLOSED") {
+    if (isRouteDismissed || sessionEnded) {
       goal = null;
     }
     return { goalSpot: goal, isExitMode: isExit };
-  }, [sessionState, isExitGuideActive, sessionParkedSpot, confirmedSpotId, sessionId, sessionTargetSpot, inspectedSpotId, spotsById, isRouteDismissed]);
+  }, [sessionState, isExitGuideActive, sessionParkedSpot, confirmedSpotId, sessionId, sessionTargetSpot, inspectedSpotId, isRouteDismissed, sessionEnded]);
 
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [route, setRoute] = useState<RouteResult | null>(null);
@@ -421,8 +486,8 @@ export function App({ sessionId }: AppProps = {}) {
       return;
     }
 
-    const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
-    const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
+    const targetVehicleId = sessionTrackIdRef.current;
+    const targetVehicle = activeVehiclesRef.current.find((v) => v.trackId === targetVehicleId);
 
     let newRoute: RouteResult | null;
     if (isExitMode) {
@@ -448,7 +513,7 @@ export function App({ sessionId }: AppProps = {}) {
       return;
     }
 
-    const targetVehicleId = sessionTrackIdRef.current ?? Number(sessionId);
+    const targetVehicleId = sessionTrackIdRef.current;
     const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
 
     if (!targetVehicle) return;
@@ -496,18 +561,43 @@ export function App({ sessionId }: AppProps = {}) {
   }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted]); // Theo vị trí xe
 
   // ── Xử lý khi bấm vào ô đỗ ──
-  const handleConfirmSpot = useCallback((spotId: SpotId): void => {
+  const handleConfirmSpot = useCallback(async (spotId: SpotId): Promise<boolean> => {
+    const currentSpot = useParkingStore.getState().spots[spotId];
+    if (currentSpot?.status !== "empty") return false;
+
+    if (sessionId) {
+      try {
+        setSessionInfo(await selectSpot(sessionId, spotId));
+      } catch (error) {
+        console.warn("Không thể cập nhật ô đỗ cho phiên xe", error);
+        if (error instanceof BackendApiError && error.code === "SPOT_NOT_AVAILABLE") {
+          const need: DestinationNeed = activeNeed ?? "services";
+          const alternatives = recommendParkingSpots(spots, need, {
+            calculatedAt: lastEventTime ?? new Date().toISOString(),
+          });
+          const alternativeSpotIds = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
+            .filter((candidate): candidate is RankedSpot => Boolean(candidate) && candidate?.spotId !== spotId)
+            .map((candidate) => candidate.spotId)
+            .slice(0, 3);
+          showInvalidSpotWarning({
+            spotId,
+            status: "occupied",
+            alternativeSpotId: alternativeSpotIds[0],
+            alternativeSpotIds,
+          });
+        }
+        return false;
+      }
+    }
     setIsRouteDismissed(false);
     confirmSpot(spotId);
-    if (sessionId) {
-      void updateSessionTarget(spotId);
-    }
-  }, [confirmSpot, sessionId, updateSessionTarget]);
+    return true;
+  }, [confirmSpot, sessionId, activeNeed, spots, lastEventTime, showInvalidSpotWarning]);
 
   const handleSpotClick = (spotId: SpotId): void => {
     const clickedSpot = spotsById[spotId];
     if (sessionId && clickedSpot?.status === "empty") {
-      handleConfirmSpot(spotId);
+      void handleConfirmSpot(spotId);
       return;
     }
     if (mode === "browse") {
@@ -522,10 +612,11 @@ export function App({ sessionId }: AppProps = {}) {
 
   const handleNeedChange = (need: DestinationNeed): void => chooseNeed(need);
 
-  const switchAlternative = (): void => {
-    if (!warning?.alternativeSpotId) return;
-    const alternative = spotsById[warning.alternativeSpotId];
-    if (alternative?.status === "empty") handleConfirmSpot(alternative.id);
+  const switchAlternative = async (spotId: SpotId): Promise<void> => {
+    const allowed = warning?.alternativeSpotIds ?? (warning?.alternativeSpotId ? [warning.alternativeSpotId] : []);
+    if (!allowed.includes(spotId)) return;
+    const alternative = spotsById[spotId];
+    if (alternative?.status === "empty") await handleConfirmSpot(alternative.id);
   };
 
   const handleDismissRoute = useCallback(async () => {
@@ -534,17 +625,25 @@ export function App({ sessionId }: AppProps = {}) {
     voiceManager.stop();
     if (sessionId) {
       setSessionInfo((prev) => prev ? { ...prev, targetSpotId: null, state: "SELECTING_SPOT" } : null);
-      await callSessionApi("select", { sessionId, spotId: null });
+      try {
+        setSessionInfo(await selectSpot(sessionId, null));
+      } catch (error) {
+        console.warn("Không thể hủy ô đỗ đã chọn", error);
+      }
     }
-  }, [sessionId, cancelNavigation, callSessionApi]);
+  }, [sessionId, cancelNavigation]);
 
   const handleStartExit = useCallback(async () => {
     if (!sessionId) return;
     setIsRouteDismissed(false);
     cancelNavigation();
     setSessionInfo((prev) => prev ? { ...prev, state: "EXIT_NAVIGATION", targetSpotId: null } : null);
-    await callSessionApi("exit", { sessionId });
-  }, [sessionId, cancelNavigation, callSessionApi]);
+    try {
+      setSessionInfo(await startExit(sessionId));
+    } catch (error) {
+      console.warn("Không thể bắt đầu chỉ đường ra cổng", error);
+    }
+  }, [sessionId, cancelNavigation]);
 
   const getSessionStatusLabel = () => {
     switch (sessionState) {
@@ -553,7 +652,6 @@ export function App({ sessionId }: AppProps = {}) {
       case "NAVIGATING_TO_SPOT": return "ĐANG DẪN ĐƯỜNG";
       case "PARKED":           return "ĐÃ ĐỖ";
       case "EXIT_NAVIGATION":  return "ĐANG RA CỔNG";
-      case "CLOSED":           return "ĐÃ HOÀN THÀNH";
       default:                 return "ĐANG TẢI...";
     }
   };
@@ -565,16 +663,43 @@ export function App({ sessionId }: AppProps = {}) {
       case "NAVIGATING_TO_SPOT": return "#3b82f6";
       case "PARKED":           return "#22c55e";
       case "EXIT_NAVIGATION":  return "#eab308";
-      case "CLOSED":           return "#64748b";
+      default:                 return "#64748b";
     }
   };
 
+  const displayedVehicles = useMemo(() => {
+    if (sessionState !== "PARKED" || !sessionParkedSpot || targetVehicleId === null) {
+      return activeVehicles;
+    }
+    const geometry = SPOT_GEOMETRY_BY_ID.get(sessionParkedSpot as SpotId);
+    if (!geometry) return activeVehicles;
+    return [{
+      trackId: targetVehicleId,
+      x: geometry.x + geometry.width / 2,
+      y: geometry.y + geometry.height / 2,
+      trail: [],
+      state: "parked" as const,
+      parkedSlotId: sessionParkedSpot,
+    }];
+  }, [activeVehicles, sessionParkedSpot, sessionState, targetVehicleId]);
+
   return (
     <div className="app-shell">
-      <SmartParkingHeader mode={mode} cameras={cameras} lastUpdated={lastEventTime} />
+      <SmartParkingHeader mode={mode} cameras={cameras} lastUpdated={lastEventTime} runtimeState={runtimeState} />
 
       <main className="app-main">
         <SummaryCards counts={counts} cameras={cameras} />
+        {trackingSource === "opencv" && runtimeError && (
+          <div className="runtime-source-alert" role="alert">
+            {runtimeError}. Hãy kiểm tra Runtime API tại cổng 8001 và URL camera thật.
+          </div>
+        )}
+        {sessionEnded && (
+          <section className="session-ended" role="status">
+            <h2>Phiên xe đã kết thúc</h2>
+            <p>Xe đã đi qua cổng ra. Liên kết QR này không còn hiệu lực.</p>
+          </section>
+        )}
         {mode === "browse" && (
           <BrowseToolbar filter={browseFilter} onFilterChange={setBrowseFilter} onFindSpot={startRecommendation} />
         )}
@@ -583,7 +708,7 @@ export function App({ sessionId }: AppProps = {}) {
         )}
 
         {/* ── Bảng trạng thái phiên làm việc (Session Status Banner) ── */}
-        {sessionId && (
+        {sessionId && !sessionEnded && (
           <div style={{
             background: "rgba(15, 23, 42, 0.95)",
             border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -815,7 +940,7 @@ export function App({ sessionId }: AppProps = {}) {
               activeNeed={activeNeed}
               route={route}
               routePaused={Boolean(warning)}
-              activeVehicles={activeVehicles}
+              activeVehicles={displayedVehicles}
               frameSize={frameSize}
               onSpotClick={handleSpotClick}
             />
@@ -851,7 +976,11 @@ export function App({ sessionId }: AppProps = {}) {
         />
       )}
       {warning && (
-        <InvalidSpotWarningSheet warning={warning} onSwitch={switchAlternative} onContinueMap={cancelNavigation} />
+        <InvalidSpotWarningSheet
+          warning={warning}
+          onSwitch={(spotId) => void switchAlternative(spotId)}
+          onContinueMap={() => void handleDismissRoute()}
+        />
       )}
       {import.meta.env.DEV && (
         <MockControlPanel
@@ -863,7 +992,7 @@ export function App({ sessionId }: AppProps = {}) {
 
       {/* ── Thông báo đỗ xe thành công (5s) ── */}
       {showParkedSuccess && (
-        <div style={{
+        <div data-testid="parked-success" style={{
           position: "fixed",
           top: "50%",
           left: "50%",
@@ -904,8 +1033,6 @@ export function App({ sessionId }: AppProps = {}) {
         }
       `}</style>
 
-      {/* ── QR Kiosk chỉ hiển thị trên Trang Chung (không có sessionId) ── */}
-      {!sessionId && <EntryQRKiosk spots={spots} />}
     </div>
   );
 }

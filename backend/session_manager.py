@@ -1,30 +1,8 @@
-"""
-session_manager.py  –  Quản lý vòng đời Phiên Đỗ Xe (Parking Session)
+"""Vehicle-session lifecycle for the QR navigation flow.
 
-Vòng đời trạng thái:
-  WAITING_FOR_SCAN    →  xe ở cổng, chờ tài xế quét QR
-  SELECTING_SPOT      →  tài xế đã quét QR, đang chọn ô đỗ
-  NAVIGATING_TO_SPOT  →  xe đang di chuyển vào ô đỗ
-  PARKED              →  xe đã đỗ, track mất dấu nhưng session vẫn sống
-  EXIT_NAVIGATION     →  xe đang di chuyển ra khỏi bãi
-  CLOSED              →  xe đã ra khỏi bãi, session kết thúc
-
-Session ID: sử dụng số đơn giản (1, 2, 3, ...) trùng với track_id
-  → URL: /?session=1  /?session=2  ...
-
-Identity tracking:
-  vehicleTrackId  –  track_id gốc (cố định, không mất khi đỗ)
-  activeTrackId   –  track_id đang active trên camera (null khi đỗ, có thể khác nếu Re-ID)
-
-Cách chạy (ở thư mục gốc TechGAR, môi trường ảo .venv):
-  python backend/session_manager.py --create --track 1
-  python backend/session_manager.py --list
-  python backend/session_manager.py --claim 1
-  python backend/session_manager.py --select-spot 1 --spot D08
-  python backend/session_manager.py --set-parked 1 --spot D08
-  python backend/session_manager.py --set-exit 1
-  python backend/session_manager.py --close 1
-  python backend/session_manager.py --watch   # chạy nền, tự động cập nhật trạng thái
+A session belongs to one canonical Global ID. Local tracker IDs are optional
+diagnostics only. The active session is deleted only after the gate controller
+confirms that the vehicle crossed the physical exit gate in the valid direction.
 """
 
 from __future__ import annotations
@@ -32,328 +10,505 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
+import tempfile
+import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-# ──────────────────────────────────────────────
-#  ĐƯỜNG DẪN FILE
-# ──────────────────────────────────────────────
-SCRIPT_DIR  = Path(__file__).resolve().parent
-ROOT_DIR    = SCRIPT_DIR.parent
 
-# File session được đặt trong frontend/public để React đọc trực tiếp
-SESSIONS_FILE   = ROOT_DIR / "frontend" / "public" / "navigation_sessions.json"
-# File vị trí xe từ tracker của An
-POSITIONS_FILE  = ROOT_DIR / "backend" / "detect_car_update" / "vehicle_positions.json"
-# File trạng thái ô đỗ xe
-STATUS_FILE     = ROOT_DIR / "frontend" / "public" / "parking_status.json"
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent
+SESSIONS_FILE = Path(
+    os.environ.get(
+        "TECHGAR_SESSIONS_FILE",
+        ROOT_DIR / "backend" / "data" / "navigation_sessions.json",
+    )
+)
+POSITIONS_FILE = ROOT_DIR / "backend" / "detect_car_update" / "vehicle_positions.json"
+STATUS_FILE = ROOT_DIR / "frontend" / "public" / "parking_status.json"
+WATCH_INTERVAL = 2.0
+QR_DISPLAY_SECONDS = 10.0
 
-# ──────────────────────────────────────────────
-#  CẤU HÌNH
-# ──────────────────────────────────────────────
-WATCH_INTERVAL      = 2.0    # giây - tần suất kiểm tra trạng thái
-PARKED_TTL_FRAMES   = 60     # số frame không có chuyển động gần ô đỗ → chuyển PARKED
-REACTIVATION_RADIUS = 80     # pixel - vùng tìm track mới khi xe rời ô đỗ
+_STORE_LOCK = threading.RLock()
 
 
-# ──────────────────────────────────────────────
-#  TIỆN ÍCH
-# ──────────────────────────────────────────────
+class SessionError(RuntimeError):
+    """Base error for a vehicle-session operation."""
+
+
+class SessionNotFound(SessionError):
+    """Raised when a session no longer exists (normally after gate exit)."""
+
+
+class InvalidSessionState(SessionError):
+    """Raised when an action is not valid for the current lifecycle state."""
+
+
 def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="milliseconds")
+
+
+def _parse_iso(value: object) -> Optional[datetime]:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def _qr_expires_at(session: dict) -> Optional[datetime]:
+    explicit_expiry = _parse_iso(session.get("qrExpiresAt"))
+    if explicit_expiry is not None:
+        return explicit_expiry
+    created_at = _parse_iso(session.get("createdAt"))
+    if created_at is None:
+        return None
+    return created_at + timedelta(seconds=QR_DISPLAY_SECONDS)
 
 
 def atomic_write(path: Path, data: dict) -> None:
-    """Ghi file JSON trực tiếp thay vì tmp.replace để tránh PermissionError trên Windows."""
+    """Write JSON via an adjacent temporary file and an atomic replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Optional[Path] = None
     try:
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+            temporary = Path(handle.name)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink(missing_ok=True)
 
 
 def load_json(path: Path) -> dict:
     if not path.exists():
         return {}
     try:
-        with path.open(encoding="utf-8") as f:
-            return json.load(f)
+        with path.open(encoding="utf-8") as handle:
+            value = json.load(handle)
     except (json.JSONDecodeError, OSError):
         return {}
+    return value if isinstance(value, dict) else {}
 
 
-# ──────────────────────────────────────────────
-#  QUẢN LÝ SESSION
-# ──────────────────────────────────────────────
-def load_sessions() -> dict:
-    return load_json(SESSIONS_FILE)
+def _normalize_session(session_id: str, value: dict) -> dict:
+    session = dict(value)
+    session["sessionId"] = str(session.get("sessionId") or session_id)
+    if session.get("globalVehicleId") is None:
+        legacy_id = session.get("vehicleTrackId")
+        if legacy_id is not None:
+            session["globalVehicleId"] = int(legacy_id)
+    session.setdefault("vehicleTrackId", session.get("activeTrackId"))
+    session.setdefault("activeTrackId", None)
+    session.setdefault("runtimeId", None)
+    session.setdefault("targetSpotId", None)
+    session.setdefault("parkedSpotId", None)
+    session.setdefault("claimed", False)
+    session.setdefault("lastKnownPosition", None)
+    session.setdefault("claimedAt", None)
+    session.setdefault("spotSelectedAt", None)
+    session.setdefault("parkedAt", None)
+    session.setdefault("exitStartedAt", None)
+    qr_expiry = _qr_expires_at(session)
+    session.setdefault(
+        "qrExpiresAt",
+        qr_expiry.isoformat(timespec="milliseconds") if qr_expiry is not None else None,
+    )
+    return session
 
 
-def save_sessions(sessions: dict) -> None:
-    atomic_write(SESSIONS_FILE, sessions)
+def load_sessions() -> dict[str, dict]:
+    with _STORE_LOCK:
+        raw = load_json(SESSIONS_FILE)
+        return {
+            str(session_id): _normalize_session(str(session_id), value)
+            for session_id, value in raw.items()
+            if isinstance(value, dict)
+        }
 
 
-def create_session(track_id: int) -> str:
+def save_sessions(sessions: dict[str, dict]) -> None:
+    with _STORE_LOCK:
+        atomic_write(SESSIONS_FILE, sessions)
+
+
+def get_session(session_id: str) -> dict:
+    session = load_sessions().get(str(session_id))
+    if session is None:
+        raise SessionNotFound(f"Session not found: {session_id}")
+    return session
+
+
+def _matches_runtime(session: dict, runtime_id: Optional[str]) -> bool:
+    return runtime_id is None or session.get("runtimeId") == str(runtime_id)
+
+
+def find_session_by_global_id(
+    global_vehicle_id: int,
+    *,
+    runtime_id: Optional[str] = None,
+) -> Optional[dict]:
+    target = int(global_vehicle_id)
+    for session in load_sessions().values():
+        if session.get("state") == "CLOSED":
+            continue
+        if (
+            session.get("globalVehicleId") == target
+            and _matches_runtime(session, runtime_id)
+        ):
+            return session
+    return None
+
+
+def list_waiting_sessions(
+    *,
+    now: Optional[datetime] = None,
+    runtime_id: Optional[str] = None,
+) -> list[dict]:
+    current_time = now or datetime.now(timezone.utc).astimezone()
+    waiting = [
+        session
+        for session in load_sessions().values()
+        if (
+            session.get("state") == "WAITING_FOR_SCAN"
+            and not session.get("claimed")
+            and _matches_runtime(session, runtime_id)
+            and (expiry := _qr_expires_at(session)) is not None
+            and current_time < expiry
+        )
+    ]
+    return sorted(waiting, key=lambda session: str(session.get("createdAt") or ""))
+
+
+def create_session(
+    track_id: Optional[int] = None,
+    *,
+    global_vehicle_id: Optional[int] = None,
+    active_track_id: Optional[int] = None,
+    session_id: Optional[str] = None,
+    runtime_id: Optional[str] = None,
+) -> str:
+    """Create one opaque QR session for a canonical Global ID.
+
+    ``track_id`` remains as a compatibility input for the deterministic sample
+    feed. The runtime integration always passes ``global_vehicle_id``.
     """
-    Tạo phiên mới khi xe vào cổng. Session ID = track_id (đơn giản).
-    State bắt đầu: WAITING_FOR_SCAN (chưa có target, chưa claimed).
-    Trả về session_id (string).
-    """
-    sessions = load_sessions()
-    sid = str(track_id)
+    resolved_global_id = global_vehicle_id if global_vehicle_id is not None else track_id
+    if resolved_global_id is None:
+        raise ValueError("global_vehicle_id is required")
+    resolved_global_id = int(resolved_global_id)
 
-    # Nếu session cũ của track này chưa CLOSED, đóng nó trước
-    if sid in sessions and sessions[sid].get("state") != "CLOSED":
-        sessions[sid]["state"] = "CLOSED"
-        sessions[sid]["closedAt"] = now_iso()
+    with _STORE_LOCK:
+        sessions = load_sessions()
+        for existing in sessions.values():
+            if (
+                existing.get("state") != "CLOSED"
+                and existing.get("globalVehicleId") == resolved_global_id
+                and _matches_runtime(existing, runtime_id)
+            ):
+                return str(existing["sessionId"])
 
-    sessions[sid] = {
-        "sessionId":        sid,
-        "state":            "WAITING_FOR_SCAN",
-        "targetSpotId":     None,
-        "parkedSpotId":     None,
-        "vehicleTrackId":   track_id,    # Identity cố định
-        "activeTrackId":    track_id,    # Track đang active trên camera
-        "claimed":          False,
-        "lastKnownPosition": None,
-        "createdAt":        now_iso(),
-        "claimedAt":        None,
-        "spotSelectedAt":   None,
-        "parkedAt":         None,
-        "exitStartedAt":    None,
-        "closedAt":         None,
-    }
-    save_sessions(sessions)
-    print(f"[OK] Tao session: {sid}  (track #{track_id})  state=WAITING_FOR_SCAN")
+        sid = str(session_id or secrets.token_urlsafe(12))
+        if sid in sessions:
+            raise SessionError(f"Session ID already exists: {sid}")
+        local_track_id = active_track_id if active_track_id is not None else track_id
+        created_at = datetime.now(timezone.utc).astimezone()
+        sessions[sid] = {
+            "sessionId": sid,
+            "state": "WAITING_FOR_SCAN",
+            "targetSpotId": None,
+            "parkedSpotId": None,
+            "globalVehicleId": resolved_global_id,
+            "runtimeId": str(runtime_id) if runtime_id is not None else None,
+            "vehicleTrackId": local_track_id,
+            "activeTrackId": local_track_id,
+            "claimed": False,
+            "lastKnownPosition": None,
+            "createdAt": created_at.isoformat(timespec="milliseconds"),
+            "qrExpiresAt": (created_at + timedelta(seconds=QR_DISPLAY_SECONDS)).isoformat(
+                timespec="milliseconds"
+            ),
+            "claimedAt": None,
+            "spotSelectedAt": None,
+            "parkedAt": None,
+            "exitStartedAt": None,
+        }
+        save_sessions(sessions)
+    print(f"[SESSION] Created {sid} for Global ID #{resolved_global_id}")
     return sid
 
 
-def claim_session(session_id: str) -> None:
-    """User đã quét QR → claim session. Chuyển WAITING_FOR_SCAN → SELECTING_SPOT."""
-    sessions = load_sessions()
-    if session_id not in sessions:
-        print(f"Khong tim thay session: {session_id}")
-        return
-    s = sessions[session_id]
-    if s["state"] != "WAITING_FOR_SCAN":
-        print(f"Session {session_id} khong o trang thai WAITING_FOR_SCAN (hien: {s['state']})")
-        return
-    s["state"]     = "SELECTING_SPOT"
-    s["claimed"]   = True
-    s["claimedAt"] = now_iso()
-    save_sessions(sessions)
-    print(f"[CLAIMED] {session_id}  ->  SELECTING_SPOT")
+def _mutate_session(session_id: str, mutate) -> dict:
+    with _STORE_LOCK:
+        sessions = load_sessions()
+        session = sessions.get(str(session_id))
+        if session is None:
+            raise SessionNotFound(f"Session not found: {session_id}")
+        mutate(session)
+        save_sessions(sessions)
+        return dict(session)
 
 
-def select_spot(session_id: str, spot_id: Optional[str]) -> None:
-    """User chọn ô đỗ (hoặc hủy chọn nếu spot_id is None)."""
-    sessions = load_sessions()
-    if session_id not in sessions:
-        print(f"Khong tim thay session: {session_id}")
-        return
-    s = sessions[session_id]
-    if not spot_id:
-        s["state"]        = "SELECTING_SPOT"
-        s["targetSpotId"] = None
-        print(f"[UNSELECT] {session_id}  ->  SELECTING_SPOT (Da huy o do)")
-    else:
-        s["state"]          = "NAVIGATING_TO_SPOT"
-        s["targetSpotId"]   = spot_id
-        s["claimed"]        = True
-        s["spotSelectedAt"] = now_iso()
-        if s.get("claimedAt") is None:
-            s["claimedAt"]  = now_iso()
-        print(f"[SELECT] {session_id}  ->  NAVIGATING_TO_SPOT  target={spot_id}")
-    save_sessions(sessions)
+def claim_session(session_id: str) -> dict:
+    def mutate(session: dict) -> None:
+        if session.get("state") == "WAITING_FOR_SCAN":
+            session["state"] = "SELECTING_SPOT"
+            session["claimed"] = True
+            session["claimedAt"] = session.get("claimedAt") or now_iso()
+            return
+        if session.get("claimed"):
+            return
+        raise InvalidSessionState(
+            f"Cannot claim session in state {session.get('state')}"
+        )
+
+    return _mutate_session(session_id, mutate)
 
 
-def set_parked(session_id: str, parked_spot: str) -> None:
-    """
-    Xe đã đỗ vào ô. Chuyển trạng thái PARKED và XÓA targetSpotId.
-    Giữ vehicleTrackId, chỉ xóa activeTrackId.
-    """
-    sessions = load_sessions()
-    if session_id not in sessions:
-        print(f"Khong tim thay session: {session_id}")
-        return
-    s = sessions[session_id]
-    s["state"]          = "PARKED"
-    s["parkedSpotId"]   = parked_spot
-    s["targetSpotId"]   = None       # Xóa ô chọn mục tiêu cũ
-    s["activeTrackId"]  = None       # Track mất dấu khi đỗ
-    s["parkedAt"]       = now_iso()
-    save_sessions(sessions)
-    print(f"[PARKED] {session_id}  ->  PARKED tai {parked_spot}")
+def select_spot(session_id: str, spot_id: Optional[str]) -> dict:
+    def mutate(session: dict) -> None:
+        if session.get("state") not in {"SELECTING_SPOT", "NAVIGATING_TO_SPOT"}:
+            raise InvalidSessionState(
+                f"Cannot select a spot in state {session.get('state')}"
+            )
+        if spot_id:
+            session["state"] = "NAVIGATING_TO_SPOT"
+            session["targetSpotId"] = str(spot_id)
+            session["claimed"] = True
+            session["claimedAt"] = session.get("claimedAt") or now_iso()
+            session["spotSelectedAt"] = now_iso()
+        else:
+            session["state"] = "SELECTING_SPOT"
+            session["targetSpotId"] = None
+
+    return _mutate_session(session_id, mutate)
 
 
-def set_exit_navigation(session_id: str, new_track_id: Optional[int] = None) -> None:
-    """Người dùng bấm 'Lấy xe ra'. Chuyển EXIT_NAVIGATION, XÓA targetSpotId cũ."""
-    sessions = load_sessions()
-    if session_id not in sessions:
-        print(f"Khong tim thay session: {session_id}")
-        return
-    s = sessions[session_id]
-    s["state"]          = "EXIT_NAVIGATION"
-    s["targetSpotId"]   = None       # Xóa targetSpotId cũ để chỉ dẫn đường lối ra
-    s["activeTrackId"]  = new_track_id
-    s["exitStartedAt"]  = now_iso()
-    save_sessions(sessions)
-    print(f"[EXIT] {session_id}  ->  EXIT_NAVIGATION  track={new_track_id}")
+def set_parked(session_id: str, parked_spot: str) -> dict:
+    def mutate(session: dict) -> None:
+        session["state"] = "PARKED"
+        session["parkedSpotId"] = str(parked_spot)
+        session["targetSpotId"] = None
+        session["activeTrackId"] = None
+        session["parkedAt"] = session.get("parkedAt") or now_iso()
+
+    return _mutate_session(session_id, mutate)
 
 
-def close_session(session_id: str) -> None:
-    """Xe đã ra khỏi bãi. Đóng session."""
-    sessions = load_sessions()
-    if session_id not in sessions:
-        print(f"Khong tim thay session: {session_id}")
-        return
-    s = sessions[session_id]
-    s["state"]         = "CLOSED"
-    s["closedAt"]      = now_iso()
-    s["activeTrackId"] = None
-    save_sessions(sessions)
-    print(f"[CLOSED] {session_id}  ->  CLOSED")
+def set_parked_by_global_id(
+    global_vehicle_id: int,
+    parked_spot: str,
+    *,
+    runtime_id: Optional[str] = None,
+) -> dict:
+    session = find_session_by_global_id(
+        global_vehicle_id, runtime_id=runtime_id
+    )
+    if session is None:
+        raise SessionNotFound(f"No active session for Global ID {global_vehicle_id}")
+    return set_parked(str(session["sessionId"]), parked_spot)
 
 
-def update_track_position(session_id: str, track_id: int, position: dict) -> None:
-    """Cập nhật vị trí cuối biết của xe trong session (last_known_position)."""
-    sessions = load_sessions()
-    if session_id not in sessions:
-        return
-    sessions[session_id]["activeTrackId"]      = track_id
-    sessions[session_id]["lastKnownPosition"]  = position
-    save_sessions(sessions)
+def set_exit_navigation(
+    session_id: str,
+    new_track_id: Optional[int] = None,
+) -> dict:
+    def mutate(session: dict) -> None:
+        if session.get("state") not in {"PARKED", "EXIT_NAVIGATION"}:
+            raise InvalidSessionState(
+                f"Cannot start exit navigation in state {session.get('state')}"
+            )
+        session["state"] = "EXIT_NAVIGATION"
+        session["targetSpotId"] = None
+        session["activeTrackId"] = new_track_id
+        session["exitStartedAt"] = session.get("exitStartedAt") or now_iso()
+
+    return _mutate_session(session_id, mutate)
+
+
+def update_global_vehicle_observation(
+    global_vehicle_id: int,
+    position: dict,
+    *,
+    active_track_id: Optional[int] = None,
+    runtime_id: Optional[str] = None,
+) -> Optional[dict]:
+    session = find_session_by_global_id(
+        global_vehicle_id, runtime_id=runtime_id
+    )
+    if session is None:
+        return None
+
+    def mutate(current: dict) -> None:
+        current["lastKnownPosition"] = {
+            "x": position.get("x"),
+            "y": position.get("y"),
+        }
+        if active_track_id is not None:
+            current["activeTrackId"] = int(active_track_id)
+
+    return _mutate_session(str(session["sessionId"]), mutate)
+
+
+def update_track_position(session_id: str, track_id: int, position: dict) -> dict:
+    def mutate(session: dict) -> None:
+        session["activeTrackId"] = int(track_id)
+        session["lastKnownPosition"] = {
+            "x": position.get("x"),
+            "y": position.get("y"),
+        }
+
+    return _mutate_session(session_id, mutate)
+
+
+def remap_global_vehicle_id(
+    old_global_id: int,
+    new_global_id: int,
+    *,
+    runtime_id: Optional[str] = None,
+) -> dict:
+    old_global_id = int(old_global_id)
+    new_global_id = int(new_global_id)
+    with _STORE_LOCK:
+        sessions = load_sessions()
+        source = next(
+            (
+                session
+                for session in sessions.values()
+                if session.get("globalVehicleId") == old_global_id
+                and session.get("state") != "CLOSED"
+                and _matches_runtime(session, runtime_id)
+            ),
+            None,
+        )
+        if source is None:
+            existing = next(
+                (
+                    session
+                    for session in sessions.values()
+                    if session.get("globalVehicleId") == new_global_id
+                    and session.get("state") != "CLOSED"
+                    and _matches_runtime(session, runtime_id)
+                ),
+                None,
+            )
+            if existing is None:
+                raise SessionNotFound(f"No active session for Global ID {old_global_id}")
+            return existing
+        duplicate = next(
+            (
+                session
+                for session in sessions.values()
+                if session is not source
+                and session.get("globalVehicleId") == new_global_id
+                and session.get("state") != "CLOSED"
+                and _matches_runtime(session, runtime_id)
+            ),
+            None,
+        )
+        if duplicate is not None:
+            raise SessionError(
+                f"Global ID merge would create duplicate sessions: {old_global_id} -> {new_global_id}"
+            )
+        source["globalVehicleId"] = new_global_id
+        save_sessions(sessions)
+        return dict(source)
+
+
+def delete_session(session_id: str) -> dict:
+    with _STORE_LOCK:
+        sessions = load_sessions()
+        session = sessions.pop(str(session_id), None)
+        if session is None:
+            raise SessionNotFound(f"Session not found: {session_id}")
+        save_sessions(sessions)
+        return session
+
+
+def delete_session_by_global_id(
+    global_vehicle_id: int,
+    *,
+    runtime_id: Optional[str] = None,
+) -> dict:
+    session = find_session_by_global_id(
+        global_vehicle_id, runtime_id=runtime_id
+    )
+    if session is None:
+        raise SessionNotFound(f"No active session for Global ID {global_vehicle_id}")
+    return delete_session(str(session["sessionId"]))
+
+
+def close_session(session_id: str) -> dict:
+    """Backward-compatible name; physical exit now deletes the active session."""
+    return delete_session(session_id)
 
 
 def list_sessions() -> None:
     sessions = load_sessions()
     if not sessions:
-        print("Chua co session nao.")
+        print("No active vehicle sessions.")
         return
-    print(f"{'SESSION':<10} {'STATE':<22} {'TARGET':<8} {'PARKED':<8} {'V-TRACK':<8} {'A-TRACK':<8} {'CLAIMED'}")
-    print("-" * 85)
-    for sid, s in sessions.items():
-        target  = s.get('targetSpotId')  or '-'
-        parked  = s.get('parkedSpotId')  or '-'
-        v_track = s.get('vehicleTrackId')
-        a_track = s.get('activeTrackId')
-        claimed = 'Yes' if s.get('claimed') else 'No'
-        v_s = str(v_track) if v_track is not None else '-'
-        a_s = str(a_track) if a_track is not None else '-'
-        print(f"{sid:<10} {s['state']:<22} {target:<8} {parked:<8} {v_s:<8} {a_s:<8} {claimed}")
-
-
-# ──────────────────────────────────────────────
-#  CHẾ ĐỘ WATCH – Tự động đồng bộ track_id vào session
-# ──────────────────────────────────────────────
-def _find_nearest_track(position: dict, vehicles: dict, radius: float) -> Optional[int]:
-    """Tìm track_id gần nhất với tọa độ đã cho, trong bán kính radius pixel."""
-    best_id, best_dist = None, float("inf")
-    for tid_str, v in vehicles.items():
-        pos = v.get("position", {})
-        dx = pos.get("x", 0) - position.get("x", 0)
-        dy = pos.get("y", 0) - position.get("y", 0)
-        dist = (dx**2 + dy**2) ** 0.5
-        if dist < radius and dist < best_dist:
-            best_dist = dist
-            best_id = int(tid_str)
-    return best_id
+    for session in sessions.values():
+        print(
+            f"{session['sessionId']}  GID={session.get('globalVehicleId')}  "
+            f"state={session.get('state')}  parked={session.get('parkedSpotId') or '-'}"
+        )
 
 
 def watch_loop() -> None:
-    """
-    Vòng lặp nền: đọc vehicle_positions.json và parking_status.json mỗi 2 giây,
-    tự động cập nhật vị trí xe và chuyển trạng thái session NAVIGATING → PARKED
-    khi ô đỗ mục tiêu chuyển sang 'occupied'.
-    """
-    print(f"[WATCH] Session Watcher dang chay... (Ctrl+C de dung)")
-    print(f"  Doc tu:  {POSITIONS_FILE}")
-    print(f"  Ghi vao: {SESSIONS_FILE}")
-
+    """Legacy single-camera watcher retained for the sample workflow."""
+    print(f"[WATCH] Reading {POSITIONS_FILE}")
     while True:
-        try:
-            sessions  = load_sessions()
-            vehicles  = load_json(POSITIONS_FILE).get("active_vehicles", {})
-            park_status = load_json(STATUS_FILE).get("slots", {})
-            changed   = False
-
-            for sid, s in sessions.items():
-                if s["state"] in ("CLOSED",):
-                    continue
-
-                track_id = s.get("activeTrackId")
-
-                # --- Cập nhật last_known_position nếu track đang active ---
-                if track_id is not None and str(track_id) in vehicles:
-                    pos = vehicles[str(track_id)].get("position", {})
-                    s["lastKnownPosition"] = {"x": pos.get("x"), "y": pos.get("y")}
-                    changed = True
-
-                # --- Tự động chuyển NAVIGATING_TO_SPOT → PARKED ---
-                # Điều kiện: ô mục tiêu chuyển sang 'occupied' và track mất dấu
-                if s["state"] == "NAVIGATING_TO_SPOT":
-                    target = s.get("targetSpotId", "")
-                    slot_status = park_status.get(target, {}).get("status", "")
-                    if slot_status == "occupied":
-                        # Xác nhận bằng cách kiểm tra track có gần ô không
-                        last_pos = s.get("lastKnownPosition") or {}
-                        print(f"  [AUTO-PARKED] {sid}: o {target} occupied -> chuyen PARKED")
-                        s["state"]          = "PARKED"
-                        s["parkedSpotId"]   = target
-                        s["activeTrackId"]  = None  # Track mất dấu
-                        # vehicleTrackId giữ nguyên
-                        s["parkedAt"]       = now_iso()
-                        changed = True
-
-                # --- Tự động gắn track mới khi EXIT_NAVIGATION ---
-                # Điều kiện: activeTrackId chưa có, ô đỗ vừa chuyển empty
-                if s["state"] == "EXIT_NAVIGATION" and s.get("activeTrackId") is None:
-                    parked_spot = s.get("parkedSpotId", "")
-                    slot_status = park_status.get(parked_spot, {}).get("status", "")
-                    if slot_status == "empty" and vehicles:
-                        # Tìm track mới xuất hiện gần ô đỗ cũ
-                        last_pos = s.get("lastKnownPosition") or {"x": 0, "y": 0}
-                        candidate = _find_nearest_track(last_pos, vehicles, REACTIVATION_RADIUS)
-                        if candidate is not None:
-                            print(f"  [RELINK] {sid}: tai lien ket voi track #{candidate}")
-                            s["activeTrackId"] = candidate
-                            changed = True
-
-            if changed:
-                save_sessions(sessions)
-
-        except Exception as e:
-            print(f"Watcher loi: {e}")
-
+        vehicles = load_json(POSITIONS_FILE).get("active_vehicles", {})
+        parking = load_json(STATUS_FILE).get("slots", {})
+        for session in load_sessions().values():
+            if session.get("state") == "NAVIGATING_TO_SPOT":
+                target = session.get("targetSpotId")
+                if target and parking.get(target, {}).get("status") == "occupied":
+                    set_parked(str(session["sessionId"]), str(target))
+            active_track_id = session.get("activeTrackId")
+            if active_track_id is not None and str(active_track_id) in vehicles:
+                position = vehicles[str(active_track_id)].get("position", {})
+                update_track_position(str(session["sessionId"]), active_track_id, position)
         time.sleep(WATCH_INTERVAL)
 
 
-# ──────────────────────────────────────────────
-#  CLI
-# ──────────────────────────────────────────────
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="TechGAR Parking Session Manager")
-    g = p.add_mutually_exclusive_group(required=True)
-    g.add_argument("--create",       action="store_true",   help="Tao session moi")
-    g.add_argument("--list",         action="store_true",   help="Liet ke tat ca session")
-    g.add_argument("--claim",        metavar="SESSION_ID",  help="Claim session (user quet QR)")
-    g.add_argument("--select-spot",  metavar="SESSION_ID",  help="Chon o do cho session")
-    g.add_argument("--set-parked",   metavar="SESSION_ID",  help="Chuyen session sang PARKED")
-    g.add_argument("--set-exit",     metavar="SESSION_ID",  help="Chuyen session sang EXIT_NAVIGATION")
-    g.add_argument("--close",        metavar="SESSION_ID",  help="Dong session")
-    g.add_argument("--watch",        action="store_true",   help="Chay vong lap tu dong cap nhat")
-    p.add_argument("--spot",   default="P001", help="O muc tieu khi --select-spot hoac --set-parked")
-    p.add_argument("--track",  type=int, default=1, help="Track ID kem theo khi --create")
-    return p.parse_args()
+    parser = argparse.ArgumentParser(description="TechGAR vehicle-session manager")
+    actions = parser.add_mutually_exclusive_group(required=True)
+    actions.add_argument("--create", action="store_true")
+    actions.add_argument("--list", action="store_true")
+    actions.add_argument("--claim", metavar="SESSION_ID")
+    actions.add_argument("--select-spot", metavar="SESSION_ID")
+    actions.add_argument("--set-parked", metavar="SESSION_ID")
+    actions.add_argument("--set-exit", metavar="SESSION_ID")
+    actions.add_argument("--close", metavar="SESSION_ID")
+    actions.add_argument("--watch", action="store_true")
+    parser.add_argument("--global-id", type=int)
+    parser.add_argument("--track", type=int)
+    parser.add_argument("--spot")
+    return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = parse_args()
     if args.create:
-        create_session(args.track)
+        create_session(track_id=args.track, global_vehicle_id=args.global_id)
     elif args.list:
         list_sessions()
     elif args.claim:
@@ -361,6 +516,8 @@ if __name__ == "__main__":
     elif args.select_spot:
         select_spot(args.select_spot, args.spot)
     elif args.set_parked:
+        if not args.spot:
+            raise SystemExit("--spot is required")
         set_parked(args.set_parked, args.spot)
     elif args.set_exit:
         set_exit_navigation(args.set_exit, args.track)
@@ -368,3 +525,7 @@ if __name__ == "__main__":
         close_session(args.close)
     elif args.watch:
         watch_loop()
+
+
+if __name__ == "__main__":
+    main()

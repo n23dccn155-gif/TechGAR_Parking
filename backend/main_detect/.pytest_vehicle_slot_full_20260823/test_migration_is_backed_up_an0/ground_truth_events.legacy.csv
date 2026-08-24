@@ -1,0 +1,2 @@
+﻿event_id,global_id,source_camera,target_camera,event_type,frame_idx,notes
+E1,M01_V1,cam1,cam1,slot_enter,1,enters A01

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "coordinate_space": "world",
+  "unit": "cm",
+  "source": "frontend_shared_map",
+  "entry_gate": {
+    "name": "Cổng vào",
+    "p1": {
+      "x": 7.6559,
+      "y": 0.3316
+    },
+    "p2": {
+      "x": 15.7531,
+      "y": 0.4416
+    },
+    "direction": "negative"
+  },
+  "exit_gate": {
+    "name": "Cổng ra",
+    "p1": {
+      "x": 40.9684,
+      "y": 39.0951
+    },
+    "p2": {
+      "x": 40.8759,
+      "y": 34.6104
+    },
+    "direction": "negative"
+  }
+}

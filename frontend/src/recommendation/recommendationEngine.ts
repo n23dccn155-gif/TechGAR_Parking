@@ -11,7 +11,7 @@ import {
   type ParkingGeometry,
 } from "../geometry/parkingGeometry";
 import { LANE_GRAPH, type LaneGraph } from "../routing/laneGraph";
-import { findVehicleRoute } from "../routing/routeEngine";
+import { findInboundRouteFromPos, findVehicleRoute } from "../routing/routeEngine";
 
 const METERS_PER_MAP_UNIT = 0.12;
 const WALKING_METERS_PER_MINUTE = 75;
@@ -26,6 +26,7 @@ export interface RecommendationOptions {
   geometry?: ParkingGeometry;
   graph?: LaneGraph;
   calculatedAt?: string;
+  startPosition?: { x: number; y: number };
 }
 
 export function getEligibleSpots(spots: readonly ParkingSpotState[]): ParkingSpotState[] {
@@ -44,7 +45,9 @@ export function rankParkingSpots(
   return getEligibleSpots(spots)
     .map((spot): RankedSpot | null => {
       const spotGeometry = SPOT_GEOMETRY_BY_ID.get(spot.id);
-      const route = findVehicleRoute(graph, spot.id);
+      const route = options.startPosition
+        ? findInboundRouteFromPos(graph, options.startPosition.x, options.startPosition.y, spot.id)
+        : findVehicleRoute(graph, spot.id);
       if (!spotGeometry || !route) return null;
 
       const drivingDistance = route.distance * METERS_PER_MAP_UNIT;

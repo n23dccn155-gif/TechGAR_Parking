@@ -26,7 +26,13 @@ export interface ParkingSpotState {
   confidence: number;
   revision: number;
   updatedAt: string;
+  vehicleId?: number | null;
+  decisionSource?: string;
+  trackingState?: string;
+  stoppedForMs?: number;
 }
+
+export type SpotOccupancyRelation = "empty" | "own" | "other" | "unknown";
 
 export interface CameraState {
   cameraId: CameraId;
@@ -95,6 +101,7 @@ export interface InvalidSpotWarning {
   spotId: SpotId;
   status: Exclude<ParkingStatus, "empty">;
   alternativeSpotId?: SpotId;
+  alternativeSpotIds?: SpotId[];
 }
 
 export const DESTINATION_LABELS: Record<DestinationNeed, string> = {
@@ -135,6 +142,17 @@ export function cameraOwnsSpot(cameraId: CameraId, spotId: SpotId): boolean {
 
 export function isSelectableStatus(status: ParkingStatus): boolean {
   return status === "empty";
+}
+
+export function classifySpotOccupancy(
+  spot: ParkingSpotState,
+  globalVehicleId: number | null,
+  parkedSpotId: string | null,
+): SpotOccupancyRelation {
+  if (spot.status === "empty") return "empty";
+  if (parkedSpotId === spot.id) return "own";
+  if (spot.vehicleId == null || globalVehicleId == null) return "unknown";
+  return spot.vehicleId === globalVehicleId ? "own" : "other";
 }
 
 export function getInvalidSpotWarningText(spotId: SpotId, status: Exclude<ParkingStatus, "empty">): string {

@@ -53,7 +53,21 @@ export function deriveParkingCounts(spots: readonly ParkingSpotState[]): Parking
 
 export const useParkingStore = create<ParkingStoreState>((set) => ({
   ...initialState,
-  setTrackingSource: (source) => set({ trackingSource: source }),
+  setTrackingSource: (source) => set((state) => {
+    if (source !== "opencv") return { trackingSource: source };
+    const spots = Object.fromEntries(
+      Object.entries(state.spots).map(([spotId, spot]) => [
+        spotId,
+        spot ? { ...spot, status: "unknown" as const, confidence: 0 } : spot,
+      ]),
+    ) as Partial<Record<SpotId, ParkingSpotState>>;
+    return {
+      trackingSource: source,
+      spots,
+      cameras: { ...initialCameras },
+      lastEventTime: undefined,
+    };
+  }),
   applySnapshot: (snapshot) => {
     const spots = Object.fromEntries(snapshot.spots.map((spot) => [spot.id, spot])) as Record<SpotId, ParkingSpotState>;
     set({

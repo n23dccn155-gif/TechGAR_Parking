@@ -1,6 +1,33 @@
 # Smart Parking Frontend Validation
 
-Validated on 2026-07-25 with Node.js 20.20.1 and pnpm 10.14.0.
+## Session Navigation Update (2026-08-23)
+
+This update supersedes the older 160-spot prototype assertions below. The
+current shared map contains 48 spots (A01-F08) and is the map used by both the
+driver and monitor views.
+
+- `pnpm lint`: PASS, 0 warnings.
+- `pnpm typecheck`: PASS.
+- `pnpm test`: PASS, 13 files and 44 tests.
+- `pnpm playwright`: PASS, 9 Chromium flows.
+- `pnpm build`: PASS, 1,665 modules transformed.
+- Backend session tests: PASS, 12 tests.
+
+The session regressions prove that an own-vehicle target does not trigger a
+false occupied warning, an occupied target offers explicit alternatives, a
+stale alternative rejected with HTTP 409 does not change the route, and a car
+parked in another spot for two seconds ends inbound navigation at that actual
+spot. The sample simulator is now isolated from realtime OpenCV polling and is
+subscribed to its event source, so deterministic browser scenarios are no
+longer overwritten or silently ignored.
+
+New desktop route evidence is saved as
+`artifacts/screenshots/1440x900-c06-navigation.png`.
+
+## Historical Prototype Baseline (2026-07-25)
+
+The remaining sections document the previous 160-spot prototype and are kept
+for traceability; they do not describe the current 48-spot shared map.
 
 ## Final Command Results
 

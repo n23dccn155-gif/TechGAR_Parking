@@ -1,414 +1,552 @@
-"""
-gate_session_controller.py - Kẻ Gác Cổng (Gate Session Watcher) & API Server
+"""Physical-gate watcher and HTTP API for vehicle QR sessions.
 
-Nhiệm vụ:
-1. Đứng nhìn (watch) file Tracking Feed (ví dụ: vehicle_positions_sample.json).
-2. Khi thấy track_id mới xuất hiện gần cổng -> Tạo Session (WAITING_FOR_SCAN, chưa có target).
-3. Tích hợp HTTP API Server trên cổng 8000 để Frontend gửi Yêu cầu:
-   - POST /api/session/claim    : User quét QR (WAITING_FOR_SCAN -> SELECTING_SPOT)
-   - POST /api/session/select   : User chọn ô đỗ (SELECTING_SPOT -> NAVIGATING_TO_SPOT)
-   - POST /api/session/exit     : User bấm lấy xe ra (PARKED -> EXIT_NAVIGATION)
-   - GET  /api/sessions         : Đọc tất cả session
-4. [Sample mode] Tự động cập nhật parking_status_sample.json khi xe đỗ / rời ô.
+Production mode consumes the two-camera runtime snapshot and keys every
+session by ``vehicles[].global_id``. A missing observation never closes a
+session. The session is deleted only when that Global ID crosses the configured
+physical exit line in the accepted direction.
 """
 
-import json
-import time
+from __future__ import annotations
+
 import argparse
-import threading
+import json
 import subprocess
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from pathlib import Path
 import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any, Callable, Optional
+from urllib.error import HTTPError, URLError
+from urllib.parse import unquote, urlparse
+from urllib.request import Request, urlopen
 
-try:
-    sys.stdout.reconfigure(encoding='utf-8')
-except Exception:
-    pass
 
 BASE_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BASE_DIR.parent
 sys.path.append(str(BASE_DIR))
-try:
-    from session_manager import (
-        create_session, claim_session, select_spot, load_sessions, save_sessions,
-        set_parked, set_exit_navigation, close_session, now_iso
-    )
-except ImportError as e:
-    print(f"Khong tim thay session_manager.py! Loi: {e}")
-    sys.exit(1)
 
-# ── Quản lý Tiến trình AI Detection (main_detect) ──
-detection_process = None
-active_video_url = str(BASE_DIR / "main_detect" / "data" / "carPark.mp4")
+from session_manager import (  # noqa: E402
+    InvalidSessionState,
+    SessionError,
+    SessionNotFound,
+    claim_session,
+    create_session,
+    delete_session_by_global_id,
+    find_session_by_global_id,
+    get_session,
+    list_waiting_sessions,
+    load_sessions,
+    remap_global_vehicle_id,
+    select_spot,
+    set_exit_navigation,
+    set_parked_by_global_id,
+    update_global_vehicle_observation,
+)
 
-def start_detection_process(video_source: str):
-    global detection_process, active_video_url
-    stop_detection_process()
-    active_video_url = video_source
-    main_script = BASE_DIR / "main_detect" / "main.py"
-    output_dir = BASE_DIR.parent / "frontend" / "public"
-    
-    cmd = [
-        sys.executable,
-        str(main_script),
-        "--video", video_source,
-        "--output-dir", str(output_dir),
-        "--loop",
-        "--no-display"
-    ]
-    print(f"[AI ENGINE] Kich hoat main_detect voi nguon: {video_source}")
-    try:
-        detection_process = subprocess.Popen(cmd)
-    except Exception as e:
-        print(f"[AI ENGINE ERROR] Khong the khoi chay main_detect: {e}")
 
-def stop_detection_process():
-    global detection_process
-    if detection_process and detection_process.poll() is None:
-        print("[AI ENGINE] Dung luong main_detect hien tai...")
+LEGACY_GATE_CONFIG = ROOT_DIR / "frontend" / "public" / "gate_roi.json"
+DEFAULT_GATE_CONFIG = BASE_DIR / "main_detect" / "config" / "gate_zones.json"
+PARKING_STATUS_SAMPLE = ROOT_DIR / "frontend" / "public" / "parking_status_sample.json"
+DEFAULT_RUNTIME_URL = "http://127.0.0.1:8001/api/runtime/snapshot"
+
+detection_process: Optional[subprocess.Popen] = None
+active_video_url: Optional[str] = None
+_LATEST_RUNTIME_LOCK = threading.RLock()
+_latest_runtime_snapshot: Optional[dict[str, Any]] = None
+
+
+def _spot_is_available(snapshot: dict[str, Any], spot_id: str) -> Optional[bool]:
+    slots = snapshot.get("parking_slots")
+    if not isinstance(slots, list):
+        return None
+    for slot in slots:
+        if not isinstance(slot, dict) or str(slot.get("slot_id")) != str(spot_id):
+            continue
+        return not bool(slot.get("occupied")) and slot.get("status") == "empty"
+    return None
+
+
+def _parked_evidence_seconds(snapshot: dict[str, Any], global_id: int, spot_id: str) -> float:
+    """Return continuous stopped time only for the same vehicle and parking spot."""
+    slots = snapshot.get("parking_slots")
+    if not isinstance(slots, list):
+        return 0.0
+    for slot in slots:
+        if not isinstance(slot, dict) or str(slot.get("slot_id")) != str(spot_id):
+            continue
         try:
-            detection_process.terminate()
-            detection_process.wait(timeout=2)
-        except Exception:
-            detection_process.kill()
-    detection_process = None
-
-# ── Đường dẫn file ──
-PARKING_STATUS_SAMPLE = BASE_DIR.parent / "frontend" / "public" / "parking_status_sample.json"
-SESSIONS_FILE = BASE_DIR.parent / "frontend" / "public" / "navigation_sessions.json"
-GATE_ROI_PATH = BASE_DIR.parent / "frontend" / "public" / "gate_roi.json"
+            vehicle_id = int(slot.get("vehicle_id"))
+            stopped_for_ms = float(slot.get("stopped_for_ms", 0))
+        except (TypeError, ValueError):
+            return 0.0
+        if vehicle_id != global_id or slot.get("tracking_state") != "parked":
+            return 0.0
+        return max(0.0, stopped_for_ms / 1000.0)
+    return 0.0
 
 
-def load_gate_roi() -> dict:
-    if GATE_ROI_PATH.exists():
-        try:
-            with open(GATE_ROI_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
+def _remember_runtime_snapshot(snapshot: dict[str, Any]) -> None:
+    global _latest_runtime_snapshot
+    with _LATEST_RUNTIME_LOCK:
+        _latest_runtime_snapshot = snapshot
+
+
+def _latest_spot_availability(spot_id: str) -> Optional[bool]:
+    with _LATEST_RUNTIME_LOCK:
+        snapshot = _latest_runtime_snapshot
+    return _spot_is_available(snapshot, spot_id) if snapshot is not None else None
+
+
+def _latest_runtime_id() -> Optional[str]:
+    with _LATEST_RUNTIME_LOCK:
+        snapshot = _latest_runtime_snapshot
+    if snapshot is None:
+        return None
+    value = snapshot.get("runtime_id")
+    return str(value) if value else None
+
+
+def _point(value: Any) -> dict[str, float]:
+    if not isinstance(value, dict):
+        raise ValueError("Gate point must be an object with x and y")
+    return {"x": float(value["x"]), "y": float(value["y"])}
+
+
+def _normalize_gate(name: str, value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"Missing {name}")
+    direction = str(value.get("direction", "positive")).lower()
+    if direction not in {"positive", "negative"}:
+        raise ValueError(f"{name}.direction must be positive or negative")
     return {
-        "entry_gate": {"p1": {"x": 880, "y": 820}, "p2": {"x": 1120, "y": 820}},
-        "exit_gate": {"p1": {"x": 80, "y": 820}, "p2": {"x": 320, "y": 820}}
+        "name": str(value.get("name") or name),
+        "p1": _point(value.get("p1")),
+        "p2": _point(value.get("p2")),
+        "direction": direction,
     }
+
+
+def load_gate_config(path: Optional[Path] = None) -> dict[str, Any]:
+    selected = path or (DEFAULT_GATE_CONFIG if DEFAULT_GATE_CONFIG.exists() else LEGACY_GATE_CONFIG)
+    try:
+        payload = json.loads(selected.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"Cannot read gate config {selected}: {error}") from error
+    return {
+        "coordinate_space": str(payload.get("coordinate_space", "legacy_svg")),
+        "unit": payload.get("unit"),
+        "entry_gate": _normalize_gate("entry_gate", payload.get("entry_gate")),
+        "exit_gate": _normalize_gate("exit_gate", payload.get("exit_gate")),
+    }
+
+
+def load_gate_roi() -> dict[str, Any]:
+    """Compatibility alias used by older scripts."""
+    return load_gate_config()
 
 
 def check_line_intersection(p1: dict, p2: dict, p3: dict, p4: dict) -> bool:
-    """
-    Kiểm tra xem đoạn thẳng p1-p2 (vệt xe chạy) có giao cắt với vạch rào chắn p3-p4 hay không.
-    p1..p4 là dict {"x": int, "y": int}
-    """
-    def ccw(A, B, C):
-        return (C["y"] - A["y"]) * (B["x"] - A["x"]) > (B["y"] - A["y"]) * (C["x"] - A["x"])
+    def orientation(a: dict, b: dict, c: dict) -> float:
+        return (b["x"] - a["x"]) * (c["y"] - a["y"]) - (
+            b["y"] - a["y"]
+        ) * (c["x"] - a["x"])
 
-    return (ccw(p1, p3, p4) != ccw(p2, p3, p4)) and (ccw(p1, p2, p3) != ccw(p1, p2, p4))
-
-
-def get_crossing_direction(p_old: dict, p_new: dict, p3: dict, p4: dict) -> float:
-    """
-    Tính tích hướng Vector Cross Product để phân biệt hướng xe cắt vạch.
-    """
-    vx = p_new["x"] - p_old["x"]
-    vy = p_new["y"] - p_old["y"]
-    gx = p4["x"] - p3["x"]
-    gy = p4["y"] - p3["y"]
-    return (vx * gy) - (vy * gx)
+    first = orientation(p1, p2, p3)
+    second = orientation(p1, p2, p4)
+    third = orientation(p3, p4, p1)
+    fourth = orientation(p3, p4, p2)
+    return first * second <= 0 and third * fourth <= 0
 
 
+def get_crossing_direction(p_old: dict, p_new: dict, gate_p1: dict, gate_p2: dict) -> float:
+    vehicle_x = p_new["x"] - p_old["x"]
+    vehicle_y = p_new["y"] - p_old["y"]
+    gate_x = gate_p2["x"] - gate_p1["x"]
+    gate_y = gate_p2["y"] - gate_p1["y"]
+    return (vehicle_x * gate_y) - (vehicle_y * gate_x)
 
-def load_json_safe(path: Path) -> dict:
-    if not path.exists():
-        return {}
+
+def _crossed_in_valid_direction(old: dict, new: dict, gate: dict) -> bool:
+    if not check_line_intersection(old, new, gate["p1"], gate["p2"]):
+        return False
+    direction = get_crossing_direction(old, new, gate["p1"], gate["p2"])
+    if abs(direction) < 1e-9:
+        return False
+    return direction > 0 if gate["direction"] == "positive" else direction < 0
+
+
+class GateSessionCoordinator:
+    """Apply runtime observations to the persistent vehicle-session store."""
+
+    def __init__(
+        self,
+        gate_config: dict[str, Any],
+        *,
+        parked_confirm_seconds: float = 2.0,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.gate_config = {
+            "coordinate_space": str(gate_config.get("coordinate_space", "world")),
+            "unit": gate_config.get("unit"),
+            "entry_gate": _normalize_gate("entry_gate", gate_config.get("entry_gate")),
+            "exit_gate": _normalize_gate("exit_gate", gate_config.get("exit_gate")),
+        }
+        self.previous_positions: dict[int, dict[str, float]] = {}
+        self.parked_confirm_seconds = max(0.0, float(parked_confirm_seconds))
+        self._clock = clock
+        self._parked_candidates: dict[int, tuple[str, float]] = {}
+        self.runtime_id: Optional[str] = None
+
+    def _apply_merge_events(
+        self, events: Any, runtime_id: Optional[str]
+    ) -> None:
+        if not isinstance(events, list):
+            return
+        for event in events:
+            if not isinstance(event, dict) or event.get("type") != "global_id_merged":
+                continue
+            old_id = event.get("superseded_global_id")
+            new_id = event.get("global_id")
+            if old_id is None or new_id is None:
+                continue
+            if find_session_by_global_id(
+                int(old_id), runtime_id=runtime_id
+            ) is None:
+                continue
+            remap_global_vehicle_id(
+                int(old_id), int(new_id), runtime_id=runtime_id
+            )
+            if int(old_id) in self.previous_positions:
+                self.previous_positions[int(new_id)] = self.previous_positions.pop(int(old_id))
+            candidate = self._parked_candidates.pop(int(old_id), None)
+            if candidate is not None:
+                self._parked_candidates[int(new_id)] = candidate
+
+    def process_snapshot(self, snapshot: dict[str, Any]) -> None:
+        runtime_unit = (snapshot.get("coordinate_space") or {}).get("unit")
+        configured_unit = self.gate_config.get("unit")
+        if configured_unit and runtime_unit and configured_unit != runtime_unit:
+            raise ValueError(
+                f"Gate config unit {configured_unit!r} does not match runtime unit {runtime_unit!r}"
+            )
+        raw_runtime_id = snapshot.get("runtime_id")
+        if raw_runtime_id:
+            next_runtime_id = str(raw_runtime_id)
+            if self.runtime_id != next_runtime_id:
+                self.previous_positions.clear()
+                self._parked_candidates.clear()
+                self.runtime_id = next_runtime_id
+        runtime_id = self.runtime_id
+        _remember_runtime_snapshot(snapshot)
+        self._apply_merge_events(snapshot.get("recent_events"), runtime_id)
+        vehicles = snapshot.get("vehicles", [])
+        if not isinstance(vehicles, list):
+            return
+
+        seen_global_ids: set[int] = set()
+        for vehicle in vehicles:
+            if not isinstance(vehicle, dict) or vehicle.get("global_id") is None:
+                continue
+            global_id = int(vehicle["global_id"])
+            seen_global_ids.add(global_id)
+            raw_position = vehicle.get("position")
+            if not isinstance(raw_position, dict):
+                continue
+            position = _point(raw_position)
+            previous = self.previous_positions.get(global_id)
+            session = find_session_by_global_id(
+                global_id, runtime_id=runtime_id
+            )
+
+            if previous is not None and _crossed_in_valid_direction(
+                previous, position, self.gate_config["entry_gate"]
+            ):
+                if session is None:
+                    session_id = create_session(
+                        global_vehicle_id=global_id,
+                        runtime_id=runtime_id,
+                    )
+                    session = get_session(session_id)
+                    print(f"[ENTRY] Global ID #{global_id} -> session {session_id}")
+
+            if previous is not None and session is not None and _crossed_in_valid_direction(
+                previous, position, self.gate_config["exit_gate"]
+            ):
+                deleted = delete_session_by_global_id(
+                    global_id, runtime_id=runtime_id
+                )
+                self.previous_positions.pop(global_id, None)
+                self._parked_candidates.pop(global_id, None)
+                print(f"[EXIT] Global ID #{global_id} -> deleted session {deleted['sessionId']}")
+                continue
+
+            self.previous_positions[global_id] = position
+            session = find_session_by_global_id(
+                global_id, runtime_id=runtime_id
+            )
+            if session is None:
+                self._parked_candidates.pop(global_id, None)
+                continue
+
+            if vehicle.get("observed", True):
+                update_global_vehicle_observation(
+                    global_id, position, runtime_id=runtime_id
+                )
+
+            parked_slot_id = vehicle.get("parked_slot_id")
+            if parked_slot_id:
+                parked_slot_id = str(parked_slot_id)
+                if (
+                    session.get("state") == "PARKED"
+                    and session.get("parkedSpotId") == parked_slot_id
+                ):
+                    self._parked_candidates.pop(global_id, None)
+                    continue
+
+                now = self._clock()
+                candidate = self._parked_candidates.get(global_id)
+                if candidate is None or candidate[0] != parked_slot_id:
+                    evidence_seconds = min(
+                        self.parked_confirm_seconds,
+                        _parked_evidence_seconds(snapshot, global_id, parked_slot_id),
+                    )
+                    candidate = (parked_slot_id, now - evidence_seconds)
+                    self._parked_candidates[global_id] = candidate
+                if now - candidate[1] < self.parked_confirm_seconds:
+                    continue
+
+                if (
+                    session.get("state") != "PARKED"
+                    or session.get("parkedSpotId") != parked_slot_id
+                ):
+                    set_parked_by_global_id(
+                        global_id,
+                        parked_slot_id,
+                        runtime_id=runtime_id,
+                    )
+                self._parked_candidates.pop(global_id, None)
+                continue
+
+            self._parked_candidates.pop(global_id, None)
+            if session.get("state") == "PARKED" and vehicle.get("observed", True):
+                set_exit_navigation(str(session["sessionId"]))
+
+        for global_id in set(self._parked_candidates) - seen_global_ids:
+            self._parked_candidates.pop(global_id, None)
+
+
+def _runtime_snapshot(url: str) -> dict[str, Any]:
+    request = Request(url, headers={"Accept": "application/json"})
+    with urlopen(request, timeout=3.0) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Runtime snapshot must be a JSON object")
+    return payload
+
+
+def _sample_snapshot(path: Path) -> dict[str, Any]:
     try:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"vehicles": [], "recent_events": []}
+    vehicles = []
+    for raw_id, raw_vehicle in payload.get("active_vehicles", {}).items():
+        if not isinstance(raw_vehicle, dict):
+            continue
+        status = str(raw_vehicle.get("status", "active"))
+        parked_slot_id = raw_vehicle.get("parked_spot_id") if status == "parked" else None
+        vehicles.append(
+            {
+                "global_id": int(raw_id),
+                "position": raw_vehicle.get("position", {"x": 0, "y": 0}),
+                "parked_slot_id": parked_slot_id,
+                "observed": status != "parked",
+                "state": "parked" if status == "parked" else "active",
+            }
+        )
+    return {"vehicles": vehicles, "recent_events": []}
 
 
-def save_json_atomic(data: dict, path: Path):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+def start_detection_process(video_source: str) -> None:
+    global detection_process, active_video_url
+    stop_detection_process()
+    active_video_url = video_source
+    script = BASE_DIR / "main_detect" / "main.py"
+    detection_process = subprocess.Popen(
+        [sys.executable, str(script), "--video", video_source, "--loop", "--no-display"]
+    )
 
 
-def update_sample_parking_status(spot_id: str, status: str):
-    """
-    Cập nhật parking_status_sample.json khi simulator xe đỗ/rời ô.
-    Giúp đồng bộ occupancy trong sample mode.
-    """
-    data = load_json_safe(PARKING_STATUS_SAMPLE)
-    if "slots" not in data:
-        data["slots"] = {}
-    data["slots"][spot_id] = {
-        "status": status,
-        "confidence": 0.99,
-    }
-    data["timestamp"] = now_iso()
-    save_json_atomic(data, PARKING_STATUS_SAMPLE)
+def stop_detection_process() -> None:
+    global detection_process
+    if detection_process is not None and detection_process.poll() is None:
+        detection_process.terminate()
+        try:
+            detection_process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            detection_process.kill()
+    detection_process = None
 
 
-# ──────────────────────────────────────────────
-#  HTTP API SERVER (Cổng 8000)
-# ──────────────────────────────────────────────
 class SessionAPIRequestHandler(BaseHTTPRequestHandler):
-    def _send_cors_headers(self):
+    def _cors(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._send_cors_headers()
-        self.end_headers()
-
-    def do_GET(self):
-        if self.path.startswith("/api/sessions") or self.path.startswith("/navigation_sessions"):
-            sessions = load_sessions()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self._send_cors_headers()
-            self.end_headers()
-            self.wfile.write(json.dumps(sessions, ensure_ascii=False, indent=2).encode("utf-8"))
-        elif self.path == "/api/detection/status":
-            is_running = detection_process is not None and detection_process.poll() is None
-            self._respond_json({
-                "running": is_running,
-                "videoUrl": active_video_url,
-            })
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def do_POST(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        body_bytes = self.rfile.read(content_length) if content_length > 0 else b'{}'
-        try:
-            payload = json.loads(body_bytes.decode('utf-8'))
-        except Exception:
-            payload = {}
-
-        sid = payload.get("sessionId")
-        spot_id = payload.get("spotId")
-
-        print(f"[API HTTP] {self.path} - Payload: {payload}")
-
-        if self.path == "/api/detection/start":
-            video_url = payload.get("videoUrl") or str(BASE_DIR / "main_detect" / "data" / "carPark.mp4")
-            start_detection_process(video_url)
-            self._respond_json({
-                "ok": True,
-                "status": "running",
-                "videoUrl": video_url
-            })
-
-        elif self.path == "/api/detection/stop":
-            stop_detection_process()
-            self._respond_json({
-                "ok": True,
-                "status": "stopped"
-            })
-
-        elif self.path == "/api/session/claim":
-            if sid:
-                claim_session(sid)
-                self._respond_json({"ok": True, "sessionId": sid, "state": "SELECTING_SPOT"})
-            else:
-                self._respond_json({"error": "Missing sessionId"}, status=400)
-
-        elif self.path == "/api/session/select":
-            if sid:
-                select_spot(sid, spot_id)
-                new_state = "NAVIGATING_TO_SPOT" if spot_id else "SELECTING_SPOT"
-                self._respond_json({"ok": True, "sessionId": sid, "spotId": spot_id, "state": new_state})
-            else:
-                self._respond_json({"error": "Missing sessionId"}, status=400)
-
-        elif self.path == "/api/session/exit":
-            if sid:
-                sessions = load_sessions()
-                session = sessions.get(sid, {})
-                parked_spot = session.get("parkedSpotId")
-                set_exit_navigation(sid)
-                if parked_spot:
-                    update_sample_parking_status(parked_spot, "empty")
-                self._respond_json({"ok": True, "sessionId": sid, "state": "EXIT_NAVIGATION"})
-            else:
-                self._respond_json({"error": "Missing sessionId"}, status=400)
-
-        else:
-            self._respond_json({"error": "Route not found"}, status=404)
-
-    def do_PUT(self):
-        # Hỗ trợ ghi đè file navigation_sessions trực tiếp nếu frontend PUT
-        content_length = int(self.headers.get('Content-Length', 0))
-        body_bytes = self.rfile.read(content_length) if content_length > 0 else b'{}'
-        try:
-            data = json.loads(body_bytes.decode('utf-8'))
-            save_sessions(data)
-            self._respond_json({"ok": True})
-        except Exception as e:
-            self._respond_json({"error": str(e)}, status=500)
-
-    def _respond_json(self, data: dict, status: int = 200):
+    def _json(self, data: Any, status: int = 200) -> None:
+        encoded = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self._send_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self._cors()
         self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
+        try:
+            self.wfile.write(encoded)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            pass
 
-    def log_message(self, format, *args):
-        # Ẩn bớt log http request định kỳ để terminal đỡ rác
-        if "GET /api/sessions" in format % args:
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_GET(self) -> None:
+        path = urlparse(self.path).path
+        if path == "/api/sessions/waiting":
+            self._json(
+                list_waiting_sessions(runtime_id=_latest_runtime_id())
+            )
             return
-        super().log_message(format, *args)
+        if path in {"/api/sessions", "/navigation_sessions"}:
+            self._json(load_sessions())
+            return
+        if path.startswith("/api/session/"):
+            session_id = unquote(path.rsplit("/", 1)[-1])
+            try:
+                self._json(get_session(session_id))
+            except SessionNotFound as error:
+                self._json({"error": str(error), "code": "SESSION_NOT_FOUND"}, 404)
+            return
+        if path == "/api/detection/status":
+            running = detection_process is not None and detection_process.poll() is None
+            self._json({"running": running, "videoUrl": active_video_url})
+            return
+        self._json({"error": "Route not found"}, 404)
+
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+        except json.JSONDecodeError:
+            self._json({"error": "Invalid JSON"}, 400)
+            return
+        path = urlparse(self.path).path
+        try:
+            if path == "/api/session/claim":
+                session = claim_session(str(payload.get("sessionId") or ""))
+                self._json(session)
+            elif path == "/api/session/select":
+                spot_id = payload.get("spotId")
+                if spot_id and _latest_spot_availability(str(spot_id)) is False:
+                    self._json(
+                        {
+                            "error": f"Parking spot is no longer available: {spot_id}",
+                            "code": "SPOT_NOT_AVAILABLE",
+                        },
+                        409,
+                    )
+                    return
+                session = select_spot(
+                    str(payload.get("sessionId") or ""), spot_id
+                )
+                self._json(session)
+            elif path == "/api/session/exit":
+                session = set_exit_navigation(str(payload.get("sessionId") or ""))
+                self._json(session)
+            elif path == "/api/detection/start":
+                video_url = str(payload.get("videoUrl") or "")
+                if not video_url:
+                    raise ValueError("videoUrl is required")
+                start_detection_process(video_url)
+                self._json({"ok": True, "running": True, "videoUrl": video_url})
+            elif path == "/api/detection/stop":
+                stop_detection_process()
+                self._json({"ok": True, "running": False})
+            else:
+                self._json({"error": "Route not found"}, 404)
+        except SessionNotFound as error:
+            self._json({"error": str(error), "code": "SESSION_NOT_FOUND"}, 404)
+        except InvalidSessionState as error:
+            self._json({"error": str(error), "code": "INVALID_SESSION_STATE"}, 409)
+        except (SessionError, ValueError) as error:
+            self._json({"error": str(error)}, 400)
+
+    def log_message(self, format: str, *args) -> None:
+        message = format % args
+        if "/api/session/" not in message and "/api/sessions/waiting" not in message:
+            super().log_message(format, *args)
 
 
-def start_api_server(port: int = 8000):
-    server = HTTPServer(("0.0.0.0", port), SessionAPIRequestHandler)
-    print(f"[API SERVER] Listening on http://0.0.0.0:{port}")
+def start_api_server(port: int = 8000) -> None:
+    server = ThreadingHTTPServer(("0.0.0.0", port), SessionAPIRequestHandler)
+    print(f"[SESSION API] http://0.0.0.0:{port}")
     server.serve_forever()
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--source", default="vehicle_positions_sample.json",
-                        help="File tracking feed de watch")
-    parser.add_argument("--port", type=int, default=8000, help="Port cho HTTP API Server")
-    args = parser.parse_args()
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(description="TechGAR Global-ID gate session controller")
+    result.add_argument(
+        "--source",
+        default=None,
+        help="Legacy file in frontend/public. Omit to consume the runtime API.",
+    )
+    result.add_argument("--runtime-url", default=DEFAULT_RUNTIME_URL)
+    result.add_argument("--gate-config", type=Path, default=None)
+    result.add_argument("--port", type=int, default=8000)
+    result.add_argument("--poll-interval", type=float, default=0.25)
+    result.add_argument("--parked-confirm-seconds", type=float, default=2.0)
+    return result
 
-    # Khởi chạy HTTP API Server ở background thread
+
+def main() -> None:
+    args = parser().parse_args()
+    gate_config = load_gate_config(args.gate_config)
+    if args.source is None and gate_config["coordinate_space"] != "world":
+        raise SystemExit(
+            "Runtime mode requires backend/main_detect/config/gate_zones.json in world "
+            "coordinates. Start runtime_server.py and configure ENTRY/EXIT on "
+            "the frontend shared map at /monitor first."
+        )
+    coordinator = GateSessionCoordinator(
+        gate_config,
+        parked_confirm_seconds=args.parked_confirm_seconds,
+    )
     api_thread = threading.Thread(target=start_api_server, args=(args.port,), daemon=True)
     api_thread.start()
-    
-    feed_path = BASE_DIR.parent / "frontend" / "public" / args.source
-    print("=" * 60)
-    print(" [GATE CONTROLLER] GATE SESSION CONTROLLER & API DANG CHAY")
-    print(f" Theo doi file: {args.source}")
-    print(f" HTTP API Endpoint: http://localhost:{args.port}/api/session")
-    print("=" * 60)
-    
-    # State tracking: track_id -> session_id
-    active_tracks = {}
-    prev_positions = {}
-    
+    source_path = ROOT_DIR / "frontend" / "public" / args.source if args.source else None
+    print(
+        f"[GATE] {'file ' + str(source_path) if source_path else 'runtime ' + args.runtime_url}"
+    )
+
     try:
         while True:
-            if not feed_path.exists():
-                time.sleep(0.5)
-                continue
-                
             try:
-                with open(feed_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                time.sleep(0.1)
+                snapshot = (
+                    _sample_snapshot(source_path)
+                    if source_path is not None
+                    else _runtime_snapshot(args.runtime_url)
+                )
+                coordinator.process_snapshot(snapshot)
+            except (HTTPError, URLError, TimeoutError, ValueError) as error:
+                print(f"[GATE] Source unavailable: {error}")
+                time.sleep(max(args.poll_interval, 1.0))
                 continue
-                
-            vehicles = data.get("active_vehicles", {})
-            current_track_ids = set(int(k) for k in vehicles.keys())
-            gate_roi = load_gate_roi()
-            entry_p1 = gate_roi["entry_gate"]["p1"]
-            entry_p2 = gate_roi["entry_gate"]["p2"]
-            exit_p1 = gate_roi["exit_gate"]["p1"]
-            exit_p2 = gate_roi["exit_gate"]["p2"]
-
-            # ── 1. Kiểm tra Vạch Cắt Cổng (Line Crossing Detection) ──
-            for t_id_str, v_data in vehicles.items():
-                t_id = int(t_id_str)
-                pos = v_data.get("position", {"x": 0, "y": 0})
-                old_pos = prev_positions.get(t_id, pos)
-                prev_positions[t_id] = pos
-
-                # Kiểm tra cắt VẠCH CỔNG VÀO (Nhập bãi)
-                crossed_entry = check_line_intersection(old_pos, pos, entry_p1, entry_p2)
-                if crossed_entry and t_id not in active_tracks:
-                    cross_val = get_crossing_direction(old_pos, pos, entry_p1, entry_p2)
-                    session_id = create_session(track_id=t_id)
-                    print(f"[TRIPWIRE ENTRY] Xe #{t_id} VƯỢT VẠCH CỔNG VÀO (Hướng Vector Cross={cross_val:.1f})! "
-                          f"Tạo Session: {session_id} (WAITING_FOR_SCAN)")
-                    active_tracks[t_id] = session_id
-                
-                # Fallback: Xe mới xuất hiện ở vùng cổng vào (y > 700) nếu chưa cắt vạch
-                elif t_id not in active_tracks and pos["y"] > 700:
-                    session_id = create_session(track_id=t_id)
-                    print(f"[GATE FALLBACK] Phát hiện xe #{t_id} tại vùng Cổng Vào! "
-                          f"Tạo Session: {session_id}")
-                    active_tracks[t_id] = session_id
-
-                # Kiểm tra cắt VẠCH CỔNG RA (Xuất bãi)
-                crossed_exit = check_line_intersection(old_pos, pos, exit_p1, exit_p2)
-                if crossed_exit and t_id in active_tracks:
-                    cross_val = get_crossing_direction(old_pos, pos, exit_p1, exit_p2)
-                    session_id = active_tracks[t_id]
-                    print(f"[TRIPWIRE EXIT] Xe #{t_id} VƯỢT VẠCH CỔNG RA (Hướng Vector Cross={cross_val:.1f})! Đóng Session {session_id}")
-                    close_session(session_id)
-                    del active_tracks[t_id]
-
-            # ── [SAMPLE MODE] Xử lý cập nhật trạng thái từ simulated status ──
-            for t_id_str, v_data in vehicles.items():
-                t_id = int(t_id_str)
-                if t_id not in active_tracks:
-                    continue
-                
-                session_id = active_tracks[t_id]
-                sessions = load_sessions()
-                session = sessions.get(session_id, {})
-                s_state = session.get("state")
-                
-                # Sample source báo xe "parked" -> lấy ĐÚNG ô thực tế từ camera/simulator (Không ghi đè nếu đang EXIT_NAVIGATION)
-                if v_data.get("status") == "parked" and s_state not in ("PARKED", "EXIT_NAVIGATION", "CLOSED"):
-                    real_parked_spot = v_data.get("parked_spot_id")
-                    if real_parked_spot:
-                        print(f"[PARK] Xe #{t_id} da do THUC TE tai o {real_parked_spot} -> PARKED")
-                        set_parked(session_id, real_parked_spot)
-                        update_sample_parking_status(real_parked_spot, "occupied")
-                
-                # Sample source báo xe "exiting" -> chuyển PARKED → EXIT_NAVIGATION (CHỈ 1 LẦN)
-                elif v_data.get("status") == "exiting" and s_state == "PARKED":
-                    real_parked_spot = session.get("parkedSpotId") or v_data.get("parked_spot_id")
-                    print(f"[EXIT] Xe #{t_id} bat dau roi o do {real_parked_spot} -> EXIT_NAVIGATION")
-                    set_exit_navigation(session_id, t_id)
-                    if real_parked_spot:
-                        update_sample_parking_status(real_parked_spot, "empty")
-
-            # ── [AI / DETECT MODE] Tự động đọc vehicle_id từ parking_status.json để gán parkedSpotId ──
-            status_file_name = "parking_status.json" if args.source == "vehicle_positions.json" else "parking_status_sample.json"
-            status_path = BASE_DIR.parent / "frontend" / "public" / status_file_name
-            status_data = load_json_safe(status_path)
-            slots_data = status_data.get("slots", {})
-
-            if isinstance(slots_data, dict):
-                for spot_id, s_info in slots_data.items():
-                    if isinstance(s_info, dict):
-                        v_id = s_info.get("vehicle_id")
-                        if v_id is not None:
-                            try:
-                                v_id_int = int(v_id)
-                                if v_id_int in active_tracks:
-                                    s_id = active_tracks[v_id_int]
-                                    sessions = load_sessions()
-                                    s_obj = sessions.get(s_id, {})
-                                    if s_obj.get("state") not in ("PARKED", "CLOSED") and s_obj.get("parkedSpotId") != spot_id:
-                                        print(f"[AI BINDER] Xe #{v_id_int} duoc phat hien tai o THUC TE {spot_id} -> set PARKED")
-                                        set_parked(s_id, spot_id)
-                            except (ValueError, TypeError):
-                                pass
-                    
-            # ── Xử lý xe đã đi khỏi bãi (mất track) ──
-            lost_tracks = list(set(active_tracks.keys()) - current_track_ids)
-            for t_id in lost_tracks:
-                session_id = active_tracks[t_id]
-                print(f"[CLOSE] Xe #{t_id} da roi khoi bai -> Dong Session {session_id}")
-                close_session(session_id)
-                del active_tracks[t_id]
-                
-            time.sleep(0.3)
-            
+            time.sleep(args.poll_interval)
     except KeyboardInterrupt:
-        print("Stopped Gate Controller.")
+        print("Stopped Gate Session Controller.")
+
 
 if __name__ == "__main__":
     main()

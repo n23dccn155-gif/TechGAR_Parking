@@ -1,0 +1,454 @@
+.monitor-shell {
+  --monitor-asphalt: #111820;
+  --monitor-deck: #17212b;
+  --monitor-inset: #0d141b;
+  --monitor-line: rgba(218, 230, 239, 0.14);
+  --monitor-line-strong: rgba(218, 230, 239, 0.28);
+  --monitor-ink: #e8eef3;
+  --monitor-secondary: #a6b5c2;
+  --monitor-tertiary: #758796;
+  --monitor-guide: #38bdf8;
+  --monitor-clear: #55b879;
+  --monitor-caution: #e4ad43;
+  --monitor-fault: #e56b65;
+  min-height: 100vh;
+  color: var(--monitor-ink);
+  background: var(--monitor-asphalt);
+}
+
+.monitor-header {
+  min-height: 68px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--monitor-line);
+}
+
+.monitor-brand,
+.monitor-brand > div:last-child,
+.monitor-brand strong,
+.monitor-brand span {
+  min-width: 0;
+}
+
+.monitor-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.monitor-brand-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--monitor-guide);
+  border: 1px solid var(--monitor-line-strong);
+  border-radius: 6px;
+}
+
+.monitor-brand strong,
+.monitor-brand span {
+  display: block;
+}
+
+.monitor-brand strong {
+  font-size: 17px;
+  letter-spacing: 0.01em;
+}
+
+.monitor-brand span {
+  margin-top: 2px;
+  color: var(--monitor-tertiary);
+  font-size: 12px;
+}
+
+.monitor-live,
+.monitor-camera-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--monitor-clear);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monitor-live--stale,
+.monitor-camera-state {
+  color: var(--monitor-caution);
+}
+
+.monitor-camera-state--online {
+  color: var(--monitor-clear);
+}
+
+.monitor-main {
+  max-width: 1760px;
+  padding: 16px 24px 28px;
+}
+
+.monitor-status-strip {
+  min-height: 48px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  color: var(--monitor-secondary);
+  background: var(--monitor-deck);
+  border: 1px solid var(--monitor-line);
+  border-radius: 6px;
+}
+
+.monitor-status-strip > div {
+  min-height: 46px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-right: 1px solid var(--monitor-line);
+  font-size: 12px;
+}
+
+.monitor-status-strip strong {
+  color: var(--monitor-ink);
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.monitor-status-strip .monitor-frame-index {
+  margin-left: auto;
+  border-right: 0;
+  color: var(--monitor-guide);
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.monitor-status-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.monitor-status-swatch--free { background: var(--monitor-clear); }
+.monitor-status-swatch--occupied { background: var(--monitor-fault); }
+
+.monitor-alert {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  color: #ffd7d4;
+  background: rgba(229, 107, 101, 0.1);
+  border: 1px solid rgba(229, 107, 101, 0.38);
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.monitor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(340px, 0.72fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.monitor-map-panel,
+.monitor-camera,
+.monitor-events {
+  background: var(--monitor-deck);
+  border: 1px solid var(--monitor-line);
+  border-radius: 6px;
+}
+
+.monitor-map-panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.monitor-section-heading {
+  min-height: 48px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.monitor-eyebrow {
+  color: var(--monitor-guide);
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.monitor-section-heading h1,
+.monitor-section-heading h2 {
+  margin: 4px 0 0;
+  color: var(--monitor-ink);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.monitor-selection {
+  min-width: 120px;
+  padding-left: 12px;
+  display: grid;
+  border-left: 2px solid var(--monitor-guide);
+}
+
+.monitor-selection span,
+.monitor-selection small {
+  color: var(--monitor-tertiary);
+  font-size: 10px;
+}
+
+.monitor-selection strong {
+  margin: 1px 0;
+  color: var(--monitor-guide);
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 16px;
+}
+
+.monitor-gate-config {
+  min-height: 70px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--monitor-inset);
+  border: 1px solid var(--monitor-line);
+  border-left: 3px solid var(--monitor-tertiary);
+  border-radius: 5px;
+}
+
+.monitor-gate-config--editing {
+  border-left-color: var(--monitor-caution);
+}
+
+.monitor-gate-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-gate-copy strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--monitor-ink);
+  font-size: 13px;
+}
+
+.monitor-gate-copy strong svg {
+  color: var(--monitor-clear);
+}
+
+.monitor-gate-copy small {
+  color: var(--monitor-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.monitor-gate-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monitor-gate-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--monitor-secondary);
+  background: #1c2833;
+  border: 1px solid var(--monitor-line-strong);
+  border-radius: 4px;
+  font: 700 11px/1 "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  cursor: pointer;
+}
+
+.monitor-gate-actions button:hover:not(:disabled),
+.monitor-gate-actions button:focus-visible {
+  color: var(--monitor-ink);
+  border-color: var(--monitor-guide);
+  outline: none;
+}
+
+.monitor-gate-actions button:disabled {
+  color: var(--monitor-tertiary);
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.monitor-gate-actions .monitor-gate-save {
+  color: #081119;
+  background: var(--monitor-guide);
+  border-color: var(--monitor-guide);
+}
+
+.monitor-gate-message {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--monitor-line);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.monitor-gate-message--error {
+  color: #ffd7d4;
+  background: rgba(229, 107, 101, 0.1);
+  border-color: rgba(229, 107, 101, 0.38);
+}
+
+.monitor-gate-message--success {
+  color: #c8f2d6;
+  background: rgba(85, 184, 121, 0.1);
+  border-color: rgba(85, 184, 121, 0.38);
+}
+
+.gate-map-editing {
+  cursor: crosshair;
+  user-select: none;
+}
+
+.monitor-map-panel .map-panel {
+  margin-top: 10px;
+}
+
+.monitor-map-panel .map-canvas {
+  height: min(66vh, 720px);
+  min-height: 560px;
+  border-color: var(--monitor-line-strong);
+  box-shadow: none;
+}
+
+.monitor-map-panel .parking-legend {
+  color: var(--monitor-secondary);
+}
+
+.monitor-map-loading {
+  min-height: 560px;
+  display: grid;
+  place-items: center;
+  color: var(--monitor-tertiary);
+  background: var(--monitor-inset);
+  border: 1px solid var(--monitor-line);
+}
+
+.runtime-vehicle[role="button"] {
+  cursor: pointer;
+}
+
+.runtime-vehicle:focus-visible .runtime-vehicle-core {
+  stroke: var(--monitor-guide);
+  stroke-width: 6px;
+}
+
+.monitor-camera-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+}
+
+.monitor-camera {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.monitor-camera header {
+  min-height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--monitor-line);
+}
+
+.monitor-camera header > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monitor-camera-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  background: var(--monitor-inset);
+  overflow: hidden;
+}
+
+.monitor-camera-frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.monitor-camera-offline {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--monitor-secondary);
+  background: rgba(13, 20, 27, 0.88);
+  font-size: 12px;
+}
+
+.monitor-events {
+  margin-top: 16px;
+  padding: 14px 16px 10px;
+}
+
+.monitor-events ol {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-events li {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  border-top: 1px solid var(--monitor-line);
+  font-size: 12px;
+}
+
+.monitor-events li span {
+  color: var(--monitor-tertiary);
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.monitor-events li strong {
+  color: var(--monitor-secondary);
+  font-weight: 600;
+}
+
+@media (max-width: 1120px) {
+  .monitor-workspace { grid-template-columns: 1fr; }
+  .monitor-camera-column { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+  .monitor-map-panel .map-canvas { min-height: 480px; }
+}
+
+@media (max-width: 720px) {
+  .monitor-header, .monitor-main { padding-left: 12px; padding-right: 12px; }
+  .monitor-status-strip { overflow-x: auto; }
+  .monitor-status-strip > div { flex: 0 0 auto; }
+  .monitor-camera-column { grid-template-columns: 1fr; }
+  .monitor-map-panel .map-canvas { min-height: 390px; height: 52vh; }
+  .monitor-live { font-size: 0; }
+  .monitor-live svg { width: 18px; height: 18px; }
+  .monitor-gate-config { align-items: stretch; flex-direction: column; }
+  .monitor-gate-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .monitor-gate-actions button:only-child { grid-column: 1 / -1; }
+}

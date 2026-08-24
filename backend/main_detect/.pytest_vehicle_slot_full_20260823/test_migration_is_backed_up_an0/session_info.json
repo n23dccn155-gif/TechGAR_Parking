@@ -1,0 +1,11 @@
+{
+  "schema_version": 3,
+  "processed_frames": 2,
+  "files": {
+    "predictions": "predictions.jsonl",
+    "predictions_schema2_backup": "predictions.schema2.jsonl",
+    "ground_truth_slots": "ground_truth_slots.csv",
+    "ground_truth_events": "ground_truth_events.csv",
+    "ground_truth_identity": "ground_truth_identity.csv"
+  }
+}

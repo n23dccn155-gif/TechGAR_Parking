@@ -1,0 +1,2 @@
+schema_version,event_id,physical_vehicle_id,event_type,start_frame,end_frame,source_camera,target_camera,source_slot_id,target_slot_id,preferred_delay_frames,max_delay_frames,required,critical,notes
+3,depart,CAR_A,departure_started,10,10,cam1,,A01,,0,4,true,true,

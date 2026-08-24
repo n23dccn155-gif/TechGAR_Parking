@@ -6,6 +6,7 @@ interface SmartParkingHeaderProps {
   mode: DriverMode;
   cameras: Record<CameraId, CameraState>;
   lastUpdated?: string;
+  runtimeState?: "connecting" | "live" | "error";
 }
 
 function formatTime(value?: string): string {
@@ -19,7 +20,7 @@ function formatTime(value?: string): string {
   }).format(new Date(value));
 }
 
-export function SmartParkingHeader({ mode, cameras, lastUpdated }: SmartParkingHeaderProps) {
+export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState }: SmartParkingHeaderProps) {
   const online = areAllCamerasOnline(cameras);
   const trackingSource = useParkingStore((state) => state.trackingSource);
   const setTrackingSource = useParkingStore((state) => state.setTrackingSource);
@@ -51,6 +52,7 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated }: SmartParkingH
         <span style={{ color: "#94a3b8", fontWeight: 500, marginRight: "4px" }}>Nguồn:</span>
         <button
           type="button"
+          data-testid="source-sample"
           onClick={() => setTrackingSource("sample")}
           style={{
             background: trackingSource === "sample" ? "#0284c7" : "transparent",
@@ -68,6 +70,7 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated }: SmartParkingH
         </button>
         <button
           type="button"
+          data-testid="source-opencv"
           onClick={() => setTrackingSource("opencv")}
           style={{
             background: trackingSource === "opencv" ? "#16a34a" : "transparent",
@@ -93,6 +96,11 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated }: SmartParkingH
           Cập nhật: {formatTime(lastUpdated)}
         </span>
         <span className="sr-only">Chế độ hiện tại: {mode}</span>
+        {trackingSource === "opencv" && (
+          <span data-testid="runtime-source-state">
+            {runtimeState === "live" ? "Camera realtime" : runtimeState === "error" ? "Mất kết nối camera" : "Đang kết nối camera"}
+          </span>
+        )}
       </div>
     </header>
   );

@@ -1,0 +1,93 @@
+{
+  "schema_version": 3,
+  "evaluator_version": "3.0",
+  "session": "two",
+  "fps": 30.0,
+  "processed_frames": 2,
+  "classification": "FAIL",
+  "practical_system_score": 40.0,
+  "uncapped_practical_system_score": 40.0,
+  "score_cap_applied": false,
+  "critical_error_count": 0,
+  "critical_errors": [],
+  "errors": [],
+  "scores": {
+    "identity_continuity_handoff": null,
+    "slot_identity_ownership": null,
+    "departure_recovery": null,
+    "occupancy": 20.0,
+    "delay_stability": 100.0
+  },
+  "weights": {
+    "identity_continuity_handoff": 0.35,
+    "slot_identity_ownership": 0.3,
+    "departure_recovery": 0.15,
+    "occupancy": 0.15,
+    "delay_stability": 0.05
+  },
+  "identity": {
+    "physical_to_canonical_gid": {},
+    "phantom_gids_ignored": [],
+    "long_unbound_gids": [],
+    "checkpoints": [],
+    "handoffs": [],
+    "per_vehicle": []
+  },
+  "slot_ownership": {
+    "lifecycles": [],
+    "free_slot_binding_runs": [],
+    "duplicate_reservation_runs": []
+  },
+  "departure_recovery": {
+    "events": []
+  },
+  "occupancy": {
+    "raw": {
+      "total_slot_frames": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "occupied_precision": 0.0,
+      "occupied_recall": 0.0,
+      "occupied_f1": 0.0,
+      "free_precision": 1.0,
+      "free_recall": 1.0,
+      "free_f1": 1.0,
+      "false_free_rate": 0.0,
+      "false_occupied_rate": 0.0,
+      "balanced_accuracy": 0.5,
+      "occupancy_score": 20.0
+    },
+    "practical": {
+      "total_slot_frames": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "occupied_precision": 0.0,
+      "occupied_recall": 0.0,
+      "occupied_f1": 0.0,
+      "free_precision": 1.0,
+      "free_recall": 1.0,
+      "free_f1": 1.0,
+      "false_free_rate": 0.0,
+      "false_occupied_rate": 0.0,
+      "balanced_accuracy": 0.5,
+      "occupancy_score": 20.0
+    },
+    "missing_labeled_slot_frames_excluded": 0,
+    "ignored_short_flickers": [],
+    "harmful_flickers": [],
+    "transitions": []
+  },
+  "delay_stability": {
+    "delay_score": 100.0,
+    "occupancy_stability_score": 100.0,
+    "long_unbound_gid_penalty": 0.0,
+    "stale_release_penalty": 0.0,
+    "stability_score": 100.0,
+    "combined_score": 100.0,
+    "delay_items": []
+  }
+}

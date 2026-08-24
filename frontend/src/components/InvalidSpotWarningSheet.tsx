@@ -5,13 +5,15 @@ import { useFocusTrap } from "./useFocusTrap";
 
 interface InvalidSpotWarningSheetProps {
   warning: InvalidSpotWarning;
-  onSwitch: () => void;
+  onSwitch: (spotId: InvalidSpotWarning["spotId"]) => void;
   onContinueMap: () => void;
 }
 
 export function InvalidSpotWarningSheet({ warning, onSwitch, onContinueMap }: InvalidSpotWarningSheetProps) {
   const sheetRef = useRef<HTMLElement>(null);
   useFocusTrap(true, sheetRef);
+  const alternatives = warning.alternativeSpotIds
+    ?? (warning.alternativeSpotId ? [warning.alternativeSpotId] : []);
   return (
     <>
       <div className="sheet-backdrop sheet-backdrop--warning" aria-hidden="true" />
@@ -23,18 +25,24 @@ export function InvalidSpotWarningSheet({ warning, onSwitch, onContinueMap }: In
             <p>{getInvalidSpotWarningText(warning.spotId, warning.status)}</p>
           </div>
         </div>
-        {warning.alternativeSpotId && (
+        {alternatives.length > 0 && (
           <div className="next-alternative">
-            <small>Phương án trống tiếp theo</small>
-            <strong>{warning.alternativeSpotId}</strong>
+            <small>Các phương án trống tiếp theo</small>
+            <strong>{alternatives.join(" · ")}</strong>
           </div>
         )}
-        {warning.alternativeSpotId && (
-          <button type="button" className="primary-action" onClick={onSwitch} data-testid="switch-alternative">
+        {alternatives.map((spotId, index) => (
+          <button
+            key={spotId}
+            type="button"
+            className="primary-action"
+            onClick={() => onSwitch(spotId)}
+            data-testid={index === 0 ? "switch-alternative" : `switch-alternative-${spotId}`}
+          >
             <RefreshCw size={19} />
-            Chuyển sang {warning.alternativeSpotId}
+            Xác nhận chuyển sang {spotId}
           </button>
-        )}
+        ))}
         <button type="button" className="secondary-action" onClick={onContinueMap} data-testid="continue-map">
           <Map size={19} />
           Tiếp tục xem bản đồ

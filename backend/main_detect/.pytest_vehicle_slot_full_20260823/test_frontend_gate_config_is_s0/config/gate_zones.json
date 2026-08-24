@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "coordinate_space": "world",
+  "unit": "cm",
+  "source": "frontend_shared_map",
+  "entry_gate": {
+    "name": "entry_gate",
+    "p1": {
+      "x": 1.0,
+      "y": 2.0
+    },
+    "p2": {
+      "x": 3.0,
+      "y": 2.0
+    },
+    "direction": "positive"
+  },
+  "exit_gate": {
+    "name": "exit_gate",
+    "p1": {
+      "x": 8.0,
+      "y": 9.0
+    },
+    "p2": {
+      "x": 10.0,
+      "y": 9.0
+    },
+    "direction": "negative"
+  }
+}

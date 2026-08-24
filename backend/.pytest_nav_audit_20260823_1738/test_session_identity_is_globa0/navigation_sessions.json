@@ -1,0 +1,18 @@
+{
+  "vehicle-session-token": {
+    "sessionId": "vehicle-session-token",
+    "state": "WAITING_FOR_SCAN",
+    "targetSpotId": null,
+    "parkedSpotId": null,
+    "globalVehicleId": 42,
+    "vehicleTrackId": 7,
+    "activeTrackId": 7,
+    "claimed": false,
+    "lastKnownPosition": null,
+    "createdAt": "2026-08-23T17:32:31+07:00",
+    "claimedAt": null,
+    "spotSelectedAt": null,
+    "parkedAt": null,
+    "exitStartedAt": null
+  }
+}

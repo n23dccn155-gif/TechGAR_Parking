@@ -1,0 +1,1 @@
+{"schema_version": 1, "cameras": {"cam1": {"image": "capture_cam1.png", "width": 100, "height": 100}, "cam2": {"image": "capture_cam2.png", "width": 100, "height": 100}}}

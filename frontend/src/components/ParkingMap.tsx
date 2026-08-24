@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
 import {
   DESTINATION_LABELS,
   STATUS_LABELS,
@@ -14,7 +14,7 @@ import { PARKING_GEOMETRY, type Point } from "../geometry/parkingGeometry";
 import type { RouteResult } from "../routing/routeEngine";
 import { MapControls } from "./MapControls";
 import { ParkingSpotShape, type SpotHighlight } from "./ParkingSpotShape";
-import type { ActiveVehicle, FrameSize } from "../app/App";
+import type { ActiveVehicle, FrameSize } from "../domain/runtime";
 
 // ── Chuyển tọa độ camera → tọa độ bản đồ SVG (1200×900) ────────────────────
 // Kích thước nguồn được truyền động từ frame_size trong vehicle_positions.json
@@ -33,6 +33,13 @@ interface ViewBoxState {
   height: number;
 }
 
+export interface GateMapOverlay {
+  editing: boolean;
+  entry: readonly Point[];
+  exit: readonly Point[];
+  onPointClick?: (point: Point) => void;
+}
+
 interface ParkingMapProps {
   spots: readonly ParkingSpotState[];
   cameras: Record<CameraId, CameraState>;
@@ -45,6 +52,9 @@ interface ParkingMapProps {
   routePaused?: boolean;
   activeVehicles?: ActiveVehicle[];   // ← xe đang di chuyển thời gian thực
   frameSize?: FrameSize;              // ← kích thước frame camera (tự động từ JSON)
+  selectedVehicleId?: number;
+  onVehicleClick?: (globalId: number) => void;
+  gateOverlay?: GateMapOverlay;
   onSpotClick: (spotId: SpotId) => void;
 }
 
@@ -135,6 +145,9 @@ export function ParkingMap({
   routePaused = false,
   activeVehicles = [],
   frameSize = { width: 1100, height: 720 },
+  selectedVehicleId,
+  onVehicleClick,
+  gateOverlay,
   onSpotClick,
 }: ParkingMapProps) {
   const [view, setView] = useState(INITIAL_VIEW);
@@ -157,6 +170,7 @@ export function ParkingMap({
   };
 
   const handlePointerDown = (event: PointerEvent<SVGSVGElement>): void => {
+    if (gateOverlay?.editing) return;
     if (typeof event.currentTarget.setPointerCapture === "function") {
       event.currentTarget.setPointerCapture(event.pointerId);
     }
@@ -164,6 +178,7 @@ export function ParkingMap({
   };
 
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>): void => {
+    if (gateOverlay?.editing) return;
     const previous = pointers.current.get(event.pointerId);
     if (!previous) return;
     const rect = event.currentTarget.getBoundingClientRect();
@@ -199,9 +214,29 @@ export function ParkingMap({
   };
 
   const handleWheel = (event: WheelEvent<SVGSVGElement>): void => {
+    if (gateOverlay?.editing) return;
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     zoomAt(event.deltaY > 0 ? 1.12 : 0.88, (event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height);
+  };
+
+  const handleMapClick = (event: MouseEvent<SVGSVGElement>): void => {
+    if (!gateOverlay?.editing || !gateOverlay.onPointClick) return;
+    const svg = event.currentTarget;
+    const matrix = typeof svg.getScreenCTM === "function" ? svg.getScreenCTM() : null;
+    if (matrix && typeof svg.createSVGPoint === "function") {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const mapped = point.matrixTransform(matrix.inverse());
+      gateOverlay.onPointClick({ x: mapped.x, y: mapped.y });
+      return;
+    }
+    const rect = svg.getBoundingClientRect();
+    gateOverlay.onPointClick({
+      x: view.x + ((event.clientX - rect.left) / rect.width) * view.width,
+      y: view.y + ((event.clientY - rect.top) / rect.height) * view.height,
+    });
   };
 
   const handleSpotKeyDown = (event: KeyboardEvent<SVGRectElement>, spotId: SpotId): void => {
@@ -223,12 +258,14 @@ export function ParkingMap({
           viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
           preserveAspectRatio="xMidYMin meet"
           role="img"
-          aria-label="Bản đồ 160 ô đỗ xe, khu E đến A từ trên xuống và khu F bên phải"
+          aria-label={`Bản đồ ${spots.length} ô đỗ xe`}
+          className={gateOverlay?.editing ? "gate-map-editing" : undefined}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
           onWheel={handleWheel}
+          onClick={handleMapClick}
         >
           <defs>
             <pattern id="landscape-pattern" width="26" height="26" patternUnits="userSpaceOnUse">
@@ -236,6 +273,12 @@ export function ParkingMap({
               <circle cx="6" cy="8" r="2" fill="#334155" />
               <circle cx="20" cy="18" r="3" fill="#0f172a" />
             </pattern>
+            <marker id="gate-entry-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#38bdf8" />
+            </marker>
+            <marker id="gate-exit-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#e56b65" />
+            </marker>
           </defs>
 
           <rect width={PARKING_GEOMETRY.width} height={PARKING_GEOMETRY.height} rx="26" fill="url(#landscape-pattern)" />
@@ -393,7 +436,22 @@ export function ParkingMap({
               .map((p) => `${p.x},${p.y}`)
               .join(" ");
             return (
-              <g key={vehicle.trackId}>
+              <g
+                key={vehicle.trackId}
+                className={selectedVehicleId === vehicle.trackId ? "runtime-vehicle runtime-vehicle--selected" : "runtime-vehicle"}
+                role={onVehicleClick ? "button" : undefined}
+                tabIndex={onVehicleClick ? 0 : undefined}
+                aria-label={`Xe Global ID ${vehicle.trackId}`}
+                pointerEvents={gateOverlay?.editing ? "none" : undefined}
+                onPointerDown={(event) => onVehicleClick && event.stopPropagation()}
+                onClick={() => onVehicleClick?.(vehicle.trackId)}
+                onKeyDown={(event) => {
+                  if (onVehicleClick && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    onVehicleClick(vehicle.trackId);
+                  }
+                }}
+              >
                 {/* Đường trail động – màu vàng đứt nút */}
                 {trailPoints && (
                   <polyline
@@ -421,7 +479,15 @@ export function ParkingMap({
                     <animate attributeName="opacity" values="0.22;0.06;0.22" dur="1.6s" repeatCount="indefinite" />
                   </circle>
                   {/* Nền tròn xe */}
-                  <circle cx={0} cy={0} r={24} fill="#ef4444" stroke="#fff" strokeWidth={3} />
+                  <circle
+                    className="runtime-vehicle-core"
+                    cx={0}
+                    cy={0}
+                    r={selectedVehicleId === vehicle.trackId ? 29 : 24}
+                    fill="#ef4444"
+                    stroke={selectedVehicleId === vehicle.trackId ? "#38bdf8" : "#fff"}
+                    strokeWidth={selectedVehicleId === vehicle.trackId ? 5 : 3}
+                  />
                   {/* Biểu tượng xe */}
                   <text
                     x={0}
@@ -458,7 +524,57 @@ export function ParkingMap({
             );
           })}
 
-          <g className="spot-hit-layer">
+          {gateOverlay && (["entry", "exit"] as const).map((gateName) => {
+            const points = gateOverlay[gateName];
+            const color = gateName === "entry" ? "#38bdf8" : "#e56b65";
+            const label = gateName === "entry" ? "ENTRY" : "EXIT";
+            const midpoint = points.length >= 2 ? {
+              x: (points[0]!.x + points[1]!.x) / 2,
+              y: (points[0]!.y + points[1]!.y) / 2,
+            } : null;
+            return (
+              <g key={gateName} className={`gate-map-overlay gate-map-overlay--${gateName}`} pointerEvents="none" data-testid={`gate-${gateName}`}>
+                {points.length >= 2 && (
+                  <line
+                    x1={points[0]!.x}
+                    y1={points[0]!.y}
+                    x2={points[1]!.x}
+                    y2={points[1]!.y}
+                    stroke={color}
+                    strokeWidth={gateOverlay.editing ? 7 : 5}
+                    strokeLinecap="round"
+                  />
+                )}
+                {midpoint && points[2] && (
+                  <line
+                    x1={midpoint.x}
+                    y1={midpoint.y}
+                    x2={points[2].x}
+                    y2={points[2].y}
+                    stroke={color}
+                    strokeWidth="4"
+                    strokeDasharray="9 7"
+                    markerEnd={`url(#gate-${gateName}-arrow)`}
+                  />
+                )}
+                {points.map((point, index) => (
+                  <g key={`${point.x}-${point.y}-${index}`}>
+                    <circle cx={point.x} cy={point.y} r={index === 2 ? 9 : 8} fill="#111820" stroke={color} strokeWidth="4" />
+                    <text x={point.x} y={point.y - 14} fill={color} textAnchor="middle" fontSize="17" fontWeight="800">
+                      {index === 2 ? "→" : index + 1}
+                    </text>
+                  </g>
+                ))}
+                {points[0] && (
+                  <text x={points[0].x + 13} y={points[0].y + 24} fill={color} fontSize="18" fontWeight="900">
+                    {label}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {!gateOverlay?.editing && <g className="spot-hit-layer">
             {PARKING_GEOMETRY.spots.map((geometry) => {
               const spot = spotById.get(geometry.id);
               if (!spot) return null;
@@ -485,13 +601,15 @@ export function ParkingMap({
                 />
               );
             })}
-          </g>
+          </g>}
         </svg>
-        <MapControls
-          onZoomIn={() => zoomAt(0.8)}
-          onZoomOut={() => zoomAt(1.25)}
-          onReset={() => setView(INITIAL_VIEW)}
-        />
+        {!gateOverlay?.editing && (
+          <MapControls
+            onZoomIn={() => zoomAt(0.8)}
+            onZoomOut={() => zoomAt(1.25)}
+            onReset={() => setView(INITIAL_VIEW)}
+          />
+        )}
       </div>
     </section>
   );

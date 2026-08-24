@@ -1,73 +1,63 @@
-/**
- * Backend API client for TechGAR.
- *
- * Review fixes:
- *   #19 — No 127.0.0.1 fallback in production
- *   #17 — Frontend calls API, not reading JSON files
- *   #26 — No shared filesystem dependency
- */
+import type { VehicleSession } from "../domain/session";
 
-const getBaseUrl = (): string => {
-  // Use VITE_BACKEND_URL if available, otherwise use relative path (same-origin proxy)
-  const envUrl = import.meta.env.VITE_BACKEND_URL;
-  if (envUrl) return envUrl;
-  // In development, Vite proxy handles /api → backend
-  return "";
-};
+const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? "";
 
-const BASE = getBaseUrl();
-
-async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) {
-    throw new Error(`API ${path}: ${res.status} ${res.statusText}`);
+export class BackendApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = "BackendApiError";
   }
-  return res.json() as Promise<T>;
+}
+
+export class SessionNotFoundError extends BackendApiError {
+  constructor(sessionId: string) {
+    super(`Phiên xe không tồn tại hoặc đã kết thúc: ${sessionId}`, 404, "SESSION_NOT_FOUND");
+    this.name = "SessionNotFoundError";
+  }
+}
+
+async function parseResponse<T>(response: Response, sessionId?: string): Promise<T> {
+  const payload = await response.json().catch(() => ({})) as { error?: string; code?: string };
+  if (!response.ok) {
+    if (response.status === 404 && payload.code === "SESSION_NOT_FOUND" && sessionId) {
+      throw new SessionNotFoundError(sessionId);
+    }
+    throw new BackendApiError(payload.error ?? `API trả về HTTP ${response.status}`, response.status, payload.code);
+  }
+  return payload as T;
+}
+
+async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, { cache: "no-store", signal });
+  return parseResponse<T>(response);
 }
 
 async function postJson<T>(path: string, body: object): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const response = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    throw new Error(`API ${path}: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(response, "sessionId" in body ? String(body.sessionId) : undefined);
 }
 
-// ── Session API ──
-
-export async function getSession(sessionId: string) {
-  return fetchJson<any>(`/api/session/${sessionId}`);
+export async function getSession(sessionId: string, signal?: AbortSignal): Promise<VehicleSession> {
+  const response = await fetch(`${BASE_URL}/api/session/${encodeURIComponent(sessionId)}`, { cache: "no-store", signal });
+  return parseResponse<VehicleSession>(response, sessionId);
 }
 
-export async function getWaitingSessions(gateId?: string) {
-  const query = gateId ? `?gate_id=${gateId}` : "";
-  return fetchJson<any[]>(`/api/sessions/waiting${query}`);
+export function getWaitingSessions(signal?: AbortSignal): Promise<VehicleSession[]> {
+  return getJson<VehicleSession[]>("/api/sessions/waiting", signal);
 }
 
-export async function claimSession(sessionId: string) {
-  return postJson<any>("/api/session/claim", { sessionId });
+export function claimSession(sessionId: string): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/claim", { sessionId });
 }
 
-export async function selectSpot(sessionId: string, spotId: string | null) {
-  return postJson<any>("/api/session/select", { sessionId, spotId });
+export function selectSpot(sessionId: string, spotId: string | null): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/select", { sessionId, spotId });
 }
 
-export async function startExit(sessionId: string) {
-  return postJson<any>("/api/session/exit", { sessionId });
-}
-
-// ── Parking API ──
-
-export async function getParkingStatus() {
-  return fetchJson<any>("/api/parking");
-}
-
-// ── Vehicle API ──
-
-export async function getAllVehicles() {
-  return fetchJson<any>("/api/vehicles");
+export function startExit(sessionId: string): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/exit", { sessionId });
 }

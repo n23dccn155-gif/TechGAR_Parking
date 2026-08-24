@@ -1,0 +1,18 @@
+{
+  "candidate-reset": {
+    "sessionId": "candidate-reset",
+    "state": "PARKED",
+    "targetSpotId": null,
+    "parkedSpotId": "D07",
+    "globalVehicleId": 42,
+    "vehicleTrackId": null,
+    "activeTrackId": null,
+    "claimed": false,
+    "lastKnownPosition": null,
+    "createdAt": "2026-08-23T19:28:18+07:00",
+    "claimedAt": null,
+    "spotSelectedAt": null,
+    "parkedAt": "2026-08-23T19:28:18+07:00",
+    "exitStartedAt": null
+  }
+}

@@ -121,3 +121,29 @@ pnpm build
 ```
 
 Screenshots will be saved under `artifacts/screenshots` at 390x844 and 1440x900, and `artifacts/VALIDATION.md` will record command results, behavioral checks, spot/count evidence, and known limitations.
+
+## Session-aware navigation repair (2026-08-23)
+
+The OpenCV runtime already publishes a canonical `vehicle_id` for each bound
+parking slot and a `parked_slot_id` for each Global ID.  The frontend must keep
+that metadata when adapting a runtime snapshot and classify a non-empty target
+as `own`, `other`, or `unknown`; spot colour alone is not identity evidence.
+
+- `own`: keep navigation quiet while the backend confirms parking.
+- `other`: pause the route, show an alternative, and wait for explicit driver
+  confirmation before changing the session target.
+- `unknown`: allow a short identity-resolution grace period before warning.
+- own vehicle in any slot: after the same Global ID and slot remain stable for
+  at least two seconds, store the actual `parkedSpotId`, stop inbound guidance,
+  and keep the parked marker visible.
+
+The session controller owns the two-second confirmation timer so page reloads
+cannot bypass it.  Frontend state changes to a replacement target only after
+the session API accepts the selection.  Regression coverage must distinguish
+own and other vehicle occupancy, reset an interrupted parking candidate, accept
+parking in a different slot, and prove that `PARKED` does not draw an exit route
+until the driver explicitly starts exit guidance.
+
+Implementation uses the current 48-spot shared map (A01-F08). The older
+160-spot geometry sections above remain historical prototype notes rather than
+current acceptance criteria.

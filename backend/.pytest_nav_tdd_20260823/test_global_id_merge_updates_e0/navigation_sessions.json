@@ -1,0 +1,21 @@
+{
+  "canonical": {
+    "sessionId": "canonical",
+    "state": "WAITING_FOR_SCAN",
+    "targetSpotId": null,
+    "parkedSpotId": null,
+    "globalVehicleId": 9,
+    "vehicleTrackId": null,
+    "activeTrackId": null,
+    "claimed": false,
+    "lastKnownPosition": {
+      "x": 5.0,
+      "y": 5.0
+    },
+    "createdAt": "2026-08-23T18:09:47+07:00",
+    "claimedAt": null,
+    "spotSelectedAt": null,
+    "parkedAt": null,
+    "exitStartedAt": null
+  }
+}

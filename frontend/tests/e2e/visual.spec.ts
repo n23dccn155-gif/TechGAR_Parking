@@ -22,11 +22,11 @@ test("capture required mobile and desktop screenshots", async ({ page }) => {
   await page.goto("/");
   await page.addStyleTag({ content: ".mock-toggle, .mock-panel { display: none !important; }" });
   await page.getByTestId("entry-skip").click();
-  await expect(page.locator("[data-spot-id]")).toHaveCount(160);
+  await expect(page.locator("[data-spot-id]")).toHaveCount(48);
   await page.screenshot({ path: "artifacts/screenshots/1440x900-desktop.png", fullPage: false });
 
-  await page.getByTestId("spot-C10").click();
+  await page.getByTestId("spot-C06").click();
   await page.getByTestId("spot-navigate").click();
   await expect(page.getByTestId("active-route")).toBeVisible();
-  await page.screenshot({ path: "artifacts/screenshots/1440x900-c10-navigation.png", fullPage: false });
+  await page.screenshot({ path: "artifacts/screenshots/1440x900-c06-navigation.png", fullPage: false });
 });

@@ -1,0 +1,4 @@
+schema_version,observation_id,physical_vehicle_id,frame_idx,camera_id,anchor_x,anchor_y,slot_id,phase,required,notes
+3,optional,CAR_B,1,cam1,100,100,,moving,false,
+3,a,CAR_A,2,cam1,10,10,,moving,true,
+3,b,CAR_B,2,cam1,100,100,,moving,true,

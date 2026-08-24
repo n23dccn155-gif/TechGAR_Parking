@@ -1,0 +1,2 @@
+﻿schema_version,observation_id,physical_vehicle_id,frame_idx,camera_id,anchor_x,anchor_y,slot_id,phase,required,notes
+3,O1,V1,1,cam1,,,A01,parked,true,

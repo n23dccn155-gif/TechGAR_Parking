@@ -1,0 +1,18 @@
+{
+  "claimable": {
+    "sessionId": "claimable",
+    "state": "PARKED",
+    "targetSpotId": null,
+    "parkedSpotId": "D06",
+    "globalVehicleId": 42,
+    "vehicleTrackId": null,
+    "activeTrackId": null,
+    "claimed": true,
+    "lastKnownPosition": null,
+    "createdAt": "2026-08-23T17:32:31+07:00",
+    "claimedAt": "2026-08-23T17:32:31+07:00",
+    "spotSelectedAt": null,
+    "parkedAt": "2026-08-23T17:32:32+07:00",
+    "exitStartedAt": null
+  }
+}
