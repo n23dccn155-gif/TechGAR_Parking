@@ -1015,6 +1015,14 @@ def opposing_view_histogram(bin_index: int) -> np.ndarray:
     return cv2.normalize(histogram, histogram)
 
 
+def bounded_cross_view_histogram(primary_weight: float) -> np.ndarray:
+    """Histogram with a reproducible distance from one_hot_histogram(0)."""
+    histogram = np.zeros((16, 16), dtype=np.float32)
+    histogram.flat[0] = float(primary_weight)
+    histogram.flat[1] = float(1.0 - primary_weight)
+    return cv2.normalize(histogram, histogram)
+
+
 def test_real_camera_shared_map_uses_bbox_center_not_opposite_vehicle_ends():
     manager = make_real_two_camera_manager()
     cam1 = DummyTrack(560, 220, w=42, h=40)
@@ -1045,7 +1053,9 @@ def test_real_camera_shared_map_uses_bbox_center_not_opposite_vehicle_ends():
 def test_unique_tight_cross_camera_pair_merges_ids_with_adaptive_appearance():
     manager = make_real_two_camera_manager()
     base = one_hot_histogram(0)
-    opposing = opposing_view_histogram(1)
+    # Distance is about 0.475: above the 0.45 hard gate but within the
+    # bounded 0.60 adaptive overlap limit.
+    opposing = bounded_cross_view_histogram(0.60)
     cam1 = attach_tracklet(
         DummyTrack(560, 220, h=40, appearance=base),
         base,
@@ -1072,6 +1082,44 @@ def test_unique_tight_cross_camera_pair_merges_ids_with_adaptive_appearance():
         event["type"] == "global_id_merged"
         and event.get("reason")
         in {"explicit_predictive_handoff", "unique_cross_camera_overlap"}
+        for event in registry["recent_events"]
+    )
+
+
+def test_two_established_global_ids_are_not_auto_merged_in_overlap():
+    manager = make_real_two_camera_manager()
+    appearance = one_hot_histogram(0)
+    cam1_far = DummyTrack(180, 220, h=40, appearance=appearance)
+    cam2_far = DummyTrack(300, 240, h=80, appearance=appearance)
+    first = manager.update_all_tracks(
+        {"cam1": {1: cam1_far}, "cam2": {7: cam2_far}}, 1
+    )
+    assert first == {"cam1": {1: 1}, "cam2": {7: 2}}
+    for frame_idx in range(2, 6):
+        ids = manager.update_all_tracks(
+            {"cam1": {1: cam1_far}, "cam2": {7: cam2_far}},
+            frame_idx,
+        )
+        assert ids == {"cam1": {1: 1}, "cam2": {7: 2}}
+
+    cam1_overlap = DummyTrack(560, 220, h=40, appearance=appearance)
+    cam2_overlap = DummyTrack(62, 240, h=80, appearance=appearance)
+    for frame_idx in range(6, 10):
+        ids = manager.update_all_tracks(
+            {
+                "cam1": {1: cam1_overlap},
+                "cam2": {7: cam2_overlap},
+            },
+            frame_idx,
+        )
+        assert ids == {"cam1": {1: 1}, "cam2": {7: 2}}
+
+    registry = manager.to_json(
+        {"cam1": {1: cam1_overlap}, "cam2": {7: cam2_overlap}}
+    )
+    assert registry["retired_global_ids"] == {}
+    assert any(
+        event["type"] == "cross_camera_merge_rejected_established_ids"
         for event in registry["recent_events"]
     )
 
@@ -1352,7 +1400,10 @@ def test_ambiguous_cross_camera_neighbours_are_not_merged():
 def test_fast_handoff_keeps_evidence_after_source_disappears():
     manager = make_real_two_camera_manager()
     source_view = one_hot_histogram(0)
-    target_view = opposing_view_histogram(1)
+    source_variant = bounded_cross_view_histogram(0.98)
+    # ~0.279 appearance distance + two distinct tracklet samples qualifies as
+    # the strong overlap path, which deliberately needs two selected frames.
+    target_view = bounded_cross_view_histogram(0.85)
     source = attach_tracklet(
         DummyTrack(
             560,
@@ -1362,7 +1413,7 @@ def test_fast_handoff_keeps_evidence_after_source_disappears():
             appearance=source_view,
         ),
         source_view,
-        source_view,
+        source_variant,
     )
     assert manager.update_all_tracks({"cam1": {1: source}}, 1)["cam1"][1] == 1
 
@@ -1378,7 +1429,7 @@ def test_fast_handoff_keeps_evidence_after_source_disappears():
             appearance=target_view,
         ),
         target_view,
-        target_view,
+        bounded_cross_view_histogram(0.86),
     )
     assert manager.update_all_tracks({"cam2": {7: target}}, 2) == {
         "cam2": {}
@@ -1393,10 +1444,160 @@ def test_fast_handoff_keeps_evidence_after_source_disappears():
     )
 
 
+def test_medium_overlap_handoff_requires_three_selected_frames():
+    manager = make_real_two_camera_manager()
+    source_view = one_hot_histogram(0)
+    target_view = bounded_cross_view_histogram(0.70)  # distance ~0.404
+    source = attach_tracklet(
+        DummyTrack(
+            560,
+            220,
+            h=40,
+            history=[(540, 220), (550, 220), (560, 220)],
+            appearance=source_view,
+        ),
+        source_view,
+        source_view,
+    )
+    assert manager.update_all_tracks({"cam1": {1: source}}, 1)["cam1"] == {
+        1: 1
+    }
+    target = attach_tracklet(
+        DummyTrack(
+            60,
+            240,
+            h=80,
+            history=[(56, 240), (58, 240), (60, 240)],
+            status="tentative",
+            appearance=target_view,
+        ),
+        target_view,
+        target_view,
+    )
+
+    assert manager.update_all_tracks({"cam2": {7: target}}, 2) == {
+        "cam2": {}
+    }
+    assert manager.update_all_tracks({"cam2": {7: target}}, 3) == {
+        "cam2": {}
+    }
+    assert manager.update_all_tracks({"cam2": {7: target}}, 4) == {
+        "cam2": {7: 1}
+    }
+    matched = [
+        event
+        for event in manager.to_json({})["recent_events"]
+        if event["type"].startswith("handoff_matched")
+    ]
+    assert matched[-1]["evidence_frames"] == 3
+
+
+def test_soft_spatial_candidate_blocks_wrong_hard_handoff_without_binding():
+    manager = make_real_two_camera_manager()
+    target_view = one_hot_histogram(0)
+    wrong_view = bounded_cross_view_histogram(0.70)  # hard, ~0.404
+    correct_view = bounded_cross_view_histogram(0.60)  # soft, ~0.475
+    target = attach_tracklet(
+        DummyTrack(
+            60,
+            240,
+            h=80,
+            status="tentative",
+            appearance=target_view,
+        ),
+        target_view,
+        bounded_cross_view_histogram(0.86),
+    )
+    manager._handoffs = [
+        HandoffEntry(
+            global_id=1,
+            source_cam="cam1",
+            source_local_track_id=11,
+            target_cam="cam2",
+            exit_edge="overlap",
+            last_world=(560.0, 200.0),
+            velocity_world=(0.0, 0.0),
+            bbox_size=(42, 80),
+            appearance=wrong_view,
+            appearance_samples=(wrong_view,),
+            created_at_frame=1,
+            updated_at_frame=1,
+        ),
+        HandoffEntry(
+            global_id=2,
+            source_cam="cam1",
+            source_local_track_id=12,
+            target_cam="cam2",
+            exit_edge="overlap",
+            # Candidate G#2 is physically closest (4.91 shared-map units),
+            # but its 0.475 HSV distance is soft evidence only.
+            last_world=(555.09, 200.0),
+            velocity_world=(0.0, 0.0),
+            bbox_size=(42, 80),
+            appearance=correct_view,
+            appearance_samples=(correct_view,),
+            created_at_frame=1,
+            updated_at_frame=1,
+        ),
+    ]
+
+    deferred = manager._match_pending_handoffs(
+        {"cam2": {9: target}}, 1
+    )
+
+    assert deferred == {("cam2", 9)}
+    assert manager.get_global_id("cam2", 9) is None
+    assert manager._handoff_candidate_evidence == {}
+    assert any(
+        event["type"] == "handoff_assignment_ambiguous"
+        for event in manager.to_json({})["recent_events"]
+    )
+
+
+def test_handoff_evidence_resets_when_selected_source_changes():
+    manager = make_real_two_camera_manager()
+    target_view = one_hot_histogram(0)
+    first_view = bounded_cross_view_histogram(0.70)
+    target = attach_tracklet(
+        DummyTrack(60, 240, h=80, status="tentative", appearance=target_view),
+        target_view,
+        target_view,
+    )
+
+    def entry(global_id: int) -> HandoffEntry:
+        return HandoffEntry(
+            global_id=global_id,
+            source_cam="cam1",
+            source_local_track_id=global_id,
+            target_cam="cam2",
+            exit_edge="overlap",
+            last_world=(560.0, 200.0),
+            velocity_world=(0.0, 0.0),
+            bbox_size=(42, 80),
+            appearance=first_view,
+            appearance_samples=(first_view,),
+            created_at_frame=1,
+            updated_at_frame=2,
+        )
+
+    manager._handoffs = [entry(1)]
+    assert manager._match_pending_handoffs({"cam2": {9: target}}, 1) == {
+        ("cam2", 9)
+    }
+    assert manager._handoff_candidate_evidence[(1, "cam2", 9)][0] == 1
+
+    manager._handoffs = [entry(2)]
+    assert manager._match_pending_handoffs({"cam2": {9: target}}, 2) == {
+        ("cam2", 9)
+    }
+    assert (1, "cam2", 9) not in manager._handoff_candidate_evidence
+    assert manager._handoff_candidate_evidence[(2, "cam2", 9)][0] == 1
+
+
 def test_explicit_handoff_reconciles_premature_target_gid():
     manager = make_real_two_camera_manager()
     source_view = one_hot_histogram(0)
-    target_view = opposing_view_histogram(1)
+    target_view = bounded_cross_view_histogram(0.85)
     source = attach_tracklet(
         DummyTrack(
             560,
@@ -1425,6 +1626,8 @@ def test_explicit_handoff_reconciles_premature_target_gid():
     first = manager.update_all_tracks({"cam2": {7: target}}, 2)
     assert first == {"cam2": {7: 2}}
     second = manager.update_all_tracks({"cam2": {7: target}}, 3)
+    assert second == {"cam2": {7: 2}}
+    second = manager.update_all_tracks({"cam2": {7: target}}, 4)
 
     assert second == {"cam2": {7: 1}}
     assert manager.canonical_global_id(2) == 1
@@ -1463,12 +1666,28 @@ def test_established_bound_gid_cannot_steal_handoff_from_unbound_target():
         )
     ]
 
-    ids = manager.update_all_tracks(
+    first = manager.update_all_tracks(
         {
             "cam2": {1: source},
             "cam1": {2: wrong_existing, 3: correct_unbound},
         },
         20,
+    )
+    assert first["cam1"] == {2: 2}
+    ids = manager.update_all_tracks(
+        {
+            "cam2": {1: source},
+            "cam1": {2: wrong_existing, 3: correct_unbound},
+        },
+        21,
+    )
+    assert ids["cam1"] == {2: 2}
+    ids = manager.update_all_tracks(
+        {
+            "cam2": {1: source},
+            "cam1": {2: wrong_existing, 3: correct_unbound},
+        },
+        22,
     )
 
     assert ids["cam1"] == {2: 2, 3: 1}
@@ -1688,7 +1907,7 @@ def test_camera_specific_gallery_is_kept_separate_by_view():
 def test_successful_handoff_collapses_old_camera_specific_alias():
     manager = make_real_two_camera_manager()
     cam1_view = one_hot_histogram(0)
-    cam2_view = opposing_view_histogram(1)
+    cam2_view = bounded_cross_view_histogram(0.85)
 
     old_cam1 = attach_tracklet(
         DummyTrack(560, 220, h=40, appearance=cam1_view),
@@ -1736,6 +1955,10 @@ def test_successful_handoff_collapses_old_camera_specific_alias():
     ) == {"cam1": {}}
     ids = manager.update_all_tracks(
         {"cam1": {9: returning}}, 5, {"cam1": 1.2}
+    )
+    assert ids == {"cam1": {}}
+    ids = manager.update_all_tracks(
+        {"cam1": {9: returning}}, 6, {"cam1": 1.3}
     )
 
     assert ids == {"cam1": {9: 1}}
@@ -1864,7 +2087,17 @@ def test_two_real_cameras_deduplicate_a_vehicle_in_calibrated_overlap():
 
     # cam2 x=60 maps to the same world x=560 via its configured homography.
     cam2 = DummyTrack(60, 200, history=[(50, 200), (60, 200)])
-    ids = manager.update_all_tracks({"cam1": {1: cam1}, "cam2": {7: cam2}}, 2)
+    first = manager.update_all_tracks(
+        {"cam1": {1: cam1}, "cam2": {7: cam2}}, 2
+    )
+    assert first["cam2"] == {}
+    second = manager.update_all_tracks(
+        {"cam1": {1: cam1}, "cam2": {7: cam2}}, 3
+    )
+    assert second["cam2"] == {}
+    ids = manager.update_all_tracks(
+        {"cam1": {1: cam1}, "cam2": {7: cam2}}, 4
+    )
     assert ids["cam2"][7] == 1
 
 
@@ -1876,7 +2109,11 @@ def test_two_real_cameras_keep_handoff_id_from_cam1_to_cam2():
 
     # The source leaves cam1. cam2's tentative local track appears at predicted world x=650.
     target = DummyTrack(150, 200, history=[(120, 200), (150, 200)], status="tentative")
-    ids = manager.update_all_tracks({"cam2": {8: target}}, 3)
+    first = manager.update_all_tracks({"cam2": {8: target}}, 3)
+    assert first == {"cam2": {}}
+    second = manager.update_all_tracks({"cam2": {8: target}}, 4)
+    assert second == {"cam2": {}}
+    ids = manager.update_all_tracks({"cam2": {8: target}}, 5)
     assert ids["cam2"][8] == 1
 
 
@@ -2038,8 +2275,16 @@ def test_overlap_zone_opens_handoff_without_relying_on_image_edge_name():
         70, 200, history=[(60, 200), (70, 200)], status="tentative"
     )
 
-    ids = manager.update_all_tracks(
+    first = manager.update_all_tracks(
         {"cam1": {1: source}, "cam2": {8: target}}, 2
+    )
+    assert first["cam2"] == {}
+    second = manager.update_all_tracks(
+        {"cam1": {1: source}, "cam2": {8: target}}, 3
+    )
+    assert second["cam2"] == {}
+    ids = manager.update_all_tracks(
+        {"cam1": {1: source}, "cam2": {8: target}}, 4
     )
 
     assert ids["cam2"][8] == 1
@@ -2153,8 +2398,16 @@ def test_protected_track_skips_simultaneous_and_existing_overlap_matching():
     assert protected == {"cam1": {1: 1}, "cam2": {}}
     assert manager.get_global_id("cam2", 7) is None
 
-    released = manager.update_all_tracks(
+    probation = manager.update_all_tracks(
         {"cam1": {1: cam1}, "cam2": {7: cam2}}, 2
+    )
+    assert probation == {"cam1": {1: 1}, "cam2": {}}
+    second_probation = manager.update_all_tracks(
+        {"cam1": {1: cam1}, "cam2": {7: cam2}}, 3
+    )
+    assert second_probation == {"cam1": {1: 1}, "cam2": {}}
+    released = manager.update_all_tracks(
+        {"cam1": {1: cam1}, "cam2": {7: cam2}}, 4
     )
     assert released == {"cam1": {1: 1}, "cam2": {7: 1}}
 

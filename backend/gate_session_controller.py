@@ -295,6 +295,10 @@ class GateSessionCoordinator:
                 )
 
             parked_slot_id = vehicle.get("parked_slot_id")
+            if session.get("state") == "EXIT_NAVIGATION":
+                self._parked_candidates.pop(global_id, None)
+                continue
+
             if parked_slot_id:
                 parked_slot_id = str(parked_slot_id)
                 if (

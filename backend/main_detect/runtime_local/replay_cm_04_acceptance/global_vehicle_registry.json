@@ -1,0 +1,2110 @@
+{
+  "timestamp": "2026-08-20T17:16:20.784+07:00",
+  "frame_index": 1570,
+  "calibration": "D:\\techgar\\TechGAR_Parking\\backend\\main_detect\\config\\two_camera.shared_cm_03.json",
+  "parking_recovery": [],
+  "world_unit": "cm",
+  "next_global_id": 4,
+  "retired_global_ids": {},
+  "active_global_vehicles": {},
+  "map_vehicles": {},
+  "identity_lifecycle": {
+    "1": {
+      "global_id": 1,
+      "state": "dormant",
+      "last_camera": "cam2",
+      "last_local_track_id": 45,
+      "last_world": {
+        "x": 41.82,
+        "y": 12.75
+      },
+      "velocity_world": {
+        "x": 1.57,
+        "y": 0.18
+      },
+      "last_seen_frame": 1425,
+      "created_at_frame": 34,
+      "last_seen_time": 63830.078,
+      "dormant_since_frame": 1425,
+      "exited_at_frame": null,
+      "appearance_sample_count": 24,
+      "camera_appearance_sample_counts": {
+        "cam1": 24,
+        "cam2": 24
+      }
+    },
+    "2": {
+      "global_id": 2,
+      "state": "parked",
+      "last_camera": "cam1",
+      "last_local_track_id": 36,
+      "last_world": {
+        "x": -17.34,
+        "y": 8.84
+      },
+      "velocity_world": {
+        "x": 0.431,
+        "y": -0.014
+      },
+      "last_seen_frame": 1543,
+      "created_at_frame": 56,
+      "last_seen_time": 63843.328,
+      "dormant_since_frame": null,
+      "exited_at_frame": null,
+      "appearance_sample_count": 24,
+      "camera_appearance_sample_counts": {
+        "cam1": 24,
+        "cam2": 24
+      }
+    },
+    "3": {
+      "global_id": 3,
+      "state": "dormant",
+      "last_camera": "cam2",
+      "last_local_track_id": 44,
+      "last_world": {
+        "x": 36.93,
+        "y": 22.38
+      },
+      "velocity_world": {
+        "x": 0.017,
+        "y": -0.169
+      },
+      "last_seen_frame": 1305,
+      "created_at_frame": 311,
+      "last_seen_time": 63816.453,
+      "dormant_since_frame": 1305,
+      "exited_at_frame": null,
+      "appearance_sample_count": 24,
+      "camera_appearance_sample_counts": {
+        "cam2": 24
+      }
+    }
+  },
+  "parked_identity_reservations": {
+    "2": {
+      "global_id": 2,
+      "slot_id": "F03",
+      "camera_id": "cam1",
+      "state": "parked",
+      "bbox": [
+        746.0,
+        400.0,
+        95.0,
+        137.0
+      ]
+    }
+  },
+  "pending_handoffs": [],
+  "recent_events": [
+    {
+      "type": "new_global_id_deferred_dormant_near_miss",
+      "frame": 599,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 36,
+      "appearance_distance": 0.398,
+      "strict_appearance_limit": 0.3,
+      "elapsed": 0.954
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 600,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 11
+    },
+    {
+      "type": "new_global_id_deferred_dormant_near_miss",
+      "frame": 600,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 36,
+      "appearance_distance": 0.391,
+      "strict_appearance_limit": 0.3,
+      "elapsed": 1.016
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 600,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 36,
+      "predicted_distance": 4.11,
+      "extrapolated_distance": 4.11,
+      "last_position_distance": 4.11,
+      "appearance_distance": 0.16,
+      "elapsed": 2.766,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 601,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "edge": "overlap",
+      "velocity": {
+        "x": -0.94,
+        "y": -0.32
+      }
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 602,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 36
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 608,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 24
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 613,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 36
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 616,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 12
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 618,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "reason": "appearance",
+      "predicted_distance": 24.43,
+      "extrapolated_distance": 24.43,
+      "last_position_distance": 26.65,
+      "overlap_signed_distance": 6.27,
+      "appearance_distance": 0.628,
+      "appearance_reference": "source_camera",
+      "tracklet_support": 1,
+      "tracklet_sample_pairs": 15,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 618,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "evidence_frames": 1,
+      "required_evidence_frames": 3,
+      "predicted_distance": 10.99,
+      "appearance_distance": 0.139,
+      "appearance_reference": "target_camera",
+      "reason": "temporal_probation"
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 622,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 27
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 623,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 10
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 623,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "evidence_frames": 1,
+      "required_evidence_frames": 3,
+      "predicted_distance": 8.93,
+      "appearance_distance": 0.14,
+      "appearance_reference": "target_camera",
+      "reason": "temporal_probation"
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 624,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "evidence_frames": 2,
+      "required_evidence_frames": 3,
+      "predicted_distance": 10.89,
+      "appearance_distance": 0.14,
+      "appearance_reference": "target_camera",
+      "reason": "temporal_probation"
+    },
+    {
+      "type": "handoff_matched_target_gallery",
+      "frame": 625,
+      "global_id": 2,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 36,
+      "target_local_id": 16,
+      "score": 0.35,
+      "appearance_distance": 0.14,
+      "tracklet_support": 2,
+      "evidence_frames": 3,
+      "appearance_reference": "target_camera",
+      "predicted_position": {
+        "x": 1.49,
+        "y": 2.15
+      }
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 626,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "edge": "overlap",
+      "velocity": {
+        "x": -0.7,
+        "y": 0.21
+      }
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 626,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "reason": "prediction_distance",
+      "predicted_distance": 27.04,
+      "extrapolated_distance": 27.04,
+      "last_position_distance": 29.71,
+      "overlap_signed_distance": 2.97
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 634,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 16,
+      "reason": "prediction_distance",
+      "predicted_distance": 28.21,
+      "extrapolated_distance": 28.21,
+      "last_position_distance": 31.04,
+      "overlap_signed_distance": 1.21
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 636,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 33
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 637,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 16
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 658,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 16
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 664,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 13
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 665,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 32
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 672,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 16
+    },
+    {
+      "type": "handoff_cancelled_identity_parked",
+      "frame": 678,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 16
+    },
+    {
+      "type": "global_id_parked_reserved",
+      "frame": 678,
+      "global_id": 2,
+      "slot_id": "F04",
+      "camera": "cam1"
+    },
+    {
+      "type": "parked_local_track_suspended",
+      "frame": 678,
+      "global_id": 2,
+      "camera": "cam2",
+      "local_track_id": 36
+    },
+    {
+      "type": "parked_local_track_suspended",
+      "frame": 678,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 16
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 681,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 33
+    },
+    {
+      "type": "global_id_recovered",
+      "frame": 740,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 17,
+      "source": "parking_departure_token"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 747,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 17
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 753,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 18,
+      "reason": "appearance",
+      "appearance_distance": 0.427,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 753,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 19,
+      "reason": "appearance",
+      "appearance_distance": 0.424,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 753,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 18,
+      "reason": "position",
+      "selected_distance": 35.151,
+      "extrapolated_distance": 35.151,
+      "last_position_distance": 38.577,
+      "distance_limit": 35.0
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 753,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 19,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 17.579
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 753,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 19,
+      "elapsed": 17.579,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 782,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "reason": "appearance",
+      "appearance_distance": 0.348,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 782,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 20.657
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 782,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "elapsed": 20.657,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 783,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "elapsed": 20.719,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 784,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "elapsed": 20.844,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 796,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 21,
+      "reason": "appearance",
+      "appearance_distance": 0.306,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 796,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 21,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 22.125
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 796,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 21,
+      "elapsed": 22.125,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 798,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "reason": "appearance",
+      "appearance_distance": 0.34,
+      "appearance_limit": 0.3,
+      "tracklet_support": 2
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 798,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 22.422
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 798,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "elapsed": 22.422,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 798,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 20,
+      "predicted_distance": 3.88,
+      "extrapolated_distance": 3.88,
+      "last_position_distance": 3.88,
+      "appearance_distance": 0.097,
+      "elapsed": 4.515,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 799,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 20
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 802,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 22,
+      "reason": "position",
+      "selected_distance": 39.358,
+      "extrapolated_distance": 39.358,
+      "last_position_distance": 43.672,
+      "distance_limit": 35.0
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 803,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 20
+    },
+    {
+      "type": "global_id_parked_reserved",
+      "frame": 810,
+      "global_id": 2,
+      "slot_id": "F03",
+      "camera": "cam1"
+    },
+    {
+      "type": "parked_local_track_suspended",
+      "frame": 810,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 17
+    },
+    {
+      "type": "parked_local_track_suspended",
+      "frame": 810,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 20
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 891,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 23,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 32.5
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 891,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 23,
+      "elapsed": 32.5,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 898,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 24,
+      "reason": "appearance",
+      "appearance_distance": 0.398,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 898,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 24,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 33.313
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 898,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 24,
+      "elapsed": 33.313,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 914,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 25,
+      "reason": "appearance",
+      "appearance_distance": 0.326,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 914,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 25,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 35.079
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 914,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 25,
+      "elapsed": 35.079,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 919,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 27,
+      "reason": "appearance",
+      "appearance_distance": 0.314,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 919,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 26,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 35.594
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 919,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 26,
+      "elapsed": 35.594,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 919,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 27,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 35.594
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 919,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 27,
+      "elapsed": 35.594,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 924,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 26,
+      "elapsed": 36.157,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 925,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 26,
+      "elapsed": 36.25,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 925,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 26,
+      "predicted_distance": 4.07,
+      "extrapolated_distance": 4.07,
+      "last_position_distance": 4.07,
+      "appearance_distance": 0.147,
+      "elapsed": 62.828,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "dormant_appearance_reentry_recovered",
+      "frame": 925,
+      "global_id": 1,
+      "camera": "cam1",
+      "target_local_id": 26,
+      "appearance_distance": 0.147,
+      "world_distance": 4.074,
+      "elapsed": 62.828,
+      "tracklet_support": 2
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 942,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 28,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 38.204
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 942,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 28,
+      "elapsed": 38.204,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 962,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "edge": "overlap",
+      "velocity": {
+        "x": 0.35,
+        "y": -0.5
+      }
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 986,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 29,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 43.25
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 986,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 29,
+      "elapsed": 43.25,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 986,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 30,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 43.25
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 986,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 30,
+      "elapsed": 43.25,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 987,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 26
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 988,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 29,
+      "elapsed": 43.469,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 992,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 29,
+      "elapsed": 43.891,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 992,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 29,
+      "predicted_distance": 4.36,
+      "extrapolated_distance": 4.36,
+      "last_position_distance": 4.36,
+      "appearance_distance": 0.281,
+      "elapsed": 0.531,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_source_rebound",
+      "frame": 992,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 29
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 995,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 44.204
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 995,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "elapsed": 44.204,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 996,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "elapsed": 44.313,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 997,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "elapsed": 44.454,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 998,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "elapsed": 44.579,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 999,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 29
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 999,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "elapsed": 44.641,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 999,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "predicted_distance": 4.09,
+      "extrapolated_distance": 4.09,
+      "last_position_distance": 4.09,
+      "appearance_distance": 0.203,
+      "elapsed": 0.0,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_source_rebound",
+      "frame": 999,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 31
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1006,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 32,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 45.454
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1006,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 32,
+      "elapsed": 45.454,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1007,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 32,
+      "elapsed": 45.563,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1008,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 32,
+      "elapsed": 45.704,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1009,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 32,
+      "elapsed": 45.813,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1010,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1017,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam1",
+      "target_local_id": 34,
+      "reason": "appearance",
+      "appearance_distance": 0.737,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1017,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 46.735
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1017,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 46.735,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1017,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 34,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 46.735
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1017,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 34,
+      "elapsed": 46.735,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1020,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.047,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1021,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.188,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "new_global_id_deferred_insufficient_fragment_evidence",
+      "frame": 1021,
+      "global_id": null,
+      "camera": "cam1",
+      "local_track_id": 33,
+      "reason": "too_few_observations",
+      "observations": 3,
+      "required_observations": 5
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1022,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.344,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1023,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.422,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "new_global_id_deferred_insufficient_fragment_evidence",
+      "frame": 1023,
+      "global_id": null,
+      "camera": "cam1",
+      "local_track_id": 33,
+      "reason": "insufficient_displacement",
+      "observations": 5,
+      "displacement": 15.556,
+      "required_displacement": 17.427
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1024,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.547,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1025,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 47.672
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1025,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 33,
+      "elapsed": 47.672,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1026,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1028,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 35,
+      "reason": "stale_without_target_camera_gallery",
+      "elapsed": 47.985
+    },
+    {
+      "type": "dormant_reid_rejected_stale",
+      "frame": 1028,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 35,
+      "elapsed": 47.985,
+      "reason": "missing_target_camera_gallery"
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1029,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1033,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1077,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 26
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1089,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 29
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1110,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "appearance",
+      "predicted_distance": 6.98,
+      "extrapolated_distance": 6.98,
+      "last_position_distance": 6.98,
+      "overlap_signed_distance": 15.86,
+      "appearance_distance": 0.609,
+      "appearance_reference": "target_camera",
+      "tracklet_support": 1,
+      "tracklet_sample_pairs": 24,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1110,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "appearance",
+      "appearance_distance": 0.319,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 1113,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "evidence_frames": 1,
+      "required_evidence_frames": 3,
+      "predicted_distance": 6.85,
+      "appearance_distance": 0.58,
+      "appearance_reference": "target_camera",
+      "reason": "soft_appearance_competitor"
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 1114,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "evidence_frames": 2,
+      "required_evidence_frames": 3,
+      "predicted_distance": 6.56,
+      "appearance_distance": 0.58,
+      "appearance_reference": "target_camera",
+      "reason": "soft_appearance_competitor"
+    },
+    {
+      "type": "handoff_assignment_ambiguous",
+      "frame": 1115,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 38,
+      "selected_cost": 0.322
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 1115,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "predicted_distance": 13.68,
+      "extrapolated_distance": 13.68,
+      "last_position_distance": 13.68,
+      "appearance_distance": 0.295,
+      "elapsed": 57.282,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 1116,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "edge": "overlap",
+      "velocity": {
+        "x": 0.31,
+        "y": 0.01
+      }
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1116,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1082,
+      "target_gid_age_frames": 805
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1116,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "reason": "appearance",
+      "predicted_distance": 6.39,
+      "extrapolated_distance": 6.39,
+      "last_position_distance": 6.39,
+      "overlap_signed_distance": 15.22,
+      "appearance_distance": 0.632,
+      "appearance_reference": "source_camera",
+      "tracklet_support": 12,
+      "tracklet_sample_pairs": 216,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1117,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1083,
+      "target_gid_age_frames": 806
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1118,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1084,
+      "target_gid_age_frames": 807
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1119,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1120,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1086,
+      "target_gid_age_frames": 809
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1121,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1122,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1088,
+      "target_gid_age_frames": 811
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1123,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_bound_identity_rejected",
+      "frame": 1124,
+      "global_id": 1,
+      "target_global_id": 3,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "both_global_ids_established",
+      "source_gid_age_frames": 1090,
+      "target_gid_age_frames": 813
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1124,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "reason": "appearance",
+      "predicted_distance": 6.75,
+      "extrapolated_distance": 6.75,
+      "last_position_distance": 6.75,
+      "overlap_signed_distance": 17.4,
+      "appearance_distance": 0.635,
+      "appearance_reference": "source_camera",
+      "tracklet_support": 12,
+      "tracklet_sample_pairs": 240,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1125,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1132,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "reason": "appearance",
+      "predicted_distance": 4.71,
+      "extrapolated_distance": 9.4,
+      "last_position_distance": 4.71,
+      "overlap_signed_distance": 17.05,
+      "appearance_distance": 0.642,
+      "appearance_reference": "source_camera",
+      "tracklet_support": 12,
+      "tracklet_sample_pairs": 240,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1137,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 37,
+      "reason": "appearance",
+      "predicted_distance": 9.41,
+      "extrapolated_distance": 9.41,
+      "last_position_distance": 9.41,
+      "overlap_signed_distance": 7.3,
+      "appearance_distance": 0.567,
+      "appearance_reference": "target_camera",
+      "tracklet_support": 6,
+      "tracklet_sample_pairs": 144,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1138,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1140,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "target_local_id": 31,
+      "reason": "appearance",
+      "predicted_distance": 8.75,
+      "extrapolated_distance": 14.67,
+      "last_position_distance": 8.75,
+      "overlap_signed_distance": 15.35,
+      "appearance_distance": 0.654,
+      "appearance_reference": "source_camera",
+      "tracklet_support": 12,
+      "tracklet_sample_pairs": 252,
+      "hard_appearance_limit": 0.45,
+      "bind_eligible": true
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1142,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 1142,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 39,
+      "evidence_frames": 1,
+      "required_evidence_frames": 3,
+      "predicted_distance": 5.4,
+      "appearance_distance": 0.277,
+      "appearance_reference": "target_camera",
+      "reason": "temporal_probation"
+    },
+    {
+      "type": "handoff_candidate_deferred",
+      "frame": 1143,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 39,
+      "evidence_frames": 2,
+      "required_evidence_frames": 3,
+      "predicted_distance": 5.17,
+      "appearance_distance": 0.277,
+      "appearance_reference": "target_camera",
+      "reason": "temporal_probation"
+    },
+    {
+      "type": "handoff_matched_target_gallery",
+      "frame": 1144,
+      "global_id": 1,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 31,
+      "target_local_id": 39,
+      "score": 0.284,
+      "appearance_distance": 0.277,
+      "tracklet_support": 1,
+      "evidence_frames": 3,
+      "appearance_reference": "target_camera",
+      "predicted_position": {
+        "x": 10.88,
+        "y": -5.16
+      }
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1145,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 40,
+      "reason": "appearance",
+      "appearance_distance": 0.486,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 1148,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "edge": "overlap",
+      "velocity": {
+        "x": -0.17,
+        "y": -0.14
+      }
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1149,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1149,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1153,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1153,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1155,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1184,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 1190,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 41,
+      "predicted_distance": 15.19,
+      "extrapolated_distance": 15.19,
+      "last_position_distance": 15.19,
+      "appearance_distance": 0.178,
+      "elapsed": 3.843,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_source_rebound",
+      "frame": 1190,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1194,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1194,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1204,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1204,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1206,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1206,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1221,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1221,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1232,
+      "global_id": 1,
+      "camera": "cam1",
+      "local_track_id": 31
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1238,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1243,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1245,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 37
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1271,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1275,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1276,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1276,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 42,
+      "reason": "appearance",
+      "appearance_distance": 0.507,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1276,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 43,
+      "reason": "appearance",
+      "appearance_distance": 0.581,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1299,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 44,
+      "reason": "appearance",
+      "appearance_distance": 0.679,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 1302,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 44,
+      "predicted_distance": 1.28,
+      "extrapolated_distance": 1.28,
+      "last_position_distance": 1.28,
+      "appearance_distance": 0.231,
+      "elapsed": 3.0,
+      "tracklet_support": 2,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_source_rebound",
+      "frame": 1302,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 44
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1305,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 44
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1305,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 45,
+      "reason": "appearance",
+      "appearance_distance": 0.545,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "dormant_global_id_recovered",
+      "frame": 1306,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 45,
+      "predicted_distance": 6.52,
+      "extrapolated_distance": 6.52,
+      "last_position_distance": 6.52,
+      "appearance_distance": 0.143,
+      "elapsed": 3.359,
+      "tracklet_support": 1,
+      "appearance_reference": "target_camera",
+      "trajectory_score": null
+    },
+    {
+      "type": "handoff_source_rebound",
+      "frame": 1306,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 45
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 1350,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 44
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1365,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 41
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1366,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 39
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1395,
+      "global_id": 3,
+      "camera": "cam2",
+      "local_track_id": 44
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1408,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1425,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 45
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1427,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 46,
+      "reason": "appearance",
+      "appearance_distance": 0.682,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "handoff_expired",
+      "frame": 1470,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam1",
+      "source_local_id": 45
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1487,
+      "global_id": 1,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 47,
+      "reason": "appearance",
+      "appearance_distance": 0.62,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "global_id_recovered",
+      "frame": 1501,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 36,
+      "source": "parking_departure_token"
+    },
+    {
+      "type": "handoff_opened",
+      "frame": 1502,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "edge": "overlap",
+      "velocity": {
+        "x": 0.52,
+        "y": -0.09
+      }
+    },
+    {
+      "type": "local_track_expired",
+      "frame": 1515,
+      "global_id": 1,
+      "camera": "cam2",
+      "local_track_id": 45
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1520,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 36
+    },
+    {
+      "type": "handoff_rejected",
+      "frame": 1528,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "target_local_id": 48,
+      "reason": "prediction_distance",
+      "predicted_distance": 53.18,
+      "extrapolated_distance": 53.18,
+      "last_position_distance": 53.18,
+      "overlap_signed_distance": -22.53
+    },
+    {
+      "type": "dormant_reid_rejected",
+      "frame": 1528,
+      "global_id": 3,
+      "source_camera": "cam2",
+      "target_camera": "cam2",
+      "target_local_id": 48,
+      "reason": "appearance",
+      "appearance_distance": 0.506,
+      "appearance_limit": 0.3,
+      "tracklet_support": 1
+    },
+    {
+      "type": "local_track_lost",
+      "frame": 1543,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 36
+    },
+    {
+      "type": "handoff_cancelled_identity_parked",
+      "frame": 1549,
+      "global_id": 2,
+      "source_camera": "cam1",
+      "target_camera": "cam2",
+      "source_local_id": 36
+    },
+    {
+      "type": "global_id_parked_reserved",
+      "frame": 1549,
+      "global_id": 2,
+      "slot_id": "F03",
+      "camera": "cam1"
+    },
+    {
+      "type": "parked_local_track_suspended",
+      "frame": 1549,
+      "global_id": 2,
+      "camera": "cam1",
+      "local_track_id": 36
+    }
+  ]
+}

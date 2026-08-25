@@ -38,6 +38,8 @@ function session(overrides: Partial<VehicleSession> = {}): VehicleSession {
     claimed: true,
     lastKnownPosition: { x: 997, y: 858 },
     createdAt: "2026-08-23T10:00:00+07:00",
+    updatedAt: "2026-08-23T10:00:00+07:00",
+    revision: 3,
     qrExpiresAt: "2026-08-23T10:00:10+07:00",
     claimedAt: "2026-08-23T10:00:01+07:00",
     spotSelectedAt: "2026-08-23T10:00:02+07:00",
@@ -129,7 +131,7 @@ describe("session-aware navigation", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("waits for identity resolution before warning about an unresolved occupied target", async () => {
+  it("does not warn when target is occupied but identity has not been resolved", async () => {
     runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({
       targetVehicleId: null,
       targetOccupied: true,
@@ -141,32 +143,25 @@ describe("session-aware navigation", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 2100));
     });
-    expect(await screen.findByRole("alertdialog")).toHaveTextContent("chưa xác định");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("refreshes and then clears an unresolved warning when ownership resolves", async () => {
-    let owner: number | null = null;
+  it("shows other-vehicle warning only after target is confirmed occupied by another vehicle", async () => {
     runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({
-      targetVehicleId: owner,
+      targetVehicleId: null,
       targetOccupied: true,
     }));
     render(<App sessionId="session-42" />);
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 2100));
-    });
+    await waitFor(() => expect(useDriverFlowStore.getState().mode).toBe("navigation"));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+
+    runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({
+      targetVehicleId: 99,
+      targetOccupied: true,
+    }));
     expect(await screen.findByRole("alertdialog")).toBeVisible();
-    expect(useDriverFlowStore.getState().warning?.status).toBe("unknown");
-
-    owner = 99;
-    await waitFor(() => {
-      expect(useDriverFlowStore.getState().warning?.status).toBe("occupied");
-    });
-
-    owner = 42;
-    await waitFor(() => {
-      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    });
+    expect(useDriverFlowStore.getState().warning?.status).toBe("occupied");
   });
 
   it("waits for the session API before switching to an alternative", async () => {

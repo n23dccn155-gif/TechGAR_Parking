@@ -445,6 +445,9 @@ def test_two_close_vehicles_keep_ids_after_merged_contour_splits(monkeypatch):
         [vehicle(20, first_appearance), vehicle(120, second_appearance)],
         [vehicle(45, first_appearance), vehicle(95, second_appearance)],
         [merged],
+        # The contour remains merged beyond the ordinary 1.5 s reacquire
+        # window. The 3.0 s merge protection must preserve both lineages.
+        [merged],
         # Reverse input order while the two distinct centre points are close.
         [vehicle(75, second_appearance), vehicle(65, first_appearance)],
         # The vehicles have crossed, but their appearance and motion lineage
@@ -467,9 +470,10 @@ def test_two_close_vehicles_keep_ids_after_merged_contour_splits(monkeypatch):
         event["type"] == "merged_detection_frozen"
         for event in tracker.association_events
     )
-    tracker.process_frame(frame, timestamp_s=0.3)
+    tracker.process_frame(frame, timestamp_s=2.0)
+    tracker.process_frame(frame, timestamp_s=2.8)
     tracks, _mask, _expired = tracker.process_frame(
-        frame, timestamp_s=0.4
+        frame, timestamp_s=2.9
     )
 
     assert set(tracks) == {1, 2}
@@ -481,6 +485,63 @@ def test_two_close_vehicles_keep_ids_after_merged_contour_splits(monkeypatch):
     assert histogram_distance(
         tracks[2].appearance, second_appearance
     ) < 0.10
+
+
+def test_ambiguous_split_coasts_without_swap_or_new_fragment(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        merged_detection_area_ratio=1.6,
+        split_assignment_margin=0.08,
+    )
+    frame = np.zeros((120, 180, 3), dtype=np.uint8)
+    appearance = np.zeros(416, dtype=np.float32)
+    appearance[10] = 1.0
+
+    def vehicle(x: int) -> dict:
+        detection = _detection(tracker, frame, x, priority=False)
+        detection["hist"] = appearance.copy()
+        detection["bbox_area"] = float(
+            detection["box"][2] * detection["box"][3]
+        )
+        return detection
+
+    merged = vehicle(45)
+    merged["box"] = (45, 16, 90, 35)
+    merged["point"] = tracker._bottom_center(merged["box"])
+    merged["area"] = 2500.0
+    merged["bbox_area"] = 3150.0
+    # Both post-split detections are deliberately tied for both lineages.
+    tied_left = vehicle(60)
+    tied_right = vehicle(60)
+    detections = iter([
+        [vehicle(20), vehicle(120)],
+        [merged],
+        [tied_right, tied_left],
+    ])
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+
+    tracker.process_frame(frame, timestamp_s=0.0)
+    tracker.process_frame(frame, timestamp_s=0.1)
+    tracks, _mask, _expired = tracker.process_frame(
+        frame, timestamp_s=0.2
+    )
+
+    assert set(tracks) == {1, 2}
+    assert all(track.consecutive_invisible_count == 2 for track in tracks.values())
+    assert all(track.status == TrackStatus.LOST for track in tracks.values())
+    assert not {3, 4}.intersection(tracks)
+    assert any(
+        event["type"] == "split_assignment_deferred"
+        for event in tracker.association_events
+    )
 
 
 def test_non_overlapping_centres_keep_ids_for_identical_crossing_vehicles(

@@ -17,9 +17,16 @@ export interface VehicleSession {
   claimed: boolean;
   lastKnownPosition: { x: number; y: number } | null;
   createdAt: string;
+  updatedAt: string;
+  revision: number;
   qrExpiresAt: string;
   claimedAt: string | null;
   spotSelectedAt: string | null;
   parkedAt: string | null;
   exitStartedAt: string | null;
+}
+
+export function buildSessionCompletionKey(session: VehicleSession): string | null {
+  if (session.state !== "PARKED" || !session.parkedSpotId || !session.parkedAt) return null;
+  return `${session.sessionId}:${session.parkedSpotId}:${session.parkedAt}`;
 }

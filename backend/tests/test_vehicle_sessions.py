@@ -145,3 +145,110 @@ def test_remap_global_id_and_delete_on_confirmed_exit(monkeypatch, tmp_path):
     assert remapped["globalVehicleId"] == 9
     assert deleted["sessionId"] == session_id
     assert session_manager.load_sessions() == {}
+
+
+def test_revision_present_and_monotonic_on_real_mutations(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="rev")
+
+    created = session_manager.get_session(session_id)
+    assert created["revision"] == 1
+    assert "updatedAt" in created
+
+    claimed = session_manager.claim_session(session_id)
+    assert claimed["revision"] == 2
+
+    selected = session_manager.select_spot(session_id, "D06")
+    assert selected["revision"] == 3
+
+    parked = session_manager.set_parked(session_id, "D06")
+    assert parked["revision"] == 4
+
+    exited = session_manager.set_exit_navigation(session_id)
+    assert exited["revision"] == 5
+
+
+def test_revision_not_bumped_by_idempotent_actions(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="idem")
+
+    first = session_manager.claim_session(session_id)
+    second = session_manager.claim_session(session_id)
+    assert first["revision"] == second["revision"] == 2
+
+    session_manager.set_parked(session_id, "D06")
+    parked_once = session_manager.get_session(session_id)
+
+    session_manager.set_parked(session_id, "D06")
+    parked_twice = session_manager.get_session(session_id)
+    assert parked_once["revision"] == parked_twice["revision"]
+    assert parked_once["parkedAt"] == parked_twice["parkedAt"]
+
+
+def test_exit_navigation_idempotent_preserves_started_at(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="exit")
+    session_manager.claim_session(session_id)
+    session_manager.select_spot(session_id, "D06")
+    session_manager.set_parked(session_id, "D06")
+
+    first = session_manager.set_exit_navigation(session_id)
+    second = session_manager.set_exit_navigation(session_id)
+
+    assert first["exitStartedAt"] == second["exitStartedAt"]
+    assert first["revision"] == second["revision"]
+    assert first["state"] == "EXIT_NAVIGATION"
+
+
+def test_set_parked_rejected_when_exiting(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="blocked")
+    session_manager.claim_session(session_id)
+    session_manager.select_spot(session_id, "D06")
+    session_manager.set_parked(session_id, "D06")
+    session_manager.set_exit_navigation(session_id)
+
+    try:
+        session_manager.set_parked(session_id, "D06")
+    except session_manager.InvalidSessionState:
+        pass
+    else:
+        raise AssertionError("EXIT_NAVIGATION session must reject set_parked")
+
+    current = session_manager.get_session(session_id)
+    assert current["state"] == "EXIT_NAVIGATION"
+    assert current["parkedSpotId"] == "D06"
+
+
+def test_exit_not_rolled_back_by_repeated_parked_snapshots(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="stable")
+    session_manager.claim_session(session_id)
+    session_manager.select_spot(session_id, "D06")
+    session_manager.set_parked(session_id, "D06")
+    session_manager.set_exit_navigation(session_id)
+
+    for _ in range(5):
+        try:
+            session_manager.set_parked(session_id, "D06")
+        except session_manager.InvalidSessionState:
+            pass
+
+    current = session_manager.get_session(session_id)
+    assert current["state"] == "EXIT_NAVIGATION"
+
+
+def test_parked_at_set_on_first_park_and_stable_on_repeat(monkeypatch, tmp_path):
+    use_temporary_store(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(global_vehicle_id=42, session_id="parkedat")
+    session_manager.claim_session(session_id)
+    session_manager.select_spot(session_id, "D06")
+    session_manager.set_parked(session_id, "D06")
+    first = session_manager.get_session(session_id)["parkedAt"]
+
+    session_manager.set_parked(session_id, "D06")
+    second = session_manager.get_session(session_id)["parkedAt"]
+
+    assert first is not None
+    assert first == second
+

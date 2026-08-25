@@ -2021,22 +2021,47 @@ class CrossCameraManager:
         details["tracklet_sample_pairs"] = appearance_match.sample_pairs
         if appearance_match.support <= 0:
             return None, "appearance_missing", details
-        appearance_limit = (
+        hard_appearance_limit = (
             min(0.45, self.appearance_threshold)
             if target_camera_reference
             else self.appearance_threshold
+        )
+        appearance_limit = hard_appearance_limit
+        details["hard_appearance_limit"] = round(hard_appearance_limit, 3)
+        details["bind_eligible"] = True
+
+        # A geometrically excellent overlap candidate with a cross-view HSV
+        # distance just above the hard gate must remain in the LAPJV matrix.
+        # It is evidence of ambiguity, not permission to bind.  Without this
+        # soft row/column competitor LAPJV can make a wrong hard candidate
+        # appear unique (the M08 frame 691 failure).
+        overlap_soft_limit = max(
+            hard_appearance_limit,
+            min(0.60, self.relaxed_appearance_threshold),
+        )
+        soft_overlap_candidate = (
+            overlap_handoff
+            and appearance_distance > hard_appearance_limit
+            and appearance_distance <= overlap_soft_limit
+            and residual <= self.cross_camera_duplicate_distance
         )
         adaptive_appearance_radius = max(
             self.strong_spatial_distance * 1.25,
             max(1.0, self.match_distance * 0.50),
         )
         adaptive_appearance = (
-            not target_camera_reference
-            and appearance_distance > appearance_limit
+            not overlap_handoff
+            and not target_camera_reference
+            and appearance_distance > hard_appearance_limit
             and residual <= adaptive_appearance_radius
-            and appearance_distance
-            <= self.relaxed_appearance_threshold
+            and appearance_distance <= self.relaxed_appearance_threshold
         )
+        if soft_overlap_candidate:
+            appearance_limit = overlap_soft_limit
+            details["soft_appearance_candidate"] = True
+            details["bind_eligible"] = False
+            details["requires_temporal_evidence"] = True
+            details["appearance_limit"] = round(appearance_limit, 3)
         if adaptive_appearance:
             # Opposing camera viewpoints can move a vehicle's HSV histogram,
             # but an entry within only a few shared-map centimetres is strong
@@ -2067,6 +2092,16 @@ class CrossCameraManager:
             direction_cost = (1.0 - direction) * 0.5
         else:
             direction_cost = 0.20
+        strong_overlap_candidate = (
+            overlap_handoff
+            and appearance_distance <= 0.30
+            and appearance_match.support >= 2
+            and residual <= self.strong_spatial_distance
+        )
+        details["overlap_handoff"] = bool(overlap_handoff)
+        details["strong_overlap_candidate"] = bool(
+            strong_overlap_candidate
+        )
         cost = 0.55 * (residual / self.prediction_radius) + 0.30 * appearance_distance + 0.10 * size_distance + 0.05 * direction_cost
         return (float(cost) if cost <= 0.92 else None), ("score" if cost > 0.92 else "ok"), details
 
@@ -2491,36 +2526,6 @@ class CrossCameraManager:
                             ),
                         )
                         continue
-                evidence_key = (
-                    source_global_id,
-                    cam_id,
-                    int(local_id),
-                )
-                evidence_count = self._advance_consecutive_evidence(
-                    self._handoff_candidate_evidence,
-                    evidence_key,
-                    frame_idx,
-                )
-                details["evidence_frames"] = evidence_count
-                if (
-                    details.get("requires_temporal_evidence")
-                    and evidence_count < 2
-                ):
-                    if (cam_id, local_id) not in self._local_to_global:
-                        deferred_keys.add((cam_id, local_id))
-                    self._event(
-                        "handoff_candidate_deferred",
-                        frame_idx,
-                        self._canonical_id(entry.global_id),
-                        source_camera=entry.source_cam,
-                        target_camera=cam_id,
-                        target_local_id=int(local_id),
-                        evidence_frames=evidence_count,
-                        predicted_distance=details.get("predicted_distance"),
-                        appearance_distance=details.get("appearance_distance"),
-                        appearance_reference=details.get("appearance_reference"),
-                    )
-                    continue
                 costs[row, col] = cost
                 details_by_pair[(row, col)] = details
         _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.92)
@@ -2547,6 +2552,69 @@ class CrossCameraManager:
                 )
                 continue
             source_global_id = self._canonical_id(entry.global_id)
+            evidence_key = (source_global_id, cam_id, int(local_id))
+            # Evidence belongs only to the one-to-one pair selected by LAPJV
+            # after it has a safe assignment margin.  Remove streaks that
+            # share either endpoint so evidence from a previous source or
+            # target can never transfer to the new pair.
+            self._handoff_candidate_evidence = {
+                key: value
+                for key, value in self._handoff_candidate_evidence.items()
+                if (
+                    key == evidence_key
+                    or (
+                        key[0] != evidence_key[0]
+                        and key[1:] != evidence_key[1:]
+                    )
+                )
+            }
+            evidence_count = self._advance_consecutive_evidence(
+                self._handoff_candidate_evidence,
+                evidence_key,
+                frame_idx,
+            )
+            match_details["evidence_frames"] = evidence_count
+            if match_details.get("overlap_handoff"):
+                required_evidence = (
+                    2
+                    if match_details.get("strong_overlap_candidate")
+                    else 3
+                )
+            elif match_details.get("requires_temporal_evidence"):
+                required_evidence = 2
+            else:
+                required_evidence = 1
+            bind_eligible = bool(
+                match_details.get("bind_eligible", True)
+            )
+            if not bind_eligible or evidence_count < required_evidence:
+                if (cam_id, local_id) not in self._local_to_global:
+                    deferred_keys.add((cam_id, local_id))
+                self._event(
+                    "handoff_candidate_deferred",
+                    frame_idx,
+                    source_global_id,
+                    source_camera=entry.source_cam,
+                    target_camera=cam_id,
+                    target_local_id=int(local_id),
+                    evidence_frames=evidence_count,
+                    required_evidence_frames=required_evidence,
+                    predicted_distance=match_details.get(
+                        "predicted_distance"
+                    ),
+                    appearance_distance=match_details.get(
+                        "appearance_distance"
+                    ),
+                    appearance_reference=match_details.get(
+                        "appearance_reference"
+                    ),
+                    reason=(
+                        "soft_appearance_competitor"
+                        if not bind_eligible
+                        else "temporal_probation"
+                    ),
+                )
+                continue
             target_global_id = self._local_to_global.get((cam_id, local_id))
             if target_global_id is not None:
                 target_global_id = self._canonical_id(target_global_id)
@@ -2797,9 +2865,12 @@ class CrossCameraManager:
             appearance_match.distance > self.appearance_threshold
             and distance <= self.strong_spatial_distance
         ):
-            appearance_threshold = max(
+            appearance_threshold = min(
+                0.60,
+                max(
                 appearance_threshold,
                 self.relaxed_appearance_threshold,
+                ),
             )
             adaptive_appearance = True
         size_distance = self._size_distance(
@@ -4929,6 +5000,33 @@ class CrossCameraManager:
             if not accepted:
                 continue
             evidence_key = tuple(sorted((left_key[1], right_key[1])))
+            left_age = int(frame_idx) - int(
+                self._global_created_frames.get(left_key[1], -999999)
+            )
+            right_age = int(frame_idx) - int(
+                self._global_created_frames.get(right_key[1], -999999)
+            )
+            # Proximity reconciliation repairs only the short race in which
+            # one camera allocated a GID just before handoff matured.  Two
+            # established identities are two real vehicles until stronger,
+            # explicit evidence says otherwise; mutual uniqueness in one
+            # overlap frame is not enough to merge them.
+            if left_age > 3 and right_age > 3:
+                self._cross_camera_duplicate_evidence.pop(
+                    evidence_key, None
+                )
+                self._event(
+                    "cross_camera_merge_rejected_established_ids",
+                    frame_idx,
+                    min(evidence_key),
+                    competing_global_id=max(evidence_key),
+                    source_camera=left_key[0],
+                    target_camera=right_key[0],
+                    source_gid_age_frames=left_age,
+                    target_gid_age_frames=right_age,
+                    reason="both_global_ids_established",
+                )
+                continue
             evidence_count = self._advance_consecutive_evidence(
                 self._cross_camera_duplicate_evidence,
                 evidence_key,

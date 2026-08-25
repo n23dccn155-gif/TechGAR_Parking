@@ -1069,7 +1069,7 @@ def make_parser() -> argparse.ArgumentParser:
         default=1,
         help="So lan morphology noi foreground",
     )
-    parser.add_argument("--motion-reacquire-seconds", type=float, default=0.75)
+    parser.add_argument("--motion-reacquire-seconds", type=float, default=1.5)
     parser.add_argument("--motion-lost-appearance-threshold", type=float, default=0.30)
     parser.add_argument("--motion-merged-area-ratio", type=float, default=1.60)
     parser.add_argument(

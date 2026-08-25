@@ -18,6 +18,8 @@ const waitingSession: VehicleSession = {
   claimed: false,
   lastKnownPosition: null,
   createdAt: "2026-08-23T10:00:00+07:00",
+  updatedAt: "2026-08-23T10:00:00+07:00",
+  revision: 1,
   qrExpiresAt: "2026-08-23T10:00:10+07:00",
   claimedAt: null,
   spotSelectedAt: null,

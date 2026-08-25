@@ -61,7 +61,9 @@ class MotionVehicleTracker:
         shadow_max_scaled_residual: float = 0.08,
         shadow_min_explained_fraction: float = 0.75,
         shadow_min_pixels: int = 120,
-        reacquire_max_seconds: float = 0.75,
+        reacquire_max_seconds: float = 1.50,
+        merged_reacquire_max_seconds: float = 3.0,
+        split_assignment_margin: float = 0.08,
         lost_appearance_threshold: float = 0.30,
         min_reacquire_area_ratio: float = 0.35,
         max_reacquire_area_ratio: float = 2.80,
@@ -111,6 +113,13 @@ class MotionVehicleTracker:
         )
         self.shadow_min_pixels = max(20, int(shadow_min_pixels))
         self.reacquire_max_seconds = max(0.05, float(reacquire_max_seconds))
+        self.merged_reacquire_max_seconds = max(
+            self.reacquire_max_seconds,
+            float(merged_reacquire_max_seconds),
+        )
+        self.split_assignment_margin = max(
+            0.0, float(split_assignment_margin)
+        )
         self.lost_appearance_threshold = max(0.0, float(lost_appearance_threshold))
         self.min_reacquire_area_ratio = max(0.01, float(min_reacquire_area_ratio))
         self.max_reacquire_area_ratio = max(
@@ -653,6 +662,49 @@ class MotionVehicleTracker:
     def _predicted_box(self, track: TrackedVehicle, point: Tuple[int, int]) -> Tuple[int, int, int, int]:
         return point[0] - track.w // 2, point[1] - track.h, track.w, track.h
 
+    @staticmethod
+    def _assignment_has_margin(
+        costs: np.ndarray,
+        row: int,
+        col: int,
+        margin: float,
+        invalid_cost: float = 10.0,
+    ) -> bool:
+        """Return whether one assignment clearly beats every competitor."""
+        selected = float(costs[row, col])
+        alternatives = [
+            float(value)
+            for index, value in enumerate(costs[row])
+            if index != col and value < invalid_cost
+        ]
+        alternatives.extend(
+            float(costs[index, col])
+            for index in range(costs.shape[0])
+            if index != row and costs[index, col] < invalid_cost
+        )
+        return not alternatives or min(alternatives) - selected >= margin
+
+    def _has_recent_merged_freeze(self, track: TrackedVehicle) -> bool:
+        timestamp = getattr(track, "last_ambiguous_timestamp_s", None)
+        if (
+            timestamp is not None
+            and self._current_timestamp_s is not None
+        ):
+            return (
+                0.0
+                <= self._current_timestamp_s - float(timestamp)
+                <= self.merged_reacquire_max_seconds
+            )
+        frame = getattr(track, "last_ambiguous_frame", None)
+        if frame is None:
+            return False
+        # Timestamp-less callers are mostly unit tests/legacy video paths.
+        # A conservative 30 FPS conversion keeps the protection bounded.
+        return (
+            0 <= self._frame_idx - int(frame)
+            <= int(round(self.merged_reacquire_max_seconds * 30.0))
+        )
+
     def _assign(self, detections: List[dict]) -> Tuple[List[Tuple[int, int, Tuple[int, int]]], List[int], List[int]]:
         track_ids = list(self._tracks)
         predictions = {}
@@ -667,6 +719,7 @@ class MotionVehicleTracker:
 
         costs = np.full((len(track_ids), len(detections)), 10.0, dtype=np.float64)
         reacquire_eligible_track_ids: set[int] = set()
+        split_margin_track_ids: set[int] = set()
         for row, track_id in enumerate(track_ids):
             track = self._tracks[track_id]
             predicted_point = predictions[track_id]
@@ -680,13 +733,23 @@ class MotionVehicleTracker:
                 and last_seen_timestamp is not None
             ):
                 lost_seconds = max(0.0, self._current_timestamp_s - last_seen_timestamp)
-                if lost_seconds > self.reacquire_max_seconds:
+                reacquire_window = (
+                    self.merged_reacquire_max_seconds
+                    if self._has_recent_merged_freeze(track)
+                    else self.reacquire_max_seconds
+                )
+                if lost_seconds > reacquire_window:
                     self._last_association_events.append({
                         "type": "association_rejected_stale_track",
                         "local_track_id": int(track_id),
                         "lost_seconds": round(lost_seconds, 3),
+                        "reacquire_window_seconds": round(
+                            reacquire_window, 3
+                        ),
                     })
                     continue
+            if invisible > 0 or self._has_recent_merged_freeze(track):
+                split_margin_track_ids.add(track_id)
             reacquire_eligible_track_ids.add(track_id)
             max_distance = self.max_distance * min(
                 1.25,
@@ -814,6 +877,10 @@ class MotionVehicleTracker:
             detection["ambiguous_merged"] = True
             self._ambiguous_detection_ids.add(col)
             self._viable_pairs.update((track_id, col) for track_id in compatible)
+            for track_id in compatible:
+                track = self._tracks[track_id]
+                track.last_ambiguous_frame = int(self._frame_idx)
+                track.last_ambiguous_timestamp_s = self._current_timestamp_s
             for row in range(len(track_ids)):
                 costs[row, col] = 10.0
             self._last_association_events.append({
@@ -829,6 +896,30 @@ class MotionVehicleTracker:
             col = int(row_to_col[row])
             if col < 0:
                 unmatched_tracks.append(track_id)
+            elif (
+                track_id in split_margin_track_ids
+                and not self._assignment_has_margin(
+                    costs,
+                    row,
+                    col,
+                    self.split_assignment_margin,
+                )
+            ):
+                # After a merged/lost interval, near-equal alternatives are
+                # precisely where ID switches happen. Keep both lineages
+                # coasting and suppress a new fragment until the split is
+                # unambiguous instead of accepting LAPJV's arbitrary tie.
+                unmatched_tracks.append(track_id)
+                self._ambiguous_detection_ids.add(col)
+                self._last_association_events.append({
+                    "type": "split_assignment_deferred",
+                    "local_track_id": int(track_id),
+                    "detection_id": int(col),
+                    "selected_cost": round(float(costs[row, col]), 4),
+                    "required_margin": round(
+                        self.split_assignment_margin, 4
+                    ),
+                })
             else:
                 assignments.append((track_id, col, predictions[track_id]))
                 unmatched_detections.discard(col)

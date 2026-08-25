@@ -129,6 +129,8 @@ def _normalize_session(session_id: str, value: dict) -> dict:
         "qrExpiresAt",
         qr_expiry.isoformat(timespec="milliseconds") if qr_expiry is not None else None,
     )
+    session.setdefault("revision", 0)
+    session.setdefault("updatedAt", session.get("createdAt") or now_iso())
     return session
 
 
@@ -228,6 +230,7 @@ def create_session(
             raise SessionError(f"Session ID already exists: {sid}")
         local_track_id = active_track_id if active_track_id is not None else track_id
         created_at = datetime.now(timezone.utc).astimezone()
+        created_iso = created_at.isoformat(timespec="milliseconds")
         sessions[sid] = {
             "sessionId": sid,
             "state": "WAITING_FOR_SCAN",
@@ -239,7 +242,8 @@ def create_session(
             "activeTrackId": local_track_id,
             "claimed": False,
             "lastKnownPosition": None,
-            "createdAt": created_at.isoformat(timespec="milliseconds"),
+            "createdAt": created_iso,
+            "updatedAt": created_iso,
             "qrExpiresAt": (created_at + timedelta(seconds=QR_DISPLAY_SECONDS)).isoformat(
                 timespec="milliseconds"
             ),
@@ -247,6 +251,7 @@ def create_session(
             "spotSelectedAt": None,
             "parkedAt": None,
             "exitStartedAt": None,
+            "revision": 1,
         }
         save_sessions(sessions)
     print(f"[SESSION] Created {sid} for Global ID #{resolved_global_id}")
@@ -259,7 +264,20 @@ def _mutate_session(session_id: str, mutate) -> dict:
         session = sessions.get(str(session_id))
         if session is None:
             raise SessionNotFound(f"Session not found: {session_id}")
+        before = dict(session)
         mutate(session)
+        after = dict(session)
+        changed = any(
+            before.get(key) != after.get(key)
+            for key in set(before) | set(after)
+            if key not in {"updatedAt", "revision"}
+        )
+        if changed:
+            session["revision"] = int(before.get("revision") or 0) + 1
+            session["updatedAt"] = now_iso()
+        else:
+            session["revision"] = int(before.get("revision") or 0)
+            session.setdefault("updatedAt", before.get("updatedAt") or now_iso())
         save_sessions(sessions)
         return dict(session)
 
@@ -301,11 +319,21 @@ def select_spot(session_id: str, spot_id: Optional[str]) -> dict:
 
 def set_parked(session_id: str, parked_spot: str) -> dict:
     def mutate(session: dict) -> None:
+        current_state = session.get("state")
+        if current_state == "EXIT_NAVIGATION":
+            raise InvalidSessionState(
+                "Cannot park session while exiting the facility"
+            )
+        current_spot = session.get("parkedSpotId")
+        if current_state == "PARKED" and current_spot == str(parked_spot):
+            return
+        previous_parked_at = _parse_iso(session.get("parkedAt"))
         session["state"] = "PARKED"
         session["parkedSpotId"] = str(parked_spot)
         session["targetSpotId"] = None
         session["activeTrackId"] = None
-        session["parkedAt"] = session.get("parkedAt") or now_iso()
+        if previous_parked_at is None or current_state != "PARKED" or current_spot != str(parked_spot):
+            session["parkedAt"] = now_iso()
 
     return _mutate_session(session_id, mutate)
 
@@ -333,10 +361,14 @@ def set_exit_navigation(
             raise InvalidSessionState(
                 f"Cannot start exit navigation in state {session.get('state')}"
             )
+        if session.get("state") == "EXIT_NAVIGATION":
+            if new_track_id is not None:
+                session["activeTrackId"] = int(new_track_id)
+            return
         session["state"] = "EXIT_NAVIGATION"
         session["targetSpotId"] = None
         session["activeTrackId"] = new_track_id
-        session["exitStartedAt"] = session.get("exitStartedAt") or now_iso()
+        session["exitStartedAt"] = now_iso()
 
     return _mutate_session(session_id, mutate)
 

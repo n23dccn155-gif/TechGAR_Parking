@@ -25,10 +25,11 @@ import { createWorldToSvg, runtimeVehiclesOnSvg } from "../calibration/worldToSv
 import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
 import type { ActiveVehicle, FrameSize } from "../domain/runtime";
 import type { VehicleSession } from "../domain/session";
+import { buildSessionCompletionKey } from "../domain/session";
 import { BackendApiError, claimSession, getSession, selectSpot, SessionNotFoundError, startExit } from "../api/backendApi";
 
 const NON_EMPTY_STATUSES: ReadonlySet<ParkingStatus> = new Set(["transitioning", "occupied", "unknown"]);
-const OWNERSHIP_GRACE_MS = 2000;
+const PARKING_DWELL_MS = 2000;
 
 interface AppProps {
   sessionId?: string | null;
@@ -41,12 +42,10 @@ export function App({ sessionId }: AppProps = {}) {
   const [sessionEnded, setSessionEnded]     = useState(false);
   const [runtimeState, setRuntimeState]     = useState<"connecting" | "live" | "error">("connecting");
   const [runtimeError, setRuntimeError]     = useState<string | null>(null);
-  const [, setOwnershipCheckTick]           = useState(0);
 
   const sessionTrackIdRef = useRef<number | null>(null);
   const loadedSessionRef = useRef(false);
   const activeVehiclesRef = useRef<ActiveVehicle[]>([]);
-  const unknownTargetRef = useRef<{ spotId: SpotId; since: number } | null>(null);
 
   useEffect(() => {
     activeVehiclesRef.current = activeVehicles;
@@ -338,49 +337,98 @@ export function App({ sessionId }: AppProps = {}) {
   useEffect(() => {
     const activeTargetId = sessionId ? sessionTargetSpot : (mode === "navigation" ? confirmedSpotId : null);
     if (!activeTargetId) {
-      unknownTargetRef.current = null;
+      if (warning) clearWarning();
       return;
     }
 
     const targetSpot = spotsById[activeTargetId as SpotId];
     if (!targetSpot) return;
 
-    const relation = sessionId
-      ? classifySpotOccupancy(targetSpot, targetVehicleId, sessionParkedSpot ?? runtimeParkedSpot)
-      : NON_EMPTY_STATUSES.has(targetSpot.status) ? "other" : "empty";
-
-    if (
-      relation === "empty"
-      || relation === "own"
-      || sessionState === "PARKED"
-      || sessionState === "EXIT_NAVIGATION"
-    ) {
-      unknownTargetRef.current = null;
+    if (sessionState === "EXIT_NAVIGATION" || sessionState === "PARKED") {
       if (warning?.spotId === targetSpot.id) clearWarning();
       return;
     }
 
-    if (relation === "unknown") {
-      const now = Date.now();
-      if (unknownTargetRef.current?.spotId !== targetSpot.id) {
-        unknownTargetRef.current = { spotId: targetSpot.id, since: now };
-      }
-      const elapsed = now - (unknownTargetRef.current?.since ?? now);
-      if (elapsed < OWNERSHIP_GRACE_MS) {
-        const timer = window.setTimeout(
-          () => setOwnershipCheckTick((value) => value + 1),
-          OWNERSHIP_GRACE_MS - elapsed,
-        );
-        return () => window.clearTimeout(timer);
-      }
-    } else {
-      unknownTargetRef.current = null;
+    const relation = sessionId
+      ? classifySpotOccupancy(targetSpot, targetVehicleId, sessionParkedSpot ?? runtimeParkedSpot)
+      : NON_EMPTY_STATUSES.has(targetSpot.status) ? "other" : "empty";
+
+    if (relation === "empty" || relation === "own") {
+      if (warning?.spotId === targetSpot.id) clearWarning();
+      return;
     }
 
-    const warningStatus = relation === "unknown" ? "unknown" : targetSpot.status;
+    if (!sessionId) {
+      if (
+        warning?.spotId === targetSpot.id
+        && warning.status === targetSpot.status
+      ) return;
+      const need: DestinationNeed = activeNeed ?? "services";
+      const alternatives = recommendParkingSpots(spots, need, {
+        calculatedAt: lastEventTime ?? "2026-07-25T08:00:00.000Z",
+      });
+      const alternativeSpotIds = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
+        .filter((candidate): candidate is RankedSpot => Boolean(candidate) && candidate?.spotId !== targetSpot.id)
+        .map((candidate) => candidate.spotId)
+        .slice(0, 3);
+      const alternativeSpotId = alternativeSpotIds[0];
+      showInvalidSpotWarning({
+        spotId: targetSpot.id,
+        status: targetSpot.status as Exclude<ParkingStatus, "empty">,
+        alternativeSpotId,
+        alternativeSpotIds,
+      });
+      return;
+    }
+
+    if (relation === "unknown" && targetSpot.status === "occupied") {
+      if (warning?.spotId === targetSpot.id) clearWarning();
+      return;
+    }
+
+    if (relation === "unknown" && targetSpot.status !== "occupied") {
+      if (
+        warning?.spotId === targetSpot.id
+        && warning.status === targetSpot.status
+      ) return;
+      const need: DestinationNeed = activeNeed ?? "services";
+      const currentVehicle = targetVehicleId === null
+        ? undefined
+        : activeVehicles.find((vehicle) => vehicle.trackId === targetVehicleId);
+      const alternatives = recommendParkingSpots(spots, need, {
+        calculatedAt: lastEventTime ?? "2026-07-25T08:00:00.000Z",
+        startPosition: currentVehicle ? { x: currentVehicle.x, y: currentVehicle.y } : undefined,
+      });
+      const alternativeSpotIds = [alternatives?.best, ...(alternatives?.alternatives ?? [])]
+        .filter((candidate): candidate is RankedSpot => Boolean(candidate) && candidate?.spotId !== targetSpot.id)
+        .map((candidate) => candidate.spotId)
+        .slice(0, 3);
+      const alternativeSpotId = alternativeSpotIds[0];
+      showInvalidSpotWarning({
+        spotId: targetSpot.id,
+        status: targetSpot.status as Exclude<ParkingStatus, "empty">,
+        alternativeSpotId,
+        alternativeSpotIds,
+      });
+      return;
+    }
+
+    if (targetSpot.vehicleId === targetVehicleId) {
+      if (warning?.spotId === targetSpot.id) clearWarning();
+      return;
+    }
+
+    if (
+      targetSpot.trackingState !== "parked"
+      || (targetSpot.stoppedForMs ?? 0) < PARKING_DWELL_MS
+    ) {
+      if (warning?.spotId === targetSpot.id) clearWarning();
+      return;
+    }
+
     if (
       warning?.spotId === targetSpot.id
-      && warning.status === warningStatus
+      && warning.status === "occupied"
     ) return;
 
     const need: DestinationNeed = activeNeed ?? "services";
@@ -397,12 +445,11 @@ export function App({ sessionId }: AppProps = {}) {
       .slice(0, 3);
     const alternativeSpotId = alternativeSpotIds[0];
 
-    const spokenStatus = relation === "unknown" ? "chưa xác định được xe đang chiếm ô" : "đã có xe khác đỗ";
-    voiceManager.speak(`Cảnh báo, ô đỗ ${targetSpot.id} ${spokenStatus}. Vui lòng xác nhận để đổi hướng sang ô ${alternativeSpotId || "khác"}.`, 6000, true);
+    voiceManager.speak(`Cảnh báo, ô đỗ ${targetSpot.id} đã có xe khác đỗ. Vui lòng xác nhận để đổi hướng sang ô ${alternativeSpotId || "khác"}.`, 6000, true);
 
     showInvalidSpotWarning({
       spotId: targetSpot.id,
-      status: warningStatus as Exclude<ParkingStatus, "empty">,
+      status: "occupied",
       alternativeSpotId,
       alternativeSpotIds,
     });
@@ -411,7 +458,8 @@ export function App({ sessionId }: AppProps = {}) {
   const [isRouteDismissed, setIsRouteDismissed] = useState<boolean>(false);
   // isExitGuideActive: true = đang bật "Chỉ lối ra", false = ẩn đường lối ra khi PARKED
   const [isExitGuideActive, setIsExitGuideActive] = useState<boolean>(false);
-  // Hiển thị thông báo "Đỗ xe thành công" trong 5s
+  // Completion keys that have already been shown (session-scoped + sessionStorage for reload safety).
+  const consumedCompletionKeysRef = useRef<Set<string>>(new Set());
   const [showParkedSuccess, setShowParkedSuccess] = useState<boolean>(false);
 
   useEffect(() => {
@@ -436,17 +484,41 @@ export function App({ sessionId }: AppProps = {}) {
   }, [sessionId, sessionState, sessionTargetSpot, confirmedSpotId, mode, warning, confirmSpot, enterBrowse, cancelNavigation]);
 
   useEffect(() => {
-    if (sessionState === "PARKED") {
-      setShowParkedSuccess(true);
-      if (sessionParkedSpot) {
-        voiceManager.speak(`Đã đỗ xe thành công tại ô ${sessionParkedSpot}`, 6000, true);
-      }
-      const timer = setTimeout(() => setShowParkedSuccess(false), 5000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!sessionId || sessionState !== "PARKED" || !sessionInfo) {
       setShowParkedSuccess(false);
+      return;
     }
-  }, [sessionState, sessionParkedSpot]);
+    const completionKey = buildSessionCompletionKey(sessionInfo);
+    if (!completionKey) {
+      setShowParkedSuccess(false);
+      return;
+    }
+    if (consumedCompletionKeysRef.current.has(completionKey)) {
+      return;
+    }
+    const storageKey = `techgar:parkedSuccess:${sessionId}`;
+    try {
+      const stored = window.sessionStorage.getItem(storageKey);
+      if (stored === completionKey) {
+        consumedCompletionKeysRef.current.add(completionKey);
+        return;
+      }
+    } catch {
+      // sessionStorage may be unavailable
+    }
+    consumedCompletionKeysRef.current.add(completionKey);
+    try {
+      window.sessionStorage.setItem(storageKey, completionKey);
+    } catch {
+      // ignore
+    }
+    setShowParkedSuccess(true);
+    if (sessionInfo.parkedSpotId) {
+      voiceManager.speak(`Đã đỗ xe thành công tại ô ${sessionInfo.parkedSpotId}`, 6000, true);
+    }
+    const timer = setTimeout(() => setShowParkedSuccess(false), 5000);
+    return () => clearTimeout(timer);
+  }, [sessionId, sessionState, sessionInfo]);
 
   // Xác định mục tiêu và chế độ dẫn đường
   const { goalSpot, isExitMode } = useMemo(() => {
@@ -636,12 +708,15 @@ export function App({ sessionId }: AppProps = {}) {
   const handleStartExit = useCallback(async () => {
     if (!sessionId) return;
     setIsRouteDismissed(false);
+    setShowParkedSuccess(false);
+    voiceManager.stop();
     cancelNavigation();
     setSessionInfo((prev) => prev ? { ...prev, state: "EXIT_NAVIGATION", targetSpotId: null } : null);
     try {
       setSessionInfo(await startExit(sessionId));
     } catch (error) {
       console.warn("Không thể bắt đầu chỉ đường ra cổng", error);
+      setSessionInfo((prev) => prev ? { ...prev, state: "PARKED" } : null);
     }
   }, [sessionId, cancelNavigation]);
 
@@ -979,7 +1054,7 @@ export function App({ sessionId }: AppProps = {}) {
         <InvalidSpotWarningSheet
           warning={warning}
           onSwitch={(spotId) => void switchAlternative(spotId)}
-          onContinueMap={() => void handleDismissRoute()}
+          onContinueMap={clearWarning}
         />
       )}
       {import.meta.env.DEV && (
