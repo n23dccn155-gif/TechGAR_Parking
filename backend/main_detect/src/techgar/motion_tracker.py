@@ -176,8 +176,12 @@ class MotionVehicleTracker:
         return float(np.hypot(dx, dy))
 
     @staticmethod
-    def _histogram(frame: np.ndarray, box: Tuple[int, int, int, int]) -> np.ndarray:
-        return hsv_histogram(frame, box)
+    def _histogram(
+        frame: np.ndarray,
+        box: Tuple[int, int, int, int],
+        mask: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        return hsv_histogram(frame, box, mask=mask)
 
     def _ground_point(self, point: Tuple[int, int]) -> Optional[Tuple[float, float]]:
         if self.homography is None:
@@ -583,7 +587,7 @@ class MotionVehicleTracker:
                 "area": area,
                 "bbox_area": bbox_area,
                 "motion_fill_ratio": float(motion_pixels) / float(max(1, w * h)),
-                "hist": self._histogram(frame, box),
+                "hist": self._histogram(frame, box, mask=mask),
                 "priority": is_priority,
                 "ambiguous_merged": False,
             })
@@ -834,49 +838,12 @@ class MotionVehicleTracker:
     def _create_or_reid(self, detection: dict) -> None:
         point = detection["point"]
 
-        # ── Bước 0: (Đã chuyển logic khôi phục ID sang two_camera.py để thống nhất quản lý Global ID) ──
-        
-        # ── Bước 1: Re-ID xe đã rời khung (appearance) ──
-        candidate = None
-        best_distance = 0.18
-        for track_id, old in self._exited_tracks.items():
-            if self._frame_idx - old.exited_frame > self.reid_ttl:
-                continue
-            current_appearance_distance = (
-                histogram_distance(old.appearance, detection["hist"])
-                if old.appearance is not None
-                else 0.25
-            )
-            distance = min(
-                current_appearance_distance,
-                compare_tracklets(old, detection["hist"]).distance,
-            )
-            if distance < best_distance:
-                candidate, best_distance = track_id, distance
-        if candidate is not None:
-            track = self._exited_tracks.pop(candidate)
-            track.kalman = self._new_kalman(detection["point"])
-            self._tracks[candidate] = track
-            # A re-entering fragment gets its own origin. Keeping the historic
-            # origin makes direction/displacement tests meaningless after the
-            # bounded display history has been trimmed.
-            track.first_observation_point = point
-            track.first_observation_bbox = detection["box"]
-            track.first_observation_frame = self._frame_idx
-            track.first_observation_timestamp_s = self._current_timestamp_s
-            # Count only detections belonging to this newly visible fragment.
-            # ``total_visible_count`` includes the historic fragment after a
-            # local Re-ID and therefore cannot safely gate creation of a new
-            # Global ID.
-            track.fragment_visible_count = 0
-            track.fragment_area_history = []
-            track.priority_track = bool(detection.get("priority", False))
-            track.priority_observation_count = 0
-            self._apply_detection(track, detection)
-            track.status = TrackStatus.CONFIRMED
-            return
+        # Local IDs are fragment-scoped. Appearance-only reuse of an expired
+        # ID made consecutive detections cycle through unrelated historic
+        # tracks and reset fragment evidence every frame. Global identity
+        # recovery belongs to ``CrossCameraManager``; every new local fragment
+        # therefore receives a fresh monotonically increasing ID.
 
-        # ── Bước 2: Tạo track hoàn toàn mới ──
         track_id = self._next_id
         self._next_id += 1
         box, point = detection["box"], detection["point"]

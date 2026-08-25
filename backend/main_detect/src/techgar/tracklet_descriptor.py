@@ -18,8 +18,16 @@ import numpy as np
 def hsv_histogram(
     frame: np.ndarray,
     box: Tuple[int, int, int, int],
+    mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Return a normalized 2-D HSV histogram for a clipped vehicle crop."""
+    """Return a normalized colour descriptor for a clipped vehicle crop.
+
+    Motion bounding boxes often contain more road than vehicle.  When a
+    foreground mask is available, describe only the observed object pixels so
+    camera-specific asphalt and old motion silhouettes do not dominate Re-ID.
+    Hue/saturation alone cannot distinguish black, grey and white vehicles, so
+    the descriptor also retains LAB chromaticity and luminance distributions.
+    """
     x, y, width, height = box
     frame_height, frame_width = frame.shape[:2]
     left = max(0, min(frame_width, int(x)))
@@ -28,10 +36,36 @@ def hsv_histogram(
     bottom = max(top, min(frame_height, int(y + height)))
     crop = frame[top:bottom, left:right]
     if crop.size == 0:
-        return np.zeros((16, 16), dtype=np.float32)
+        return np.zeros(416, dtype=np.float32)
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    histogram = cv2.calcHist([hsv], [0, 1], None, [16, 16], [0, 180, 0, 256])
-    return cv2.normalize(histogram, histogram).astype(np.float32)
+    lab = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)
+    histogram_mask = None
+    if mask is not None:
+        value = np.asarray(mask)
+        if value.shape[:2] != frame.shape[:2]:
+            raise ValueError("Histogram mask must match frame dimensions")
+        histogram_mask = np.where(
+            value[top:bottom, left:right] > 0, 255, 0
+        ).astype(np.uint8)
+        if cv2.countNonZero(histogram_mask) == 0:
+            histogram_mask = None
+    hue_saturation = cv2.calcHist(
+        [hsv], [0, 1], histogram_mask, [16, 16], [0, 180, 0, 256]
+    )
+    lab_chromaticity = cv2.calcHist(
+        [lab], [1, 2], histogram_mask, [12, 12], [0, 256, 0, 256]
+    )
+    luminance = cv2.calcHist(
+        [lab], [0], histogram_mask, [16], [0, 256]
+    )
+    descriptor = np.concatenate(
+        (
+            0.70 * hue_saturation.reshape(-1),
+            1.20 * lab_chromaticity.reshape(-1),
+            0.60 * luminance.reshape(-1),
+        )
+    ).astype(np.float32)
+    return cv2.normalize(descriptor, descriptor).astype(np.float32)
 
 
 def _normalized_copy(histogram: np.ndarray) -> Optional[np.ndarray]:

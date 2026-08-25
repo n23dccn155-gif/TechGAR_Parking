@@ -662,6 +662,28 @@ class CrossCameraManager:
                 reason="slot_already_reserved",
             )
 
+        parked_ids = set(selected)
+        retained_handoffs = []
+        for entry in self._handoffs:
+            global_id = self._canonical_id(entry.global_id)
+            if global_id not in parked_ids:
+                retained_handoffs.append(entry)
+                continue
+            self._event(
+                "handoff_cancelled_identity_parked",
+                frame_idx,
+                global_id,
+                source_camera=entry.source_cam,
+                target_camera=entry.target_cam,
+                source_local_id=entry.source_local_track_id,
+            )
+        self._handoffs = retained_handoffs
+        self._handoff_candidate_evidence = {
+            key: value
+            for key, value in self._handoff_candidate_evidence.items()
+            if self._canonical_id(key[0]) not in parked_ids
+        }
+
         previously_parked = set(self._parked_reservations)
         for global_id, reservation in selected.items():
             previous = self._parked_reservations.get(global_id)
@@ -1535,13 +1557,10 @@ class CrossCameraManager:
     def _dormant_reid_ready(cls, track, frame_idx: int) -> bool:
         """Require a mature *current fragment* before reviving a dormant GID.
 
-        Motion-track objects can be recycled from the local exited-track
-        gallery.  Their lifetime ``total_visible_count`` and display history
-        then include the old fragment, so neither value alone proves that the
-        newly appeared blob has survived more than one frame.  The tracker
-        resets ``first_observation_frame`` for each fragment; prefer that
-        evidence when available and retain history/count fallbacks for legacy
-        trackers and tests.
+        Local IDs are fragment-scoped, so a newly appeared blob must survive
+        long enough on its own before it can reclaim an old Global ID. Prefer
+        the explicit fragment origin and retain history/count fallbacks for
+        legacy trackers and tests.
         """
         if not cls._is_confirmed(track):
             return False
@@ -1674,6 +1693,18 @@ class CrossCameraManager:
         ratio_w = min(fw, sw) / max(fw, sw, 1)
         ratio_h = min(fh, sh) / max(fh, sh, 1)
         return 1.0 - ratio_w * ratio_h
+
+    @classmethod
+    def _rotation_invariant_size_distance(
+        cls,
+        first: Tuple[int, int],
+        second: Tuple[int, int],
+    ) -> float:
+        """Compare top-down vehicle dimensions without treating a turn as resize."""
+        return cls._size_distance(
+            tuple(sorted(first)),
+            tuple(sorted(second)),
+        )
 
     def _upsert_handoff(
         self,
@@ -2328,6 +2359,18 @@ class CrossCameraManager:
         cancelled_entry_ids = set()
         for entry in self._handoffs:
             if frame_idx - entry.updated_at_frame > self.handoff_ttl:
+                continue
+            canonical_entry_id = self._canonical_id(entry.global_id)
+            if canonical_entry_id in self._parked_reservations:
+                cancelled_entry_ids.add(id(entry))
+                self._event(
+                    "handoff_cancelled_identity_parked",
+                    frame_idx,
+                    canonical_entry_id,
+                    source_camera=entry.source_cam,
+                    target_camera=entry.target_cam,
+                    source_local_id=entry.source_local_track_id,
+                )
                 continue
             if self._has_confirmed_camera_member(
                 entry.global_id, entry.target_cam, all_tracks
@@ -3288,6 +3331,91 @@ class CrossCameraManager:
         )
         return mature_lifetime and strong_camera_galleries >= 2
 
+    def _has_durable_turnaround_proof(
+        self,
+        identity: GlobalIdentityState,
+        cam_id: str,
+        track,
+        appearance_match,
+        size_distance: float,
+        world_distance: float,
+        distance_limit: float,
+    ) -> bool:
+        """Prove a parking-lot turn without trusting the old velocity sign.
+
+        A vehicle can reverse or turn between overlapping cameras. Direction
+        is therefore not a safe veto once the identity has a durable history
+        and a matching gallery from the destination camera. Short identities
+        retain the conservative direction gate so a new vehicle cannot steal
+        an ID from a one-frame fragment.
+        """
+        created_at = self._global_created_frames.get(
+            self._canonical_id(identity.global_id)
+        )
+        if created_at is None:
+            return False
+        lifetime_frames = int(identity.last_seen_frame) - int(created_at)
+        target_gallery = identity.camera_appearance_samples.get(cam_id, ())
+        return bool(
+            lifetime_frames >= 30
+            and len(target_gallery) >= 2
+            and len(appearance_samples(track)) >= 2
+            and appearance_match.support >= 2
+            and appearance_match.distance <= 0.25
+            and size_distance <= 0.65
+            and world_distance <= distance_limit
+        )
+
+    def _has_durable_same_camera_reentry_proof(
+        self,
+        identity: GlobalIdentityState,
+        cam_id: str,
+        track,
+        appearance_match,
+        size_distance: float,
+        elapsed: float,
+        recent_reid_window: float,
+    ) -> bool:
+        """Recognize an established vehicle after an unobserved outside loop.
+
+        Position is not continuous when a vehicle leaves the calibrated map
+        and later returns through the entrance.  In that case only a mature,
+        multi-camera identity with a unique same-view fingerprint may bypass
+        the ordinary spatial gate.  Ambiguous look-alikes still get a new ID.
+        """
+        if (
+            identity.last_camera != cam_id
+            or not self._identity_is_established(identity)
+            or elapsed <= recent_reid_window
+            or len(identity.camera_appearance_samples.get(cam_id, ())) < 2
+            or len(appearance_samples(track)) < 2
+            or appearance_match.support < 2
+            or appearance_match.distance > 0.25
+            or size_distance > 0.65
+        ):
+            return False
+
+        canonical_id = self._canonical_id(identity.global_id)
+        for other in self._identities.values():
+            other_id = self._canonical_id(other.global_id)
+            if (
+                other_id == canonical_id
+                or other_id in self._parked_reservations
+                or other.state in {"parked", "recovery_pending", "exited"}
+            ):
+                continue
+            other_gallery = other.camera_appearance_samples.get(cam_id, ())
+            if len(other_gallery) < 2:
+                continue
+            other_match = compare_tracklets(track, other_gallery)
+            if (
+                other_match.support >= 2
+                and other_match.distance
+                <= float(appearance_match.distance) + 0.08
+            ):
+                return False
+        return True
+
     def _predicted_identity_world(
         self,
         identity: GlobalIdentityState,
@@ -3417,11 +3545,12 @@ class CrossCameraManager:
                 # A motion-mask fragment can restart just beyond the
                 # calibrated radius. Allow only a small same-camera margin
                 # when appearance, size, maturity and a short gap agree.
+                same_camera_reentry_proof = False
                 if same_camera and has_target_camera_history:
                     preliminary_match = compare_tracklets(
                         track, target_camera_gallery
                     )
-                    preliminary_size = self._size_distance(
+                    preliminary_size = self._rotation_invariant_size_distance(
                         (track.w, track.h),
                         identity.camera_bbox_sizes.get(
                             cam_id, identity.bbox_size
@@ -3440,7 +3569,20 @@ class CrossCameraManager:
                         and int(identity.last_seen_frame) - int(created_at)
                         >= 30
                     )
-                    if (
+                    same_camera_reentry_proof = (
+                        self._has_durable_same_camera_reentry_proof(
+                            identity,
+                            cam_id,
+                            track,
+                            preliminary_match,
+                            preliminary_size,
+                            elapsed,
+                            recent_reid_window,
+                        )
+                    )
+                    if same_camera_reentry_proof:
+                        distance_limit = max(distance_limit, distance)
+                    elif (
                         mature_same_camera_identity
                         and preliminary_match.support >= 2
                         and preliminary_match.distance <= 0.20
@@ -3647,15 +3789,39 @@ class CrossCameraManager:
                 if not self._dormant_reid_ready(track, frame_idx):
                     deferred_keys.add((cam_id, local_id))
                     continue
+                turnaround_proof = False
+                trajectory_evidence = None
+                trajectory_ready = False
                 if same_camera:
-                    direction_cost = 0.0
-                    cost = (
-                        0.55 * distance / max(distance_limit, 1.0)
-                        + 0.35 * appearance / max(appearance_threshold, 1e-6)
-                        + 0.10 * size
-                    )
+                    if same_camera_reentry_proof:
+                        cost = (
+                            0.75 * appearance / 0.25
+                            + 0.25 * preliminary_size / 0.65
+                        )
+                    else:
+                        cost = (
+                            0.55 * distance / max(distance_limit, 1.0)
+                            + 0.35
+                            * appearance
+                            / max(appearance_threshold, 1e-6)
+                            + 0.10 * size
+                        )
                 else:
                     direction = self._direction_cosine(cam_id, track, velocity)
+                    turnaround_proof = self._has_durable_turnaround_proof(
+                        identity,
+                        cam_id,
+                        track,
+                        appearance_match,
+                        size,
+                        distance,
+                        distance_limit,
+                    )
+                    if turnaround_proof:
+                        self._direction_reid_claims.pop(
+                            (identity_global_id, str(cam_id), int(local_id)),
+                            None,
+                        )
                     direction_claim_key = (
                         identity_global_id,
                         str(cam_id),
@@ -3664,9 +3830,10 @@ class CrossCameraManager:
                     has_direction_claim = (
                         direction_claim_key in self._direction_reid_claims
                     )
-                    if (
-                        direction is not None and direction < -0.35
-                    ) or has_direction_claim:
+                    if not turnaround_proof and (
+                        (direction is not None and direction < -0.35)
+                        or has_direction_claim
+                    ):
                         action = self._direction_claim_action(
                             identity,
                             cam_id,
@@ -3708,10 +3875,9 @@ class CrossCameraManager:
                         appearance_score=max(0.0, 1.0 - float(appearance)),
                         size_score=max(0.0, 1.0 - float(size)),
                         topology_score=1.0,
-                        # A mildly noisy direction remains a score signal. A
-                        # stable truly opposite trajectory is still a hard
-                        # rejection and never receives an appearance bypass.
-                        min_direction_cosine=-0.35,
+                        min_direction_cosine=(
+                            -1.01 if turnaround_proof else -0.35
+                        ),
                         source_camera=identity.last_camera,
                     )
                     source_trajectory_samples = [
@@ -3728,7 +3894,8 @@ class CrossCameraManager:
                         and len(appearance_samples(track)) >= 2
                     )
                     if (
-                        trajectory_ready
+                        not turnaround_proof
+                        and trajectory_ready
                         and trajectory_evidence.hard_reject_reason is not None
                     ):
                         self._record_dormant_rejection(
@@ -3746,7 +3913,8 @@ class CrossCameraManager:
                         )
                         continue
                     if (
-                        trajectory_ready
+                        not turnaround_proof
+                        and trajectory_ready
                         and trajectory_evidence.score
                         < self.trajectory.match_threshold
                     ):
@@ -3762,7 +3930,15 @@ class CrossCameraManager:
                             trajectory_threshold=self.trajectory.match_threshold,
                         )
                         continue
-                    if trajectory_ready:
+                    if turnaround_proof:
+                        cost = (
+                            0.55 * distance / max(distance_limit, 1.0)
+                            + 0.35
+                            * appearance
+                            / max(appearance_threshold, 1e-6)
+                            + 0.10 * size
+                        )
+                    elif trajectory_ready:
                         cost = 1.0 - float(trajectory_evidence.score)
                     else:
                         direction_cost = (
@@ -3796,6 +3972,8 @@ class CrossCameraManager:
                         if not same_camera and trajectory_ready
                         else None
                     ),
+                    turnaround_proof,
+                    same_camera_reentry_proof,
                 )
 
         _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.95)
@@ -3854,6 +4032,8 @@ class CrossCameraManager:
                 last_position_distance,
                 appearance_reference,
                 trajectory_score,
+                turnaround_proof,
+                same_camera_reentry_proof,
             ) = details_by_pair[(row, col)]
             self._event(
                 "dormant_global_id_recovered", frame_idx, identity.global_id,
@@ -3866,6 +4046,30 @@ class CrossCameraManager:
                 appearance_reference=appearance_reference,
                 trajectory_score=trajectory_score,
             )
+            if turnaround_proof:
+                self._event(
+                    "dormant_turnaround_recovered",
+                    frame_idx,
+                    identity.global_id,
+                    source_camera=previous_camera,
+                    target_camera=cam_id,
+                    target_local_id=int(local_id),
+                    appearance_distance=round(float(appearance), 3),
+                    world_distance=round(float(distance), 3),
+                    tracklet_support=int(tracklet_support),
+                )
+            if same_camera_reentry_proof:
+                self._event(
+                    "dormant_appearance_reentry_recovered",
+                    frame_idx,
+                    identity.global_id,
+                    camera=cam_id,
+                    target_local_id=int(local_id),
+                    appearance_distance=round(float(appearance), 3),
+                    world_distance=round(float(distance), 3),
+                    elapsed=round(float(elapsed), 3),
+                    tracklet_support=int(tracklet_support),
+                )
             if cam_id == previous_camera:
                 # Local fragmentation in the source camera does not mean the
                 # planned cross-camera transfer was cancelled. Move that

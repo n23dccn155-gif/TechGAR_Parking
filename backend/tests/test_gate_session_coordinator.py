@@ -154,6 +154,47 @@ def test_runtime_stop_duration_counts_toward_two_second_confirmation(monkeypatch
     assert session["parkedSpotId"] == "D06"
 
 
+def test_scanned_session_parking_in_a_different_slot_keeps_same_session(
+    monkeypatch, tmp_path
+):
+    gate = coordinator(monkeypatch, tmp_path)
+    session_id = session_manager.create_session(
+        global_vehicle_id=42,
+        runtime_id="runtime-m08",
+        session_id="blue-car-session",
+    )
+    session_manager.claim_session(session_id)
+    session_manager.select_spot(session_id, "D08")
+
+    gate.process_snapshot(snapshot(
+        vehicle(
+            42,
+            5,
+            5,
+            parked_slot_id="D04",
+            observed=False,
+            state="parked",
+        ),
+        runtime_id="runtime-m08",
+        parking_slots=[{
+            "slot_id": "D04",
+            "status": "occupied",
+            "occupied": True,
+            "vehicle_id": 42,
+            "tracking_state": "parked",
+            "stopped_for_ms": 2100,
+        }],
+    ))
+
+    parked = session_manager.find_session_by_global_id(
+        42, runtime_id="runtime-m08"
+    )
+    assert parked["sessionId"] == session_id
+    assert parked["state"] == "PARKED"
+    assert parked["targetSpotId"] is None
+    assert parked["parkedSpotId"] == "D04"
+
+
 def test_wrong_exit_direction_does_not_delete_session(monkeypatch, tmp_path):
     gate = coordinator(monkeypatch, tmp_path)
     session_manager.create_session(global_vehicle_id=42, session_id="still-inside")

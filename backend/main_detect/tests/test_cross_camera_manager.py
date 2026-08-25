@@ -491,6 +491,116 @@ def test_parked_reservation_detaches_local_track_and_blocks_id_theft():
     assert manager.parked_global_ids == set()
 
 
+def test_parked_reservation_cancels_stale_pending_handoff():
+    manager = make_real_two_camera_manager()
+    appearance = one_hot_histogram(0)
+    source = attach_tracklet(
+        DummyTrack(560, 220, h=40, appearance=appearance),
+        appearance,
+        appearance,
+    )
+    assert manager.update_all_tracks(
+        {"cam1": {1: source}}, 1, {"cam1": 0.0}
+    )["cam1"][1] == 1
+    manager._handoffs.append(
+        HandoffEntry(
+            global_id=1,
+            source_cam="cam1",
+            source_local_track_id=1,
+            target_cam="cam2",
+            exit_edge="overlap",
+            last_world=manager._track_world("cam1", source),
+            velocity_world=(0.0, 0.0),
+            bbox_size=(source.w, source.h),
+            appearance=appearance,
+            appearance_samples=(appearance,),
+            target_appearance_samples=(appearance, appearance),
+            created_at_frame=1,
+            updated_at_frame=1,
+        )
+    )
+
+    manager.sync_parked_reservations(
+        [{
+            "global_id": 1,
+            "slot_id": "D04",
+            "camera_id": "cam1",
+            "state": "parked",
+            "bbox": (540, 180, 40, 40),
+        }],
+        2,
+    )
+
+    assert manager.to_json({})["pending_handoffs"] == []
+    target = attach_tracklet(
+        DummyTrack(60, 220, h=80, appearance=appearance),
+        appearance,
+        appearance,
+    )
+    ids = manager.update_all_tracks(
+        {"cam2": {9: target}}, 3, {"cam2": 0.2}
+    )
+    assert ids["cam2"][9] != 1
+
+
+def test_mature_target_view_identity_can_reid_after_parking_lot_turnaround():
+    manager = make_real_two_camera_manager()
+    cam1_view = one_hot_histogram(0)
+    cam2_view = one_hot_histogram(4)
+    cam2_variant = np.zeros((16, 16), dtype=np.float32)
+    cam2_variant.flat[4] = 0.9
+    cam2_variant.flat[5] = 0.1
+    cam2_variant = cv2.normalize(cam2_variant, cam2_variant)
+    old_cam2 = attach_tracklet(
+        DummyTrack(60, 240, h=80, appearance=cam2_view),
+        cam2_view,
+        cam2_variant,
+    )
+    manager.bind_external_id("cam2", 1, 1, 1, source="test")
+    manager.update_all_tracks(
+        {"cam2": {1: old_cam2}}, 1, {"cam2": 0.0}
+    )
+    source = attach_tracklet(
+        DummyTrack(
+            560,
+            220,
+            h=40,
+            history=[(540, 220), (550, 220), (560, 220)],
+            appearance=cam1_view,
+        ),
+        cam1_view,
+        cam1_view,
+        cam1_view,
+    )
+    manager.bind_external_id("cam1", 2, 1, 2, source="test")
+    manager.update_all_tracks(
+        {"cam1": {2: source}}, 31, {"cam1": 0.1}
+    )
+    manager.notify_track_lost("cam1", 2, source, 32, timestamp_s=0.2)
+    manager._handoffs.clear()
+
+    returning = attach_tracklet(
+        DummyTrack(
+            60,
+            240,
+            h=80,
+            history=[(80, 240), (70, 240), (60, 240)],
+            appearance=cam2_view,
+        ),
+        cam2_view,
+        cam2_variant,
+    )
+    ids = manager.update_all_tracks(
+        {"cam2": {9: returning}}, 37, {"cam2": 0.7}
+    )
+
+    assert ids == {"cam2": {9: 1}}
+    assert any(
+        event["type"] == "dormant_turnaround_recovered"
+        for event in manager.to_json({})["recent_events"]
+    )
+
+
 def test_same_camera_motion_echo_keeps_one_global_id_and_map_observation():
     manager = make_manager()
     primary = fast_left_track(250)
@@ -1006,6 +1116,79 @@ def test_strong_same_camera_fragment_recovers_just_outside_base_distance():
     assert ids == {"cam2": {9: 1}}
     assert any(
         event["type"] == "dormant_global_id_recovered"
+        and event["global_id"] == 1
+        for event in manager.to_json({})["recent_events"]
+    )
+
+
+def test_established_identity_reenters_far_away_by_unique_same_view_fingerprint():
+    manager = make_real_two_camera_manager()
+    manager.dormant_match_distance = 35.0
+    appearance = one_hot_histogram(0)
+    variant = np.zeros((16, 16), dtype=np.float32)
+    variant.flat[0] = 0.95
+    variant.flat[1] = 0.05
+    variant = cv2.normalize(variant, variant)
+    cam1 = attach_tracklet(
+        DummyTrack(560, 220, h=40, appearance=appearance),
+        appearance,
+        variant,
+    )
+    assert manager.update_all_tracks(
+        {"cam1": {1: cam1}}, 1, {"cam1": 0.0}
+    ) == {"cam1": {1: 1}}
+    cam2 = attach_tracklet(
+        DummyTrack(60, 220, h=80, appearance=appearance),
+        appearance,
+        variant,
+        appearance,
+    )
+    manager.bind_external_id("cam2", 2, 1, 2, source="test")
+    manager.update_all_tracks(
+        {"cam2": {2: cam2}}, 200, {"cam2": 1.0}
+    )
+    manager.notify_track_lost(
+        "cam2", 2, cam2, 201, timestamp_s=1.1
+    )
+    manager._handoffs.clear()
+    parked_lookalike = attach_tracklet(
+        DummyTrack(300, 220, h=80, appearance=appearance),
+        appearance,
+        variant,
+    )
+    manager.bind_external_id(
+        "cam2", 8, 2, 250, source="test_parked_lookalike"
+    )
+    manager._next_global_id = 3
+    manager.update_all_tracks(
+        {"cam2": {8: parked_lookalike}}, 250, {"cam2": 2.0}
+    )
+    manager.sync_parked_reservations(
+        [{
+            "global_id": 2,
+            "slot_id": "D04",
+            "camera_id": "cam2",
+            "state": "parked",
+        }],
+        251,
+    )
+
+    returning = attach_tracklet(
+        fragment_track(
+            180, 220, 5, origin=(150, 220), w=80, h=42
+        ),
+        appearance,
+        variant,
+        appearance,
+    )
+    returning.appearance = appearance
+    ids = manager.update_all_tracks(
+        {"cam2": {9: returning}}, 350, {"cam2": 50.0}
+    )
+
+    assert ids == {"cam2": {9: 1}}
+    assert any(
+        event["type"] == "dormant_appearance_reentry_recovered"
         and event["global_id"] == 1
         for event in manager.to_json({})["recent_events"]
     )

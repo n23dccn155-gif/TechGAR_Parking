@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from techgar.motion_tracker import MotionVehicleTracker
+from techgar.tracklet_descriptor import histogram_distance
 from techgar.vehicle_tracker import TrackStatus
 
 
@@ -366,6 +367,23 @@ def test_stale_lost_track_cannot_capture_a_new_detection():
     )
 
 
+def test_expired_local_track_id_is_never_reused_by_appearance_only():
+    tracker = MotionVehicleTracker()
+    frame = np.zeros((100, 220, 3), dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    expired = tracker._tracks.pop(1)
+    expired.exited_frame = 1
+    tracker._exited_tracks[1] = expired
+
+    tracker._frame_idx = 100
+    tracker._create_or_reid(_detection(tracker, frame, 160, priority=False))
+
+    assert set(tracker._tracks) == {2}
+    assert tracker._tracks[2].fragment_visible_count == 1
+    assert set(tracker._exited_tracks) == {1}
+
+
 def test_large_detection_covering_two_tracks_is_frozen():
     tracker = MotionVehicleTracker(merged_detection_area_ratio=1.6)
     frame = np.zeros((120, 220, 3), dtype=np.uint8)
@@ -391,6 +409,135 @@ def test_large_detection_covering_two_tracks_is_frozen():
         event["type"] == "merged_detection_frozen"
         for event in tracker.association_events
     )
+
+
+def test_two_close_vehicles_keep_ids_after_merged_contour_splits(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        merged_detection_area_ratio=1.6,
+    )
+    frame = np.zeros((120, 180, 3), dtype=np.uint8)
+    first_appearance = np.zeros(416, dtype=np.float32)
+    first_appearance[10] = 1.0
+    second_appearance = np.zeros(416, dtype=np.float32)
+    second_appearance[300] = 1.0
+
+    def vehicle(x: int, appearance: np.ndarray) -> dict:
+        detection = _detection(tracker, frame, x, priority=False)
+        detection["hist"] = appearance.copy()
+        detection["bbox_area"] = float(
+            detection["box"][2] * detection["box"][3]
+        )
+        return detection
+
+    merged_appearance = cv2.normalize(
+        first_appearance + second_appearance,
+        None,
+    ).astype(np.float32)
+    merged = vehicle(45, merged_appearance)
+    merged["box"] = (45, 16, 90, 35)
+    merged["point"] = tracker._bottom_center(merged["box"])
+    merged["area"] = 2500.0
+    merged["bbox_area"] = 3150.0
+
+    detections = iter([
+        [vehicle(20, first_appearance), vehicle(120, second_appearance)],
+        [vehicle(45, first_appearance), vehicle(95, second_appearance)],
+        [merged],
+        # Reverse input order while the two distinct centre points are close.
+        [vehicle(75, second_appearance), vehicle(65, first_appearance)],
+        # The vehicles have crossed, but their appearance and motion lineage
+        # must remain attached to their original Local IDs.
+        [vehicle(45, second_appearance), vehicle(95, first_appearance)],
+    ])
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+
+    tracker.process_frame(frame, timestamp_s=0.0)
+    tracker.process_frame(frame, timestamp_s=0.1)
+    tracker.process_frame(frame, timestamp_s=0.2)
+    assert any(
+        event["type"] == "merged_detection_frozen"
+        for event in tracker.association_events
+    )
+    tracker.process_frame(frame, timestamp_s=0.3)
+    tracks, _mask, _expired = tracker.process_frame(
+        frame, timestamp_s=0.4
+    )
+
+    assert set(tracks) == {1, 2}
+    assert tracks[1].cx == 109
+    assert tracks[2].cx == 59
+    assert histogram_distance(
+        tracks[1].appearance, first_appearance
+    ) < 0.10
+    assert histogram_distance(
+        tracks[2].appearance, second_appearance
+    ) < 0.10
+
+
+def test_non_overlapping_centres_keep_ids_for_identical_crossing_vehicles(
+    monkeypatch,
+):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+    )
+    frame = np.zeros((120, 180, 3), dtype=np.uint8)
+    same_appearance = np.zeros(416, dtype=np.float32)
+    same_appearance[10] = 1.0
+
+    def vehicle(x: int) -> dict:
+        detection = _detection(tracker, frame, x, priority=False)
+        detection["hist"] = same_appearance.copy()
+        detection["bbox_area"] = float(
+            detection["box"][2] * detection["box"][3]
+        )
+        return detection
+
+    first_path = [20, 35, 50, 65, 80, 95]
+    second_path = [120, 105, 90, 75, 60, 45]
+    assert all(
+        tracker._bottom_center(vehicle(first_x)["box"])
+        != tracker._bottom_center(vehicle(second_x)["box"])
+        for first_x, second_x in zip(first_path, second_path)
+    )
+    detections = iter([
+        (
+            [vehicle(first_x), vehicle(second_x)]
+            if frame_index == 0
+            else [vehicle(second_x), vehicle(first_x)]
+        )
+        for frame_index, (first_x, second_x) in enumerate(
+            zip(first_path, second_path)
+        )
+    ])
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+
+    tracks = None
+    for frame_index in range(len(first_path)):
+        tracks, _mask, _expired = tracker.process_frame(
+            frame, timestamp_s=0.1 * frame_index
+        )
+
+    assert tracks is not None
+    assert set(tracks) == {1, 2}
+    assert tracks[1].cx == 109
+    assert tracks[2].cx == 59
 
 
 def test_oversized_motion_bbox_is_rejected_before_it_can_create_or_expand_track(monkeypatch):
