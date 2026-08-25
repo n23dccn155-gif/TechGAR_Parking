@@ -212,3 +212,74 @@ TechGAR/
             ├── routeEngine.ts          # Thuật toán tìm đường Dijkstra (Inbound/Exit)
             └── voiceGuidance.ts        # Web Speech API Giọng nói Tiếng Việt & Off-route Warning
 ```
+
+
+• Chỉnh từng ô ROI bằng two_camera.py, không chỉnh trong cửa sổ calibrate_map.py.
+
+  Từ thư mục gốc dự án, chạy:
+
+  .\backend\.venv\Scripts\python.exe .\backend\main_detect\two_camera.py `
+    --cam1-url "http://192.168.100.53:4747/video/force/1280x720" `
+    --cam2-url "http://192.168.100.198:4747/video/force/1280x720" `
+    --slots-cam1 "backend\main_detect\config\parking_slots_cam1.json" `
+    --slots-cam2 "backend\main_detect\config\parking_slots_cam2.json" `
+    --calibration "backend\main_detect\config\two_camera.shared_cm_02.json" `
+    --mask-cam1 "backend\main_detect\config\roi_mask_cam1.json" `
+    --mask-cam2 "backend\main_detect\config\roi_mask_cam2.json" `
+    --detector-profile "backend\main_detect\config\two_camera.detector.json" `
+    --output-dir "backend\main_detect\runtime_output_two_camera" `
+    --no-parking-debug
+
+
+ Terminal 1 — backend cam1 + cam2:
+
+   cd "D:\Documents\SCIENTIFIC RESEARCH\Hiệp\TechGAR_Parking"
+
+  .\backend\.venv\Scripts\python.exe .\backend\main_detect\runtime_server.py `
+    --replay-session "backend\main_detect\data" `
+    --slots-cam1 "backend\main_detect\config\parking_slots_cam1.json" `
+    --slots-cam2 "backend\main_detect\config\parking_slots_cam2.json" `
+    --calibration "backend\main_detect\config\two_camera.shared_cm_02.json" `
+    --mask-cam1 "backend\main_detect\config\roi_mask_cam1.json" `
+    --mask-cam2 "backend\main_detect\config\roi_mask_cam2.json" `
+    --detector-profile "backend\main_detect\config\two_camera.detector.json" `
+    --output-dir "backend\main_detect\runtime_replay_data" `
+    --api-port 8001 `
+    --no-display
+
+    ### Terminal 2 — Backend quản lý phiên xe, cổng 8000
+
+   cd "D:\Documents\SCIENTIFIC RESEARCH\Hiệp\TechGAR_Parking"
+
+  .\backend\.venv\Scripts\python.exe .\backend\gate_session_controller.py `
+    --runtime-url "http://127.0.0.1:8001/api/runtime/snapshot" `
+    --gate-config "backend\main_detect\config\gate_zones.json" `
+    --port 8000
+
+
+    ### Terminal 3 — Frontend
+
+  cd "D:\Documents\SCIENTIFIC RESEARCH\Hiệp\TechGAR_Parking\frontend"
+
+  pnpm dev
+
+  ..\..\.venv\Scripts\python.exe .\runtime_server.py `
+  --cam1-url "http://192.168.100.53:4747/video/force/1280x720"  `
+  --cam2-url "http://192.168.100.198:4747/video/force/1280x720" `
+  --slots-cam1 "config\parking_slots_cam1.json" `
+  --slots-cam2 "config\parking_slots_cam2.json" `
+  --calibration "config\two_camera.shared_m_01.json" `
+  --mask-cam1 "config\roi_mask_cam1.json" `
+  --mask-cam2 "config\roi_mask_cam2.json" `
+  --output-dir "experiment_test\output\runtime_shared_vd_07" `
+  --session-dir "experiment_test\output\droidcam_shared_vd_07" `
+  --identity-retention-seconds 60 `
+  --show-motion-trails `
+  --tracklet-max-samples 12 `
+  --tracklet-sample-interval 3 `
+  --global-gallery-max-samples 24 `
+  --api-port 8001 `
+  --no-display
+
+
+ 
