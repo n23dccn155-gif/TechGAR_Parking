@@ -78,6 +78,66 @@ def _normalized_copy(histogram: np.ndarray) -> Optional[np.ndarray]:
     return cv2.normalize(copied, copied).astype(np.float32)
 
 
+def compute_sample_quality(
+    frame: np.ndarray,
+    box: Tuple[int, int, int, int],
+    mask: Optional[np.ndarray] = None,
+    min_area: int = 200,
+    min_foreground_ratio: float = 0.15,
+) -> float:
+    """Compute quality score for an appearance sample.
+
+    Priority 8: Filter low-quality samples before adding to gallery.
+    Returns score between 0 (bad) and 1 (good). Reject if < 0.5.
+
+    Quality factors:
+    - Crop size (too small = unreliable)
+    - Foreground ratio (low = mostly background = noisy)
+    - Aspect ratio sanity check
+    """
+    x, y, width, height = box
+    frame_h, frame_w = frame.shape[:2]
+
+    # Clamp box to frame bounds
+    left = max(0, min(frame_w, int(x)))
+    top = max(0, min(frame_h, int(y)))
+    right = max(left, min(frame_w, int(x + width)))
+    bottom = max(top, min(frame_h, int(y + height)))
+
+    crop_w = right - left
+    crop_h = bottom - top
+    crop_area = crop_w * crop_h
+
+    # Factor 1: Size score (too small = unreliable)
+    if crop_area < min_area:
+        return 0.0
+    size_score = min(1.0, crop_area / 1000.0)  # 1000px^2 = perfect
+
+    # Factor 2: Foreground ratio (if mask available)
+    fg_ratio_score = 1.0
+    if mask is not None:
+        fg_mask = np.asarray(mask)
+        if fg_mask.shape[:2] == frame.shape[:2]:
+            fg_crop = fg_mask[top:bottom, left:right]
+            fg_pixels = cv2.countNonZero(fg_crop)
+            if crop_area > 0:
+                fg_ratio = fg_pixels / crop_area
+                if fg_ratio < min_foreground_ratio:
+                    return 0.0  # Reject: mostly background
+                fg_ratio_score = min(1.0, fg_ratio * 2.0)  # 0.5 ratio = perfect
+
+    # Factor 3: Aspect ratio sanity (vehicles aren't extremely thin/wide)
+    aspect = crop_w / max(1, crop_h)
+    if aspect < 0.3 or aspect > 4.0:
+        aspect_score = 0.5  # Suspicious but not reject
+    else:
+        aspect_score = 1.0
+
+    # Combined score
+    quality = 0.5 * size_score + 0.3 * fg_ratio_score + 0.2 * aspect_score
+    return float(np.clip(quality, 0.0, 1.0))
+
+
 def histogram_distance(left: np.ndarray, right: np.ndarray) -> float:
     """Bhattacharyya distance normalized to the range used by OpenCV."""
     return float(

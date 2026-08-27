@@ -75,13 +75,15 @@ Click phải xóa điểm gần nhất, `R` xóa toàn bộ điểm camera hiệ
   chưa áp ROI; dùng kiểm tra các vạch sơn có chồng khít hay không.
 - `config\shared_map_01\shared_map_active_roi.png`: sau khi áp
   `roi_mask_cam1/2` và vẽ `parking_slots_cam1/2`; đây là vùng tracking sử dụng.
+  Hai ROI quản lý có thể tách rời và được chọn độc lập cho từng camera.
 - `config\shared_map_01\shared_map_preview.png`: bản đồ ROI dạng polygon cũ,
   được giữ để tương thích.
 - Ảnh gốc, ảnh đã đánh dấu và CSV được giữ lại để đối chiếu.
 
 Script mở `shared_map_full_view.png` trước. Bấm phím bất kỳ để chuyển sang
 `shared_map_active_roi.png`, rồi bấm phím bất kỳ lần nữa để đóng. Parking slots
-chỉ là lớp vẽ kiểm tra; overlap runtime vẫn được tính từ `roi_mask_cam1/2`.
+chỉ là lớp vẽ kiểm tra; overlap cross-camera runtime được tính từ phần hai
+khung hình đầy đủ cùng nhìn thấy, không bắt buộc hai ROI quản lý phải giao nhau.
 
 Nếu IP DroidCam thay đổi, vẫn chỉ chạy một lệnh nhưng truyền URL mới:
 

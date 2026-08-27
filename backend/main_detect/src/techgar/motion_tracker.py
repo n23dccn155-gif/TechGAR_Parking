@@ -18,6 +18,7 @@ from lap import lapjv
 from .tracklet_descriptor import (
     AppearanceTracklet,
     compare_tracklets,
+    compute_sample_quality,
     histogram_distance,
     hsv_histogram,
 )
@@ -189,7 +190,16 @@ class MotionVehicleTracker:
         frame: np.ndarray,
         box: Tuple[int, int, int, int],
         mask: Optional[np.ndarray] = None,
-    ) -> np.ndarray:
+    ) -> Optional[np.ndarray]:
+        """Compute appearance histogram with quality filtering.
+
+        Priority 8: Reject low-quality samples (too small, mostly background)
+        to prevent noisy histograms from entering the gallery.
+        """
+        # Quality check before computing histogram
+        quality = compute_sample_quality(frame, box, mask)
+        if quality < 0.5:
+            return None  # Reject low-quality sample
         return hsv_histogram(frame, box, mask=mask)
 
     def _ground_point(self, point: Tuple[int, int]) -> Optional[Tuple[float, float]]:
@@ -590,13 +600,17 @@ class MotionVehicleTracker:
                     })
                     cv2.drawContours(mask, [contour], -1, 0, thickness=cv2.FILLED)
                     continue
+            # Priority 8: Quality filter - skip low-quality detections
+            histogram = self._histogram(frame, box, mask=mask)
+            if histogram is None:
+                continue  # Reject: sample too small or mostly background
             detections.append({
                 "box": box,
                 "point": point,
                 "area": area,
                 "bbox_area": bbox_area,
                 "motion_fill_ratio": float(motion_pixels) / float(max(1, w * h)),
-                "hist": self._histogram(frame, box, mask=mask),
+                "hist": histogram,
                 "priority": is_priority,
                 "ambiguous_merged": False,
             })
@@ -683,6 +697,32 @@ class MotionVehicleTracker:
             if index != row and costs[index, col] < invalid_cost
         )
         return not alternatives or min(alternatives) - selected >= margin
+
+    def _lineage_score(self, track) -> float:
+        """Calculate lineage score based on track history and reliability.
+
+        Priority 5: Use track lineage to adjust split assignment margin.
+        New/unreliable tracks require higher margin to prevent ID switches.
+
+        Returns value between 0 (new/unreliable) and 1 (established/reliable).
+        """
+        # History length score (longer history = more reliable)
+        history_score = min(1.0, len(getattr(track, 'history', [])) / 10.0)
+
+        # Visible count score (more observations = more reliable)
+        visible_count = getattr(track, 'total_visible_count', 0)
+        visible_score = min(1.0, float(visible_count) / 10.0)
+
+        # Fragment visible count score
+        fragment_count = getattr(track, 'fragment_visible_count', 0)
+        fragment_score = min(1.0, float(fragment_count) / 5.0)
+
+        # Age score (frames since creation)
+        age = getattr(track, 'age', 0)
+        age_score = min(1.0, float(age) / 15.0)
+
+        # Average of all scores
+        return (history_score + visible_score + fragment_score + age_score) / 4.0
 
     def _has_recent_merged_freeze(self, track: TrackedVehicle) -> bool:
         timestamp = getattr(track, "last_ambiguous_timestamp_s", None)
@@ -896,30 +936,41 @@ class MotionVehicleTracker:
             col = int(row_to_col[row])
             if col < 0:
                 unmatched_tracks.append(track_id)
-            elif (
-                track_id in split_margin_track_ids
-                and not self._assignment_has_margin(
+            elif track_id in split_margin_track_ids:
+                # Priority 5: Use lineage score to adjust margin requirement.
+                # New/unreliable tracks need higher margin to prevent ID switches.
+                track = self._tracks[track_id]
+                lineage_score = self._lineage_score(track)
+                # Adjust margin: new tracks (low score) require 2x margin,
+                # established tracks (high score) require normal margin.
+                adjusted_margin = self.split_assignment_margin * (2.0 - lineage_score)
+
+                if not self._assignment_has_margin(
                     costs,
                     row,
                     col,
-                    self.split_assignment_margin,
-                )
-            ):
-                # After a merged/lost interval, near-equal alternatives are
-                # precisely where ID switches happen. Keep both lineages
-                # coasting and suppress a new fragment until the split is
-                # unambiguous instead of accepting LAPJV's arbitrary tie.
-                unmatched_tracks.append(track_id)
-                self._ambiguous_detection_ids.add(col)
-                self._last_association_events.append({
-                    "type": "split_assignment_deferred",
-                    "local_track_id": int(track_id),
-                    "detection_id": int(col),
-                    "selected_cost": round(float(costs[row, col]), 4),
-                    "required_margin": round(
-                        self.split_assignment_margin, 4
-                    ),
-                })
+                    adjusted_margin,
+                ):
+                    # After a merged/lost interval, near-equal alternatives are
+                    # precisely where ID switches happen. Keep both lineages
+                    # coasting and suppress a new fragment until the split is
+                    # unambiguous instead of accepting LAPJV's arbitrary tie.
+                    unmatched_tracks.append(track_id)
+                    self._ambiguous_detection_ids.add(col)
+                    # Mark track as recovering to prevent premature GID allocation
+                    track.association_state = "split_recovering"
+                    self._last_association_events.append({
+                        "type": "split_assignment_deferred",
+                        "local_track_id": int(track_id),
+                        "detection_id": int(col),
+                        "selected_cost": round(float(costs[row, col]), 4),
+                        "required_margin": round(adjusted_margin, 4),
+                        "base_margin": round(self.split_assignment_margin, 4),
+                        "lineage_score": round(lineage_score, 3),
+                    })
+                else:
+                    assignments.append((track_id, col, predictions[track_id]))
+                    unmatched_detections.discard(col)
             else:
                 assignments.append((track_id, col, predictions[track_id]))
                 unmatched_detections.discard(col)
@@ -994,6 +1045,29 @@ class MotionVehicleTracker:
 
     def _apply_detection(self, track: TrackedVehicle, detection: dict) -> None:
         point, box = detection["point"], detection["box"]
+
+        # Priority 3: Freeze appearance and bbox size during merged/occluded interval
+        # Khi detection hợp nhất (merged/oversized), không cập nhật appearance, bbox size,
+        # chỉ dùng Kalman prediction. ID duplicate tạm thời ít nguy hiểm hơn ID collision.
+        is_merged_or_ambiguous = bool(detection.get("ambiguous_merged", False))
+
+        if is_merged_or_ambiguous:
+            # Frozen state: chỉ cập nhật timestamp, không update measurement
+            track.last_seen_frame = self._frame_idx
+            track.last_seen_timestamp_s = self._current_timestamp_s
+            track.consecutive_invisible_count = 0
+            track.age += 1
+            # KHÔNG cập nhật: kalman.correct, appearance, bbox, area
+            # Track sẽ coasting dựa trên Kalman prediction
+            self._last_association_events.append({
+                "type": "track_frozen_merged_detection",
+                "local_track_id": int(track.track_id),
+                "frame": int(self._frame_idx),
+                "reason": "merged_or_ambiguous_detection",
+            })
+            return
+
+        # Normal detection: cập nhật đầy đủ
         track.kalman.correct(np.array([[point[0]], [point[1]]], dtype=np.float32))
         track.cx, track.cy, track.bbox, track.area = point[0], point[1], box, float(detection["area"])
         track.age += 1

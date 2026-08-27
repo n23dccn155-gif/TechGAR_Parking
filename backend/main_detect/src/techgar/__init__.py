@@ -5,6 +5,7 @@ from .motion_tracker import MotionVehicleTracker
 from .parking_detector import ParkingDetector
 from .slot_vehicle_binder import SlotVehicleBinder
 from .tracklet_descriptor import AppearanceTracklet
+from .deep_reid_model import DeepReIDExtractor
 
 __all__ = [
     "CrossCameraManager",
@@ -12,4 +13,5 @@ __all__ = [
     "ParkingDetector",
     "SlotVehicleBinder",
     "AppearanceTracklet",
+    "DeepReIDExtractor",
 ]

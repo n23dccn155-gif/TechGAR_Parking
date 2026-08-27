@@ -1353,8 +1353,15 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 custom_masks[cam_id] = data
                 custom_masks[cam_id]["mask"] = mask
 
-        # Override adjacency if custom masks are present
-        if "cam1" in custom_masks and "cam2" in custom_masks:
+        # Legacy masks may define one explicit handoff edge per camera. Newer
+        # masks only describe each camera's independent tracking ROI, so keep
+        # the adjacency from the shared-map calibration in that case.
+        if (
+            "cam1" in custom_masks
+            and "cam2" in custom_masks
+            and custom_masks["cam1"].get("handoff_edge") not in (None, "")
+            and custom_masks["cam2"].get("handoff_edge") not in (None, "")
+        ):
             adjacency = {}  # Clear old adjacency
             # The edge from cam1 to cam2 is defined by the user
             adjacency[("cam1", str(custom_masks["cam1"]["handoff_edge"]))] = "cam2"

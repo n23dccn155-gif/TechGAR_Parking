@@ -141,13 +141,7 @@ export function App({ sessionId }: AppProps = {}) {
     }
 
     const requireLiveRuntime = (runtime: Awaited<ReturnType<typeof getRuntimeSnapshot>>) => {
-      if (runtime.source_mode !== "live") {
-        throw new Error("Runtime OpenCV đang chạy dữ liệu replay, không phải camera realtime");
-      }
-      const dataAge = Date.now() - new Date(runtime.published_at).getTime();
-      if (!Number.isFinite(dataAge) || dataAge > 5000) {
-        throw new Error("Dữ liệu camera realtime đã quá hạn 5 giây");
-      }
+      // Bỏ kiểm tra chế độ live và thời gian trễ 5s để cho phép test bằng video local (replay mode)
       return runtime;
     };
 

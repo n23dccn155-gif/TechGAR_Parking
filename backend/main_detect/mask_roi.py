@@ -77,68 +77,26 @@ def get_frame(url):
         raise RuntimeError(f"Cannot read frame from {url}")
     return frame
 
-def load_transform(calibration_path):
-    with open(calibration_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return np.array(data["camera_transforms"]["cam2"], dtype=np.float32)
-
 def run_app(args):
     print("Reading frames from cameras...")
     cam1_frame = get_frame(args.cam1_url)
     cam2_frame = get_frame(args.cam2_url)
-    
-    # Cam 1: 4 points
+
+    print("\nSelect 4 ROI points for CAM 1.")
     builder1 = MaskROIBuilder("CAM 1", cam1_frame, target_points=4)
     points1 = builder1.run()
-    
-    print("\n--- Handoff Configuration ---")
-    edge1 = -1
-    while edge1 < 1 or edge1 > 4:
-        try:
-            edge1 = int(input("Enter handoff Edge number for CAM 1 (1-4): "))
-        except ValueError:
-            pass
-            
-    # Project edge points to cam2
-    p1_idx = edge1 - 1
-    p2_idx = (edge1) % 4
-    # Wait, the outward normal in cam1 points outward. If we project p2 -> p1 (reversed order), 
-    # it becomes p1 -> p2 in cam2, so its outward normal in cam2 points properly away from cam1?
-    # To keep polygon clockwise/consistent, let's reverse the order of points for cam2
-    pt1 = points1[p2_idx] # reverse order so it's a shared edge with consistent winding
-    pt2 = points1[p1_idx]
-    
-    transform_cam2_to_cam1 = load_transform(args.calibration)
-    # To project cam1 -> cam2, we need inverse
-    transform_cam1_to_cam2 = np.linalg.inv(transform_cam2_to_cam1)
-    
-    pts_cam1 = np.array([[[float(pt1[0]), float(pt1[1])], [float(pt2[0]), float(pt2[1])]]], dtype=np.float32)
-    pts_cam2 = cv2.perspectiveTransform(pts_cam1, transform_cam1_to_cam2)[0]
-    
-    proj_pt1 = (int(round(pts_cam2[0][0])), int(round(pts_cam2[0][1])))
-    proj_pt2 = (int(round(pts_cam2[1][0])), int(round(pts_cam2[1][1])))
-    
-    # Cam 2: starts with 2 projected points, user clicks 2 more
-    print("\nProjected edge onto CAM 2 (Cyan Line). Please click 2 more points to complete the CAM 2 mask.")
-    builder2 = MaskROIBuilder("CAM 2", cam2_frame, initial_points=[proj_pt1, proj_pt2], target_points=4)
-    points2 = builder2.run()
-    
-    # In Cam 2, the handoff edge is exactly the first 2 points we injected!
-    # So edge2 is always 1 (from P1 to P2)
-    edge2 = 1
 
-    # Save to JSON
+    print("\nSelect 4 ROI points for CAM 2.")
+    builder2 = MaskROIBuilder("CAM 2", cam2_frame, target_points=4)
+    points2 = builder2.run()
+
     cam1_data = {
         "polygon": [{"x": p[0], "y": p[1]} for p in points1],
-        "handoff_edge": edge1,
-        "handoff_target": "cam2",
         "image_size": [cam1_frame.shape[1], cam1_frame.shape[0]]
     }
-    
+
     cam2_data = {
         "polygon": [{"x": p[0], "y": p[1]} for p in points2],
-        "handoff_edge": edge2,
-        "handoff_target": "cam1",
         "image_size": [cam2_frame.shape[1], cam2_frame.shape[0]]
     }
     
@@ -156,7 +114,6 @@ def make_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cam1-url", required=True)
     parser.add_argument("--cam2-url", required=True)
-    parser.add_argument("--calibration", required=True)
     parser.add_argument("--save-mask-cam1", required=True)
     parser.add_argument("--save-mask-cam2", required=True)
     return parser

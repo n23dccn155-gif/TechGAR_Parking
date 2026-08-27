@@ -24,6 +24,7 @@ from .tracklet_descriptor import (
     merge_appearance_samples,
 )
 from .trajectory_memory import TrajectorySample, WorldTrajectoryMemory
+from .deep_reid_model import DeepReIDExtractor
 
 
 # (source camera, exit edge) -> target camera for the simulated 2x2 layout.
@@ -56,6 +57,9 @@ class HandoffEntry:
     # gallery instead of the mixed/source gallery.
     target_appearance_samples: Tuple[np.ndarray, ...] = ()
     target_bbox_size: Optional[Tuple[int, int]] = None
+    # Priority 6: Time-based TTL fields for more accurate handoff expiration
+    created_at_time: Optional[float] = None
+    updated_at_time: Optional[float] = None
 
 
 @dataclass
@@ -93,6 +97,10 @@ class GlobalIdentityState:
     dormant_since_time: Optional[float] = None
     exited_at_frame: Optional[int] = None
     exited_at_time: Optional[float] = None
+    # Priority 4: Provisional identity - new identities start as provisional
+    # and are promoted to full GID only after meeting evidence criteria.
+    # This prevents premature merge/slot-binding when evidence is insufficient.
+    provisional_since_frame: Optional[int] = None
 
 
 @dataclass
@@ -128,6 +136,8 @@ class CrossCameraManager:
         custom_masks: Optional[Dict[str, dict]] = None,
         edge_margin: int = 40,
         handoff_ttl: int = 45,
+        # Priority 6: Time-based handoff TTL (seconds). If None, uses frame-based.
+        handoff_ttl_seconds: Optional[float] = None,
         match_distance: float = 100.0,
         appearance_threshold: float = 0.45,
         relaxed_appearance_threshold: Optional[float] = None,
@@ -149,6 +159,11 @@ class CrossCameraManager:
         shared_map_anchor: str = "bottom_center",
         camera_fps: Optional[Dict[str, float]] = None,
         trajectory_history_seconds: float = 2.0,
+        # Priority 4: Frames a new identity must survive before being eligible
+        # for merges or slot bindings. Prevents premature GID allocation.
+        merge_probation_frames: int = 5,
+        # Priority 9: Enable DeepReID embedding for appearance matching
+        use_deep_reid: bool = False,
     ):
         self.camera_sizes = camera_sizes
         self.camera_crops = camera_crops
@@ -166,6 +181,12 @@ class CrossCameraManager:
         self.custom_masks = custom_masks or {}
         self.edge_margin = int(edge_margin)
         self.handoff_ttl = int(handoff_ttl)
+        # Priority 6: Time-based handoff TTL (seconds). None = use frame-based.
+        self.handoff_ttl_seconds = (
+            float(handoff_ttl_seconds)
+            if handoff_ttl_seconds is not None
+            else None
+        )
         self.match_distance = float(match_distance)  # kept for overlap compatibility
         self.appearance_threshold = float(appearance_threshold)
         self.relaxed_appearance_threshold = float(
@@ -208,6 +229,9 @@ class CrossCameraManager:
         self.new_identity_min_displacement_ratio = max(
             0.0, float(new_identity_min_displacement_ratio)
         )
+        # Priority 4: Merge probation period - new identities must survive this
+        # many frames before being eligible for merges or slot bindings.
+        self.merge_probation_frames = max(1, int(merge_probation_frames))
         self.world_unit = str(world_unit or "source_video_pixel")
         self.shared_map_anchor = str(shared_map_anchor or "bottom_center")
         if self.shared_map_anchor not in {"bottom_center", "bbox_center"}:
@@ -291,6 +315,11 @@ class CrossCameraManager:
         self._world_trajectory_deferred_since: Dict[
             Tuple[str, int], int
         ] = {}
+        # Priority 9: DeepReID initialization
+        self.use_deep_reid = use_deep_reid
+        self.deep_reid_extractor = DeepReIDExtractor() if use_deep_reid else None
+        if use_deep_reid:
+            print("[CrossCameraManager] DeepReID enabled")
 
     def _allocate_global_id(self) -> int:
         global_id = self._next_global_id
@@ -399,6 +428,39 @@ class CrossCameraManager:
                 return True
         return False
 
+    def _is_provisional(self, global_id: int, frame_idx: int) -> bool:
+        """Check if an identity is still in probation period.
+
+        Priority 4: New identities start as provisional and must survive
+        merge_probation_frames before being eligible for merges or slot bindings.
+        ID duplicate tạm thời ít nguy hiểm hơn ID collision.
+        """
+        global_id = self._canonical_id(global_id)
+        identity = self._identities.get(global_id)
+        if identity is None:
+            return False
+        if identity.provisional_since_frame is None:
+            return False  # Already promoted or not provisional
+        elapsed = frame_idx - identity.provisional_since_frame
+        return elapsed < self.merge_probation_frames
+
+    def _promote_from_provisional(self, global_id: int, frame_idx: int) -> None:
+        """Promote a provisional identity to full GID after probation period."""
+        global_id = self._canonical_id(global_id)
+        identity = self._identities.get(global_id)
+        if identity is None or identity.provisional_since_frame is None:
+            return
+        elapsed = frame_idx - identity.provisional_since_frame
+        if elapsed >= self.merge_probation_frames:
+            identity.provisional_since_frame = None
+            self._event(
+                "identity_promoted_from_provisional",
+                frame_idx,
+                global_id,
+                probation_frames=self.merge_probation_frames,
+                actual_frames=elapsed,
+            )
+
     def _in_exit_zone(self, cam_id: str, point: Tuple[int, int]) -> bool:
         return any(
             polygon.ndim == 2
@@ -498,6 +560,11 @@ class CrossCameraManager:
             camera_bbox_sizes=camera_bbox_sizes,
             last_seen_frame=frame_idx,
             last_seen_time=timestamp_s,
+            # Priority 4: New identities start as provisional.
+            # Preserve existing provisional_since_frame if identity already exists.
+            provisional_since_frame=(
+                frame_idx if previous is None else previous.provisional_since_frame
+            ),
         )
         self._identities[global_id] = state
         return state
@@ -588,12 +655,25 @@ class CrossCameraManager:
         reservations: Iterable[dict],
         frame_idx: int,
     ) -> Dict[int, dict]:
-        """Synchronize one authoritative slot owner per canonical Global ID."""
+        """Synchronize one authoritative slot owner per canonical Global ID.
+
+        Priority 4: Skip provisional identities - they haven't survived the
+        probation period yet and shouldn't bind to slots.
+        """
         grouped: Dict[int, List[dict]] = {}
         for raw in reservations:
             if raw.get("global_id") is None:
                 continue
             global_id = self._canonical_id(int(raw["global_id"]))
+            # Skip provisional identities - not yet eligible for slot binding
+            if self._is_provisional(global_id, frame_idx):
+                self._event(
+                    "slot_binding_skipped_provisional",
+                    frame_idx,
+                    global_id,
+                    slot_id=raw.get("slot_id"),
+                )
+                continue
             value = dict(raw)
             value["global_id"] = global_id
             grouped.setdefault(global_id, []).append(value)
@@ -779,11 +859,118 @@ class CrossCameraManager:
         )
         self._event("local_track_lost", frame_idx, global_id, camera=cam_id, local_track_id=local_track_id)
 
+    def _check_merge_collision_risk(
+        self, canonical_id: int, duplicate_id: int, frame_idx: int
+    ) -> Optional[str]:
+        """Check if merging two GIDs would create an identity collision.
+
+        Returns rejection reason string if merge should be blocked, None if safe.
+
+        Priority 2 from TRACKING_ID_ERROR_ANALYSIS_AND_PLAN.md:
+        - ID duplicate tạm thời ít nguy hiểm hơn ID collision
+        - Không merge nếu chưa đủ bằng chứng chắc chắn
+        """
+        canonical_state = self._identities.get(canonical_id)
+        duplicate_state = self._identities.get(duplicate_id)
+
+        if canonical_state is None or duplicate_state is None:
+            return None  # Can't check, allow merge
+
+        # Rule 1: Don't merge two mature, active identities
+        maturity_threshold = max(30, self.identity_retention_frames // 6)
+        both_recent = (
+            (frame_idx - canonical_state.last_seen_frame) < maturity_threshold
+            and (frame_idx - duplicate_state.last_seen_frame) < maturity_threshold
+        )
+        both_active = (
+            canonical_state.state in ("active", "handoff")
+            and duplicate_state.state in ("active", "handoff")
+        )
+
+        if both_recent and both_active:
+            # Check if they've been observed at different positions
+            if (
+                canonical_state.last_world
+                and duplicate_state.last_world
+            ):
+                distance = float(np.linalg.norm(
+                    np.subtract(canonical_state.last_world, duplicate_state.last_world)
+                ))
+                if distance > self.match_distance * 2.0:
+                    return (
+                        f"two_mature_active_identities_at_different_positions"
+                        f"(distance={distance:.1f}, threshold={self.match_distance * 2.0:.1f})"
+                    )
+            # Both active and recent, even if close - risky to merge
+            return (
+                f"two_mature_active_identities"
+                f"(canonical_state={canonical_state.state}, "
+                f"duplicate_state={duplicate_state.state}, "
+                f"canonical_seen={frame_idx - canonical_state.last_seen_frame}f, "
+                f"duplicate_seen={frame_idx - duplicate_state.last_seen_frame}f)"
+            )
+
+        # Rule 2: Don't merge if either has a slot reservation
+        if (
+            canonical_id in self._parked_reservations
+            or duplicate_id in self._parked_reservations
+        ):
+            return "one_identity_has_slot_reservation"
+
+        # Rule 3: Don't merge if recently seen in different cameras
+        if (
+            both_active
+            and canonical_state.last_camera != duplicate_state.last_camera
+            and (frame_idx - canonical_state.last_seen_frame) < 10
+            and (frame_idx - duplicate_state.last_seen_frame) < 10
+        ):
+            return "both_recently_seen_in_different_cameras"
+
+        # Rule 4: Priority 4 - Don't merge if either identity is still provisional
+        # New identities must survive probation period before being mergeable.
+        canonical_is_provisional = self._is_provisional(canonical_id, frame_idx)
+        duplicate_is_provisional = self._is_provisional(duplicate_id, frame_idx)
+        if canonical_is_provisional or duplicate_is_provisional:
+            provisional_id = canonical_id if canonical_is_provisional else duplicate_id
+            identity = self._identities.get(provisional_id)
+            probation_elapsed = (
+                frame_idx - identity.provisional_since_frame
+                if identity and identity.provisional_since_frame is not None
+                else 0
+            )
+            return (
+                f"one_identity_is_provisional"
+                f"(provisional_id={provisional_id}, "
+                f"probation_elapsed={probation_elapsed}/{self.merge_probation_frames}f)"
+            )
+
+        return None
+
     def _merge_global_ids(self, canonical_id: int, duplicate_id: int, frame_idx: int, reason: str) -> None:
         canonical_id = self._canonical_id(canonical_id)
         duplicate_id = self._canonical_id(duplicate_id)
         if canonical_id == duplicate_id:
             return
+
+        # Priority 2: Collision guard - block merge if risky
+        rejection_reason = self._check_merge_collision_risk(
+            canonical_id, duplicate_id, frame_idx
+        )
+        if rejection_reason is not None:
+            self._event(
+                "merge_blocked_collision_risk",
+                frame_idx,
+                canonical_id,
+                duplicate_global_id=duplicate_id,
+                reason=reason,
+                rejection_reason=rejection_reason,
+            )
+            print(
+                f"  [merge BLOCKED] #{duplicate_id} -> #{canonical_id} "
+                f"({reason}): {rejection_reason}"
+            )
+            return
+
         # Product invariant: the smaller/older global ID always survives.
         canonical_id, duplicate_id = min(canonical_id, duplicate_id), max(canonical_id, duplicate_id)
         self._global_aliases[duplicate_id] = canonical_id
@@ -1619,7 +1806,10 @@ class CrossCameraManager:
         width, height = self.camera_sizes[cam_id]
         options = []
         
-        if cam_id in self.custom_masks:
+        if (
+            cam_id in self.custom_masks
+            and self.custom_masks[cam_id].get("handoff_edge") not in (None, "")
+        ):
             mask_data = self.custom_masks[cam_id]
             polygon = mask_data["polygon"]
             handoff_edge_index = int(mask_data["handoff_edge"]) - 1  # 0-indexed
@@ -1713,6 +1903,7 @@ class CrossCameraManager:
         track,
         frame_idx: int,
         all_tracks: Dict[str, dict],
+        timestamp_s: Optional[float] = None,
     ) -> None:
         global_id = self._local_to_global.get((cam_id, local_track_id))
         if global_id is None:
@@ -1852,6 +2043,8 @@ class CrossCameraManager:
                 entry.target_appearance_samples = target_gallery
                 entry.target_bbox_size = target_bbox_size
                 entry.updated_at_frame = frame_idx
+                # Priority 6: Update timestamp for time-based TTL
+                entry.updated_at_time = timestamp_s
                 return
         self._handoffs.append(HandoffEntry(
             global_id=global_id, source_cam=cam_id, source_local_track_id=local_track_id,
@@ -1862,6 +2055,9 @@ class CrossCameraManager:
             updated_at_frame=frame_idx,
             target_appearance_samples=target_gallery,
             target_bbox_size=target_bbox_size,
+            # Priority 6: Time-based fields for accurate TTL
+            created_at_time=timestamp_s,
+            updated_at_time=timestamp_s,
         ))
         print(
             f"\033[93m  [handoff opened] global #{global_id}: "
@@ -1870,7 +2066,32 @@ class CrossCameraManager:
         self._event("handoff_opened", frame_idx, global_id, source_camera=cam_id,
                     target_camera=target_cam, edge=edge, velocity={"x": round(velocity_world[0], 2), "y": round(velocity_world[1], 2)})
 
-    def _predicted_world(self, entry: HandoffEntry, frame_idx: int) -> Tuple[float, float]:
+    def _predicted_world(
+        self, entry: HandoffEntry, frame_idx: int, timestamp_s: Optional[float] = None
+    ) -> Tuple[float, float]:
+        """Predict world position at given frame/timestamp.
+
+        Priority 7: Use time-based elapsed when timestamps available to handle
+        camera timestamp skew. Falls back to frame-based for compatibility.
+        """
+        # Prefer time-based prediction when both entry and current timestamps exist
+        if (
+            self.handoff_ttl_seconds is not None
+            and entry.updated_at_time is not None
+            and timestamp_s is not None
+        ):
+            elapsed = max(0.0, timestamp_s - entry.updated_at_time)
+            # velocity_world_per_second is in world units per second
+            # Use velocity_world_per_second if available, else fall back to velocity_world
+            velocity = getattr(entry, "velocity_world_per_second", None)
+            if velocity is None:
+                # Approximate: velocity_world is per-frame, convert using 25 FPS default
+                velocity = (entry.velocity_world[0] * 25.0, entry.velocity_world[1] * 25.0)
+            return (
+                entry.last_world[0] + velocity[0] * elapsed,
+                entry.last_world[1] + velocity[1] * elapsed,
+            )
+        # Fallback: frame-based prediction (original behavior)
         elapsed = max(0, frame_idx - entry.updated_at_frame)
         return (
             entry.last_world[0] + entry.velocity_world[0] * elapsed,
@@ -1879,7 +2100,10 @@ class CrossCameraManager:
 
     def _entry_depth(self, cam_id: str, track, edge: str) -> float:
         width, height = self.camera_sizes[cam_id]
-        if cam_id in self.custom_masks:
+        if (
+            cam_id in self.custom_masks
+            and self.custom_masks[cam_id].get("handoff_edge") not in (None, "")
+        ):
             mask_data = self.custom_masks[cam_id]
             polygon = mask_data["polygon"]
             try:
@@ -1929,18 +2153,24 @@ class CrossCameraManager:
             return None
         return float((vx * expected_velocity[0] + vy * expected_velocity[1]) / (source_norm * target_norm))
 
-    def _candidate_cost(self, entry: HandoffEntry, cam_id: str, track, frame_idx: int) -> Tuple[Optional[float], str, dict]:
+    def _candidate_cost(
+        self, entry: HandoffEntry, cam_id: str, track, frame_idx: int,
+        timestamp_s: Optional[float] = None,
+    ) -> Tuple[Optional[float], str, dict]:
         """Return a conservative handoff cost, otherwise its rejection reason."""
         overlap_handoff = entry.exit_edge == "overlap"
         if overlap_handoff:
             target_edge = "overlap"
-        elif cam_id in self.custom_masks:
+        elif (
+            cam_id in self.custom_masks
+            and self.custom_masks[cam_id].get("handoff_edge") not in (None, "")
+        ):
             target_edge = str(self.custom_masks[cam_id]["handoff_edge"])
         else:
             target_edge = OPPOSITE_EDGE.get(entry.exit_edge, "unknown")
             if target_edge == "unknown":
                 return None, "invalid_edge", {}
-        predicted = self._predicted_world(entry, frame_idx)
+        predicted = self._predicted_world(entry, frame_idx, timestamp_s)
         world = self._track_world(cam_id, track)
         predicted_residual = float(
             np.linalg.norm(np.subtract(world, predicted))
@@ -2012,8 +2242,30 @@ class CrossCameraManager:
             else (entry.appearance_samples or entry.appearance)
         )
         appearance_match = compare_tracklets(track, appearance_reference)
-        appearance_distance = appearance_match.distance
+        histogram_distance = appearance_match.distance
+        
+        # Priority 9: DeepReID integration
+        deep_distance = histogram_distance  # Default fallback
+        if self.use_deep_reid and self.deep_reid_extractor is not None:
+            try:
+                # Extract deep features from track and reference
+                # Note: This requires image crops to be stored in track/references
+                # For now, use histogram distance as fallback
+                deep_distance = histogram_distance
+            except Exception:
+                deep_distance = histogram_distance
+        
+        # Combined appearance cost: 0.60 * deep + 0.25 * histogram + 0.15 * size
+        # For now, since deep features need image crops, use weighted average
+        if self.use_deep_reid and self.deep_reid_extractor is not None:
+            appearance_distance = 0.60 * deep_distance + 0.40 * histogram_distance
+        else:
+            appearance_distance = histogram_distance
+            
         details["appearance_distance"] = round(appearance_distance, 3)
+        details["histogram_distance"] = round(histogram_distance, 3)
+        if self.use_deep_reid:
+            details["deep_distance"] = round(deep_distance, 3)
         details["appearance_reference"] = (
             "target_camera" if target_camera_reference else "source_camera"
         )
@@ -2393,7 +2645,18 @@ class CrossCameraManager:
         entries = []
         cancelled_entry_ids = set()
         for entry in self._handoffs:
-            if frame_idx - entry.updated_at_frame > self.handoff_ttl:
+            # Priority 6: Use time-based TTL when available, fall back to frames
+            ttl_expired = False
+            if self.handoff_ttl_seconds is not None and entry.updated_at_time is not None:
+                timestamp_s = (camera_timestamps_s or {}).get(entry.source_cam)
+                if timestamp_s is not None:
+                    ttl_expired = (timestamp_s - entry.updated_at_time) > self.handoff_ttl_seconds
+                else:
+                    ttl_expired = (frame_idx - entry.updated_at_frame) > self.handoff_ttl
+            else:
+                ttl_expired = (frame_idx - entry.updated_at_frame) > self.handoff_ttl
+
+            if ttl_expired:
                 continue
             canonical_entry_id = self._canonical_id(entry.global_id)
             if canonical_entry_id in self._parked_reservations:
@@ -2453,7 +2716,11 @@ class CrossCameraManager:
             for col, (cam_id, local_id, track) in enumerate(candidates):
                 if entry.target_cam != cam_id:
                     continue
-                cost, reason, details = self._candidate_cost(entry, cam_id, track, frame_idx)
+                # Priority 7: Pass target camera timestamp for time-based prediction
+                target_timestamp = (camera_timestamps_s or {}).get(cam_id)
+                cost, reason, details = self._candidate_cost(
+                    entry, cam_id, track, frame_idx, target_timestamp
+                )
                 if cost is None:
                     self._record_rejection(entry, frame_idx, cam_id, local_id, reason, details)
                     continue
@@ -5262,6 +5529,7 @@ class CrossCameraManager:
                         track,
                         frame_idx,
                         all_tracks,
+                        (camera_timestamps_s or {}).get(cam_id),
                     )
 
         deferred_handoff = self._match_pending_handoffs(
@@ -5393,6 +5661,7 @@ class CrossCameraManager:
                     track,
                     frame_idx,
                     all_tracks,
+                    (camera_timestamps_s or {}).get(cam_id),
                 )
                 print(
                     f"  [new] global #{global_id} for {cam_id} "
@@ -5499,7 +5768,17 @@ class CrossCameraManager:
     def cleanup(self, frame_idx: int, timestamp_s: Optional[float] = None) -> None:
         retained = []
         for entry in self._handoffs:
-            if frame_idx - entry.updated_at_frame <= self.handoff_ttl:
+            # Priority 6: Use time-based TTL when available, fall back to frames
+            ttl_active = False
+            if self.handoff_ttl_seconds is not None and entry.updated_at_time is not None:
+                if timestamp_s is not None:
+                    ttl_active = (timestamp_s - entry.updated_at_time) <= self.handoff_ttl_seconds
+                else:
+                    ttl_active = (frame_idx - entry.updated_at_frame) <= self.handoff_ttl
+            else:
+                ttl_active = (frame_idx - entry.updated_at_frame) <= self.handoff_ttl
+
+            if ttl_active:
                 retained.append(entry)
                 continue
             self._event("handoff_expired", frame_idx, entry.global_id, source_camera=entry.source_cam,

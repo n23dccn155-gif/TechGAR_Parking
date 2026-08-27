@@ -579,7 +579,7 @@ def draw_full_view_preview(
     )
     cv2.putText(
         canvas,
-        "Check painted ground lines: aligned = H1/H2 good; double/ghosted = recalibrate",
+        "Check painted ground lines: aligned = H1/H2 good; moving cars may ghost because captures are sequential",
         (30, 74),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.53,
@@ -763,9 +763,10 @@ def draw_map_preview(
         _world_to_canvas(point, bounds, canvas_size, padding)
         for point in overlap
     ], dtype=np.int32)
-    overlap_layer = canvas.copy()
-    cv2.fillPoly(overlap_layer, [overlap_polygon], (180, 70, 180))
-    cv2.addWeighted(overlap_layer, 0.35, canvas, 0.65, 0, canvas)
+    if len(overlap_polygon) >= 3:
+        overlap_layer = canvas.copy()
+        cv2.fillPoly(overlap_layer, [overlap_polygon], (180, 70, 180))
+        cv2.addWeighted(overlap_layer, 0.35, canvas, 0.65, 0, canvas)
 
     for camera_id, polygon in coverages.items():
         canvas_polygon = np.asarray([
@@ -773,7 +774,8 @@ def draw_map_preview(
             for point in polygon
         ], dtype=np.int32)
         cv2.polylines(canvas, [canvas_polygon], True, colors[camera_id], 3)
-    cv2.polylines(canvas, [overlap_polygon], True, (180, 30, 180), 3)
+    if len(overlap_polygon) >= 3:
+        cv2.polylines(canvas, [overlap_polygon], True, (180, 30, 180), 3)
 
     for camera_id, diagnostic in diagnostics.items():
         for point in diagnostic["points"]:
@@ -908,9 +910,9 @@ def build_command(args: argparse.Namespace) -> None:
         full_bounds_tuple,
     )
     if overlap_area <= 0 or len(overlap) < 3:
-        raise ValueError(
-            "Full-view preview da tao, nhung hai ROI hoat dong khong giao nhau. "
-            "Kiem tra roi_mask_cam1/2 trong shared_map_active_roi.png."
+        print(
+            "Canh bao: hai ROI quan ly khong giao nhau. Runtime van dung "
+            "full-view overlap va CrossCameraManager de ghep ID giua hai cam."
         )
 
     world_bounds = draw_map_preview(coverages, overlap, diagnostics, preview_path)
