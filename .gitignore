@@ -13,6 +13,12 @@ backend/__pycache__/
 *.pyc
 *.pyo
 
+# Pytest
+.pytest_cache/
+*/.pytest_cache/
+_pytest_tmp/
+*/_pytest_tmp/
+
 # Node & Frontend
 node_modules/
 frontend/node_modules/

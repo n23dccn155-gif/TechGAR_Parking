@@ -64,6 +64,13 @@ class MotionVehicleTracker:
         shadow_min_pixels: int = 120,
         reacquire_max_seconds: float = 1.50,
         merged_reacquire_max_seconds: float = 3.0,
+        lost_track_ttl_seconds: Optional[float] = None,
+        lost_track_ttl_reacquire_multiple: float = 1.5,
+        assignment_cost_limit: float = 0.90,
+        motion_trail_elongation_frames: float = 1.75,
+        velocity_gate_scale: float = 2.0,
+        velocity_gate_size_ratio: float = 1.0,
+        velocity_gate_min_observations: int = 3,
         split_assignment_margin: float = 0.08,
         lost_appearance_threshold: float = 0.30,
         min_reacquire_area_ratio: float = 0.35,
@@ -121,6 +128,28 @@ class MotionVehicleTracker:
         self.split_assignment_margin = max(
             0.0, float(split_assignment_margin)
         )
+        # A LOST fragment that can no longer be re-associated must also leave
+        # the candidate pool. ``lost_track_ttl`` is counted in frames, so at a
+        # low effective FPS it kept unreacquirable tracks alive for many
+        # seconds after their reacquire window closed; they then crowded the
+        # assignment problem and the merged-contour heuristic. The real bound
+        # is a duration, so derive one from the widest reacquire window.
+        self.lost_track_ttl_seconds = (
+            float(lost_track_ttl_seconds)
+            if lost_track_ttl_seconds is not None
+            else max(1.0, float(lost_track_ttl_reacquire_multiple))
+            * self.merged_reacquire_max_seconds
+        )
+        # Maximum association cost LAPJV may accept. The cost terms sum to at
+        # most 1.0, so the historical 0.90 admitted nearly every pair that
+        # passed the gates.
+        self.assignment_cost_limit = float(np.clip(assignment_cost_limit, 0.05, 1.0))
+        self.motion_trail_elongation_frames = max(
+            0.0, float(motion_trail_elongation_frames)
+        )
+        self.velocity_gate_scale = max(1.0, float(velocity_gate_scale))
+        self.velocity_gate_size_ratio = max(0.0, float(velocity_gate_size_ratio))
+        self.velocity_gate_min_observations = max(2, int(velocity_gate_min_observations))
         self.lost_appearance_threshold = max(0.0, float(lost_appearance_threshold))
         self.min_reacquire_area_ratio = max(0.01, float(min_reacquire_area_ratio))
         self.max_reacquire_area_ratio = max(
@@ -160,6 +189,8 @@ class MotionVehicleTracker:
         self._viable_pairs: set[Tuple[int, int]] = set()
         self._pair_metrics: Dict[Tuple[int, int], dict] = {}
         self._last_association_events: List[dict] = []
+        self._background_image: Optional[np.ndarray] = None
+        self._background_frame: Optional[int] = None
 
     @staticmethod
     def _bottom_center(box: Tuple[int, int, int, int]) -> Tuple[int, int]:
@@ -223,7 +254,7 @@ class MotionVehicleTracker:
     @staticmethod
     def _motion_between(current: np.ndarray, reference: np.ndarray, threshold: int) -> np.ndarray:
         """Return brightness-compensated change without treating a light shift as motion."""
-        brightness_shift = float(np.median(current.astype(np.int16) - reference.astype(np.int16)))
+        brightness_shift = MotionVehicleTracker._brightness_shift(current, reference)
         adjusted_reference = np.clip(
             reference.astype(np.float32) + brightness_shift,
             0,
@@ -232,6 +263,29 @@ class MotionVehicleTracker:
         difference = cv2.absdiff(current, adjusted_reference)
         _, return_mask = cv2.threshold(difference, threshold, 255, cv2.THRESH_BINARY)
         return return_mask
+
+    # Rows/columns kept when estimating the global brightness offset. The
+    # median of a full 1280x720 int16 difference costs ~17 ms and runs twice
+    # per frame per camera in multiscale mode, which is a third of the whole
+    # per-frame budget. A regular grid of ~128x128 samples of the same field
+    # reproduces that median to well under one grey level for ~0.3 ms, and the
+    # effective frame rate is what decides whether a moving vehicle stays
+    # associated at all.
+    _BRIGHTNESS_SAMPLE_TARGET = 128
+
+    @classmethod
+    def _brightness_shift(cls, current: np.ndarray, reference: np.ndarray) -> float:
+        """Median grey-level offset between two frames, from a coarse sample."""
+        step = max(
+            1,
+            min(
+                current.shape[0] // cls._BRIGHTNESS_SAMPLE_TARGET,
+                current.shape[1] // cls._BRIGHTNESS_SAMPLE_TARGET,
+            ),
+        )
+        sampled_current = current[::step, ::step].astype(np.int16)
+        sampled_reference = reference[::step, ::step].astype(np.int16)
+        return float(np.median(sampled_current - sampled_reference))
 
     def _timestamp_references(self, timestamp_s: float) -> List[np.ndarray]:
         history = list(self._gray_history)[:-1]
@@ -475,6 +529,37 @@ class MotionVehicleTracker:
         )
         return bool(is_shadow), metrics
 
+    # MOG2 learns at roughly 1/history per frame, so its background image barely
+    # moves between consecutive frames. Rebuilding it costs ~6-12 ms on a
+    # 1280x720 stream, so one snapshot is reused for a short interval. The
+    # snapshot is always taken *before* ``bg_sub.apply`` for the frame that
+    # created it, so the shadow test never compares a vehicle against a
+    # background that already contains it.
+    _background_refresh_interval = 10
+
+    def _background_reference(self) -> Optional[np.ndarray]:
+        """Learned background used to explain a blob as a cast shadow."""
+        if not self.reject_cast_shadows:
+            return None
+        age = (
+            None
+            if self._background_frame is None
+            else self._frame_idx - self._background_frame
+        )
+        if self._background_image is not None and age is not None and (
+            0 <= age < self._background_refresh_interval
+        ):
+            return self._background_image
+        background_getter = getattr(self.bg_sub, "getBackgroundImage", None)
+        if not callable(background_getter):
+            return None
+        try:
+            self._background_image = background_getter()
+        except cv2.error:
+            self._background_image = None
+        self._background_frame = self._frame_idx
+        return self._background_image
+
     def _detect(
         self,
         frame: np.ndarray,
@@ -483,13 +568,7 @@ class MotionVehicleTracker:
     ) -> Tuple[List[dict], np.ndarray]:
         self._last_shadow_rejections = []
         self._last_detection_rejections = []
-        background_image = None
-        background_getter = getattr(self.bg_sub, "getBackgroundImage", None)
-        if self.reject_cast_shadows and callable(background_getter):
-            try:
-                background_image = background_getter()
-            except cv2.error:
-                background_image = None
+        background_image = self._background_reference()
         background_mask = self.bg_sub.apply(frame)
         _, background_mask = cv2.threshold(background_mask, 200, 255, cv2.THRESH_BINARY)
         temporal_motion = self._temporal_motion_mask(frame, timestamp_s=timestamp_s)
@@ -684,7 +763,13 @@ class MotionVehicleTracker:
         margin: float,
         invalid_cost: float = 10.0,
     ) -> bool:
-        """Return whether one assignment clearly beats every competitor."""
+        """Return whether one assignment clearly beats every competitor.
+
+        Competitors that the global solution already gave to another track are
+        deliberately still counted: when two lineages are tied for two
+        interchangeable detections, LAPJV's choice between them is arbitrary,
+        and that tie is exactly the ID switch this check exists to catch.
+        """
         selected = float(costs[row, col])
         alternatives = [
             float(value)
@@ -697,6 +782,85 @@ class MotionVehicleTracker:
             if index != row and costs[index, col] < invalid_cost
         )
         return not alternatives or min(alternatives) - selected >= margin
+
+    def _association_gate(
+        self,
+        track: TrackedVehicle,
+        invisible: int,
+        ceiling: float,
+    ) -> float:
+        """Largest prediction-to-detection distance this track may claim.
+
+        ``max_distance`` alone is a whole-scene constant: on a top-down model
+        lot it spans more than a vehicle length, so a coasting track could
+        claim the neighbouring car's blob. What the motion model can actually
+        justify is the distance the vehicle could have travelled since its last
+        measurement, plus a margin for its own size, and that is what gates
+        here. ``ceiling`` still applies, for a car that accelerates faster than
+        its filtered velocity suggests.
+
+        The gate fails open while the motion model is uninformed: a fragment
+        with only one or two corrections still carries the Kalman filter's
+        initial zero velocity, so a budget derived from it would reject the
+        vehicle's real displacement.
+        """
+        if int(getattr(track, "total_visible_count", 0)) < self.velocity_gate_min_observations:
+            return float(ceiling)
+        velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
+        speed = float(np.hypot(velocity_x, velocity_y))
+        extent = float(max(track.w, track.h))
+        budget = (
+            speed * (invisible + 1) * self.velocity_gate_scale
+            + self.velocity_gate_size_ratio * extent
+        )
+        floor = max(24.0, self.velocity_gate_size_ratio * extent)
+        return float(min(ceiling, max(floor, budget)))
+
+    @staticmethod
+    def _track_velocity_px_per_frame(track: TrackedVehicle) -> Tuple[float, float]:
+        """Per-frame image velocity, from the Kalman state or the trail."""
+        kalman = getattr(track, "kalman", None)
+        state = getattr(kalman, "statePost", None) if kalman is not None else None
+        if state is not None and state.shape[0] >= 4:
+            return float(state[2, 0]), float(state[3, 0])
+        history = list(getattr(track, "history", ()) or ())
+        if len(history) >= 2:
+            steps = min(4, len(history) - 1)
+            first, last = history[-1 - steps], history[-1]
+            return (last[0] - first[0]) / steps, (last[1] - first[1]) / steps
+        return 0.0, 0.0
+
+    def _elongation_explained_by_motion(
+        self,
+        track: TrackedVehicle,
+        box: Tuple[int, int, int, int],
+    ) -> bool:
+        """Is this blob one moving vehicle rather than two merged ones?
+
+        Frame differencing keeps both the previous and the current silhouette
+        of a moving vehicle, so a single car produces a contour stretched along
+        its own direction of travel by roughly ``velocity x reference age``.
+        The lower the effective frame rate, the larger that stretch: at ~7 FPS
+        it routinely reaches two to three times the vehicle's own area, which
+        the plain size ratio cannot tell apart from two cars side by side.
+        Motion direction can: a real merge grows the contour across the
+        direction of travel as well, a motion trail does not.
+        """
+        _x, _y, width, height = box
+        excess_width = float(width) - float(track.w)
+        excess_height = float(height) - float(track.h)
+        if excess_width <= 0.0 and excess_height <= 0.0:
+            return True
+        velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
+        span = self.motion_trail_elongation_frames
+        # Perspective and mask noise vary the silhouette by a fraction of the
+        # vehicle even when it moves along one axis only.
+        tolerance_width = 0.30 * float(track.w)
+        tolerance_height = 0.30 * float(track.h)
+        return (
+            excess_width <= abs(velocity_x) * span + tolerance_width
+            and excess_height <= abs(velocity_y) * span + tolerance_height
+        )
 
     def _lineage_score(self, track) -> float:
         """Calculate lineage score based on track history and reliability.
@@ -791,13 +955,17 @@ class MotionVehicleTracker:
             if invisible > 0 or self._has_recent_merged_freeze(track):
                 split_margin_track_ids.add(track_id)
             reacquire_eligible_track_ids.add(track_id)
+            # The gate decides which pairs are admissible; the cost is still
+            # normalised by the scene-wide ceiling so that costs stay
+            # comparable across tracks with different motion budgets.
             max_distance = self.max_distance * min(
                 1.25,
                 1.0 + min(invisible, 15) / 60.0,
             )
+            gate_distance = self._association_gate(track, invisible, max_distance)
             for col, detection in enumerate(detections):
                 distance = float(np.linalg.norm(np.subtract(predicted_point, detection["point"])))
-                if distance > max_distance:
+                if distance > gate_distance:
                     continue
                 iou = self._iou(predicted_box, detection["box"])
                 current_appearance_distance = (
@@ -864,6 +1032,17 @@ class MotionVehicleTracker:
                 # heuristic and freeze a detection belonging to live cars.
                 if track_id not in reacquire_eligible_track_ids:
                     continue
+                # Freezing a detection costs every listed track its only
+                # measurement this frame, so the merge hypothesis needs live
+                # evidence: the track was seen in the previous frame, or it is
+                # already inside an ongoing merged interval. A fragment that
+                # has merely been coasting for unrelated reasons can otherwise
+                # drift onto a real car and silence it.
+                if (
+                    int(self._tracks[track_id].consecutive_invisible_count) > 0
+                    and not self._has_recent_merged_freeze(self._tracks[track_id])
+                ):
+                    continue
                 px, py = predictions[track_id]
                 track = self._tracks[track_id]
                 if not (x - 12 <= px <= x + width + 12 and y - 12 <= py <= y + height + 12):
@@ -913,6 +1092,17 @@ class MotionVehicleTracker:
                 height_ratio = height / max(1.0, float(reference_track.h))
                 if width_ratio < 1.30 and height_ratio < 1.30:
                     continue
+                # One car's own motion trail is not an ambiguous measurement.
+                if self._elongation_explained_by_motion(
+                    reference_track, detection["box"]
+                ):
+                    self._last_association_events.append({
+                        "type": "oversized_detection_kept_as_motion_trail",
+                        "detection_id": int(col),
+                        "local_track_ids": [int(compatible[0])],
+                        "bbox": [int(value) for value in detection["box"]],
+                    })
+                    continue
                 event_type = "oversized_detection_frozen"
             detection["ambiguous_merged"] = True
             self._ambiguous_detection_ids.add(col)
@@ -930,7 +1120,7 @@ class MotionVehicleTracker:
                 "bbox": [int(value) for value in detection["box"]],
             })
 
-        _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.90)
+        _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=self.assignment_cost_limit)
         assignments, unmatched_tracks, unmatched_detections = [], [], set(range(len(detections)))
         for row, track_id in enumerate(track_ids):
             col = int(row_to_col[row])
@@ -1116,6 +1306,21 @@ class MotionVehicleTracker:
         })
         return track
 
+    def _lost_beyond_ttl_seconds(self, track: TrackedVehicle) -> bool:
+        """Has this fragment been unmatched for longer than the duration TTL?
+
+        Frame-counted TTLs stretch with the processing rate: at ~7 FPS the
+        90-frame default kept fragments for over 13 seconds even though they
+        stopped being re-associable after 1.5-3 seconds. Timestamp-less
+        callers keep the frame-only behaviour.
+        """
+        last_seen = getattr(track, "last_seen_timestamp_s", None)
+        if self._current_timestamp_s is None or last_seen is None:
+            return False
+        return (
+            self._current_timestamp_s - float(last_seen) > self.lost_track_ttl_seconds
+        )
+
     def process_frame(
         self,
         frame: np.ndarray,
@@ -1167,7 +1372,10 @@ class MotionVehicleTracker:
             if track.status == TrackStatus.CONFIRMED:
                 track.status = TrackStatus.LOST
                 self._newly_lost_tracks.append((track_id, track))
-            if track.consecutive_invisible_count > self.lost_track_ttl:
+            if (
+                track.consecutive_invisible_count > self.lost_track_ttl
+                or self._lost_beyond_ttl_seconds(track)
+            ):
                 expired.append(track_id)
         expired_tracks = []  # Danh sách tracks vừa expire frame này
         for track_id in expired:

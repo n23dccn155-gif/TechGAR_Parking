@@ -2859,3 +2859,216 @@ def test_destination_gallery_overrides_bad_direction_for_five_second_gap():
     )
 
     assert ids == {"cam2": {9: 1}}
+
+
+def _lose_identity_in_cam1(manager, *, cx=300, cy=260):
+    """Register one identity in cam1 and let it go dormant there."""
+    track = DummyTrack(cx, cy, history=[(cx, cy), (cx, cy)])
+    assert manager.update_all_tracks(
+        {"cam1": {1: track}}, 1, {"cam1": 1.0}
+    )["cam1"][1] == 1
+    manager.notify_track_lost("cam1", 1, track, 2, timestamp_s=1.1)
+    manager.notify_track_expired(
+        "cam1", 1, track.cx, track.cy, track.w, track.h,
+        track.appearance, 3, timestamp_s=2.0,
+    )
+    return track
+
+
+def test_stale_same_camera_revival_gets_a_new_id_instead_of_the_dormant_one():
+    # The dormant identity is still inside identity_retention_seconds (60 s),
+    # so only the moving window may refuse it. Without that window a car that
+    # left the lot minutes ago hands its Global ID to whoever drives past the
+    # place it was last seen.
+    manager = make_real_two_camera_manager()
+    manager.identity_retention_moving_seconds = 12.0
+    manager._moving_retention_ratio = 12.0 / manager.identity_retention_seconds
+    _lose_identity_in_cam1(manager)
+
+    someone_else = DummyTrack(
+        315, 260, history=[(305, 260), (310, 260), (315, 260)]
+    )
+    ids = manager.update_all_tracks(
+        {"cam1": {9: someone_else}}, 400, {"cam1": 30.0}
+    )
+
+    assert ids["cam1"][9] != 1
+    events = manager.to_json({"cam1": {9: someone_else}})["recent_events"]
+    assert not any(
+        event["type"] == "dormant_global_id_recovered" for event in events
+    )
+
+
+def test_parked_reservation_keeps_the_long_window_for_the_same_camera():
+    # A reserved slot is positive evidence about where the vehicle still is,
+    # so the shorter moving window must not apply to it.
+    manager = make_real_two_camera_manager()
+    manager.identity_retention_moving_seconds = 12.0
+    manager._moving_retention_ratio = 12.0 / manager.identity_retention_seconds
+    manager.sync_parked_reservations(
+        [{
+            "global_id": 1,
+            "slot_id": "A01",
+            "camera_id": "cam1",
+            "state": "parked",
+        }],
+        0,
+    )
+    _lose_identity_in_cam1(manager)
+    assert 1 in manager._parked_reservations
+
+    leaving = DummyTrack(
+        315, 260, history=[(305, 260), (310, 260), (315, 260)]
+    )
+    ids = manager.update_all_tracks(
+        {"cam1": {9: leaving}}, 400, {"cam1": 30.0}
+    )
+
+    assert ids["cam1"][9] == 1
+
+
+def test_moving_window_does_not_apply_across_a_blind_region():
+    # cam1 -> cam2 means the vehicle crossed ground neither camera sees, which
+    # is exactly what the long retention window exists for. The same delay in
+    # cam1 has no blind region to explain it.
+    manager = make_real_two_camera_manager()
+    manager.identity_retention_moving_seconds = 12.0
+    manager._moving_retention_ratio = 12.0 / manager.identity_retention_seconds
+    _lose_identity_in_cam1(manager, cx=560, cy=200)
+    identity = manager._identities[1]
+
+    assert manager._identity_is_recent(identity, 400, 30.0, target_camera="cam2")
+    assert not manager._identity_is_recent(
+        identity, 400, 30.0, target_camera="cam1"
+    )
+    # A caller that does not name a destination camera (identity expiry) keeps
+    # the global window, so nothing retires early behind the matcher's back.
+    assert manager._identity_is_recent(identity, 400, 30.0)
+
+
+def test_reachable_distance_limit_scales_with_measured_speed():
+    manager = make_real_two_camera_manager()
+    manager.reid_reachable_margin = 4.0
+    manager.reid_reachable_speed_scale = 1.5
+
+    # A stationary identity may only be reclaimed inside the anchor margin,
+    # which is what still allows a parked car to be recovered where it stands.
+    assert manager._reachable_distance_limit((0.0, 0.0), 30.0, True) == 4.0
+    # Ten world units per second for two seconds is 20 units of ground, and
+    # the scale absorbs anchor jitter between the two fragments.
+    assert manager._reachable_distance_limit((10.0, 0.0), 2.0, True) == 34.0
+    # Elapsed time cannot run backwards into a negative allowance.
+    assert manager._reachable_distance_limit((10.0, 0.0), -5.0, True) == 4.0
+
+
+# --- same-camera dormant radius follows the measured speed
+
+
+def _manager_with_tight_dormant_radius():
+    manager = make_real_two_camera_manager()
+    # World units are source pixels in this fixture; 20 px stands in for the
+    # slot-derived radius so the 2x ceiling is a round 40.
+    manager.dormant_match_distance = 20.0
+    manager.reid_reachable_margin = 4.0
+    manager.reid_reachable_speed_scale = 1.5
+    return manager
+
+
+def _lose_identity_at_speed(manager, *, px_per_second):
+    """Register one identity in cam1 that was moving when it was lost."""
+    start = DummyTrack(300, 260, history=[(280, 260), (290, 260), (300, 260)])
+    assert manager.update_all_tracks(
+        {"cam1": {1: start}}, 1, {"cam1": 1.0}
+    )["cam1"][1] == 1
+
+    # 0.2 s later, so the measured per-second velocity is the caller's speed.
+    moved_x = 300 + int(round(px_per_second * 0.2))
+    moving = DummyTrack(
+        moved_x,
+        260,
+        history=[(moved_x - 20, 260), (moved_x - 10, 260), (moved_x, 260)],
+    )
+    assert manager.update_all_tracks(
+        {"cam1": {1: moving}}, 2, {"cam1": 1.2}
+    )["cam1"][1] == 1
+
+    manager.notify_track_lost("cam1", 1, moving, 3, timestamp_s=1.3)
+    manager.notify_track_expired(
+        "cam1", 1, moving.cx, moving.cy, moving.w, moving.h,
+        moving.appearance, 4, timestamp_s=1.5,
+    )
+    return moving
+
+
+def _reappear(manager, *, at_x, frame_idx=5, timestamp_s=2.2):
+    fragment = DummyTrack(
+        at_x,
+        260,
+        history=[(at_x - 20, 260), (at_x - 10, 260), (at_x, 260)],
+    )
+    ids = manager.update_all_tracks(
+        {"cam1": {9: fragment}}, frame_idx, {"cam1": timestamp_s}
+    )
+    events = manager.to_json({"cam1": {9: fragment}})["recent_events"]
+    return ids, events
+
+
+def test_moving_identity_is_reclaimed_along_the_ground_it_could_cover():
+    # A car that was crossing the lot at 100 px/s when its fragment broke may
+    # restart 30 px further on: that is one third of a second of its own
+    # motion, not a different vehicle.
+    manager = _manager_with_tight_dormant_radius()
+    lost = _lose_identity_at_speed(manager, px_per_second=100.0)
+    # ``notify_track_lost`` re-observes the final, unmoved position, so the
+    # smoothed velocity decays to 0.65 of the last measurement before the
+    # identity goes dormant. The gate has to work off that damped number.
+    assert manager._identities[1].velocity_world_per_second[0] == pytest.approx(
+        65.0, abs=1.0
+    )
+
+    ids, events = _reappear(manager, at_x=lost.cx + 30)
+
+    assert ids["cam1"][9] == 1
+    recovery = next(
+        event
+        for event in events
+        if event["type"] == "dormant_global_id_recovered"
+    )
+    # The flat radius alone would have refused this; the speed-derived
+    # expansion is what admitted it, and it is recorded for the diagnostics.
+    assert recovery["predicted_distance"] > manager.dormant_match_distance
+    assert recovery["distance_limit"] == pytest.approx(
+        2.0 * manager.dormant_match_distance
+    )
+
+
+def test_stationary_identity_keeps_the_tight_dormant_radius():
+    # The same 30 px gap after a car that was standing still is the case the
+    # tight radius exists for: a parked Global ID must not jump to whatever
+    # appears a few slots away.
+    manager = _manager_with_tight_dormant_radius()
+    lost = _lose_identity_at_speed(manager, px_per_second=0.0)
+    assert manager._identities[1].velocity_world_per_second == pytest.approx(
+        (0.0, 0.0)
+    )
+
+    ids, events = _reappear(manager, at_x=lost.cx + 30)
+
+    assert ids["cam1"][9] != 1
+    assert not any(
+        event["type"] == "dormant_global_id_recovered" for event in events
+    )
+
+
+def test_speed_cannot_stretch_the_dormant_radius_past_twice_the_calibration():
+    # Reachability is an argument for a wider gate, not an unbounded one: a bad
+    # velocity vector from a clipped final blob must not open the whole lot.
+    manager = _manager_with_tight_dormant_radius()
+    lost = _lose_identity_at_speed(manager, px_per_second=100.0)
+
+    ids, events = _reappear(manager, at_x=lost.cx + 45)
+
+    assert ids["cam1"][9] != 1
+    assert not any(
+        event["type"] == "dormant_global_id_recovered" for event in events
+    )

@@ -63,26 +63,17 @@ def _render_selection(
     points: Sequence[Tuple[int, int]],
 ) -> np.ndarray:
     preview = image.copy()
-    cv2.rectangle(preview, (0, 0), (preview.shape[1], 76), (0, 0, 0), -1)
     next_label = POINT_LABELS[len(points)] if len(points) < 4 else "DONE"
-    cv2.putText(
-        preview,
-        f"{camera_id.upper()}: click SAME overlap rectangle - next point {next_label}",
-        (12, 29),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.61,
-        (0, 255, 255),
-        2,
-    )
-    cv2.putText(
-        preview,
-        f"Points: {len(points)}/4 | Order A-B-C-D around rectangle | Right: undo | R: reset | Q: cancel",
-        (12, 59),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.45,
-        (235, 235, 235),
-        1,
-    )
+    
+    # Ve chu co vien den truc tiep len anh ma khong can ve dai den che khuat mep anh
+    text1 = f"{camera_id.upper()}: click SAME overlap rectangle - next point {next_label}"
+    text2 = f"Points: {len(points)}/4 | A-B-C-D around rectangle | Right: undo | R: reset | Q: cancel"
+    
+    cv2.putText(preview, text1, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 4, cv2.LINE_AA)
+    cv2.putText(preview, text1, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(preview, text2, (12, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(preview, text2, (12, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
+
     for label, point in zip(POINT_LABELS, points):
         cv2.circle(preview, point, 7, (0, 255, 255), -1)
         cv2.circle(preview, point, 10, (0, 0, 0), 2)
@@ -119,9 +110,15 @@ def select_rectangle_points(camera_id: str, image: np.ndarray) -> List[Tuple[int
             points.pop()
             print(f"Da xoa diem {camera_id}:{removed_label}")
 
-    cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, 1280, 720)
     cv2.setMouseCallback(window_name, on_mouse)
     while True:
+        next_label = POINT_LABELS[len(points)] if len(points) < 4 else "DONE"
+        cv2.setWindowTitle(
+            window_name,
+            f"[{camera_id.upper()}] Diem tiep theo: {next_label} ({len(points)}/4) | Chuot phai: Undo | R: Reset | Q: Cancel",
+        )
         cv2.imshow(window_name, _render_selection(image, camera_id, points))
         key = cv2.waitKey(20) & 0xFF
         if key in (27, ord("q")):

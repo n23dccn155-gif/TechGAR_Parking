@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pytest
 
 from techgar.motion_tracker import MotionVehicleTracker
 from techgar.tracklet_descriptor import histogram_distance
@@ -785,3 +786,383 @@ def test_legacy_confirmation_keeps_rolling_history_origin():
 
     assert track.first_observation_point == (24, 44)
     assert track.status == TrackStatus.TENTATIVE
+
+
+# --- effective frame rate -------------------------------------------------
+# The per-frame budget decides whether a moving vehicle is still measurable
+# at all, so the two hot paths below are treated as correctness, not speed.
+
+
+def test_sampled_brightness_shift_matches_the_full_frame_median():
+    rng = np.random.default_rng(7)
+    reference = rng.integers(20, 220, size=(720, 1280), dtype=np.int16).astype(np.uint8)
+    shifted = np.clip(reference.astype(np.int16) + 11, 0, 255).astype(np.uint8)
+    # A vehicle occupying part of the frame must not drag the estimate.
+    shifted[300:420, 500:640] = 5
+
+    exact = float(np.median(shifted.astype(np.int16) - reference.astype(np.int16)))
+    sampled = MotionVehicleTracker._brightness_shift(shifted, reference)
+
+    assert abs(sampled - exact) <= 1.0
+
+
+def test_brightness_shift_reads_every_pixel_of_a_small_frame():
+    reference = np.zeros((40, 60), dtype=np.uint8)
+    current = np.full((40, 60), 9, dtype=np.uint8)
+
+    assert MotionVehicleTracker._brightness_shift(current, reference) == 9.0
+
+
+def test_background_reference_is_reused_within_the_refresh_interval():
+    tracker = MotionVehicleTracker(reject_cast_shadows=True)
+    calls = []
+
+    class CountingBackground:
+        def getBackgroundImage(self):
+            calls.append(1)
+            return np.zeros((8, 8, 3), dtype=np.uint8)
+
+        def apply(self, _frame):
+            return np.zeros((8, 8), dtype=np.uint8)
+
+    tracker.bg_sub = CountingBackground()
+
+    tracker._frame_idx = 1
+    tracker._background_reference()
+    for offset in range(1, tracker._background_refresh_interval):
+        tracker._frame_idx = 1 + offset
+        tracker._background_reference()
+    assert len(calls) == 1
+
+    tracker._frame_idx = 1 + tracker._background_refresh_interval
+    tracker._background_reference()
+    assert len(calls) == 2
+
+
+def test_background_reference_is_not_built_without_shadow_rejection():
+    tracker = MotionVehicleTracker(reject_cast_shadows=False)
+
+    class ExplodingBackground:
+        def getBackgroundImage(self):  # pragma: no cover - must never run
+            raise AssertionError("background must not be rebuilt")
+
+        def apply(self, _frame):
+            return np.zeros((8, 8), dtype=np.uint8)
+
+    tracker.bg_sub = ExplodingBackground()
+
+    assert tracker._background_reference() is None
+
+
+# --- duration-based lost-track TTL ---------------------------------------
+
+
+def test_lost_track_ttl_is_derived_from_the_widest_reacquire_window():
+    tracker = MotionVehicleTracker(
+        merged_reacquire_max_seconds=3.0,
+        lost_track_ttl_reacquire_multiple=1.5,
+    )
+
+    # Nothing still re-associable may be discarded, so the TTL has to sit
+    # above the widest reacquire window rather than below it.
+    assert tracker.lost_track_ttl_seconds == pytest.approx(4.5)
+    assert tracker.lost_track_ttl_seconds > tracker.merged_reacquire_max_seconds
+    assert MotionVehicleTracker(
+        lost_track_ttl_seconds=2.0
+    ).lost_track_ttl_seconds == pytest.approx(2.0)
+
+
+def test_unreacquirable_fragment_expires_on_duration_not_frame_count(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        lost_track_ttl=90,
+        lost_track_ttl_seconds=1.0,
+    )
+    frame = np.zeros((100, 180, 3), dtype=np.uint8)
+    detections = iter([
+        [_detection(tracker, frame, 30, priority=False)],
+        [],
+        [],
+    ])
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+
+    tracker.process_frame(frame, timestamp_s=0.0)
+    assert set(tracker._tracks) == {1}
+
+    # Two invisible frames are far below the 90-frame TTL, but at this frame
+    # rate they already outlast every reacquire window.
+    tracker.process_frame(frame, timestamp_s=0.6)
+    assert set(tracker._tracks) == {1}
+    tracker.process_frame(frame, timestamp_s=1.4)
+
+    assert tracker._tracks == {}
+
+
+def test_frame_counted_ttl_still_applies_without_timestamps(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        lost_track_ttl=2,
+        lost_track_ttl_seconds=1.0,
+    )
+    frame = np.zeros((100, 180, 3), dtype=np.uint8)
+    detections = iter([[_detection(tracker, frame, 30, priority=False)], [], [], []])
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+
+    for _ in range(3):
+        tracker.process_frame(frame)
+    assert set(tracker._tracks) == {1}
+
+    tracker.process_frame(frame)
+
+    assert tracker._tracks == {}
+
+
+# --- motion trail versus a genuine merge ---------------------------------
+
+
+def _feed(tracker, frame, per_frame_detections, monkeypatch, *, dt=0.1):
+    """Drive process_frame with a fixed detection script."""
+    detections = iter(per_frame_detections)
+    monkeypatch.setattr(
+        tracker,
+        "_detect",
+        lambda _frame, timestamp_s=None, priority_regions=None: (
+            next(detections),
+            np.zeros(_frame.shape[:2], dtype=np.uint8),
+        ),
+    )
+    tracks = None
+    for index in range(len(per_frame_detections)):
+        tracks, _mask, _expired = tracker.process_frame(
+            frame, timestamp_s=dt * index
+        )
+    return tracks
+
+
+def _moving_vehicle(tracker, frame, x, *, hist=None, box=None):
+    detection = _detection(tracker, frame, x, priority=False)
+    if box is not None:
+        detection["box"] = box
+        detection["point"] = tracker._bottom_center(box)
+        detection["area"] = float(box[2] * box[3])
+    if hist is not None:
+        detection["hist"] = hist.copy()
+    detection["bbox_area"] = float(
+        detection["box"][2] * detection["box"][3]
+    )
+    return detection
+
+
+def test_motion_trail_along_travel_keeps_the_measurement(monkeypatch):
+    # Frame differencing keeps the previous silhouette too, so one car moving
+    # at 20 px/frame paints a contour ~1.7x its own width. Freezing that is
+    # how a lone vehicle loses every measurement and dies of coasting.
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        merged_detection_area_ratio=1.6,
+    )
+    frame = np.zeros((120, 400, 3), dtype=np.uint8)
+    script = [[_moving_vehicle(tracker, frame, x)] for x in (20, 40, 60, 80)]
+    script.append([_moving_vehicle(tracker, frame, 100, box=(100, 20, 68, 24))])
+
+    tracks = _feed(tracker, frame, script, monkeypatch)
+
+    assert set(tracks) == {1}
+    assert tracks[1].consecutive_invisible_count == 0
+    assert any(
+        event["type"] == "oversized_detection_kept_as_motion_trail"
+        for event in tracker.association_events
+    )
+    assert not any(
+        event["type"] == "oversized_detection_frozen"
+        for event in tracker.association_events
+    )
+
+
+def test_growth_across_the_direction_of_travel_still_freezes(monkeypatch):
+    # A car cannot get taller by moving sideways-free along x, so this blob is
+    # the ambiguous measurement the freeze exists for.
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        merged_detection_area_ratio=1.6,
+    )
+    frame = np.zeros((160, 400, 3), dtype=np.uint8)
+    script = [[_moving_vehicle(tracker, frame, x)] for x in (20, 40, 60, 80)]
+    script.append([_moving_vehicle(tracker, frame, 100, box=(100, 20, 44, 52))])
+
+    tracks = _feed(tracker, frame, script, monkeypatch)
+
+    assert set(tracks) == {1}
+    assert tracks[1].consecutive_invisible_count == 1
+    assert any(
+        event["type"] == "oversized_detection_frozen"
+        for event in tracker.association_events
+    )
+
+
+def test_elongation_check_needs_no_velocity_when_the_blob_did_not_grow():
+    tracker = MotionVehicleTracker()
+    frame = np.zeros((100, 180, 3), dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    track = tracker._tracks[1]
+
+    assert tracker._elongation_explained_by_motion(
+        track, (30, 20, track.w, track.h)
+    )
+
+
+# --- velocity-derived association gate ------------------------------------
+
+
+def test_association_gate_stays_within_reach_of_a_slow_vehicle(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        max_distance=180.0,
+    )
+    frame = np.zeros((120, 400, 3), dtype=np.uint8)
+    script = [[_moving_vehicle(tracker, frame, x)] for x in (20, 40, 60, 80, 100)]
+    _feed(tracker, frame, script, monkeypatch)
+    track = tracker._tracks[1]
+
+    gate = tracker._association_gate(track, 0, 180.0)
+
+    # 20 px/frame cannot become 180 px of travel in one frame, so the whole
+    # scene-wide constant is not what this track may claim.
+    assert 40.0 < gate < 100.0
+    assert gate < 180.0
+    # A longer gap re-opens the gate in proportion to the time elapsed.
+    assert tracker._association_gate(track, 3, 180.0) > gate
+
+
+def test_association_gate_fails_open_for_an_uninformed_fragment():
+    tracker = MotionVehicleTracker(max_distance=180.0)
+    frame = np.zeros((100, 180, 3), dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    track = tracker._tracks[1]
+
+    # One correction leaves the filter's initial zero velocity in place; a
+    # budget derived from it would reject the vehicle's real displacement.
+    assert track.total_visible_count < tracker.velocity_gate_min_observations
+    assert tracker._association_gate(track, 0, 180.0) == pytest.approx(180.0)
+
+
+def test_far_detection_outside_the_velocity_budget_starts_its_own_track(
+    monkeypatch,
+):
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        max_distance=400.0,
+    )
+    frame = np.zeros((120, 600, 3), dtype=np.uint8)
+    script = [[_moving_vehicle(tracker, frame, x)] for x in (20, 40, 60, 80)]
+    # A blob 300 px further along cannot be the same vehicle one frame later.
+    script.append([_moving_vehicle(tracker, frame, 400)])
+
+    tracks = _feed(tracker, frame, script, monkeypatch)
+
+    assert set(tracks) == {1, 2}
+    assert tracks[1].consecutive_invisible_count == 1
+    assert tracks[2].total_visible_count == 1
+
+
+def test_two_parallel_vehicles_one_car_length_apart_keep_their_ids(monkeypatch):
+    # The reported failure: two identical model cars driving side by side, one
+    # car length apart. Their appearance carries no information, so only the
+    # motion model may decide which blob belongs to which lineage.
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        max_distance=180.0,
+    )
+    frame = np.zeros((120, 500, 3), dtype=np.uint8)
+    same_appearance = np.zeros(416, dtype=np.float32)
+    same_appearance[10] = 1.0
+
+    leader = [90, 105, 120, 135, 150, 165]
+    follower = [x - 56 for x in leader]  # exactly two bbox widths behind
+    script = []
+    for index, (front, back) in enumerate(zip(leader, follower)):
+        pair = [
+            _moving_vehicle(tracker, frame, front, hist=same_appearance),
+            _moving_vehicle(tracker, frame, back, hist=same_appearance),
+        ]
+        # Detection order must not be what preserves identity.
+        script.append(pair if index % 2 == 0 else list(reversed(pair)))
+
+    tracks = _feed(tracker, frame, script, monkeypatch)
+
+    assert set(tracks) == {1, 2}
+    # Local #1 took the leading blob on the first frame and must still hold it.
+    assert tracks[1].cx > tracks[2].cx
+    assert tracks[1].cx == pytest.approx(leader[-1] + 14, abs=2)
+    assert tracks[2].cx == pytest.approx(follower[-1] + 14, abs=2)
+    assert all(track.consecutive_invisible_count == 0 for track in tracks.values())
+    assert not any(
+        event["type"] == "split_assignment_deferred"
+        for event in tracker.association_events
+    )
+
+
+def test_coasting_fragment_alone_cannot_freeze_a_merged_detection():
+    # Freezing costs every listed track its only measurement, so the merge
+    # hypothesis needs a track that was actually seen in the previous frame.
+    tracker = MotionVehicleTracker(merged_detection_area_ratio=1.6)
+    frame = np.zeros((120, 220, 3), dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._current_timestamp_s = 0.0
+    tracker._create_or_reid(_detection(tracker, frame, 50, priority=False))
+    tracker._create_or_reid(_detection(tracker, frame, 90, priority=False))
+    coasting, live = tracker._tracks[1], tracker._tracks[2]
+    coasting.status = TrackStatus.LOST
+    coasting.consecutive_invisible_count = 1
+    coasting.last_seen_timestamp_s = 0.0
+    live.status = TrackStatus.CONFIRMED
+    live.last_seen_timestamp_s = 0.1
+
+    merged = _detection(tracker, frame, 42, priority=False)
+    merged["box"] = (42, 16, 90, 35)
+    merged["point"] = (87, 51)
+    merged["area"] = 2500.0
+    merged["bbox_area"] = 3150.0
+    tracker._current_timestamp_s = 0.1
+    tracker._assign([merged])
+
+    assert not any(
+        event["type"] == "merged_detection_frozen"
+        for event in tracker.association_events
+    )
+
+
+def test_assignment_cost_limit_is_configurable_and_bounded():
+    assert MotionVehicleTracker().assignment_cost_limit == pytest.approx(0.90)
+    assert MotionVehicleTracker(
+        assignment_cost_limit=0.60
+    ).assignment_cost_limit == pytest.approx(0.60)
+    # The cost terms sum to at most 1.0, so a larger limit means "no limit".
+    assert MotionVehicleTracker(
+        assignment_cost_limit=5.0
+    ).assignment_cost_limit == pytest.approx(1.0)
+
+

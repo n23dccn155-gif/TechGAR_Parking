@@ -164,6 +164,18 @@ class CrossCameraManager:
         merge_probation_frames: int = 5,
         # Priority 9: Enable DeepReID embedding for appearance matching
         use_deep_reid: bool = False,
+        # A vehicle that disappeared mid-manoeuvre is only worth re-claiming
+        # for as long as it plausibly sat in a blind spot.  A parked car keeps
+        # the full ``identity_retention_seconds`` because its slot reservation
+        # proves where it is; a moving one does not, and stretching its window
+        # to a minute is what lets a long-gone Global ID reappear on the next
+        # vehicle that happens to drive through the same place.
+        identity_retention_moving_seconds: Optional[float] = 12.0,
+        # A dormant identity can only be recovered where it could physically
+        # have travelled: ``speed * elapsed`` plus a margin for the anchor
+        # jitter between two fragments of the same vehicle.
+        reid_reachable_speed_scale: float = 1.5,
+        reid_reachable_margin: Optional[float] = None,
     ):
         self.camera_sizes = camera_sizes
         self.camera_crops = camera_crops
@@ -212,6 +224,31 @@ class CrossCameraManager:
         self.min_direction_cosine = float(np.clip(min_direction_cosine, -1.0, 1.0))
         self.identity_retention_frames = max(1, int(identity_retention_frames))
         self.identity_retention_seconds = max(0.1, float(identity_retention_seconds))
+        self.identity_retention_moving_seconds = min(
+            self.identity_retention_seconds,
+            max(
+                0.1,
+                float(
+                    identity_retention_moving_seconds
+                    if identity_retention_moving_seconds is not None
+                    else identity_retention_seconds
+                ),
+            ),
+        )
+        # The frame-counted retention path (legacy videos, unit tests) has to
+        # shrink by the same proportion so both units express one policy.
+        self._moving_retention_ratio = (
+            self.identity_retention_moving_seconds / self.identity_retention_seconds
+        )
+        self.reid_reachable_speed_scale = max(1.0, float(reid_reachable_speed_scale))
+        self.reid_reachable_margin = max(
+            1e-3,
+            float(
+                reid_reachable_margin
+                if reid_reachable_margin is not None
+                else self.cross_camera_duplicate_distance
+            ),
+        )
         self.dormant_match_distance = max(1.0, float(dormant_match_distance))
         self.dormant_appearance_threshold = float(
             dormant_appearance_threshold
@@ -2940,8 +2977,14 @@ class CrossCameraManager:
                         predicted_position={"x": round(self._predicted_world(entry, frame_idx)[0], 2), "y": round(self._predicted_world(entry, frame_idx)[1], 2)})
             print(f"  [handoff] global #{source_global_id}: {entry.source_cam} -> {cam_id}")
             accepted_entries.append(entry)
-        for entry in accepted_entries:
-            self._handoffs.remove(entry)
+        # Binding a match can merge identities, and the merge/bind paths rebuild
+        # ``self._handoffs`` themselves.  An accepted entry may therefore already
+        # be gone; drop by identity so a pruned entry cannot abort the frame.
+        if accepted_entries:
+            accepted_ids = {id(entry) for entry in accepted_entries}
+            self._handoffs = [
+                entry for entry in self._handoffs if id(entry) not in accepted_ids
+            ]
         live_evidence_keys = {
             (
                 self._canonical_id(entry.global_id),
@@ -2987,7 +3030,9 @@ class CrossCameraManager:
                 continue
             if candidate_global_id in self._parked_reservations:
                 continue
-            if not self._identity_is_recent(identity, frame_idx, timestamp_s):
+            if not self._identity_is_recent(
+                identity, frame_idx, timestamp_s, target_camera=cam_id
+            ):
                 continue
             gallery = identity.camera_appearance_samples.get(cam_id, ())
             if not gallery:
@@ -3640,6 +3685,7 @@ class CrossCameraManager:
         identity: GlobalIdentityState,
         frame_idx: int,
         timestamp_s: Optional[float],
+        target_camera: Optional[str] = None,
     ) -> bool:
         elapsed, uses_seconds = self._identity_elapsed(identity, frame_idx, timestamp_s)
         limit = self.identity_retention_seconds if uses_seconds else self.identity_retention_frames
@@ -3649,7 +3695,57 @@ class CrossCameraManager:
             # it across longer blind regions; explicit exit zones still retire
             # it immediately. Short/noisy identities retain the normal TTL.
             limit *= 4.0
+        if self._same_camera_recovery_is_stale(identity, target_camera, elapsed, uses_seconds):
+            return False
         return elapsed <= limit
+
+    def _same_camera_recovery_is_stale(
+        self,
+        identity: GlobalIdentityState,
+        target_camera: Optional[str],
+        elapsed: float,
+        uses_seconds: bool,
+    ) -> bool:
+        """Whether a *same-camera* revival of this identity waited too long.
+
+        A vehicle that vanished in one camera and reappears in the *other* one
+        crossed a real blind region, so the long retention window is what keeps
+        its Global ID across the gap.  A vehicle that vanished and reappears in
+        the same camera has no blind region to explain the delay: after a while
+        the far more likely explanation is a different car arriving where the
+        first one was last seen.  Parked identities are exempt because their
+        slot reservation proves where the vehicle still is.
+        """
+        if target_camera is None or identity.last_camera != target_camera:
+            return False
+        if self._canonical_id(identity.global_id) in self._parked_reservations:
+            return False
+        moving_limit = (
+            self.identity_retention_moving_seconds
+            if uses_seconds
+            else self.identity_retention_frames * self._moving_retention_ratio
+        )
+        return elapsed > moving_limit
+
+    def _reachable_distance_limit(
+        self,
+        velocity: Tuple[float, float],
+        elapsed: float,
+        uses_seconds: bool,
+    ) -> float:
+        """How far a dormant identity could physically have travelled.
+
+        ``velocity`` and ``elapsed`` are already expressed in the same time
+        unit (per second, or per frame for the legacy path), so their product
+        is a world-space distance.  The margin absorbs the anchor jitter
+        between two fragments of the same vehicle, which is what still lets a
+        parked car with zero velocity be recovered where it stands.
+        """
+        speed = float(np.hypot(*velocity))
+        return float(
+            self.reid_reachable_margin
+            + self.reid_reachable_speed_scale * speed * max(0.0, float(elapsed))
+        )
 
     def _identity_is_established(
         self,
@@ -3808,7 +3904,9 @@ class CrossCameraManager:
                 same_camera = identity.last_camera == cam_id
                 if not same_camera and not self._are_adjacent(identity.last_camera, cam_id):
                     continue
-                if not self._identity_is_recent(identity, frame_idx, timestamp_s):
+                if not self._identity_is_recent(
+                    identity, frame_idx, timestamp_s, target_camera=cam_id
+                ):
                     continue
                 # After a vehicle parks, its next local track starts close to
                 # the last stationary position. Extrapolating the velocity
@@ -3852,18 +3950,35 @@ class CrossCameraManager:
                     if uses_seconds and np.hypot(*identity.velocity_world_per_second) > 1e-6
                     else identity.velocity_world
                 )
-                distance_limit = (
-                    self.dormant_match_distance
-                    if same_camera
-                    else (
+                if same_camera:
+                    # A same-camera revival has no blind region to explain the
+                    # gap, so the radius starts at the calibrated slot-derived
+                    # distance and grows only by the ground this identity had
+                    # the *measured speed* to cover. A parked or slow car keeps
+                    # the tight radius -- which is what stops an old Global ID
+                    # from landing on a different car parked a few slots away --
+                    # while a car that was crossing the lot when it was lost can
+                    # be picked up further along its own path.
+                    distance_limit = min(
+                        self.dormant_match_distance * 2.0,
+                        max(
+                            self.dormant_match_distance,
+                            self._reachable_distance_limit(
+                                velocity,
+                                min(elapsed, 2.0 if uses_seconds else 8.0),
+                                uses_seconds,
+                            ),
+                        ),
+                    )
+                elif long_cross_camera_gap:
+                    distance_limit = (
                         self.dormant_match_distance * 1.60
-                        if long_cross_camera_gap
-                        and has_target_camera_history
+                        if has_target_camera_history
                         and self._identity_is_established(identity)
                         else self.dormant_match_distance
                     )
-                    if long_cross_camera_gap
-                    else min(
+                else:
+                    distance_limit = min(
                         self.dormant_match_distance * 2.0,
                         max(
                             (
@@ -3879,7 +3994,6 @@ class CrossCameraManager:
                             * 0.25,
                         ),
                     )
-                )
                 # A motion-mask fragment can restart just beyond the
                 # calibrated radius. Allow only a small same-camera margin
                 # when appearance, size, maturity and a short gap agree.
@@ -3919,7 +4033,19 @@ class CrossCameraManager:
                         )
                     )
                     if same_camera_reentry_proof:
-                        distance_limit = max(distance_limit, distance)
+                        # A durable fingerprint may stretch the radius, but not
+                        # past the ground the vehicle had time to cover: an
+                        # unbounded accept here is how a long-dormant Global ID
+                        # lands on a different car across the lot.
+                        distance_limit = max(
+                            distance_limit,
+                            min(
+                                distance,
+                                self._reachable_distance_limit(
+                                    velocity, elapsed, uses_seconds
+                                ),
+                            ),
+                        )
                     elif (
                         mature_same_camera_identity
                         and preliminary_match.support >= 2
@@ -4312,6 +4438,7 @@ class CrossCameraManager:
                     ),
                     turnaround_proof,
                     same_camera_reentry_proof,
+                    float(distance_limit),
                 )
 
         _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.95)
@@ -4372,6 +4499,7 @@ class CrossCameraManager:
                 trajectory_score,
                 turnaround_proof,
                 same_camera_reentry_proof,
+                accepted_distance_limit,
             ) = details_by_pair[(row, col)]
             self._event(
                 "dormant_global_id_recovered", frame_idx, identity.global_id,
@@ -4379,6 +4507,7 @@ class CrossCameraManager:
                 target_local_id=local_id, predicted_distance=round(distance, 2),
                 extrapolated_distance=round(predicted_distance, 2),
                 last_position_distance=round(last_position_distance, 2),
+                distance_limit=round(float(accepted_distance_limit), 2),
                 appearance_distance=round(appearance, 3), elapsed=round(elapsed, 3),
                 tracklet_support=tracklet_support,
                 appearance_reference=appearance_reference,

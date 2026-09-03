@@ -185,20 +185,23 @@ class ParkingSpacePicker:
         cv2.destroyAllWindows()
 
 
-def load_frame(image_path: Path | None, video_path: Path | None, frame_index: int) -> np.ndarray:
+def load_frame(image_path: Path | None, video_path: Path | str | None, frame_index: int) -> np.ndarray:
     if image_path is not None:
         frame = cv2.imread(str(image_path))
         if frame is None:
             raise RuntimeError(f"Cannot read image: {image_path}")
         return frame
-    capture = cv2.VideoCapture(str(video_path))
+    src = str(video_path)
+    if src.startswith("http:") or src.startswith("https:"):
+        src = src.replace("\\", "/")
+    capture = cv2.VideoCapture(src)
     if not capture.isOpened():
-        raise RuntimeError(f"Cannot open video: {video_path}")
+        raise RuntimeError(f"Cannot open video: {src}")
     capture.set(cv2.CAP_PROP_POS_FRAMES, max(0, frame_index))
     ok, frame = capture.read()
     capture.release()
     if not ok:
-        raise RuntimeError(f"Cannot read frame {frame_index} from {video_path}")
+        raise RuntimeError(f"Cannot read frame {frame_index} from {src}")
     return frame
 
 

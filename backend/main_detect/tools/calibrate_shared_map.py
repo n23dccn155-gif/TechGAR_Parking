@@ -120,27 +120,13 @@ def select_labeled_points(
     cv2.setMouseCallback(window_name, on_mouse)
     while True:
         preview = image.copy()
-        panel_height = 72
-        cv2.rectangle(preview, (0, 0), (preview.shape[1], panel_height), (0, 0, 0), -1)
         current = labels[len(points)] if len(points) < len(labels) else "DONE"
-        cv2.putText(
-            preview,
-            f"Click point: {current}   ({len(points)}/{len(labels)})",
-            (12, 28),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.68,
-            (0, 255, 255),
-            2,
-        )
-        cv2.putText(
-            preview,
-            "Left: add | Right: undo | R: reset | Enter: confirm | Q/Esc: cancel",
-            (12, 57),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.52,
-            (230, 230, 230),
-            1,
-        )
+        text1 = f"Click point: {current}   ({len(points)}/{len(labels)})"
+        text2 = "Left: add | Right: undo | R: reset | Enter: confirm | Q/Esc: cancel"
+        cv2.putText(preview, text1, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.68, (0, 0, 0), 4, cv2.LINE_AA)
+        cv2.putText(preview, text1, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.68, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(preview, text2, (12, 57), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (0, 0, 0), 3, cv2.LINE_AA)
+        cv2.putText(preview, text2, (12, 57), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (230, 230, 230), 1, cv2.LINE_AA)
         for index, point in enumerate(points):
             cv2.circle(preview, point, 7, (0, 255, 255), -1)
             cv2.circle(preview, point, 10, (0, 0, 0), 2)

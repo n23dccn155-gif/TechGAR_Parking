@@ -265,6 +265,75 @@ def load_calibration(path: Path) -> tuple[dict, dict, dict, dict]:
     return matrices, adjacency, {("cam1", "cam2"): polygon}, exit_zones
 
 
+# Identity distance thresholds only mean something relative to the size of the
+# vehicles they describe.  Every calibration file records its parking slots in
+# world units, so the slot length is the one measured length available for any
+# deployment; expressing the thresholds as multiples of it keeps a scale-model
+# lot and a full-size car park on the same code path instead of on hand-tuned
+# centimetre constants.
+SLOT_MATCHING_MULTIPLES = {
+    "handoff_match_distance": 1.75,
+    "handoff_prediction_radius": 2.75,
+    "dormant_match_distance": 1.75,
+    "cross_camera_duplicate_distance": 0.50,
+}
+
+
+def median_slot_length(payload: dict) -> Optional[float]:
+    """Median long edge of the calibrated parking slots, in world units."""
+    slots = payload.get("parking_slots_world") or {}
+    groups = list(slots.values()) if isinstance(slots, dict) else [slots]
+    lengths = []
+    for group in groups:
+        for slot in group or ():
+            polygon = slot.get("polygon") if isinstance(slot, dict) else None
+            if not polygon or len(polygon) < 3:
+                continue
+            points = np.asarray(polygon, dtype=np.float32)
+            if points.ndim != 2 or points.shape[1] != 2:
+                continue
+            (_center, (width, height), _angle) = cv2.minAreaRect(points)
+            lengths.append(max(float(width), float(height)))
+    if not lengths:
+        return None
+    return float(np.median(lengths))
+
+
+def derive_matching_defaults(payload: dict) -> dict:
+    """Matching distances implied by the calibrated slot geometry."""
+    slot_length = median_slot_length(payload)
+    if slot_length is None or slot_length <= 0.0:
+        return {}
+    return {
+        name: round(slot_length * multiple, 3)
+        for name, multiple in SLOT_MATCHING_MULTIPLES.items()
+    }
+
+
+def resolve_matching_distance(
+    name: str,
+    override: Optional[float],
+    configured: Optional[float],
+    derived: Optional[float],
+    fallback: float,
+) -> float:
+    """Combine CLI, calibration and slot geometry for one distance threshold.
+
+    An explicit command-line value always wins.  Otherwise the calibrated
+    geometry acts as a ceiling: a calibration file may tighten a threshold but
+    cannot stretch it past what the measured slot size can justify, which is
+    how a stale file ends up granting re-identification across several vehicle
+    lengths.
+    """
+    if override is not None:
+        return float(override)
+    if configured is None:
+        return float(derived if derived is not None else fallback)
+    if derived is None:
+        return float(configured)
+    return float(min(float(configured), float(derived)))
+
+
 def synchronize_live_frames(
     captures: dict,
     frames: dict,
@@ -1137,6 +1206,15 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--handoff-prediction-radius", type=float)
     parser.add_argument("--handoff-min-direction-cosine", type=float, default=0.25)
     parser.add_argument("--identity-retention-seconds", type=float, default=60.0)
+    parser.add_argument(
+        "--identity-retention-moving-seconds",
+        type=float,
+        default=12.0,
+        help=(
+            "cua so giu Global ID cho xe dang di chuyen (xe da do giu"
+            " --identity-retention-seconds nho co reservation cho do)"
+        ),
+    )
     parser.add_argument("--identity-retention-frames", type=int, default=180)
     parser.add_argument("--dormant-match-distance", type=float)
     parser.add_argument("--dormant-appearance-threshold", type=float, default=0.60)
@@ -1313,32 +1391,48 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         matching_defaults = calibration_payload.get("matching_defaults", {})
         tracking_defaults = calibration_payload.get("tracking_defaults", {})
         world_unit = str(calibration_payload.get("world", {}).get("unit", "source_video_pixel"))
+        derived_matching = derive_matching_defaults(calibration_payload)
+        slot_length_world = median_slot_length(calibration_payload) or 0.0
+        world_unit_label = "cm" if world_unit == "cm" else "u"
         shared_map_anchor = str(
             tracking_defaults.get("shared_map_anchor", "bottom_center")
         )
-        handoff_match_distance = float(
-            args.handoff_match_distance
-            if args.handoff_match_distance is not None
-            else matching_defaults.get("handoff_match_distance", 100.0)
+        handoff_match_distance = resolve_matching_distance(
+            "handoff_match_distance",
+            args.handoff_match_distance,
+            matching_defaults.get("handoff_match_distance"),
+            derived_matching.get("handoff_match_distance"),
+            100.0,
         )
-        handoff_prediction_radius = float(
-            args.handoff_prediction_radius
-            if args.handoff_prediction_radius is not None
-            else matching_defaults.get("handoff_prediction_radius", 90.0)
+        handoff_prediction_radius = resolve_matching_distance(
+            "handoff_prediction_radius",
+            args.handoff_prediction_radius,
+            matching_defaults.get("handoff_prediction_radius"),
+            derived_matching.get("handoff_prediction_radius"),
+            90.0,
         )
-        dormant_match_distance = float(
-            args.dormant_match_distance
-            if args.dormant_match_distance is not None
-            else matching_defaults.get("dormant_match_distance", 160.0)
+        dormant_match_distance = resolve_matching_distance(
+            "dormant_match_distance",
+            args.dormant_match_distance,
+            matching_defaults.get("dormant_match_distance"),
+            derived_matching.get("dormant_match_distance"),
+            160.0,
         )
-        cross_camera_duplicate_distance = float(
-            args.cross_camera_duplicate_distance
-            if args.cross_camera_duplicate_distance is not None
-            else matching_defaults.get(
-                "cross_camera_duplicate_distance",
-                handoff_match_distance * 0.60,
+        cross_camera_duplicate_distance = resolve_matching_distance(
+            "cross_camera_duplicate_distance",
+            args.cross_camera_duplicate_distance,
+            matching_defaults.get("cross_camera_duplicate_distance"),
+            derived_matching.get("cross_camera_duplicate_distance"),
+            handoff_match_distance * 0.60,
+        )
+        if derived_matching:
+            print(
+                f"  [identity] slot dai {slot_length_world:.2f}{world_unit_label} ->"
+                f" handoff {handoff_match_distance:.2f}"
+                f" prediction {handoff_prediction_radius:.2f}"
+                f" dormant {dormant_match_distance:.2f}"
+                f" duplicate {cross_camera_duplicate_distance:.2f}"
             )
-        )
 
         # Load mask jsons and set roi_mask
         custom_masks = {}
@@ -1385,6 +1479,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             min_direction_cosine=args.handoff_min_direction_cosine,
             identity_retention_frames=args.identity_retention_frames,
             identity_retention_seconds=args.identity_retention_seconds,
+            identity_retention_moving_seconds=args.identity_retention_moving_seconds,
             dormant_match_distance=dormant_match_distance,
             dormant_appearance_threshold=args.dormant_appearance_threshold,
             tracklet_gallery_size=args.global_gallery_max_samples,
@@ -2115,6 +2210,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         args.tracking_roi_cam2 or args.mask_cam2
                     ),
                     "identity_retention_seconds": args.identity_retention_seconds,
+                    "identity_retention_moving_seconds": (
+                        args.identity_retention_moving_seconds
+                    ),
                     "new_identity_min_observations": (
                         args.new_identity_min_observations
                     ),
