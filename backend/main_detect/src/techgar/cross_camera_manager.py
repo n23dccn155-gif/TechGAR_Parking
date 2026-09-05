@@ -104,6 +104,17 @@ class GlobalIdentityState:
 
 
 @dataclass
+class MergeResult:
+    """Result of a merge_global_ids operation."""
+
+    accepted: bool
+    canonical_id: Optional[int] = None
+    retired_id: Optional[int] = None
+    reason: str = ""
+    rejection_reason: Optional[str] = None
+
+
+@dataclass
 class DirectionReIDClaim:
     """Bounded evidence for a spatial/appearance match with unstable motion."""
 
@@ -694,16 +705,21 @@ class CrossCameraManager:
     ) -> Dict[int, dict]:
         """Synchronize one authoritative slot owner per canonical Global ID.
 
-        Priority 4: Skip provisional identities - they haven't survived the
-        probation period yet and shouldn't bind to slots.
+        P0-C Fix: Provisional identities with confirmed parked reservations
+        are now protected. Skip only NEW reservations for provisional IDs,
+        but keep existing reservations.
         """
         grouped: Dict[int, List[dict]] = {}
         for raw in reservations:
             if raw.get("global_id") is None:
                 continue
             global_id = self._canonical_id(int(raw["global_id"]))
-            # Skip provisional identities - not yet eligible for slot binding
-            if self._is_provisional(global_id, frame_idx):
+            is_provisional = self._is_provisional(global_id, frame_idx)
+            has_existing_reservation = global_id in self._parked_reservations
+
+            # If provisional AND no existing reservation, skip this NEW claim
+            # but keep any existing reservation for this ID
+            if is_provisional and not has_existing_reservation:
                 self._event(
                     "slot_binding_skipped_provisional",
                     frame_idx,
@@ -711,6 +727,7 @@ class CrossCameraManager:
                     slot_id=raw.get("slot_id"),
                 )
                 continue
+
             value = dict(raw)
             value["global_id"] = global_id
             grouped.setdefault(global_id, []).append(value)
@@ -983,11 +1000,11 @@ class CrossCameraManager:
 
         return None
 
-    def _merge_global_ids(self, canonical_id: int, duplicate_id: int, frame_idx: int, reason: str) -> None:
+    def _merge_global_ids(self, canonical_id: int, duplicate_id: int, frame_idx: int, reason: str) -> MergeResult:
         canonical_id = self._canonical_id(canonical_id)
         duplicate_id = self._canonical_id(duplicate_id)
         if canonical_id == duplicate_id:
-            return
+            return MergeResult(accepted=True, canonical_id=canonical_id, reason=reason)
 
         # Priority 2: Collision guard - block merge if risky
         rejection_reason = self._check_merge_collision_risk(
@@ -1006,7 +1023,13 @@ class CrossCameraManager:
                 f"  [merge BLOCKED] #{duplicate_id} -> #{canonical_id} "
                 f"({reason}): {rejection_reason}"
             )
-            return
+            return MergeResult(
+                accepted=False,
+                canonical_id=canonical_id,
+                retired_id=duplicate_id,
+                reason=reason,
+                rejection_reason=rejection_reason,
+            )
 
         # Product invariant: the smaller/older global ID always survives.
         canonical_id, duplicate_id = min(canonical_id, duplicate_id), max(canonical_id, duplicate_id)
@@ -1111,6 +1134,12 @@ class CrossCameraManager:
         ]
         self._event("global_id_merged", frame_idx, canonical_id, superseded_global_id=duplicate_id, reason=reason)
         print(f"  [merge] global #{duplicate_id} -> #{canonical_id} ({reason})")
+        return MergeResult(
+            accepted=True,
+            canonical_id=canonical_id,
+            retired_id=duplicate_id,
+            reason=reason,
+        )
 
     def _merge_recently_lost_duplicates(self, all_tracks: Dict[str, dict], frame_idx: int) -> None:
         """Prefer the pre-existing ID when its motion echo outlives it."""
@@ -1163,9 +1192,10 @@ class CrossCameraManager:
                     ready = count >= 3
                 if not ready:
                     continue
-                self._merge_global_ids(entry.global_id, candidate_id, frame_idx, "lost_track_continuation")
-                merged = True
-                break
+                merge_result = self._merge_global_ids(entry.global_id, candidate_id, frame_idx, "lost_track_continuation")
+                if merge_result.accepted:
+                    merged = True
+                    break
             if not merged:
                 retained.append(entry)
         self._recently_lost = retained
@@ -2945,13 +2975,25 @@ class CrossCameraManager:
                             **bound_proof,
                         )
                         continue
-                    self._merge_global_ids(
+                    merge_result = self._merge_global_ids(
                         source_global_id,
                         target_global_id,
                         frame_idx,
                         "explicit_predictive_handoff",
                     )
-                    source_global_id = self._canonical_id(source_global_id)
+                    # Only update canonical ID if merge was accepted
+                    if merge_result.accepted:
+                        source_global_id = self._canonical_id(source_global_id)
+                    else:
+                        # Merge was blocked - continue with original source_global_id
+                        self._event(
+                            "handoff_merge_rejected",
+                            frame_idx,
+                            source_global_id,
+                            target_global_id=target_global_id,
+                            reason=merge_result.rejection_reason,
+                        )
+                        continue
             source_global_id = self._reconcile_handoff_dormant_alias(
                 source_global_id,
                 cam_id,
@@ -3101,23 +3143,24 @@ class CrossCameraManager:
             return source_global_id
         kept = min(source_global_id, dormant_global_id)
         retired = max(source_global_id, dormant_global_id)
-        self._event(
-            "handoff_reconciled_dormant_alias",
-            frame_idx,
-            kept,
-            superseded_global_id=retired,
-            target_camera=cam_id,
-            target_local_id=int(local_id),
-            world_distance=round(distance, 3),
-            appearance_distance=round(float(appearance), 3),
-            tracklet_support=int(support),
-        )
-        self._merge_global_ids(
+        merge_result = self._merge_global_ids(
             kept,
             retired,
             frame_idx,
             "handoff_destination_camera_history",
         )
+        if merge_result.accepted:
+            self._event(
+                "handoff_reconciled_dormant_alias",
+                frame_idx,
+                kept,
+                superseded_global_id=retired,
+                target_camera=cam_id,
+                target_local_id=int(local_id),
+                world_distance=round(distance, 3),
+                appearance_distance=round(float(appearance), 3),
+                tracklet_support=int(support),
+            )
         return self._canonical_id(kept)
 
     def _world_is_in_overlap(self, cam_id: str, other_cam: str, world: Tuple[float, float]) -> bool:
@@ -5259,8 +5302,9 @@ class CrossCameraManager:
                     ):
                         continue
                     kept_id, retired_id = min(left_global_id, right_global_id), max(left_global_id, right_global_id)
-                    self._merge_global_ids(kept_id, retired_id, frame_idx, "nearby_boxes_same_camera")
-                    left_global_id = kept_id
+                    merge_result = self._merge_global_ids(kept_id, retired_id, frame_idx, "nearby_boxes_same_camera")
+                    if merge_result.accepted:
+                        left_global_id = kept_id
 
     def _merge_unique_cross_camera_duplicates(
         self,
@@ -5490,29 +5534,30 @@ class CrossCameraManager:
                 continue
             kept_id = min(left_global_id, right_global_id)
             retired_id = max(left_global_id, right_global_id)
-            self._event(
-                "cross_camera_duplicate_matched",
-                frame_idx,
-                kept_id,
-                superseded_global_id=retired_id,
-                source_camera=left_cam,
-                target_camera=right_cam,
-                source_local_id=left_local_id,
-                target_local_id=right_local_id,
-                world_distance=round(distance, 3),
-                appearance_distance=round(appearance_match.distance, 3),
-                appearance_threshold=round(appearance_threshold, 3),
-                adaptive_appearance=adaptive_appearance,
-                tracklet_support=appearance_match.support,
-                tracklet_sample_pairs=appearance_match.sample_pairs,
-                size_distance=round(size_distance, 3),
-            )
-            self._merge_global_ids(
+            merge_result = self._merge_global_ids(
                 kept_id,
                 retired_id,
                 frame_idx,
                 "unique_cross_camera_overlap",
             )
+            if merge_result.accepted:
+                self._event(
+                    "cross_camera_duplicate_matched",
+                    frame_idx,
+                    kept_id,
+                    superseded_global_id=retired_id,
+                    source_camera=left_cam,
+                    target_camera=right_cam,
+                    source_local_id=left_local_id,
+                    target_local_id=right_local_id,
+                    world_distance=round(distance, 3),
+                    appearance_distance=round(appearance_match.distance, 3),
+                    appearance_threshold=round(appearance_threshold, 3),
+                    adaptive_appearance=adaptive_appearance,
+                    tracklet_support=appearance_match.support,
+                    tracklet_sample_pairs=appearance_match.sample_pairs,
+                    size_distance=round(size_distance, 3),
+                )
         self._cross_camera_duplicate_evidence = {
             key: value
             for key, value in self._cross_camera_duplicate_evidence.items()
