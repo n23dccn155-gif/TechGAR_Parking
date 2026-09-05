@@ -83,10 +83,10 @@ const MAP_WIDTH = 1200;
 const MAP_HEIGHT = 900;
 
 const SPOT_WIDTH = 90;
-const SPOT_HEIGHT = 70;
-const SPOT_GAP = 12;    // vertical gap between spots
+const SPOT_HEIGHT = 56;
+const SPOT_GAP = 10;    // vertical gap between spots
 
-const FIRST_SPOT_Y = 110;  // y of slot 08 (topmost)
+const FIRST_SPOT_Y = 112;  // y of slot 10 (topmost)
 
 // X positions for each zone column
 const ZONE_COLUMNS: Record<MainZoneId, number> = {
@@ -116,8 +116,8 @@ const CONNECTOR_HEIGHT = 30;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function spotY(slotNumber: number): number {
-  // Slot 08 at top (FIRST_SPOT_Y), slot 01 at bottom
-  const indexFromTop = SPOTS_PER_ZONE - slotNumber; // 08→0, 07→1, ..., 01→7
+  // Slot 10 at top (FIRST_SPOT_Y), slot 01 at bottom
+  const indexFromTop = SPOTS_PER_ZONE - slotNumber; // 10→0, 09→1, ..., 01→9
   return FIRST_SPOT_Y + indexFromTop * (SPOT_HEIGHT + SPOT_GAP);
 }
 

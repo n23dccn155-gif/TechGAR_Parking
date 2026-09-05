@@ -3,7 +3,7 @@ export const ALL_ZONE_IDS = ["A", "B", "C", "D", "E", "F"] as const;
 export const CAMERA_IDS = ["cam-left", "cam-right"] as const;
 export const PARKING_STATUSES = ["empty", "occupied", "transitioning", "unknown"] as const;
 
-export const SPOTS_PER_ZONE = 8;
+export const SPOTS_PER_ZONE = 10;
 
 export type MainZoneId = (typeof MAIN_ZONE_ORDER)[number];
 export type ZoneId = (typeof ALL_ZONE_IDS)[number];

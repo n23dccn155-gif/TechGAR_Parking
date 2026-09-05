@@ -73,7 +73,7 @@ describe("admin monitor", () => {
     await screen.findByText("FRAME 42");
     await user.click(screen.getByRole("button", { name: "Cấu hình cổng" }));
 
-    const map = screen.getByRole("img", { name: /Bản đồ 48 ô/ });
+    const map = screen.getByRole("img", { name: /Bản đồ 60 ô/ });
     vi.spyOn(map, "getBoundingClientRect").mockReturnValue({
       x: 0,
       y: 0,
