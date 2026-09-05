@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at": "2026-08-18T19:40:59.599834+07:00",
+  "captured_at": "2026-09-05T10:46:15.731472+07:00",
   "cameras": {
     "cam1": {
       "source": "http://192.168.100.53:4747/video/force/1280x720",
