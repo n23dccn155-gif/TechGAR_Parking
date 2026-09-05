@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-22T19:21:41.833+07:00",
+  "timestamp": "2026-09-03T17:32:58.678+07:00",
   "source": "sample_simulator",
   "slots": {
     "A01": {
@@ -31,6 +31,14 @@
       "confidence": 0.99
     },
     "A08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "A10": {
       "status": "empty",
       "confidence": 0.99
     },
@@ -66,6 +74,14 @@
       "status": "empty",
       "confidence": 0.99
     },
+    "B09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "B10": {
+      "status": "empty",
+      "confidence": 0.99
+    },
     "C01": {
       "status": "empty",
       "confidence": 0.99
@@ -95,6 +111,14 @@
       "confidence": 0.99
     },
     "C08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "C10": {
       "status": "empty",
       "confidence": 0.99
     },
@@ -130,6 +154,14 @@
       "status": "empty",
       "confidence": 0.99
     },
+    "D09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "D10": {
+      "status": "empty",
+      "confidence": 0.99
+    },
     "E01": {
       "status": "empty",
       "confidence": 0.99
@@ -162,6 +194,14 @@
       "status": "empty",
       "confidence": 0.99
     },
+    "E09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "E10": {
+      "status": "empty",
+      "confidence": 0.99
+    },
     "F01": {
       "status": "empty",
       "confidence": 0.99
@@ -191,6 +231,14 @@
       "confidence": 0.99
     },
     "F08": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F09": {
+      "status": "empty",
+      "confidence": 0.99
+    },
+    "F10": {
       "status": "empty",
       "confidence": 0.99
     }

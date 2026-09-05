@@ -10,7 +10,7 @@ import { RecommendationPanel } from "../components/RecommendationPanel";
 import { SmartParkingHeader } from "../components/SmartParkingHeader";
 import { SpotDetailSheet } from "../components/SpotDetailSheet";
 import { SummaryCards } from "../components/SummaryCards";
-import { classifySpotOccupancy, type DestinationNeed, type ParkingSpotState, type ParkingStatus, type RankedSpot, type SpotId } from "../domain/parking";
+import { classifySpotOccupancy, getSpotOwner, type DestinationNeed, type ParkingSpotState, type ParkingStatus, type RankedSpot, type SpotId } from "../domain/parking";
 import { mockParkingDataSource } from "../mocks/MockParkingDataSource";
 import { recommendParkingSpots } from "../recommendation/recommendationEngine";
 import { LANE_GRAPH, updateGateNodesInGraph } from "../routing/laneGraph";
@@ -147,18 +147,50 @@ export function App({ sessionId }: AppProps = {}) {
 
     const fetchRealtimeStatus = async () => {
       try {
-        if (trackingSource !== "opencv") return;
-        const runtime = requireLiveRuntime(await getRuntimeSnapshot());
-        const runtimeSpots = runtimeParkingSpots(runtime);
-        if (!active || !sourceIsCurrent()) return;
-        applySnapshot({
-          spots: runtimeSpots,
-          cameras: runtimeCameraStates(runtime),
-          capturedAt: runtime.published_at,
-        });
-        if (active) {
-          setRuntimeState("live");
-          setRuntimeError(null);
+        if (trackingSource === "opencv") {
+          const runtime = requireLiveRuntime(await getRuntimeSnapshot());
+          const runtimeSpots = runtimeParkingSpots(runtime);
+          if (!active || !sourceIsCurrent()) return;
+          applySnapshot({
+            spots: runtimeSpots,
+            cameras: runtimeCameraStates(runtime),
+            capturedAt: runtime.published_at,
+          });
+          if (active) {
+            setRuntimeState("live");
+            setRuntimeError(null);
+          }
+        } else if (trackingSource === "sample") {
+          const res = await fetch(`/parking_status_sample.json?t=${Date.now()}`);
+          if (!res.ok || !active || !sourceIsCurrent()) return;
+          const data = await res.json();
+          if (data?.slots) {
+            const currentSpots = useParkingStore.getState().spots;
+            const updatedSpots: ParkingSpotState[] = PARKING_GEOMETRY.spots.map((geom) => {
+              const prev = currentSpots[geom.id];
+              const slotData = data.slots[geom.id];
+              const status: ParkingStatus = slotData?.status ?? prev?.status ?? "empty";
+              return {
+                id: geom.id,
+                zone: geom.zone,
+                number: geom.number,
+                row: geom.row,
+                owner: prev?.owner ?? getSpotOwner(geom.id),
+                status,
+                confidence: slotData?.confidence ?? 0.99,
+                revision: (prev?.revision ?? 0) + 1,
+                updatedAt: data.timestamp ?? new Date().toISOString(),
+              };
+            });
+            applySnapshot({
+              spots: updatedSpots,
+              cameras: {
+                "cam-left": { cameraId: "cam-left", health: "online", updatedAt: data.timestamp ?? "" },
+                "cam-right": { cameraId: "cam-right", health: "online", updatedAt: data.timestamp ?? "" },
+              },
+              capturedAt: data.timestamp ?? new Date().toISOString(),
+            });
+          }
         }
       } catch (error) {
         if (trackingSource === "opencv" && active && sourceIsCurrent()) {
@@ -169,7 +201,7 @@ export function App({ sessionId }: AppProps = {}) {
     };
 
     void fetchRealtimeStatus();
-    const interval = setInterval(fetchRealtimeStatus, 1000);
+    const interval = setInterval(fetchRealtimeStatus, 500);
 
     // ── Đồng bộ CỔNG VÀO / CỔNG RA cho đồ thị dẫn đường ──
     const fetchGateRoi = async () => {

@@ -75,7 +75,7 @@ describe("canonical parking store", () => {
 
   it("derives counts from canonical state after every accepted event", () => {
     const before = deriveParkingCounts(getParkingSpots());
-    expect(before.total).toBe(48); // 6 zones * 8 spots
+    expect(before.total).toBe(60); // 6 zones * 10 spots
     useParkingStore.getState().applyEvent({
       type: "spot.status.changed",
       cameraId: "cam-right",
@@ -86,7 +86,7 @@ describe("canonical parking store", () => {
       updatedAt: "2026-07-25T08:01:02.000Z",
     });
     const after = deriveParkingCounts(getParkingSpots());
-    expect(after.total).toBe(48);
+    expect(after.total).toBe(60);
     expect(after.empty).toBe(before.empty - 1);
     expect(after.occupied).toBe(before.occupied + 1);
     expect(after.total).toBe(after.empty + after.occupied + after.transitioning + after.unknown);

@@ -34,10 +34,10 @@ SCENARIO = [
         "travel_time": 30.0,
         "park_duration": 40.0,
         "exit_time": 25.0,
-        "spot_destination": "D06",
-        # Đi vào (entrance y=790) → đỗ D06
-        "inbound": [(1100, 790), (1100, 775), (540, 775), (540, 274), (488, 274), (435, 274)],
-        "outbound": [(435, 274), (488, 274), (540, 274), (540, 75), (840, 75), (840, 90), (1100, 90)]
+        "spot_destination": "D08",
+        # Đi vào (entrance y=790) → đỗ D08 (x=435, y=272)
+        "inbound": [(1100, 790), (1100, 775), (540, 775), (540, 272), (488, 272), (435, 272)],
+        "outbound": [(435, 272), (488, 272), (540, 272), (540, 75), (840, 75), (840, 90), (1100, 90)]
     },
     {
         "track_id": 2,
@@ -46,10 +46,10 @@ SCENARIO = [
         "travel_time": 30.0,
         "park_duration": 35.0,
         "exit_time": 25.0,
-        "spot_destination": "B04",
-        # Đi vào (entrance y=790) → đỗ B04
-        "inbound": [(1100, 790), (1100, 775), (840, 775), (840, 438), (788, 438), (735, 438)],
-        "outbound": [(735, 438), (788, 438), (840, 438), (840, 90), (1100, 90)]
+        "spot_destination": "B05",
+        # Đi vào (entrance y=790) → đỗ B05 (x=735, y=470)
+        "inbound": [(1100, 790), (1100, 775), (840, 775), (840, 470), (788, 470), (735, 470)],
+        "outbound": [(735, 470), (788, 470), (840, 470), (840, 90), (1100, 90)]
     },
     {
         "track_id": 3,
@@ -58,8 +58,8 @@ SCENARIO = [
         "travel_time": 30.0,
         "park_duration": 30.0,
         "exit_time": 25.0,
-        "spot_destination": "E02",
-        # Đi vào (entrance y=790) → đỗ E02
+        "spot_destination": "E03",
+        # Đi vào (entrance y=790) → đỗ E03 (x=345, y=602)
         "inbound": [(1100, 790), (1100, 775), (250, 775), (250, 602), (292, 602), (345, 602)],
         "outbound": [(345, 602), (292, 602), (250, 602), (250, 75), (840, 75), (840, 90), (1100, 90)]
     }
@@ -203,7 +203,7 @@ def main():
             # Ghi đồng bộ trạng thái đỗ xe để đè lên MockParkingDataSource
             all_spots = {}
             for zone in ["A", "B", "C", "D", "E", "F"]:
-                for i in range(1, 9):
+                for i in range(1, 11):
                     all_spots[f"{zone}{i:02d}"] = {"status": "empty", "confidence": 0.99}
             
             for v in active_vehicles.values():
