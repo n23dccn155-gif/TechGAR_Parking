@@ -336,6 +336,13 @@ class CrossCameraManager:
             Tuple[str, int], Tuple[int, set[int]]
         ] = {}
         self._new_identity_defer_last: Dict[Tuple[str, int, str], int] = {}
+        # First frame each unbound fragment was deferred for physically
+        # leaving a reserved parking slot (keyed like
+        # ``_world_trajectory_deferred_since``).  The allocation loop bounds
+        # each deferral by ``max(handoff_ttl, 60)`` frames so a reservation
+        # that outlives every plausible departure cannot starve a genuinely
+        # new vehicle of a Global ID.
+        self._departure_deferred_since: Dict[Tuple[str, int], int] = {}
         # Robust per-camera size gallery. ``camera_bbox_sizes`` used to be
         # overwritten by the latest motion blob, so one lamp/edge fragment
         # could become the learned "vehicle size" and later validate more
@@ -865,10 +872,34 @@ class CrossCameraManager:
             if identity is not None and identity.state in {"parked", "recovery_pending"}:
                 identity.state = "dormant"
                 identity.dormant_since_frame = int(frame_idx)
+                # Parked time must not count as lost-signal time: while the
+                # slot was reserved the vehicle was deliberately unobserved,
+                # so retention restarts at departure instead of expiring one
+                # frame after the reservation drops (P0 hiep2/D01).
+                identity.last_seen_frame = int(frame_idx)
+                latest_timestamp_s = self._latest_camera_timestamp_s()
+                if latest_timestamp_s is not None:
+                    identity.last_seen_time = float(latest_timestamp_s)
         for global_id in previously_parked - set(selected):
             self.trajectory.set_parked(global_id, False)
         self._parked_reservations = selected
         return {global_id: dict(value) for global_id, value in selected.items()}
+
+    def _latest_camera_timestamp_s(self) -> Optional[float]:
+        """Return the newest capture timestamp processed on any camera.
+
+        ``sync_parked_reservations`` only receives a frame index, yet the
+        retention TTL prefers wall-clock seconds.  ``_update_camera_timing``
+        already maintains the per-camera last processed timestamps, so their
+        maximum is the best available "now" when a dropped reservation
+        re-anchors a parked identity's last-seen time at departure.
+        """
+        timestamps = [
+            float(timestamp)
+            for timestamp in self._camera_last_timestamp.values()
+            if timestamp is not None and np.isfinite(float(timestamp))
+        ]
+        return max(timestamps) if timestamps else None
 
     def detach_parked_local_tracks(self, frame_idx: int) -> List[Tuple[str, int, int]]:
         """Detach local fragments so a parked track cannot steal a new bbox."""
@@ -1402,8 +1433,18 @@ class CrossCameraManager:
         track,
         *,
         recent_window_s: float,
+        candidate_global_id: Optional[int] = None,
     ) -> dict:
-        """Return conservative world/appearance evidence for a departure token."""
+        """Return conservative world/appearance evidence for a departure token.
+
+        ``candidate_global_id`` prepares late reconciliation (two_camera
+        callers): when the fragment is already bound to another Global ID it
+        has no provisional trail, so the candidate's own bound samples on
+        ``camera_id`` serve as its world trail for the origin and
+        competing-reservation comparisons.  All other evidence (parked
+        origin, match_departure, appearance, topology, competing-GID
+        analysis) is unchanged.
+        """
         global_id = self._canonical_id(int(global_id))
         appearance = self.identity_appearance_evidence(
             global_id, camera_id, track
@@ -1467,6 +1508,18 @@ class CrossCameraManager:
         candidate_samples = self.trajectory.provisional_samples(
             (str(camera_id), int(local_track_id))
         )
+        if not candidate_samples and candidate_global_id is not None:
+            # Late reconciliation evaluates a fragment already bound to the
+            # candidate Global ID: its samples were promoted out of the
+            # provisional store, so read the candidate's bound world trail
+            # on this camera instead.
+            candidate_samples = tuple(
+                sample
+                for sample in self.trajectory.global_samples(
+                    self._canonical_id(int(candidate_global_id))
+                )
+                if sample.camera_id == str(camera_id)
+            )
         intended_origin = self.trajectory.parked_origin(global_id)
         intended_origin_distance = (
             float(
@@ -1591,6 +1644,99 @@ class CrossCameraManager:
                 )
                 break
         return payload
+
+    def _leaves_reserved_slot(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        track,
+        frame_idx: int,
+    ) -> Optional[dict]:
+        """Return the slot reservation a fresh fragment is driving out of.
+
+        Departure tokens are fragile: once one is cancelled, a vehicle
+        leaving its reserved slot looks like a brand-new fragment to the
+        allocator and used to be minted a fresh Global ID (P0 hiep2/D01).
+        Fail closed instead: when the fragment's provisional trail starts
+        inside a reserved slot's world origin and moves away from it, report
+        that reservation so new-ID allocation can be deferred and slot
+        recovery can reclaim the identity instead.
+        """
+        samples = self.trajectory.provisional_samples(
+            (str(cam_id), int(local_track_id))
+        )
+        if len(samples) < self.trajectory.min_observations:
+            # Mirror WorldTrajectoryMemory.min_observations: shorter trails
+            # carry no reliable direction evidence.
+            return None
+        latest = samples[-1]
+        if int(frame_idx) - int(latest.frame_idx) > max(
+            self.handoff_ttl, 60
+        ):
+            # A recycled local track ID must not inherit a stale trail.
+            return None
+        earliest = samples[0]
+        for raw_global_id, reservation in sorted(
+            self._parked_reservations.items()
+        ):
+            if str(reservation.get("state")) not in {
+                "parked",
+                "recovery_pending",
+            }:
+                continue
+            reservation_camera = reservation.get("camera_id")
+            if (
+                reservation_camera
+                and str(reservation_camera) != str(cam_id)
+            ):
+                continue
+            global_id = self._canonical_id(int(raw_global_id))
+            origin = self.trajectory.parked_origin(global_id)
+            if origin is None:
+                # Same projection sync_parked_reservations uses to anchor a
+                # reservation center on the shared map.
+                raw_center = reservation.get("center")
+                if not reservation_camera or raw_center is None:
+                    continue
+                try:
+                    origin = self._world(
+                        str(reservation_camera),
+                        (float(raw_center[0]), float(raw_center[1])),
+                    )
+                except (
+                    cv2.error,
+                    KeyError,
+                    np.linalg.LinAlgError,
+                    TypeError,
+                    ValueError,
+                ):
+                    continue
+            earliest_distance = float(
+                np.linalg.norm(np.subtract(earliest.world, origin))
+            )
+            # Reservations carry no slot polygon, so the dormant match
+            # corridor doubles as the slot-proximity bound.
+            if earliest_distance > self.dormant_match_distance:
+                continue
+            latest_distance = float(
+                np.linalg.norm(np.subtract(latest.world, origin))
+            )
+            try:
+                velocity_world = self._world_velocity(cam_id, track)
+            except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+                velocity_world = (0.0, 0.0)
+            radial_speed = float(
+                np.dot(velocity_world, np.subtract(latest.world, origin))
+            )
+            if latest_distance <= earliest_distance and radial_speed <= 0.0:
+                # Neither the trail nor the velocity points away from the
+                # slot, so this is not (yet) a departure.
+                continue
+            return {
+                "reserved_global_id": int(global_id),
+                "slot_id": str(reservation.get("slot_id")),
+            }
+        return None
 
     def draw_motion_trails(
         self,
@@ -3780,6 +3926,13 @@ class CrossCameraManager:
         filtered view of the tracks. A one-frame LOST/frozen fragment can be
         absent from that view even though the motion tracker still owns the
         local ID. Cleanup must therefore use the original tracker snapshot.
+
+        ``_departure_deferred_since`` is keyed the same way and is pruned
+        here too: a fragment that stopped reporting cannot extend its
+        departure deferral.  Live fragments are bounded separately at
+        allocation time by ``max(handoff_ttl, 60)`` frames, and entries whose
+        slot reservation disappeared are popped by the allocation loop when
+        ``_leaves_reserved_slot`` stops matching.
         """
         present_keys = {
             (str(camera_id), int(local_id))
@@ -3789,6 +3942,11 @@ class CrossCameraManager:
         self._world_trajectory_deferred_since = {
             key: started
             for key, started in self._world_trajectory_deferred_since.items()
+            if key in present_keys
+        }
+        self._departure_deferred_since = {
+            key: first_deferred
+            for key, first_deferred in self._departure_deferred_since.items()
             if key in present_keys
         }
 
@@ -5914,6 +6072,54 @@ class CrossCameraManager:
                     frame_idx,
                 ):
                     continue
+                # A fragment physically leaving a reserved parking slot must
+                # not be minted a brand-new Global ID just because its
+                # fragile departure token was cancelled (P0 hiep2/D01).
+                # Defer allocation while the slot's owner can still recover
+                # the identity, but bound the deferral so a reservation that
+                # outlives every plausible departure cannot starve a
+                # genuinely new vehicle.
+                depart_key = (str(cam_id), int(local_track_id))
+                depart_deferred_since = self._departure_deferred_since.get(
+                    depart_key
+                )
+                depart_expired = (
+                    depart_deferred_since is not None
+                    and int(frame_idx) - int(depart_deferred_since)
+                    > max(self.handoff_ttl, 60)
+                )
+                if depart_expired:
+                    self._departure_deferred_since.pop(depart_key, None)
+                    self._event(
+                        "departure_deferral_expired",
+                        frame_idx,
+                        None,
+                        camera=cam_id,
+                        local_track_id=int(local_track_id),
+                        deferred_since_frame=int(depart_deferred_since),
+                        deferred_frames=int(frame_idx)
+                        - int(depart_deferred_since),
+                    )
+                reserved_slot = (
+                    None
+                    if depart_expired
+                    else self._leaves_reserved_slot(
+                        cam_id, local_track_id, track, frame_idx
+                    )
+                )
+                if reserved_slot is not None:
+                    self._departure_deferred_since.setdefault(
+                        depart_key, int(frame_idx)
+                    )
+                    self._record_new_identity_deferred(
+                        cam_id,
+                        local_track_id,
+                        frame_idx,
+                        "leaving_reserved_slot",
+                        **reserved_slot,
+                    )
+                    continue
+                self._departure_deferred_since.pop(depart_key, None)
                 allocated_global_id = self._allocate_global_id()
                 self._global_created_frames.setdefault(
                     allocated_global_id, int(frame_idx)

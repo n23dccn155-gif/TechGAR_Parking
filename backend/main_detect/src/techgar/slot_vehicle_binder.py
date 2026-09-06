@@ -206,7 +206,7 @@ class SlotVehicleBinder:
         recovery_size_ratio_range: Tuple[float, float] = (0.40, 2.50),
         recovery_relaxed_slot_overlap: float = 0.25,
         false_empty_grace_seconds: float = 1.25,
-        predeparture_guard_seconds: float = 0.75,
+        predeparture_guard_seconds: float = 2.5,
         recovery_min_movement_px: float = 3.0,
         recovery_min_outward_px: float = 1.5,
         recovery_min_radial_gain_px: float = 0.75,
@@ -496,6 +496,22 @@ class SlotVehicleBinder:
                     slot_id=binding.slot_id,
                     local_key=repr(key),
                 )
+            elif (
+                existing.predeparture
+                and not existing.confirmed_empty
+                and existing.empty_observations == 0
+            ):
+                # The leaving fragment is still physically at this slot, so
+                # the departure is not finished.  Refresh the guard clock so
+                # the token survives until the slower vision worker confirms
+                # the slot empty (hiep2/D01).  A confirmed token is never
+                # touched here: its recovery radius expands from
+                # created_at_s and must not be reset.
+                existing.created_at_s = float(timestamp_s)
+                if existing.expires_at_s < float(timestamp_s):
+                    existing.expires_at_s = (
+                        float(timestamp_s) + self.recovery_retention_seconds
+                    )
             protected.add(key)
         return protected
 
@@ -1147,6 +1163,8 @@ class SlotVehicleBinder:
             predeparture=bool(predeparture),
         )
         self._departure_tokens[binding.slot_id] = token
+        vision_evidence = getattr(binding.result_ref, "evidence", None) or {}
+        evidence_frame_idx = vision_evidence.get("evidence_frame_idx")
         self._event(
             "departure_token_created",
             global_id=global_id,
@@ -1154,6 +1172,12 @@ class SlotVehicleBinder:
             reason=reason,
             provisional=True,
             expires_in_ms=int(self.recovery_retention_seconds * 1000),
+            applied_frame_idx=int(self._last_frame_idx),
+            evidence_frame_idx=(
+                int(evidence_frame_idx)
+                if evidence_frame_idx is not None
+                else None
+            ),
         )
         return token
 
@@ -1185,6 +1209,13 @@ class SlotVehicleBinder:
             state.observations.clear()
 
     def _restore_false_empty_token(self, token: DepartureToken) -> None:
+        if token.predeparture and token.empty_observations == 0:
+            # Vision never produced even one empty sample for this token, so
+            # an occupied reading is not a "false empty": the vehicle is
+            # still physically covering the slot while reversing out.  Leave
+            # the sticky binding and the token untouched (fail closed: no
+            # cancel, no event).
+            return
         binding = self._bindings.get(token.slot_id)
         if binding is None or binding.vehicle_id not in (None, token.global_id):
             return
@@ -1244,14 +1275,35 @@ class SlotVehicleBinder:
                 and token.empty_observations == 0
                 and now_s - token.created_at_s > self.predeparture_guard_seconds
             ):
-                self._departure_tokens.pop(slot_id, None)
-                self._event(
-                    "departure_token_cancelled",
-                    global_id=token.global_id,
-                    slot_id=slot_id,
-                    reason="predeparture_guard_expired",
+                # Fail closed (hiep2/D01): the vision worker can need longer
+                # than the guard to deliver the two empty samples.  While any
+                # candidate evidence is still fresh, or a qualified departure
+                # fragment remains within the recovery retention window, do
+                # not cancel here; such tokens die only through the ordinary
+                # retention path below.
+                fresh_evidence = any(
+                    now_s - evidence.last_seen_s
+                    <= self.false_empty_grace_seconds
+                    for evidence in token.candidates.values()
                 )
-                continue
+                qualified_evidence = any(
+                    (
+                        evidence.qualified_predeparture
+                        or evidence.world_trajectory_qualified
+                    )
+                    and now_s - evidence.last_seen_s
+                    <= self.recovery_retention_seconds
+                    for evidence in token.candidates.values()
+                )
+                if not fresh_evidence and not qualified_evidence:
+                    self._departure_tokens.pop(slot_id, None)
+                    self._event(
+                        "departure_token_cancelled",
+                        global_id=token.global_id,
+                        slot_id=slot_id,
+                        reason="predeparture_guard_expired",
+                    )
+                    continue
             if now_s <= token.expires_at_s:
                 # Forget candidates that disappeared; their old one-frame
                 # evidence must never be reused by a later blob with the same
@@ -1818,18 +1870,36 @@ class SlotVehicleBinder:
                         )
                         self._detach_binding_for_departure(binding, token, timestamp_s)
                         if token.confirmed_empty:
+                            vision_evidence = (
+                                getattr(result, "evidence", None) or {}
+                            )
+                            evidence_frame_idx = vision_evidence.get(
+                                "evidence_frame_idx"
+                            )
                             self._event(
                                 "departure_token_confirmed",
                                 global_id=token.global_id,
                                 slot_id=slot_id,
                                 empty_observations=token.empty_observations,
+                                applied_frame_idx=int(self._last_frame_idx),
+                                evidence_frame_idx=(
+                                    int(evidence_frame_idx)
+                                    if evidence_frame_idx is not None
+                                    else None
+                                ),
                             )
                 elif token is not None:
                     # If occupied vision returns before the token is consumed,
                     # the empty interval was a detector flicker.  Restore the
                     # parked owner regardless of token age; a real departure
                     # consumes/cancels the token through verified tracking.
-                    self._restore_false_empty_token(token)
+                    # Exception: a predeparture token with zero empty
+                    # observations never saw a single empty sample, so the
+                    # occupied reading just means the vehicle is still
+                    # physically covering the slot while reversing out.  Keep
+                    # the sticky binding and the token exactly as they are.
+                    if token.empty_observations > 0 or not token.predeparture:
+                        self._restore_false_empty_token(token)
 
                 if binding.vision_occupied and binding.vehicle_id is None:
                     self._try_commit_arrival_claim(

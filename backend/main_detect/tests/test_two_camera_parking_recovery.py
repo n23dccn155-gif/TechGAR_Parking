@@ -437,3 +437,195 @@ def test_observed_identity_cancels_mature_same_camera_and_cross_camera_tokens():
         {"cam1": 10.1, "cam2": 10.1},
     )
     assert cross.cancelled == [(31, "identity_observed_cross_camera")]
+
+
+class LateReconciliationFakeManager(FakeManager):
+    """FakeManager + merge/GID-allocation metadata for reconciliation tests."""
+
+    def __init__(self):
+        super().__init__()
+        self.merges = []
+        self._global_created_frames = {}
+        self.dormant_match_distance = 160.0
+        self.recovery_retention_seconds = 5.0
+
+    def parking_recovery_trajectory_evidence(
+        self, global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None,
+    ):
+        raise AssertionError("test must stub this attribute")
+
+    def _merge_global_ids(
+        self, canonical_id, duplicate_id, frame_idx, reason, **_kwargs
+    ):
+        self.merges.append(
+            (int(canonical_id), int(duplicate_id), reason)
+        )
+        from techgar.cross_camera_manager import MergeResult
+
+        return MergeResult(
+            accepted=True,
+            canonical_id=int(canonical_id),
+            retired_id=int(duplicate_id),
+            reason=reason,
+        )
+
+
+def _passing_reconciliation_evidence():
+    return {
+        "hard_reject_reason": None,
+        "origin_distance_cm": 12.0,
+        "score": 0.92,
+        "observations": 4,
+        "stable": True,
+        "appearance_distance": 0.20,
+        "appearance_support": 3.0,
+        "topology_score": 1.0,
+    }
+
+
+def test_late_reconciliation_restores_owner_and_retires_wrong_gid():
+    # hiep2/D01 regression: vision confirmed the slot empty only after the
+    # departing car was minted a wrong new Global ID.  The wrong ID must be
+    # reconciled back to the parked owner, never merged unconditionally.
+    manager = LateReconciliationFakeManager()
+    manager.bindings[("cam1", 9)] = 4  # departing car carries wrong G#4
+    manager._global_created_frames = {2: 167, 4: 1181}
+    manager.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: _passing_reconciliation_evidence()
+    )
+    confirmed_token = token("D01", 2)
+    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
+    binder = FakeBinder(confirmed_token)
+    binder.recovery_appearance_threshold = 0.55
+    binders = {"cam1": binder, "cam2": FakeBinder(None)}
+    transforms = {camera_id: np.eye(3) for camera_id in binders}
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager,
+        binders,
+        transforms,
+        1197,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    # Owner G#2 re-bound onto the leaving track, wrong G#4 retired via merge.
+    assert manager.bindings[("cam1", 9)] == 2
+    assert manager.merges == [(2, 4, "late_departure_token_reconciliation")]
+    assert binder.cancelled == [(2, "late_departure_token_reconciled")]
+    assert protected == {("cam1", 9)}
+    assert any(
+        item["type"] == "slot_recovery_late_reconciliation_applied"
+        for item in diagnostics
+    )
+
+
+def test_late_reconciliation_waits_when_evidence_fails():
+    manager = LateReconciliationFakeManager()
+    manager.bindings[("cam1", 9)] = 4
+    manager._global_created_frames = {2: 167, 4: 1181}
+    weak = _passing_reconciliation_evidence()
+    weak["score"] = 0.31  # trajectory evidence insufficient -> wait, no merge
+    manager.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: weak
+    )
+    confirmed_token = token("D01", 2)
+    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
+    binder = FakeBinder(confirmed_token)
+    binder.recovery_appearance_threshold = 0.55
+    binders = {"cam1": binder, "cam2": FakeBinder(None)}
+    transforms = {camera_id: np.eye(3) for camera_id in binders}
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager,
+        binders,
+        transforms,
+        1197,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    assert manager.bindings[("cam1", 9)] == 4  # untouched
+    assert manager.merges == []
+    assert binder.cancelled == []  # token stays alive for retry
+    assert protected == set()
+    assert diagnostics == [
+        {
+            "type": "slot_recovery_late_reconciliation_pending",
+            "reason": "trajectory_not_qualified",
+            "frame": 1197,
+            "camera": "cam1",
+            "local_track_id": 9,
+            "token_slot_id": "D01",
+            "token_global_id": 2,
+            "current_global_id": 4,
+        }
+    ]
+
+
+def test_late_reconciliation_never_touches_unconfirmed_or_younger_ids():
+    # Fail closed: a wrong ID minted BEFORE the owner identity existed can
+    # never be reconciled (it is not the departing car), and unconfirmed
+    # tokens grant no reconciliation right at all.
+    manager = LateReconciliationFakeManager()
+    manager.bindings[("cam1", 9)] = 4
+    manager._global_created_frames = {2: 1200, 4: 1181}  # G#4 older than G#2
+    manager.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: _passing_reconciliation_evidence()
+    )
+    confirmed_token = token("D01", 2)
+    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
+    binder = FakeBinder(confirmed_token)
+    binder.recovery_appearance_threshold = 0.55
+    binders = {"cam1": binder, "cam2": FakeBinder(None)}
+    transforms = {camera_id: np.eye(3) for camera_id in binders}
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager,
+        binders,
+        transforms,
+        1210,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    assert manager.bindings[("cam1", 9)] == 4
+    assert manager.merges == []
+    assert binder.cancelled == []
+    assert protected == set()
+    assert diagnostics == []
+
+    # Unconfirmed token: no reconciliation even with perfect evidence.
+    manager2 = LateReconciliationFakeManager()
+    manager2.bindings[("cam1", 9)] = 4
+    manager2._global_created_frames = {2: 167, 4: 1181}
+    manager2.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: _passing_reconciliation_evidence()
+    )
+    unconfirmed_token = token("D01", 2)
+    binder2 = FakeBinder(unconfirmed_token)
+    binder2.recovery_appearance_threshold = 0.55
+    binders2 = {"cam1": binder2, "cam2": FakeBinder(None)}
+
+    protected2, diagnostics2 = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager2,
+        binders2,
+        transforms,
+        1197,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+    assert manager2.bindings[("cam1", 9)] == 4
+    assert manager2.merges == []
+    assert binder2.cancelled == []
+    assert protected2 == set()
+    assert diagnostics2 == []

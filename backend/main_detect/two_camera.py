@@ -779,17 +779,30 @@ def recover_departing_vehicle_ids(
         for local_id, track in tracks.items()
         if manager.get_global_id(camera_id, local_id) is None
     }
-    if not unbound:
+    if not unbound and not any(
+        manager.get_global_id(camera_id, local_id) is not None
+        for camera_id, tracks in observable.items()
+        for local_id in tracks
+    ):
         return set(), []
 
     diagnostics: list[dict] = []
     tokens_by_camera: dict[str, list[dict]] = {}
     tokens_by_global_id: dict[int, list[tuple[str, dict]]] = {}
+    # Late reconciliation needs the full confirmed token list, including tokens
+    # whose owner GID is still visibly tracked (the normal path refuses those):
+    # hiep2/D01 showed vision confirming empty after the departing car had
+    # already been minted a wrong new Global ID.
+    confirmed_tokens_by_camera: dict[str, list[dict]] = {
+        camera_id: [] for camera_id in binders
+    }
     for camera_id, binder in binders.items():
         tokens_by_camera[camera_id] = []
         for raw_token in binder.export_recovery_tokens(camera_timestamps_s[camera_id]):
             token = dict(raw_token)
             token["global_id"] = int(canonicalize(token["global_id"]))
+            if token.get("confirmed_empty"):
+                confirmed_tokens_by_camera[camera_id].append(token)
             # Keep the token alive while its original local track is still
             # visible, but never offer that GID to a second object concurrently.
             if token["global_id"] in active_global_ids:
@@ -833,6 +846,9 @@ def recover_departing_vehicle_ids(
     payload_cache: dict[tuple[tuple[str, int], str], dict] = {}
     assigned_candidates: dict[str, dict] = {camera_id: {} for camera_id in binders}
     protected: set[tuple[str, int]] = set()
+    trajectory_evidence_for = getattr(
+        manager, "parking_recovery_trajectory_evidence", None
+    )
     for local_key, track in unbound.items():
         source_camera, _local_id = local_key
         continuation_owners = [
@@ -980,9 +996,6 @@ def recover_departing_vehicle_ids(
                 )
             ),
         )
-        trajectory_evidence_for = getattr(
-            manager, "parking_recovery_trajectory_evidence", None
-        )
         for local_key, payload in candidates.items():
             source_camera, local_id = local_key
             track = unbound[local_key]
@@ -1059,6 +1072,189 @@ def recover_departing_vehicle_ids(
                     **detail,
                 }
             )
+    # Late departure reconciliation (P0 hiep2/D01): vision may confirm the
+    # slot empty only AFTER the departing vehicle was already minted a wrong
+    # new Global ID.  The normal candidate pool above is unbound-only, so such
+    # a track is invisible to it.  Admit already-assigned tracks into a
+    # separate, fail-closed pool driven by confirmed tokens.  A wrong ID is
+    # canonicalized back to the slot owner only when EVERY gate below proves
+    # this is the vehicle that left the slot; otherwise the token simply
+    # retries next frame until retention expires.
+    if (
+        trajectory_evidence_for is not None
+        and any(confirmed_tokens_by_camera.values())
+    ):
+        created_frames = getattr(manager, "_global_created_frames", {})
+        dormant_distance = float(
+            getattr(manager, "dormant_match_distance", 160.0)
+        )
+        for camera_id, tracks in observable.items():
+            for local_id, track in tracks.items():
+                current_gid_raw = manager.get_global_id(camera_id, local_id)
+                if current_gid_raw is None:
+                    continue  # normal unbound recovery owns this key
+                current_gid = int(canonicalize(current_gid_raw))
+                for token_owner, tokens in confirmed_tokens_by_camera.items():
+                    reconciled = False
+                    for token in tokens:
+                        token_gid = int(token["global_id"])
+                        # g1 token proof: confirmed, owner differs from the
+                        # wrong ID, and the token GID itself is not the
+                        # concurrently-tracked identity.
+                        if not token.get("confirmed_empty") or token_gid == current_gid:
+                            continue
+                        if token_gid in active_global_ids:
+                            continue
+                        # g2 timing: the wrong ID must have been minted while
+                        # the token was already collecting evidence, never
+                        # after the owner identity itself was created.
+                        wrong_birth = created_frames.get(current_gid)
+                        owner_birth = created_frames.get(token_gid)
+                        if wrong_birth is None or int(wrong_birth) > int(frame_idx):
+                            continue
+                        if owner_birth is not None and int(wrong_birth) <= int(
+                            owner_birth
+                        ):
+                            continue
+                        # g3-g6: origin, trajectory, appearance, camera via the
+                        # manager's conservative evidence bundle, sourced from
+                        # the bound candidate trail.
+                        try:
+                            evidence = trajectory_evidence_for(
+                                token_gid,
+                                camera_id,
+                                int(local_id),
+                                track,
+                                recent_window_s=max(
+                                    0.1,
+                                    float(
+                                        getattr(
+                                            binders[token_owner],
+                                            "recovery_retention_seconds",
+                                            5.0,
+                                        )
+                                    ),
+                                ),
+                                candidate_global_id=current_gid,
+                            )
+                        except (
+                            cv2.error,
+                            KeyError,
+                            np.linalg.LinAlgError,
+                            ValueError,
+                        ):
+                            continue
+                        origin_distance = evidence.get("origin_distance_cm")
+                        appearance_distance = evidence.get("appearance_distance")
+                        reason = None
+                        if evidence.get("hard_reject_reason") is not None:
+                            reason = str(evidence["hard_reject_reason"])
+                        elif (
+                            origin_distance is None
+                            or float(origin_distance) > dormant_distance
+                        ):
+                            reason = "origin_too_far"
+                        elif (
+                            evidence.get("score") is None
+                            or float(evidence["score"]) < 0.78
+                            or int(evidence.get("observations", 0)) < 3
+                            or not evidence.get("stable")
+                        ):
+                            reason = "trajectory_not_qualified"
+                        elif (
+                            appearance_distance is None
+                            or float(appearance_distance) > float(
+                                getattr(
+                                    binders[token_owner],
+                                    "recovery_appearance_threshold",
+                                    0.55,
+                                )
+                            )
+                            or float(evidence.get("appearance_support", 0.0)) <= 0.0
+                        ):
+                            reason = "appearance_mismatch"
+                        elif float(evidence.get("topology_score", 0.0)) <= 0.0:
+                            reason = "camera_topology"
+                        if reason is not None:
+                            diagnostics.append({
+                                "type": "slot_recovery_late_reconciliation_pending",
+                                "reason": reason,
+                                "frame": int(frame_idx),
+                                "camera": camera_id,
+                                "local_track_id": int(local_id),
+                                "token_slot_id": token.get("slot_id"),
+                                "token_global_id": token_gid,
+                                "current_global_id": current_gid,
+                            })
+                            continue
+                        local_key = (camera_id, int(local_id))
+                        try:
+                            manager.bind_external_id(
+                                camera_id,
+                                int(local_id),
+                                token_gid,
+                                frame_idx,
+                                source="parking_departure_token",
+                                source_slot_id=str(token["slot_id"]),
+                                source_camera_id=str(
+                                    token.get("camera_id") or token_owner
+                                ),
+                            )
+                        except ValueError:
+                            diagnostics.append({
+                                "type": "slot_recovery_late_reconciliation_pending",
+                                "reason": "rebind_rejected",
+                                "frame": int(frame_idx),
+                                "camera": camera_id,
+                                "local_track_id": int(local_id),
+                                "token_slot_id": token.get("slot_id"),
+                                "token_global_id": token_gid,
+                                "current_global_id": current_gid,
+                            })
+                            continue
+                        merge = manager._merge_global_ids(
+                            canonical_id=token_gid,
+                            duplicate_id=current_gid,
+                            frame_idx=frame_idx,
+                            reason="late_departure_token_reconciliation",
+                        )
+                        if not merge.accepted:
+                            # The owner is restored even when the wrongly
+                            # minted GID cannot merge (e.g. it was
+                            # independently observed); the duplicate retires
+                            # through normal retention.
+                            diagnostics.append({
+                                "type": "slot_recovery_late_reconciliation_blocked",
+                                "reason": merge.rejection_reason,
+                                "frame": int(frame_idx),
+                                "camera": camera_id,
+                                "local_track_id": int(local_id),
+                                "token_slot_id": token.get("slot_id"),
+                                "token_global_id": token_gid,
+                                "current_global_id": current_gid,
+                            })
+                        else:
+                            diagnostics.append({
+                                "type": "slot_recovery_late_reconciliation_applied",
+                                "frame": int(frame_idx),
+                                "camera": camera_id,
+                                "local_track_id": int(local_id),
+                                "slot_id": token.get("slot_id"),
+                                "token_global_id": token_gid,
+                                "retired_global_id": current_gid,
+                            })
+                        # Retire the consumed token so it is never offered
+                        # twice.  Keep the key protected this frame so the
+                        # allocator cannot immediately re-bind it elsewhere.
+                        binders[token_owner].cancel_recovery_for_global_id(
+                            token_gid,
+                            reason="late_departure_token_reconciled",
+                        )
+                        protected.add(local_key)
+                        reconciled = True
+                        break
+                    if reconciled:
+                        break
     return protected, diagnostics
 
 
@@ -1669,6 +1865,17 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 # Three observations keep a two-frame shadow/noise fragment
                 # from ever consuming the only parked Global ID.
                 recovery_evidence_frames=3,
+                # The predeparture guard must outlive the slowest path to a
+                # confirmed-empty vision result: stale live-result age + the
+                # empty dwell + one parking worker interval.  The old 0.75 s
+                # default cancelled the token while the car was still
+                # reversing out and vision needed >= 1.0 s to confirm the
+                # slot empty (P0 hiep2/D01).
+                predeparture_guard_seconds=(
+                    args.parking_empty_seconds
+                    + args.parking_max_result_age_seconds
+                    + 1.0 / max(args.parking_fps, 0.01)
+                ),
                 arrival_lookback_seconds=arrival_lookback_seconds,
                 arrival_min_samples=args.slot_arrival_min_samples,
                 arrival_vision_confirmations=args.slot_arrival_vision_confirmations,
