@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import importlib.metadata
 import json
 import os
+import subprocess
 import sys
 import time
 import uuid
@@ -69,7 +72,7 @@ class PendingParkingJob:
     timestamp_s: float
 
 
-def finish_recording_actions(actions: list[Callable[[], object]]) -> None:
+def finish_recording_actions(actions: list[Callable[[], object]]) -> bool:
     """Finish the current frame record before honoring Ctrl+C.
 
     On Windows, ``KeyboardInterrupt`` can arrive between individual video and
@@ -82,8 +85,59 @@ def finish_recording_actions(actions: list[Callable[[], object]]) -> None:
             action()
         except KeyboardInterrupt:
             interrupted = True
-    if interrupted:
-        raise KeyboardInterrupt
+    return interrupted
+
+
+def counted_recording_action(
+    counts: dict[str, int],
+    channel: str,
+    action: Callable[[], object],
+) -> Callable[[], object]:
+    """Count a channel only after its frame write returned successfully."""
+    def run_action() -> object:
+        result = action()
+        counts[channel] = counts.get(channel, 0) + 1
+        return result
+
+    return run_action
+
+
+def file_sha256(path: Path) -> Optional[str]:
+    """Return a reproducibility hash without failing a recording shutdown."""
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def git_revision(path: Path) -> Optional[str]:
+    """Return the source revision when this checkout is a Git worktree."""
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=path,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return completed.stdout.strip() or None
+
+
+def dependency_versions() -> dict[str, str]:
+    """Small dependency snapshot used to reproduce an experiment session."""
+    versions = {
+        "python": sys.version.split()[0],
+        "opencv-python": str(cv2.__version__),
+        "numpy": str(np.__version__),
+    }
+    try:
+        versions["lap"] = importlib.metadata.version("lap")
+    except importlib.metadata.PackageNotFoundError:
+        versions["lap"] = "unknown"
+    return versions
 
 
 class ReplaySession:
@@ -610,6 +664,8 @@ def collect_binder_global_tracks(camera_id, tracker, manager) -> dict[int, objec
     """Include retained confirmed/LOST tracks so a stopped car can bind fast."""
     selected: dict[int, tuple[tuple[int, int, int], object]] = {}
     for local_id, track in tracker.confirmed_tracks.items():
+        if getattr(track, 'observation_kind', 'detection') in {'occluded_prediction', 'watershed_validated', 'watershed_provisional'}:
+            continue
         global_id = manager.get_global_id(camera_id, local_id)
         if global_id is None:
             continue
@@ -637,6 +693,12 @@ def sync_parking_identity_reservations(
         for reservation in binder.get_identity_reservations()
     ]
     accepted = manager.sync_parked_reservations(reservations, frame_idx)
+    for binder in binders.values():
+        binder.reconcile_identity_reservations(
+            accepted,
+            frame_idx,
+            manager.canonical_global_id,
+        )
     for camera_id, local_id, _global_id in manager.detach_parked_local_tracks(
         frame_idx
     ):
@@ -952,12 +1014,37 @@ def recover_departing_vehicle_ids(
         protected.update(batch.ambiguous_local_keys)
         for local_key, global_id in batch.recovered_ids.items():
             source_camera, local_id = local_key
+            recovery_token = next(
+                (
+                    token
+                    for token in tokens_by_camera.get(owner_camera, ())
+                    if int(token["global_id"])
+                    == int(manager.canonical_global_id(global_id))
+                ),
+                None,
+            )
+            if recovery_token is None:
+                # Fail closed: a bare source string is not proof that this
+                # local track owns a parked identity.
+                protected.add(local_key)
+                diagnostics.append({
+                    "type": "slot_recovery_rejected_missing_token_proof",
+                    "frame": int(frame_idx),
+                    "camera": source_camera,
+                    "local_track_id": int(local_id),
+                    "global_id": int(global_id),
+                })
+                continue
             manager.bind_external_id(
                 source_camera,
                 int(local_id),
                 int(global_id),
                 frame_idx,
                 source="parking_departure_token",
+                source_slot_id=str(recovery_token["slot_id"]),
+                source_camera_id=str(
+                    recovery_token.get("camera_id") or owner_camera
+                ),
             )
             protected.discard(local_key)
         for local_key, detail in batch.diagnostics.items():
@@ -981,7 +1068,7 @@ def process_parking_frame(
     include_debug: bool,
 ) -> tuple[list, tuple[np.ndarray, np.ndarray] | None]:
     """Run slow parking work outside the live display loop."""
-    results = detector.detect(frame, apply_smoothing=True)
+    results = detector.detect(frame, apply_smoothing=not detector.stable_evidence)
     debug = detector.build_debug_images(frame) if include_debug else None
     return results, debug
 
@@ -1085,6 +1172,11 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-parking-debug", action="store_true", help="An cua so threshold pixel de giam tai")
     parser.add_argument("--parking-fps", type=float, default=2.0)
+    parser.add_argument("--legacy-parking-filter", action="store_true", help="Replay baseline border filter and frame smoothing")
+    parser.add_argument("--parking-enter-ratio", type=float, default=0.12)
+    parser.add_argument("--parking-exit-ratio", type=float, default=0.08)
+    parser.add_argument("--parking-occupied-seconds", type=float, default=0.5)
+    parser.add_argument("--parking-empty-seconds", type=float, default=1.0)
     parser.add_argument(
         "--parking-max-result-age-seconds",
         type=float,
@@ -1103,6 +1195,9 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-visible-count", type=int, default=3)
     parser.add_argument("--lost-track-ttl", type=int, default=90)
     parser.add_argument("--motion-min-area", type=int, default=650)
+    parser.add_argument("--no-occlusion-guard", action="store_true", help="Ablation: disable two-car group protection")
+    parser.add_argument("--no-watershed", action="store_true", help="Keep group protection, disable provisional watershed")
+    parser.add_argument("--no-spatial-appearance", action="store_true", help="Ablation: original 416-D descriptor only")
     parser.add_argument("--motion-max-distance", type=float, default=180.0)
     parser.add_argument("--motion-min-displacement", type=float, default=6.0)
     parser.add_argument("--motion-threshold", type=int, default=20)
@@ -1272,6 +1367,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    calibration_path = Path(args.calibration).resolve()
 
     session_dir = Path(args.session_dir).resolve() if args.session_dir else None
     if session_dir is not None and session_dir.exists():
@@ -1282,9 +1378,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
     timestamps_file = performance_file = predictions_file = None
     frame_index = 0
     recorded_frame_count = 0
+    recording_counts: dict[str, int] = {}
+    recording_write_interrupted = False
     session_created = False
     status = "failed"
     started_at = datetime.now().astimezone()
+    processing_started_at = time.monotonic()
     runtime_id = uuid.uuid4().hex
     tuning_panel = None
     roi_editor = None
@@ -1385,7 +1484,6 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 with (session_dir / filename).open("w", newline="", encoding="utf-8-sig") as ground_truth:
                     csv.writer(ground_truth).writerow(header)
         
-        calibration_path = Path(args.calibration).resolve()
         transforms, adjacency, overlap_regions, exit_zones = load_calibration(calibration_path)
         calibration_payload = json.loads(calibration_path.read_text(encoding="utf-8"))
         matching_defaults = calibration_payload.get("matching_defaults", {})
@@ -1505,6 +1603,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 # The magenta inner mask should cover most of the vehicle,
                 # while still staying clear of the painted slot boundary.
                 core_scale=0.80,
+                stable_evidence=not args.legacy_parking_filter,
+                selective_line_filter=not args.legacy_parking_filter,
+                exit_ratio_thr=args.parking_exit_ratio,
+                occupied_seconds=args.parking_occupied_seconds,
+                empty_seconds=args.parking_empty_seconds,
             )
             for camera_id, slot_file in slot_files.items()
         }
@@ -1549,6 +1652,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     apply_detector_parameters(
                         detector, replay_detector_profile.get(camera_id, {})
                     )
+        if not args.legacy_parking_filter:
+            for camera_id, detector in detectors.items():
+                detector.ratio_thr = float(np.clip(args.parking_enter_ratio, .01, 1.0))
+                if tuning_panel is not None:
+                    cv2.setTrackbarPos(f"{camera_id.upper()} Ratio %", tuning_panel.WINDOW,
+                                      int(round(detector.ratio_thr * 100)))
         binders = {
             camera_id: SlotVehicleBinder(
                 policy="vision_primary",
@@ -1576,6 +1685,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             cv2.setMouseCallback(MAIN_WINDOW, roi_editor.handle_mouse)
         trackers = {
             camera_id: MotionVehicleTracker(
+                enable_occlusion_guard=not args.no_occlusion_guard,
+                enable_watershed=not args.no_watershed,
+                enable_spatial_appearance=not args.no_spatial_appearance,
                 min_visible_count=args.min_visible_count,
                 lost_track_ttl=args.lost_track_ttl,
                 history_len=90,
@@ -1710,6 +1822,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         frames[camera_id],
                         include_parking_debug,
                     )
+                    if not detector.accept_evidence(result, camera_now, frame_index):
+                        continue
+                    if debug_images is not None:
+                        debug_images = detector.build_debug_images()
                     slot_results[camera_id] = result
                     binders[camera_id].update_vision(
                         result,
@@ -1734,6 +1850,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         0.0, float(args.parking_max_result_age_seconds)
                     ):
                         continue
+                    detector = detectors[camera_id]
+                    if not detector.accept_evidence(completed_results, job.timestamp_s, job.frame_idx):
+                        continue
+                    if debug_images is not None:
+                        debug_images = detector.build_debug_images()
                     slot_results[camera_id] = completed_results
                     binders[camera_id].update_vision(
                         slot_results[camera_id],
@@ -1795,7 +1916,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         camera_id, local_id, track, frame_index,
                         timestamp_s=camera_timestamps_s.get(camera_id),
                     )
-                    if lost_global_id is not None:
+                    if lost_global_id is not None and getattr(track, 'observation_kind', '') != 'occluded_prediction':
                         binders[camera_id].notify_track_lost(
                             manager.canonical_global_id(lost_global_id),
                             frame_index,
@@ -1817,6 +1938,15 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     )
 
             observable = {camera_id: tracker.observable_tracks for camera_id, tracker in trackers.items()}
+            manager.sync_occluded_identities({
+                manager.canonical_global_id(gid)
+                for camera_id, tracker in trackers.items()
+                for group in tracker.occlusion_guard.groups.values() if group.active
+                for local_id in group.members
+                if (gid := manager.get_global_id(camera_id, local_id)) is not None
+            })
+            for camera_id, tracker in trackers.items():
+                manager.register_independent_tracks(camera_id, tracker.occlusion_guard.independent_pairs)
             # Parking-token recovery runs before ordinary ID association. Feed
             # the numeric trails first so it can require three real world-map
             # observations instead of trusting one nearby foreground blob.
@@ -2027,8 +2157,16 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     raw_frame = frames[camera_id]
                     debug_frame = debug_frames[camera_id]
                     recording_actions.extend([
-                        lambda writer=raw_writer, frame=raw_frame: writer.write(frame),
-                        lambda writer=debug_writer, frame=debug_frame: writer.write(frame),
+                        counted_recording_action(
+                            recording_counts,
+                            f"raw_{camera_id}",
+                            lambda writer=raw_writer, frame=raw_frame: writer.write(frame),
+                        ),
+                        counted_recording_action(
+                            recording_counts,
+                            f"debug_{camera_id}",
+                            lambda writer=debug_writer, frame=debug_frame: writer.write(frame),
+                        ),
                     ])
             if predictions_file is not None:
                 capture_ns = (
@@ -2071,13 +2209,28 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     f"{(time.perf_counter() - started) * 1000.0:.3f}\n"
                 )
                 recording_actions.extend([
-                    lambda record=timestamp_record: timestamps_file.write(record),
-                    lambda record=prediction_record: predictions_file.write(record),
-                    lambda record=performance_record: performance_file.write(record),
+                    counted_recording_action(
+                        recording_counts,
+                        "timestamps",
+                        lambda record=timestamp_record: timestamps_file.write(record),
+                    ),
+                    counted_recording_action(
+                        recording_counts,
+                        "predictions",
+                        lambda record=prediction_record: predictions_file.write(record),
+                    ),
+                    counted_recording_action(
+                        recording_counts,
+                        "performance",
+                        lambda record=performance_record: performance_file.write(record),
+                    ),
                 ])
             if recording_actions:
-                finish_recording_actions(recording_actions)
-                recorded_frame_count = frame_index
+                recording_interrupted = finish_recording_actions(recording_actions)
+                recorded_frame_count = min(recording_counts.values(), default=0)
+                if recording_interrupted:
+                    recording_write_interrupted = True
+                    raise KeyboardInterrupt
             if not args.no_display:
                 camera_views = {}
                 for camera_id in ("cam1", "cam2"):
@@ -2153,7 +2306,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         else:
             status = "stopped_by_user"
     except KeyboardInterrupt:
-        status = "stopped_by_user"
+        status = (
+            "incomplete_interrupted_frame_write"
+            if recording_write_interrupted
+            else "stopped_by_user"
+        )
     finally:
         if parking_executor is not None:
             parking_executor.shutdown(wait=True)
@@ -2172,6 +2329,30 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             if output is not None:
                 output.close()
         if session_created:
+            recording_counts_consistent = (
+                len(set(recording_counts.values())) <= 1
+                if recording_counts
+                else True
+            )
+            if not recording_counts_consistent and status != "failed":
+                status = "incomplete_record_count_mismatch"
+            configuration_files = {
+                name: {
+                    "path": str(path),
+                    "sha256": file_sha256(path),
+                }
+                for name, path in {
+                    "calibration": calibration_path,
+                    "slots_cam1": Path(args.slots_cam1).resolve(),
+                    "slots_cam2": Path(args.slots_cam2).resolve(),
+                    "mask_cam1": Path(args.mask_cam1).resolve(),
+                    "mask_cam2": Path(args.mask_cam2).resolve(),
+                    "detector_profile": Path(args.detector_profile).resolve(),
+                }.items()
+            }
+            processing_elapsed_seconds = max(
+                0.0, time.monotonic() - processing_started_at
+            )
             save_json(session_dir / "session_info.json", {
                 "schema_version": 3,
                 "status": status,
@@ -2179,8 +2360,25 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 "started_at": started_at.isoformat(timespec="milliseconds"),
                 "ended_at": datetime.now().astimezone().isoformat(timespec="milliseconds"),
                 "processed_frames": recorded_frame_count,
+                "record_counts": recording_counts,
+                "record_counts_consistent": recording_counts_consistent,
+                "processing_elapsed_seconds": round(processing_elapsed_seconds, 3),
+                "processing_fps": round(
+                    recorded_frame_count / processing_elapsed_seconds,
+                    3,
+                ) if processing_elapsed_seconds > 0 else 0.0,
                 "camera_ids": ["cam1", "cam2"],
                 "calibration": str(calibration_path),
+                "configuration_files": configuration_files,
+                "configuration_hash": hashlib.sha256(
+                    json.dumps(
+                        configuration_files,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    ).encode("utf-8")
+                ).hexdigest(),
+                "git_commit": git_revision(PROJECT_ROOT),
+                "dependency_versions": dependency_versions(),
                 "replay_source": str(replay_session_path) if replay_session_path else None,
                 "analysis_only": bool(args.no_session_video),
                 "detector_parameters": tuning_panel.snapshot() if tuning_panel is not None else {
@@ -2226,6 +2424,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "temporal_long_seconds": 0.80,
                 },
                 "parking_identity_parameters": {
+                    "stable_evidence": not args.legacy_parking_filter,
+                    "enter_ratio": args.parking_enter_ratio,
+                    "exit_ratio": args.parking_exit_ratio,
+                    "occupied_seconds": args.parking_occupied_seconds,
+                    "empty_seconds": args.parking_empty_seconds,
                     "policy": "vision_primary",
                     "smoothing_frames": max(1, int(args.parking_smoothing_frames)),
                     "max_live_result_age_seconds": args.parking_max_result_age_seconds,
@@ -2242,6 +2445,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "arrival_lost_commit_delay_seconds": (
                         args.slot_arrival_lost_commit_delay_seconds
                     ),
+                },
+                "occlusion_features": {
+                    "guard": not args.no_occlusion_guard,
+                    "watershed": not args.no_watershed,
+                    "spatial_appearance": not args.no_spatial_appearance,
                 },
                 "files": {
                     "predictions": "predictions.jsonl",

@@ -30,6 +30,7 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
                 },
             },
             "parked_identity_reservations": {"8": {"slot_id": "D01"}},
+            "retired_global_ids": {"12": 7},
             "recent_events": [{"event": "handoff"}],
         },
         parking_by_camera={
@@ -63,3 +64,4 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
     assert snapshot["parking_slots"][0]["tracking_state"] == "parked"
     assert snapshot["parking_slots"][0]["stopped_for_ms"] == 2300
     assert snapshot["slot_layout"][0]["slot_id"] == "D01"
+    assert snapshot["retired_global_ids"] == {"12": 7}

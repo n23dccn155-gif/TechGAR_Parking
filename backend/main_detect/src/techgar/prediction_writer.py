@@ -205,6 +205,7 @@ class PredictionV3Builder:
                     "camera_id": str(camera_id),
                     "slot_id": str(slot_id),
                     "occupied": bool(slot.get("occupied", False)),
+                    "parking_evidence": _json_value(slot.get('parking_evidence', {})),
                     "raw_vehicle_gid": int(raw_gid) if raw_gid is not None else None,
                     "canonical_vehicle_gid": canonical_gid,
                     "vision_occupied": bool(
@@ -303,6 +304,8 @@ class PredictionV3Builder:
                         track.get("association_state", "unknown")
                     ),
                     "invisible_count": int(track.get("invisible_count", 0)),
+                    "observation_kind": str(track.get('observation_kind', 'unknown')),
+                    "occlusion_group": _json_value(track.get('occlusion_group', [])),
                     "assignment_cost": _json_value(
                         track.get("assignment_cost", {})
                     ),

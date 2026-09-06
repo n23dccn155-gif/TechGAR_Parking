@@ -24,7 +24,6 @@ from .tracklet_descriptor import (
     merge_appearance_samples,
 )
 from .trajectory_memory import TrajectorySample, WorldTrajectoryMemory
-from .deep_reid_model import DeepReIDExtractor
 
 
 # (source camera, exit edge) -> target camera for the simulated 2x2 layout.
@@ -303,6 +302,10 @@ class CrossCameraManager:
         # Retired IDs are permanent aliases to the smaller canonical ID.  A
         # handoff/slot recovery that still references an old ID cannot revive it.
         self._global_aliases: Dict[int, int] = {}
+        self._independent_global_pairs: set[tuple[int, int]] = set()
+        self._independent_local_pairs: dict[str, set] = {}
+        self._occluded_global_ids: set[int] = set()
+        self._ownership_tracks = None
         self._handoffs: List[HandoffEntry] = []
         self._recently_lost: List[LostTrackEntry] = []
         self._identities: Dict[int, GlobalIdentityState] = {}
@@ -363,11 +366,16 @@ class CrossCameraManager:
         self._world_trajectory_deferred_since: Dict[
             Tuple[str, int], int
         ] = {}
-        # Priority 9: DeepReID initialization
-        self.use_deep_reid = use_deep_reid
-        self.deep_reid_extractor = DeepReIDExtractor() if use_deep_reid else None
+        # No trained model/crop pipeline is shipped with the motion backend.
+        # Keeping this explicit prevents a randomly initialized CNN (or the
+        # HSV histogram itself) from being advertised as DeepReID evidence.
         if use_deep_reid:
-            print("[CrossCameraManager] DeepReID enabled")
+            raise ValueError(
+                "DeepReID is not available in the motion backend: provide a "
+                "trained model and a vehicle-crop feature pipeline first"
+            )
+        self.use_deep_reid = False
+        self.deep_reid_extractor = None
 
     def _allocate_global_id(self) -> int:
         global_id = self._next_global_id
@@ -466,7 +474,10 @@ class CrossCameraManager:
         neighbouring vehicle.
         """
         global_id = self._canonical_id(global_id)
-        for local_track_id, track in all_tracks.get(cam_id, {}).items():
+        # Assignment passes receive filtered candidate dictionaries. Those
+        # dictionaries must never hide an owner already observed this frame.
+        ownership_tracks = self._ownership_tracks if self._ownership_tracks is not None else all_tracks
+        for local_track_id, track in ownership_tracks.get(cam_id, {}).items():
             if exclude_local_id is not None and local_track_id == exclude_local_id:
                 continue
             mapped = self._local_to_global.get((cam_id, local_track_id))
@@ -669,6 +680,9 @@ class CrossCameraManager:
         global_id: int,
         frame_idx: int,
         source: str = "external",
+        *,
+        source_slot_id: Optional[str] = None,
+        source_camera_id: Optional[str] = None,
     ) -> int:
         """Bind a verified global identity before normal ID allocation.
 
@@ -679,10 +693,22 @@ class CrossCameraManager:
         global_id = self._canonical_id(global_id)
         self._global_created_frames.setdefault(global_id, int(frame_idx))
         if global_id in self._parked_reservations:
+            reservation = self._parked_reservations[global_id]
             if source != "parking_departure_token":
                 raise ValueError(
                     f"Global #{global_id} is parked and may only be recovered "
                     "from its departure token"
+                )
+            if (
+                source_slot_id is None
+                or str(source_slot_id) != str(reservation.get("slot_id"))
+                or source_camera_id is None
+                or str(source_camera_id) != str(reservation.get("camera_id"))
+            ):
+                raise ValueError(
+                    f"Departure proof does not own Global #{global_id}: "
+                    f"expected {reservation.get('camera_id')}/"
+                    f"{reservation.get('slot_id')}"
                 )
             self._parked_reservations.pop(global_id, None)
         self.trajectory.set_parked(global_id, False)
@@ -703,31 +729,12 @@ class CrossCameraManager:
         reservations: Iterable[dict],
         frame_idx: int,
     ) -> Dict[int, dict]:
-        """Synchronize one authoritative slot owner per canonical Global ID.
-
-        P0-C Fix: Provisional identities with confirmed parked reservations
-        are now protected. Skip only NEW reservations for provisional IDs,
-        but keep existing reservations.
-        """
+        """Synchronize one authoritative slot owner per canonical Global ID."""
         grouped: Dict[int, List[dict]] = {}
         for raw in reservations:
             if raw.get("global_id") is None:
                 continue
             global_id = self._canonical_id(int(raw["global_id"]))
-            is_provisional = self._is_provisional(global_id, frame_idx)
-            has_existing_reservation = global_id in self._parked_reservations
-
-            # If provisional AND no existing reservation, skip this NEW claim
-            # but keep any existing reservation for this ID
-            if is_provisional and not has_existing_reservation:
-                self._event(
-                    "slot_binding_skipped_provisional",
-                    frame_idx,
-                    global_id,
-                    slot_id=raw.get("slot_id"),
-                )
-                continue
-
             value = dict(raw)
             value["global_id"] = global_id
             grouped.setdefault(global_id, []).append(value)
@@ -914,7 +921,12 @@ class CrossCameraManager:
         self._event("local_track_lost", frame_idx, global_id, camera=cam_id, local_track_id=local_track_id)
 
     def _check_merge_collision_risk(
-        self, canonical_id: int, duplicate_id: int, frame_idx: int
+        self,
+        canonical_id: int,
+        duplicate_id: int,
+        frame_idx: int,
+        *,
+        verified_transfer: bool = False,
     ) -> Optional[str]:
         """Check if merging two GIDs would create an identity collision.
 
@@ -927,10 +939,25 @@ class CrossCameraManager:
         canonical_state = self._identities.get(canonical_id)
         duplicate_state = self._identities.get(duplicate_id)
 
+        # A slot reservation is authoritative even when the motion identity
+        # has already gone dormant and its in-memory state was pruned.  Check
+        # ownership before relying on optional identity-state records.
+        if (
+            canonical_id in self._parked_reservations
+            or duplicate_id in self._parked_reservations
+        ):
+            return "one_identity_has_slot_reservation"
+
         if canonical_state is None or duplicate_state is None:
             return None  # Can't check, allow merge
 
-        # Rule 1: Don't merge two mature, active identities
+        # A verified transfer is supplied only by a caller that has already
+        # passed the spatial, temporal, topology, appearance and one-to-one
+        # assignment checks.  HandoffEntry itself contains one GID, so trying
+        # to infer an ID pair by scanning pending entries is both insufficient
+        # and (historically) accessed a non-existent ``source_gid`` field.
+
+        # Rule 1: Don't merge two mature, active identities UNLESS there's a pending handoff
         maturity_threshold = max(30, self.identity_retention_frames // 6)
         both_recent = (
             (frame_idx - canonical_state.last_seen_frame) < maturity_threshold
@@ -941,7 +968,7 @@ class CrossCameraManager:
             and duplicate_state.state in ("active", "handoff")
         )
 
-        if both_recent and both_active:
+        if both_recent and both_active and not verified_transfer:
             # Check if they've been observed at different positions
             if (
                 canonical_state.last_world
@@ -964,16 +991,10 @@ class CrossCameraManager:
                 f"duplicate_seen={frame_idx - duplicate_state.last_seen_frame}f)"
             )
 
-        # Rule 2: Don't merge if either has a slot reservation
-        if (
-            canonical_id in self._parked_reservations
-            or duplicate_id in self._parked_reservations
-        ):
-            return "one_identity_has_slot_reservation"
-
         # Rule 3: Don't merge if recently seen in different cameras
         if (
             both_active
+            and not verified_transfer
             and canonical_state.last_camera != duplicate_state.last_camera
             and (frame_idx - canonical_state.last_seen_frame) < 10
             and (frame_idx - duplicate_state.last_seen_frame) < 10
@@ -984,7 +1005,7 @@ class CrossCameraManager:
         # New identities must survive probation period before being mergeable.
         canonical_is_provisional = self._is_provisional(canonical_id, frame_idx)
         duplicate_is_provisional = self._is_provisional(duplicate_id, frame_idx)
-        if canonical_is_provisional or duplicate_is_provisional:
+        if (canonical_is_provisional or duplicate_is_provisional) and not verified_transfer:
             provisional_id = canonical_id if canonical_is_provisional else duplicate_id
             identity = self._identities.get(provisional_id)
             probation_elapsed = (
@@ -1000,15 +1021,51 @@ class CrossCameraManager:
 
         return None
 
-    def _merge_global_ids(self, canonical_id: int, duplicate_id: int, frame_idx: int, reason: str) -> MergeResult:
+    def sync_occluded_identities(self, global_ids):
+        self._occluded_global_ids = {self._canonical_id(gid) for gid in global_ids}
+
+    def register_independent_tracks(self, camera_id, local_pairs):
+        """Persist evidence of two separately observed physical vehicles."""
+        self._independent_local_pairs.setdefault(camera_id, set()).update(local_pairs)
+        for left, right in local_pairs:
+            a = self.get_global_id(camera_id, left)
+            b = self.get_global_id(camera_id, right)
+            if a is not None and b is not None and a != b:
+                self._independent_global_pairs.add(tuple(sorted((a, b))))
+
+    def _merge_global_ids(
+        self,
+        canonical_id: int,
+        duplicate_id: int,
+        frame_idx: int,
+        reason: str,
+        *,
+        verified_transfer: bool = False,
+    ) -> MergeResult:
         canonical_id = self._canonical_id(canonical_id)
         duplicate_id = self._canonical_id(duplicate_id)
         if canonical_id == duplicate_id:
             return MergeResult(accepted=True, canonical_id=canonical_id, reason=reason)
+        for left, right in self._independent_global_pairs:
+            pair = {self._canonical_id(left), self._canonical_id(right)}
+            if pair == {canonical_id, duplicate_id}:
+                rejection = 'independently_observed_vehicles'
+                self._event('merge_blocked_collision_risk', frame_idx, canonical_id,
+                            duplicate_global_id=duplicate_id, rejection_reason=rejection)
+                return MergeResult(accepted=False, canonical_id=canonical_id,
+                                   retired_id=duplicate_id, reason=reason,
+                                   rejection_reason=rejection)
+        if {canonical_id, duplicate_id} & self._occluded_global_ids:
+            return MergeResult(accepted=False, canonical_id=canonical_id,
+                               retired_id=duplicate_id, reason=reason,
+                               rejection_reason='identity_temporarily_occluded')
 
         # Priority 2: Collision guard - block merge if risky
         rejection_reason = self._check_merge_collision_risk(
-            canonical_id, duplicate_id, frame_idx
+            canonical_id,
+            duplicate_id,
+            frame_idx,
+            verified_transfer=verified_transfer,
         )
         if rejection_reason is not None:
             self._event(
@@ -1654,6 +1711,9 @@ class CrossCameraManager:
         )
         if association_state in {
             "coasting",
+            "split_recovering",
+            "occluded_prediction",
+            "watershed_provisional",
             "frozen_ambiguous",
             "ambiguous_merged",
         }:
@@ -1665,7 +1725,12 @@ class CrossCameraManager:
     def _is_allocatable(cls, track) -> bool:
         if not cls._is_confirmed(track):
             return False
+        if getattr(track, 'observation_kind', 'detection') != 'detection':
+            return False
         return getattr(track, "association_state", "matched") not in {
+            "split_recovering",
+            "occluded_prediction",
+            "watershed_provisional",
             "frozen_ambiguous",
             "ambiguous_merged",
         }
@@ -2225,6 +2290,8 @@ class CrossCameraManager:
         timestamp_s: Optional[float] = None,
     ) -> Tuple[Optional[float], str, dict]:
         """Return a conservative handoff cost, otherwise its rejection reason."""
+        if self._canonical_id(entry.global_id) in self._occluded_global_ids:
+            return None, 'identity_temporarily_occluded', {}
         overlap_handoff = entry.exit_edge == "overlap"
         if overlap_handoff:
             target_edge = "overlap"
@@ -2310,29 +2377,10 @@ class CrossCameraManager:
         )
         appearance_match = compare_tracklets(track, appearance_reference)
         histogram_distance = appearance_match.distance
-        
-        # Priority 9: DeepReID integration
-        deep_distance = histogram_distance  # Default fallback
-        if self.use_deep_reid and self.deep_reid_extractor is not None:
-            try:
-                # Extract deep features from track and reference
-                # Note: This requires image crops to be stored in track/references
-                # For now, use histogram distance as fallback
-                deep_distance = histogram_distance
-            except Exception:
-                deep_distance = histogram_distance
-        
-        # Combined appearance cost: 0.60 * deep + 0.25 * histogram + 0.15 * size
-        # For now, since deep features need image crops, use weighted average
-        if self.use_deep_reid and self.deep_reid_extractor is not None:
-            appearance_distance = 0.60 * deep_distance + 0.40 * histogram_distance
-        else:
-            appearance_distance = histogram_distance
-            
+        appearance_distance = histogram_distance
+
         details["appearance_distance"] = round(appearance_distance, 3)
         details["histogram_distance"] = round(histogram_distance, 3)
-        if self.use_deep_reid:
-            details["deep_distance"] = round(deep_distance, 3)
         details["appearance_reference"] = (
             "target_camera" if target_camera_reference else "source_camera"
         )
@@ -2980,6 +3028,7 @@ class CrossCameraManager:
                         target_global_id,
                         frame_idx,
                         "explicit_predictive_handoff",
+                        verified_transfer=True,
                     )
                     # Only update canonical ID if merge was accepted
                     if merge_result.accepted:
@@ -3070,7 +3119,7 @@ class CrossCameraManager:
                 continue
             if identity.state not in {"dormant", "handoff"}:
                 continue
-            if candidate_global_id in self._parked_reservations:
+            if candidate_global_id in self._parked_reservations or candidate_global_id in self._occluded_global_ids:
                 continue
             if not self._identity_is_recent(
                 identity, frame_idx, timestamp_s, target_camera=cam_id
@@ -3148,6 +3197,7 @@ class CrossCameraManager:
             retired,
             frame_idx,
             "handoff_destination_camera_history",
+            verified_transfer=True,
         )
         if merge_result.accepted:
             self._event(
@@ -3161,7 +3211,20 @@ class CrossCameraManager:
                 appearance_distance=round(float(appearance), 3),
                 tracklet_support=int(support),
             )
-        return self._canonical_id(kept)
+            return self._canonical_id(kept)
+        self._event(
+            "handoff_dormant_alias_merge_rejected",
+            frame_idx,
+            source_global_id,
+            competing_global_id=int(dormant_global_id),
+            target_camera=cam_id,
+            target_local_id=int(local_id),
+            reason=merge_result.rejection_reason,
+        )
+        # A rejected merge must be observationally a no-op.  Returning the
+        # numerically smaller candidate here used to bind the destination
+        # track to an ID whose alias/mapping was never committed.
+        return source_global_id
 
     def _world_is_in_overlap(self, cam_id: str, other_cam: str, world: Tuple[float, float]) -> bool:
         region = self.overlap_regions.get((cam_id, other_cam))
@@ -3277,6 +3340,8 @@ class CrossCameraManager:
                     continue
                 global_id = self._canonical_id(global_id)
                 graph_key = (cam_id, global_id)
+                if global_id in self._occluded_global_ids:
+                    continue
                 previous = bound.get(graph_key)
                 area = float(getattr(track, "area", track.w * track.h))
                 if previous is not None:
@@ -3334,7 +3399,9 @@ class CrossCameraManager:
             if accepted:
                 cam_id, local_id = unbound_key
                 global_id = self._canonical_id(int(claim["global_id"]))
-                if global_id not in self._parked_reservations:
+                if (global_id not in self._parked_reservations
+                    and global_id not in self._occluded_global_ids
+                    and not self._has_confirmed_camera_member(global_id, cam_id, all_tracks, exclude_local_id=local_id)):
                     self._bind(cam_id, local_id, global_id)
                     self._event(
                         "cross_camera_deferred_claim_matched",
@@ -3378,6 +3445,8 @@ class CrossCameraManager:
             cam_id, _local_id = unbound_key
             for bound_key, (_other_local_id, _other_track, other_world) in bound.items():
                 other_cam, bound_global_id = bound_key
+                if self._has_confirmed_camera_member(bound_global_id, cam_id, all_tracks, exclude_local_id=_local_id):
+                    continue
                 if len(bound_gid_cameras.get(bound_global_id, ())) != 1:
                     continue
                 if not self._are_adjacent(cam_id, other_cam):
@@ -3730,6 +3799,8 @@ class CrossCameraManager:
         timestamp_s: Optional[float],
         target_camera: Optional[str] = None,
     ) -> bool:
+        # Retention is not permission to associate. Occlusion blocks matching
+        # at its call sites, not this lifetime check used by cleanup().
         elapsed, uses_seconds = self._identity_elapsed(identity, frame_idx, timestamp_s)
         limit = self.identity_retention_seconds if uses_seconds else self.identity_retention_frames
         if self._identity_is_established(identity):
@@ -3933,6 +4004,7 @@ class CrossCameraManager:
             identity
             for identity in self._identities.values()
             if identity.state in {"dormant", "handoff"}
+            and self._canonical_id(identity.global_id) not in self._occluded_global_ids
         ]
         if not candidates or not identities:
             return set()
@@ -4654,6 +4726,7 @@ class CrossCameraManager:
             if identity.state not in {"parked", "exited", "expired"}
             and self._canonical_id(identity.global_id)
             not in self._parked_reservations
+            and self._canonical_id(identity.global_id) not in self._occluded_global_ids
         ]
         live_candidate_keys = {
             (str(cam_id), int(local_id))
@@ -5042,7 +5115,15 @@ class CrossCameraManager:
             )
 
     def _match_simultaneous_overlap(self, cam_id: str, local_track_id: int, track, all_tracks: Dict[str, dict]) -> Optional[int]:
-        """Deduplicate one car seen in two overlapping views."""
+        """Deduplicate same-video crops, not physical-camera observations.
+
+        Calibrated cameras use _match_unique_unbound_cross_camera_tracks(),
+        with mutual uniqueness, camera-aware size/appearance and probation.
+        The old pixel-crop shortcut only checks one distance/histogram and
+        otherwise bypasses all of those safeguards for a tentative fragment.
+        """
+        if self.camera_transforms:
+            return None
         world = self._track_world(cam_id, track)
         for other_cam, other_tracks in all_tracks.items():
             if other_cam == cam_id:
@@ -5054,6 +5135,8 @@ class CrossCameraManager:
             for other_local_id, other_track in other_tracks.items():
                 global_id = self._local_to_global.get((other_cam, other_local_id))
                 if global_id is None:
+                    continue
+                if self._canonical_id(global_id) in self._occluded_global_ids or not self._has_fresh_detection(other_track):
                     continue
                 if self._has_confirmed_camera_member(
                     global_id,
@@ -5217,7 +5300,11 @@ class CrossCameraManager:
         for other_local_id, other_track in all_tracks.get(cam_id, {}).items():
             if other_local_id == local_track_id:
                 continue
+            if tuple(sorted((int(local_track_id), int(other_local_id)))) in self._independent_local_pairs.get(cam_id, set()):
+                continue
             global_id = self._local_to_global.get((cam_id, other_local_id))
+            if global_id is not None and self._canonical_id(global_id) in self._occluded_global_ids:
+                continue
             if global_id is None:
                 other_fragment_observations = int(
                     getattr(other_track, "fragment_visible_count", 0) or 0
@@ -5539,6 +5626,7 @@ class CrossCameraManager:
                 retired_id,
                 frame_idx,
                 "unique_cross_camera_overlap",
+                verified_transfer=True,
             )
             if merge_result.accepted:
                 self._event(
@@ -5663,6 +5751,7 @@ class CrossCameraManager:
         protected.
         """
         self._processing_frame_idx = int(frame_idx)
+        self._ownership_tracks = all_tracks
         self._update_camera_timing(camera_timestamps_s)
         self._cleanup_world_trajectory_deferrals(all_tracks)
         self.observe_trajectories(
@@ -5675,6 +5764,25 @@ class CrossCameraManager:
             if int(value[0]) >= int(frame_idx)
         }
         protected_keys = set(protected_local_keys or ())
+        # A fresh neighbouring-camera fragment must wait while two identities
+        # are unresolved, instead of stealing one dormant ID or getting a new
+        # GID before the source-camera group can separate them.
+        for cam_id, tracks in all_tracks.items():
+            for local_id, track in tracks.items():
+                if (cam_id, local_id) in self._local_to_global:
+                    continue
+                world = self._track_world(cam_id, track)
+                for gid in self._occluded_global_ids:
+                    identity = self._identities.get(gid)
+                    if identity is None:
+                        continue
+                    predicted = self._predicted_identity_world(identity, frame_idx, (camera_timestamps_s or {}).get(cam_id))
+                    if min(np.linalg.norm(np.subtract(world, predicted)),
+                           np.linalg.norm(np.subtract(world, identity.last_world))) <= self.prediction_radius:
+                        protected_keys.add((cam_id, local_id))
+                        self._record_new_identity_deferred(cam_id, local_id, frame_idx,
+                                                          'near_occluded_identity', occluded_global_id=gid)
+                        break
         protected_unbound_keys = {
             (cam_id, local_track_id)
             for cam_id, tracks in all_tracks.items()
@@ -5842,6 +5950,8 @@ class CrossCameraManager:
                     f"(local #{local_track_id})"
                 )
 
+        for camera_id, pairs in self._independent_local_pairs.items():
+            self.register_independent_tracks(camera_id, pairs)
         self._merge_all_nearby_active_duplicates(all_tracks, frame_idx)
         # Do not irreversibly merge an already-issued ID merely because it is
         # near a recently lost one. Two real vehicles commonly pass side by
@@ -5861,6 +5971,7 @@ class CrossCameraManager:
             for cam_id, tracks in all_tracks.items()
         }
         self._processing_frame_idx = None
+        self._ownership_tracks = None
         return result
 
     def notify_track_expired(

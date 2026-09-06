@@ -366,13 +366,23 @@ def validate(session: Path) -> tuple[list[str], dict]:
     except Exception as exc:
         return [f"session_info.json khong hop le: {exc}"], {}
 
+    metadata_errors: list[str] = []
+    if str(metadata.get("status", "")).startswith("incomplete_"):
+        metadata_errors.append(
+            f"Session duoc danh dau khong hoan chinh: {metadata.get('status')}"
+        )
+    if metadata.get("record_counts_consistent") is False:
+        metadata_errors.append("Metadata xac nhan cac kenh ghi co so frame lech nhau")
+
     schema_version = int(metadata.get("schema_version", 1))
     if schema_version == 3:
-        return _validate_v3(session, metadata)
+        errors, counts = _validate_v3(session, metadata)
+        return metadata_errors + errors, counts
     if schema_version == 2:
-        return _validate_two_camera(session, metadata)
+        errors, counts = _validate_two_camera(session, metadata)
+        return metadata_errors + errors, counts
 
-    errors: list[str] = []
+    errors: list[str] = list(metadata_errors)
     for name in REQUIRED_FILES:
         if not (session / name).is_file():
             errors.append(f"Thieu file {name}")

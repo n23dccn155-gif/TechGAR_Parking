@@ -9,17 +9,18 @@ export interface SessionError {
 
 interface CommitResult {
   accepted: boolean;
-  reason?: "stale_revision" | "session_mismatch" | "no_current";
+  reason?: "stale_revision" | "session_mismatch" | "deleted";
 }
 
 export interface UseVehicleSessionResult {
   session: VehicleSession | null;
   error: SessionError | null;
+  ended: boolean;
   busyAction: "claim" | "select" | "exit" | null;
-  claim: () => Promise<void>;
-  selectSpot: (spotId: string | null) => Promise<void>;
-  startExit: () => Promise<void>;
-  refresh: () => Promise<void>;
+  claim: () => Promise<VehicleSession | null>;
+  selectSpot: (spotId: string | null) => Promise<VehicleSession | null>;
+  startExit: () => Promise<VehicleSession | null>;
+  refresh: () => Promise<VehicleSession | null>;
 }
 
 const POLL_INTERVAL_MS = 500;
@@ -27,164 +28,151 @@ const POLL_INTERVAL_MS = 500;
 export function useVehicleSession(sessionId: string | null): UseVehicleSessionResult {
   const [session, setSession] = useState<VehicleSession | null>(null);
   const [error, setError] = useState<SessionError | null>(null);
+  const [ended, setEnded] = useState(false);
   const [busyAction, setBusyAction] = useState<"claim" | "select" | "exit" | null>(null);
 
   const sessionRef = useRef<VehicleSession | null>(null);
-  sessionRef.current = session;
-
+  const activeSessionIdRef = useRef<string | null>(sessionId);
+  const lifecycleRef = useRef(0);
+  const deletedRef = useRef(false);
   const pollControllerRef = useRef<AbortController | null>(null);
-  const pendingGetRef = useRef<Promise<VehicleSession> | null>(null);
+  const pendingGetRef = useRef<Promise<VehicleSession | null> | null>(null);
+  const actionRef = useRef<"claim" | "select" | "exit" | null>(null);
 
-  const commit = useCallback((next: VehicleSession, source: string): CommitResult => {
-    const current = sessionRef.current;
-    if (current && current.sessionId !== next.sessionId) {
-      console.warn(`[useVehicleSession] sessionId mismatch from ${source}: ${current.sessionId} vs ${next.sessionId}`);
+  const commit = useCallback((next: VehicleSession, source: string, expectedId: string, lifecycle: number): CommitResult => {
+    if (lifecycle !== lifecycleRef.current || activeSessionIdRef.current !== expectedId || next.sessionId !== expectedId) {
       return { accepted: false, reason: "session_mismatch" };
     }
+    if (deletedRef.current) return { accepted: false, reason: "deleted" };
+    const current = sessionRef.current;
     if (next.runtimeId && current?.runtimeId && next.runtimeId !== current.runtimeId) {
-      console.warn(`[useVehicleSession] runtimeId mismatch from ${source}: ${current.runtimeId} vs ${next.runtimeId}`);
+      console.warn(`[useVehicleSession] runtime mismatch from ${source}`);
       return { accepted: false, reason: "session_mismatch" };
     }
     if (current && next.revision < current.revision) {
       return { accepted: false, reason: "stale_revision" };
     }
-    if (
-      current &&
-      next.revision === current.revision &&
-      next.state === current.state &&
-      next.targetSpotId === current.targetSpotId &&
-      next.parkedSpotId === current.parkedSpotId &&
-      next.globalVehicleId === current.globalVehicleId
-    ) {
+    if (current && next.revision === current.revision) {
+      const identical = next.state === current.state
+        && next.targetSpotId === current.targetSpotId
+        && next.parkedSpotId === current.parkedSpotId
+        && next.globalVehicleId === current.globalVehicleId
+        && next.updatedAt === current.updatedAt;
+      if (!identical) {
+        console.warn(`[useVehicleSession] conflicting revision from ${source}`);
+        return { accepted: false, reason: "stale_revision" };
+      }
       return { accepted: true };
     }
+    sessionRef.current = next;
     setSession(next);
+    setEnded(false);
     return { accepted: true };
   }, []);
 
-  const refresh = useCallback(async () => {
-    if (!sessionId) return;
-    if (pollControllerRef.current) {
-      pollControllerRef.current.abort();
-    }
+  const markDeleted = useCallback((expectedId: string, lifecycle: number) => {
+    if (lifecycle !== lifecycleRef.current || activeSessionIdRef.current !== expectedId) return;
+    deletedRef.current = true;
+    sessionRef.current = null;
+    setSession(null);
+    setEnded(true);
+  }, []);
+
+  const refresh = useCallback(async (): Promise<VehicleSession | null> => {
+    const expectedId = activeSessionIdRef.current;
+    const lifecycle = lifecycleRef.current;
+    if (!expectedId || deletedRef.current || actionRef.current) return null;
+    if (pendingGetRef.current) return pendingGetRef.current;
     const controller = new AbortController();
     pollControllerRef.current = controller;
-    try {
-      const next = await backendApi.getSession(sessionId, controller.signal);
-      commit(next, "GET");
-    } catch (err) {
-      if (controller.signal.aborted) return;
-      if (err instanceof backendApi.SessionNotFoundError) {
-        setSession(null);
-        return;
-      }
-    } finally {
-      if (pollControllerRef.current === controller) {
-        pollControllerRef.current = null;
-      }
-    }
-  }, [sessionId, commit]);
+    let pending: Promise<VehicleSession | null>;
+    pending = backendApi.getSession(expectedId, controller.signal)
+      .then((next) => commit(next, "GET", expectedId, lifecycle).accepted ? next : null)
+      .catch((caught: unknown) => {
+        if (controller.signal.aborted) return null;
+        if (caught instanceof backendApi.SessionNotFoundError) markDeleted(expectedId, lifecycle);
+        return null;
+      })
+      .finally(() => {
+        if (pollControllerRef.current === controller) pollControllerRef.current = null;
+        if (pendingGetRef.current === pending) pendingGetRef.current = null;
+      });
+    pendingGetRef.current = pending;
+    return pending;
+  }, [commit, markDeleted]);
 
-  const runAction = useCallback(
-    async (
-      action: "claim" | "select" | "exit",
-      call: () => Promise<VehicleSession>,
-    ) => {
-      setError(null);
-      setBusyAction(action);
-      try {
-        if (pollControllerRef.current) {
-          pollControllerRef.current.abort();
-        }
-        const result = await call();
-        const outcome = commit(result, `POST:${action}`);
-        if (!outcome.accepted && outcome.reason === "stale_revision") {
-          await refresh();
-        }
-      } catch (err) {
-        const message =
-          err instanceof backendApi.BackendApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : "Lỗi không xác định";
-        setError({ message, action });
-      } finally {
+  const runAction = useCallback(async (
+    action: "claim" | "select" | "exit",
+    call: (id: string) => Promise<VehicleSession>,
+  ): Promise<VehicleSession | null> => {
+    const expectedId = activeSessionIdRef.current;
+    const lifecycle = lifecycleRef.current;
+    if (!expectedId || deletedRef.current || actionRef.current) return null;
+    actionRef.current = action;
+    pollControllerRef.current?.abort();
+    pendingGetRef.current = null;
+    setError(null);
+    setBusyAction(action);
+    try {
+      const next = await call(expectedId);
+      const result = commit(next, `POST:${action}`, expectedId, lifecycle);
+      if (!result.accepted && result.reason === "stale_revision") {
+        actionRef.current = null;
+        return await refresh();
+      }
+      return result.accepted ? next : null;
+    } catch (caught) {
+      if (caught instanceof backendApi.SessionNotFoundError) markDeleted(expectedId, lifecycle);
+      if (lifecycle === lifecycleRef.current && activeSessionIdRef.current === expectedId) {
+        setError({ message: caught instanceof Error ? caught.message : "Lỗi không xác định", action });
+        // The POST outcome is unknown to the UI on transport failures.  Drop
+        // the action lock and reconcile with the backend before the next user
+        // interaction instead of inventing an optimistic session state.
+        actionRef.current = null;
+        await refresh();
+      }
+      throw caught;
+    } finally {
+      if (
+        lifecycle === lifecycleRef.current
+        && activeSessionIdRef.current === expectedId
+        && actionRef.current === action
+      ) {
+        actionRef.current = null;
+        setBusyAction(null);
+      } else if (lifecycle === lifecycleRef.current && activeSessionIdRef.current === expectedId) {
         setBusyAction(null);
       }
-    },
-    [commit, refresh],
-  );
+    }
+  }, [commit, markDeleted, refresh]);
 
-  const claim = useCallback(async () => {
-    if (!sessionId) return;
-    await runAction("claim", () => backendApi.claimSession(sessionId));
-  }, [sessionId, runAction]);
-
+  const claim = useCallback(() => runAction("claim", backendApi.claimSession), [runAction]);
   const selectSpot = useCallback(
-    async (spotId: string | null) => {
-      if (!sessionId) return;
-      await runAction("select", () => backendApi.selectSpot(sessionId, spotId));
-    },
-    [sessionId, runAction],
+    (spotId: string | null) => runAction("select", (id) => backendApi.selectSpot(id, spotId)),
+    [runAction],
   );
-
-  const startExit = useCallback(async () => {
-    if (!sessionId) return;
-    await runAction("exit", () => backendApi.startExit(sessionId));
-  }, [sessionId, runAction]);
+  const startExit = useCallback(() => runAction("exit", backendApi.startExit), [runAction]);
 
   useEffect(() => {
-    if (!sessionId) {
-      setSession(null);
-      return;
-    }
-    let cancelled = false;
-    let timer: ReturnType<typeof setInterval> | null = null;
-    const controller = new AbortController();
-
-    const poll = async () => {
-      if (cancelled || pendingGetRef.current) return;
-      const pending = backendApi
-        .getSession(sessionId, controller.signal)
-        .then((next) => {
-          if (!cancelled) commit(next, "POLL");
-          return next;
-        })
-        .catch((err) => {
-          if (err instanceof backendApi.SessionNotFoundError && !cancelled) {
-            setSession(null);
-          }
-          throw err;
-        })
-        .finally(() => {
-          pendingGetRef.current = null;
-        });
-      pendingGetRef.current = pending;
-      try {
-        await pending;
-      } catch {
-        // handled in .then/.catch
-      }
-    };
-
-    poll();
-    timer = setInterval(poll, POLL_INTERVAL_MS);
-
+    lifecycleRef.current += 1;
+    activeSessionIdRef.current = sessionId;
+    deletedRef.current = false;
+    sessionRef.current = null;
+    actionRef.current = null;
+    pollControllerRef.current?.abort();
+    pendingGetRef.current = null;
+    setSession(null);
+    setEnded(false);
+    setError(null);
+    setBusyAction(null);
+    if (!sessionId) return;
+    void refresh();
+    const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
     return () => {
-      cancelled = true;
-      if (timer) clearInterval(timer);
-      controller.abort();
+      clearInterval(timer);
+      pollControllerRef.current?.abort();
     };
-  }, [sessionId, commit]);
+  }, [sessionId, refresh]);
 
-  return {
-    session,
-    error,
-    busyAction,
-    claim,
-    selectSpot,
-    startExit,
-    refresh,
-  };
+  return { session, error, ended, busyAction, claim, selectSpot, startExit, refresh };
 }

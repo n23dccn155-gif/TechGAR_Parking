@@ -149,6 +149,36 @@ def histogram_distance(left: np.ndarray, right: np.ndarray) -> float:
     )
 
 
+def spatial_histograms(frame, box, mask):
+    """Two image-space zones, only for same-camera comparison.
+
+    Empty zones are absent evidence, never a fallback to the whole background.
+    Keep the established 416-D descriptor ABI unchanged.
+    """
+    x, y, w, h = map(int, box)
+    zones = []
+    for top, height in ((y, h // 2), (y + h // 2, h - h // 2)):
+        left, right = max(0, x), min(frame.shape[1], x+w)
+        start, end = max(0, top), min(frame.shape[0], top+height)
+        if end <= start or right <= left or mask is None:
+            zones.append(None)
+            continue
+        foreground = cv2.countNonZero(mask[start:end, left:right])
+        if foreground < max(20, .15 * (end-start) * (right-left)):
+            zones.append(None)
+        else:
+            zones.append(hsv_histogram(frame, (left, start, right-left, end-start), mask))
+    return tuple(zones)
+
+
+def spatial_distance(left, right):
+    if left is None or right is None or len(left) != 2 or len(right) != 2:
+        return None
+    if any(value is None for value in (*left, *right)):
+        return None
+    return float(np.mean([histogram_distance(a, b) for a, b in zip(left, right)]))
+
+
 @dataclass
 class AppearanceTracklet:
     """Bounded, temporally sampled appearance gallery for one local track."""

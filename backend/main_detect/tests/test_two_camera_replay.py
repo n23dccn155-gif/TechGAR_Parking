@@ -4,25 +4,33 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from two_camera import ReplaySession, finish_recording_actions
+from two_camera import ReplaySession, counted_recording_action, finish_recording_actions
 
 
 def test_recording_finishes_current_frame_before_honoring_ctrl_c():
     completed = []
+    counts = {}
 
     def interrupted_write():
         completed.append("raw_cam1")
         raise KeyboardInterrupt
 
-    with pytest.raises(KeyboardInterrupt):
-        finish_recording_actions([
-            interrupted_write,
-            lambda: completed.append("raw_cam2"),
-            lambda: completed.append("timestamp"),
-            lambda: completed.append("prediction"),
-        ])
+    interrupted = finish_recording_actions([
+        counted_recording_action(counts, "raw_cam1", interrupted_write),
+        counted_recording_action(
+            counts, "raw_cam2", lambda: completed.append("raw_cam2")
+        ),
+        counted_recording_action(
+            counts, "timestamp", lambda: completed.append("timestamp")
+        ),
+        counted_recording_action(
+            counts, "prediction", lambda: completed.append("prediction")
+        ),
+    ])
 
+    assert interrupted is True
     assert completed == ["raw_cam1", "raw_cam2", "timestamp", "prediction"]
+    assert counts == {"raw_cam2": 1, "timestamp": 1, "prediction": 1}
 
 
 class FakeCapture:

@@ -100,6 +100,8 @@ def test_entry_park_disappear_leave_and_exit_lifecycle(monkeypatch, tmp_path):
     assert session_manager.find_session_by_global_id(42) is not None
 
     gate.process_snapshot(snapshot(vehicle(42, 5, 3)))
+    assert session_manager.find_session_by_global_id(42)["state"] == "PARKED"
+    gate.process_snapshot(snapshot(vehicle(42, 5, 2.5)))
     assert session_manager.find_session_by_global_id(42)["state"] == "EXIT_NAVIGATION"
 
     gate.process_snapshot(snapshot(vehicle(42, 5, -1)))
@@ -319,3 +321,44 @@ def test_latest_runtime_slot_availability_rejects_an_occupied_replacement():
     assert gate_session_controller._spot_is_available(runtime, "A01") is False
     assert gate_session_controller._spot_is_available(runtime, "A02") is True
     assert gate_session_controller._spot_is_available(runtime, "A03") is None
+
+
+def test_same_runtime_frame_cannot_accumulate_parking_confirmation(
+    monkeypatch, tmp_path
+):
+    clock = FakeClock()
+    gate = coordinator(monkeypatch, tmp_path, clock=clock)
+    session_manager.create_session(global_vehicle_id=42, session_id="no-replay-time")
+    frozen = snapshot(
+        vehicle(42, 5, 5, parked_slot_id="D06", observed=False, state="parked")
+    )
+    frozen["runtime_id"] = "runtime-one"
+    frozen["frame_index"] = 12
+
+    gate.process_snapshot(frozen)
+    clock.advance(5.0)
+    gate.process_snapshot(frozen)
+
+    assert session_manager.get_session("no-replay-time")["state"] == "WAITING_FOR_SCAN"
+
+
+def test_unobserved_vehicle_position_does_not_cross_gate(monkeypatch, tmp_path):
+    gate = coordinator(monkeypatch, tmp_path)
+    gate.process_snapshot(snapshot(vehicle(42, 5, 12, observed=False)))
+    gate.process_snapshot(snapshot(vehicle(42, 5, 8, observed=False)))
+    assert session_manager.find_session_by_global_id(42) is None
+
+
+def test_durable_alias_table_remaps_session_without_recent_event(
+    monkeypatch, tmp_path
+):
+    gate = coordinator(monkeypatch, tmp_path)
+    session_manager.create_session(global_vehicle_id=42, session_id="alias-session")
+    payload = snapshot(vehicle(9, 5, 5))
+    payload["retired_global_ids"] = {"42": 9}
+    gate.process_snapshot(payload)
+    remapped = session_manager.get_session("alias-session")
+    assert remapped["globalVehicleId"] == 9
+    # One revision is produced by the durable alias remap and another may be
+    # produced by the observation contained in this same runtime snapshot.
+    assert remapped["revision"] >= 2

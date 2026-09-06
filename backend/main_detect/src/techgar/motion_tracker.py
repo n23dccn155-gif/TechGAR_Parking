@@ -21,8 +21,11 @@ from .tracklet_descriptor import (
     compute_sample_quality,
     histogram_distance,
     hsv_histogram,
+    spatial_histograms,
+    spatial_distance,
 )
 from .vehicle_tracker import TrackStatus, TrackedVehicle
+from .occlusion_guard import OcclusionGuard
 
 
 class MotionVehicleTracker:
@@ -81,6 +84,9 @@ class MotionVehicleTracker:
         max_bbox_area_ratio: float = 0.12,
         motion_join_kernel_size: int = 5,
         motion_join_iterations: int = 1,
+        enable_occlusion_guard: bool = True,
+        enable_watershed: bool = True,
+        enable_spatial_appearance: bool = True,
     ):
         self.min_visible_count = max(1, min_visible_count)
         self.lost_track_ttl = max(1, lost_track_ttl)
@@ -191,6 +197,66 @@ class MotionVehicleTracker:
         self._last_association_events: List[dict] = []
         self._background_image: Optional[np.ndarray] = None
         self._background_frame: Optional[int] = None
+        self.occlusion_guard = OcclusionGuard(self.merged_reacquire_max_seconds)
+        self.enable_occlusion_guard = bool(enable_occlusion_guard)
+        self.enable_watershed = bool(enable_watershed)
+        self.enable_spatial_appearance = bool(enable_spatial_appearance)
+        self._predictions_frame = -1
+        self._predictions = {}
+
+    def _predict_tracks(self):
+        if self._predictions_frame != self._frame_idx:
+            self._predictions = {}
+            for tid, track in self._tracks.items():
+                predicted = track.kalman.predict()
+                self._predictions[tid] = int(predicted[0, 0]), int(predicted[1, 0])
+            self._predictions_frame = self._frame_idx
+        return self._predictions
+
+    def _remember_clean(self, track, detection):
+        now = self._current_timestamp_s
+        if now is None:
+            now = self._frame_idx / 30.0
+        samples = list(getattr(track, 'clean_observations', []))
+        if not samples or now > samples[-1][0]:
+            samples.append((now, detection['point'], detection['box']))
+        track.clean_observations = samples[-8:]
+        track.observation_kind = 'detection'
+
+    def _clean_size(self, track):
+        if self.enable_occlusion_guard:
+            for group in self.occlusion_guard.groups.values():
+                if track.track_id in group.references:
+                    return group.references[track.track_id]
+            return self.occlusion_guard.reference(track)
+        return float(track.w), float(track.h)
+
+    def _unresolved_merged_birth(self, detection):
+        """A timed-out group is not permission to mint an ID for its joint blob.
+
+        This is only a birth veto, never permission for a stale track to claim
+        a new detection. It ends at the ordinary local-track retention bound.
+        """
+        if not self.enable_occlusion_guard:
+            return False
+        x,y,w,h = detection['box']
+        owners = set()
+        now = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
+        for tid,track in self._tracks.items():
+            samples = getattr(track, 'clean_observations', [])
+            last = getattr(track, 'last_seen_timestamp_s', None)
+            if len(samples) < 3 or (last is not None and now-last > self.lost_track_ttl_seconds):
+                continue
+            cx,cy = track.cx,track.cy-track.h/2
+            if x <= cx <= x+w and y <= cy <= y+h and w*h >= 1.6*np.prod(self._clean_size(track)):
+                owners.add(tid)
+        if any(set(pair).issubset(owners) for pair in self.occlusion_guard.independent_pairs):
+            self._last_association_events.append({
+                'type':'new_local_id_deferred_unresolved_merge',
+                'local_track_ids':sorted(owners), 'bbox':list(detection['box']),
+            })
+            return True
+        return False
 
     @staticmethod
     def _bottom_center(box: Tuple[int, int, int, int]) -> Tuple[int, int]:
@@ -598,6 +664,32 @@ class MotionVehicleTracker:
         detections = []
         for contour in contours:
             area = cv2.contourArea(contour)
+            box = cv2.boundingRect(contour)
+            group = (self.occlusion_guard.covering_group(box, self._tracks, self._predictions)
+                     if self.enable_occlusion_guard else None)
+            if group is not None:
+                # Check group ownership before size/appearance filters can
+                # delete the only evidence of two occluded cars.
+                regions = (self.occlusion_guard.partition(frame, mask, box, self._tracks,
+                                                         self._predictions, group)
+                           if self.enable_watershed else [])
+                if not regions:
+                    self.occlusion_guard.activate(group, self._tracks)
+                    detections.append({'box': box, 'point': self._bottom_center(box),
+                        'area': area, 'bbox_area': box[2]*box[3], 'hist': None,
+                        'ambiguous_merged': True, 'occlusion_members': group.members,
+                        'observation_kind': 'merged', 'priority': False})
+                else:
+                    x0, y0, _, _ = box
+                    for tid, child, selection in regions:
+                        selected = np.zeros(mask.shape, np.uint8)
+                        selected[y0:y0+selection.shape[0], x0:x0+selection.shape[1]] = selection
+                        detections.append({'box': child, 'point': self._bottom_center(child),
+                            'area': cv2.countNonZero(selection), 'bbox_area': child[2]*child[3],
+                            'hist': self._histogram(frame, child, selected), 'priority': False,
+                            'observation_kind': 'watershed_provisional',
+                            'occlusion_members': group.members, 'ambiguous_merged': False})
+                continue
             if area > image_area * 0.22:
                 continue
             x, y, w, h = cv2.boundingRect(contour)
@@ -681,8 +773,6 @@ class MotionVehicleTracker:
                     continue
             # Priority 8: Quality filter - skip low-quality detections
             histogram = self._histogram(frame, box, mask=mask)
-            if histogram is None:
-                continue  # Reject: sample too small or mostly background
             detections.append({
                 "box": box,
                 "point": point,
@@ -692,6 +782,9 @@ class MotionVehicleTracker:
                 "hist": histogram,
                 "priority": is_priority,
                 "ambiguous_merged": False,
+                "appearance_trusted": histogram is not None,
+                "observation_kind": "detection",
+                "spatial_appearance": spatial_histograms(frame, box, mask) if self.enable_spatial_appearance else None,
             })
         return self._suppress_duplicate_detections(detections), mask
 
@@ -702,6 +795,10 @@ class MotionVehicleTracker:
         fast car.  They have near-identical appearance/size and either overlap
         or almost touch, unlike two independent parked cars.
         """
+        if first.get('hist') is None or second.get('hist') is None:
+            return False
+        if first.get('occlusion_members') or second.get('occlusion_members'):
+            return False
         first_box, second_box = first["box"], second["box"]
         first_w, first_h = first_box[2], first_box[3]
         second_w, second_h = second_box[2], second_box[3]
@@ -726,6 +823,8 @@ class MotionVehicleTracker:
         kept = []
         for detection in sorted(detections, key=lambda item: item["area"], reverse=True):
             if any(
+                not self._different_clean_owners(detection, existing)
+                and
                 self._same_motion_echo(detection, existing)
                 and self._iou(detection["box"], existing["box"]) >= 0.25
                 and cv2.compareHist(
@@ -736,6 +835,17 @@ class MotionVehicleTracker:
                 continue
             kept.append(detection)
         return kept
+
+    def _different_clean_owners(self, first, second):
+        if not self.enable_occlusion_guard:
+            return False
+        def owners(item):
+            x, y, w, h = item['box']
+            return {tid for tid, track in self._tracks.items()
+                    if len(getattr(track, 'clean_observations', [])) >= 3
+                    and x <= track.cx <= x+w and y <= track.cy-track.h/2 <= y+h}
+        left, right = owners(first), owners(second)
+        return bool(left and right and left.isdisjoint(right))
 
     def _is_echo_of_matched_track(self, detection: dict, track: TrackedVehicle) -> bool:
         """Reject a new detection that is the trailing silhouette of a track."""
@@ -911,13 +1021,18 @@ class MotionVehicleTracker:
 
     def _assign(self, detections: List[dict]) -> Tuple[List[Tuple[int, int, Tuple[int, int]]], List[int], List[int]]:
         track_ids = list(self._tracks)
-        predictions = {}
+        predictions = dict(self._predict_tracks())
+        if self.enable_occlusion_guard:
+            for group in self.occlusion_guard.groups.values():
+                if group.active:
+                    for tid in group.members:
+                        center = self.occlusion_guard.center(self._tracks[tid], predictions, group.references[tid])
+                        predictions[tid] = tuple(np.rint(center + [0, group.references[tid][1]/2]).astype(int))
         self._ambiguous_detection_ids = set()
         self._viable_pairs = set()
         self._pair_metrics = {}
-        for track_id in track_ids:
-            predicted = self._tracks[track_id].kalman.predict()  # attached on create
-            predictions[track_id] = int(predicted[0, 0]), int(predicted[1, 0])
+        if self.enable_occlusion_guard:
+            self.occlusion_guard.annotate(detections, self._tracks, predictions)
         if not track_ids or not detections:
             return [], track_ids, list(range(len(detections)))
 
@@ -964,22 +1079,31 @@ class MotionVehicleTracker:
             )
             gate_distance = self._association_gate(track, invisible, max_distance)
             for col, detection in enumerate(detections):
+                if detection.get('ambiguous_merged'):
+                    continue
                 distance = float(np.linalg.norm(np.subtract(predicted_point, detection["point"])))
                 if distance > gate_distance:
                     continue
                 iou = self._iou(predicted_box, detection["box"])
                 current_appearance_distance = (
                     histogram_distance(track.appearance, detection["hist"])
-                    if track.appearance is not None
+                    if track.appearance is not None and detection.get('hist') is not None
                     else 0.25
                 )
                 appearance_distance = min(
                     current_appearance_distance,
                     compare_tracklets(track, detection["hist"]).distance,
-                )
+                ) if detection.get('hist') is not None else 0.5
+                if invisible > 0 and detection.get('hist') is None:
+                    continue
+                zone_distance = spatial_distance(getattr(track, 'spatial_appearance', None),
+                                                 detection.get('spatial_appearance'))
+                if zone_distance is not None and self.enable_spatial_appearance:
+                    appearance_distance = .70 * appearance_distance + .30 * zone_distance
                 if invisible > 0 and appearance_distance > self.lost_appearance_threshold:
                     continue
-                track_area = max(1.0, float(track.w * track.h))
+                clean_w, clean_h = self._clean_size(track)
+                track_area = max(1.0, clean_w * clean_h)
                 detection_area = max(
                     1.0,
                     float(
@@ -1023,6 +1147,12 @@ class MotionVehicleTracker:
         # live track while the second car is still tentative/LOST.  In both
         # cases, coast rather than stretching one track over both cars.
         for col, detection in enumerate(detections):
+            if detection.get('ambiguous_merged'):
+                self._ambiguous_detection_ids.add(col)
+                for tid in detection.get('occlusion_members', ()):
+                    self._viable_pairs.add((tid, col))
+                costs[:, col] = 10.0
+                continue
             x, y, width, height = detection["box"]
             compatible = []
             for track_id in track_ids:
@@ -1052,7 +1182,7 @@ class MotionVehicleTracker:
                     continue
                 appearance_distance = (
                     histogram_distance(track.appearance, detection["hist"])
-                    if track.appearance is not None
+                    if track.appearance is not None and detection.get('hist') is not None
                     else 0.25
                 )
                 if appearance_distance > max(0.55, self.lost_appearance_threshold):
@@ -1061,7 +1191,7 @@ class MotionVehicleTracker:
             if not compatible:
                 continue
             reference_area = float(
-                np.median([self._tracks[track_id].w * self._tracks[track_id].h for track_id in compatible])
+                np.median([np.prod(self._clean_size(self._tracks[track_id])) for track_id in compatible])
             )
             detection_bbox_area = float(
                 detection.get(
@@ -1088,8 +1218,9 @@ class MotionVehicleTracker:
                 # area prevents ordinary perspective variation from freezing
                 # a valid single-car observation.
                 reference_track = self._tracks[compatible[0]]
-                width_ratio = width / max(1.0, float(reference_track.w))
-                height_ratio = height / max(1.0, float(reference_track.h))
+                reference_w, reference_h = self._clean_size(reference_track)
+                width_ratio = width / max(1.0, reference_w)
+                height_ratio = height / max(1.0, reference_h)
                 if width_ratio < 1.30 and height_ratio < 1.30:
                     continue
                 # One car's own motion trail is not an ambiguous measurement.
@@ -1165,6 +1296,19 @@ class MotionVehicleTracker:
                 assignments.append((track_id, col, predictions[track_id]))
                 unmatched_detections.discard(col)
         unmatched_detections.difference_update(self._ambiguous_detection_ids)
+        if self.enable_occlusion_guard:
+            assignments, deferred_tracks, deferred_detections = self.occlusion_guard.gate_assignments(
+                assignments, costs, track_ids, self._tracks, detections, self.split_assignment_margin)
+            unmatched_tracks = list(set(unmatched_tracks) | deferred_tracks)
+            self._ambiguous_detection_ids.update(deferred_detections)
+            unmatched_detections.difference_update(deferred_detections)
+        for tid, col, _ in assignments:
+            row = track_ids.index(tid)
+            detections[col]['appearance_trusted'] = bool(
+                detections[col].get('hist') is not None
+                and detections[col].get('observation_kind', 'detection') == 'detection'
+                and .65 <= (np.prod(detections[col]['box'][2:]) / max(1., np.prod(self._clean_size(self._tracks[tid])))) <= 1.6
+                and self._assignment_has_margin(costs, row, col, self.split_assignment_margin))
         return assignments, unmatched_tracks, list(unmatched_detections)
 
     def _create_or_reid(self, detection: dict) -> None:
@@ -1192,6 +1336,8 @@ class MotionVehicleTracker:
             sample_interval=self.tracklet_sample_interval,
         )
         track.appearance_tracklet.update(detection["hist"], self._frame_idx)
+        self._remember_clean(track, detection)
+        track.spatial_appearance = detection.get('spatial_appearance')
         track.association_state = "new_tentative"
         track.assignment_cost = {}
         # Preserve fragment origin independently of ``history``. The latter is
@@ -1202,6 +1348,11 @@ class MotionVehicleTracker:
         track.first_observation_frame = self._frame_idx
         track.first_observation_timestamp_s = self._current_timestamp_s
         track.last_seen_timestamp_s = self._current_timestamp_s
+        measured_at = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
+        measurements = list(getattr(track, 'measurement_observations', []))
+        if not measurements or measured_at > measurements[-1][0]:
+            measurements.append((measured_at, point, box))
+        track.measurement_observations = measurements[-8:]
         track.fragment_visible_count = 1
         track.fragment_area_history = [float(detection["area"])]
         track.priority_track = bool(detection.get("priority", False))
@@ -1242,11 +1393,8 @@ class MotionVehicleTracker:
         is_merged_or_ambiguous = bool(detection.get("ambiguous_merged", False))
 
         if is_merged_or_ambiguous:
-            # Frozen state: chỉ cập nhật timestamp, không update measurement
-            track.last_seen_frame = self._frame_idx
-            track.last_seen_timestamp_s = self._current_timestamp_s
-            track.consecutive_invisible_count = 0
-            track.age += 1
+            # Never describe a prediction as a fresh detection.
+            track.observation_kind = 'occluded_prediction'
             # KHÔNG cập nhật: kalman.correct, appearance, bbox, area
             # Track sẽ coasting dựa trên Kalman prediction
             self._last_association_events.append({
@@ -1272,18 +1420,27 @@ class MotionVehicleTracker:
         track.last_seen_frame = self._frame_idx
         track.last_seen_timestamp_s = self._current_timestamp_s
         track.ground_point = self._ground_point(point)
-        if track.appearance is None:
-            track.appearance = detection["hist"].copy()
-        else:
-            track.appearance = cv2.addWeighted(
-                track.appearance, 0.75, detection["hist"], 0.25, 0
-            )
+        measured_at = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
+        measurements = list(getattr(track, 'measurement_observations', []))
+        if not measurements or measured_at > measurements[-1][0]:
+            measurements.append((measured_at, point, box))
+        track.measurement_observations = measurements[-8:]
+        trusted = detection.get('appearance_trusted', True) and detection.get('hist') is not None
+        if trusted:
+            if track.appearance is None:
+                track.appearance = detection['hist'].copy()
+            else:
+                track.appearance = cv2.addWeighted(track.appearance, .75, detection['hist'], .25, 0)
         if track.appearance_tracklet is None:
             track.appearance_tracklet = AppearanceTracklet(
                 max_samples=self.tracklet_max_samples,
                 sample_interval=self.tracklet_sample_interval,
             )
-        track.appearance_tracklet.update(detection["hist"], self._frame_idx)
+        if trusted:
+            track.appearance_tracklet.update(detection["hist"], self._frame_idx)
+            self._remember_clean(track, detection)
+            track.spatial_appearance = detection.get('spatial_appearance')
+        track.observation_kind = detection.get('observation_kind', 'detection')
         if detection.get("priority", False):
             track.priority_track = True
             track.priority_observation_count = getattr(track, "priority_observation_count", 0) + 1
@@ -1344,6 +1501,11 @@ class MotionVehicleTracker:
         )
         self._last_association_events = []
         self._newly_lost_tracks = []
+        predictions = self._predict_tracks()
+        if self.enable_occlusion_guard:
+            self.occlusion_guard.prepare(self._tracks, predictions,
+                self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx / 30.0,
+                self._frame_idx)
         detections, mask = self._detect(
             frame,
             timestamp_s=self._current_timestamp_s,
@@ -1362,12 +1524,13 @@ class MotionVehicleTracker:
             track = self._tracks[track_id]
             track.age += 1
             track.consecutive_invisible_count += 1
-            frozen = any(
+            frozen = track_id in self.occlusion_guard.frozen or any(
                 detection_id in self._ambiguous_detection_ids
                 and (track_id, detection_id) in self._viable_pairs
                 for detection_id in self._ambiguous_detection_ids
             )
             track.association_state = "frozen_ambiguous" if frozen else "coasting"
+            track.observation_kind = 'occluded_prediction' if frozen else 'prediction'
             track.assignment_cost = {}
             if track.status == TrackStatus.CONFIRMED:
                 track.status = TrackStatus.LOST
@@ -1403,7 +1566,12 @@ class MotionVehicleTracker:
             )
         ]
         for detection_id in unmatched_detections:
+            if detections[detection_id].get('occlusion_members'):
+                continue
+            if self._unresolved_merged_birth(detections[detection_id]):
+                continue
             self._create_or_reid(detections[detection_id])
+        self._last_association_events.extend(self.occlusion_guard.events)
         return self._tracks, mask, expired_tracks
 
     def draw_tracks(
@@ -1504,6 +1672,8 @@ class MotionVehicleTracker:
                 "assignment_cost": dict(
                     getattr(track, "assignment_cost", {}) or {}
                 ),
+                "observation_kind": getattr(track, 'observation_kind', 'detection'),
+                "occlusion_group": list(getattr(track, 'occlusion_group', None) or ()),
                 "fragment_visible_count": int(
                     getattr(track, "fragment_visible_count", 0)
                 ),

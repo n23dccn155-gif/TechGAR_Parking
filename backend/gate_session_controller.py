@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import sys
 import threading
@@ -54,6 +55,7 @@ detection_process: Optional[subprocess.Popen] = None
 active_video_url: Optional[str] = None
 _LATEST_RUNTIME_LOCK = threading.RLock()
 _latest_runtime_snapshot: Optional[dict[str, Any]] = None
+_latest_runtime_received_at: Optional[float] = None
 
 
 def _spot_is_available(snapshot: dict[str, Any], spot_id: str) -> Optional[bool]:
@@ -87,15 +89,27 @@ def _parked_evidence_seconds(snapshot: dict[str, Any], global_id: int, spot_id: 
 
 
 def _remember_runtime_snapshot(snapshot: dict[str, Any]) -> None:
-    global _latest_runtime_snapshot
+    global _latest_runtime_snapshot, _latest_runtime_received_at
     with _LATEST_RUNTIME_LOCK:
         _latest_runtime_snapshot = snapshot
+        _latest_runtime_received_at = time.monotonic()
 
 
-def _latest_spot_availability(spot_id: str) -> Optional[bool]:
+def _latest_spot_availability(
+    spot_id: str,
+    *,
+    max_age_seconds: float = 5.0,
+) -> Optional[bool]:
     with _LATEST_RUNTIME_LOCK:
         snapshot = _latest_runtime_snapshot
-    return _spot_is_available(snapshot, spot_id) if snapshot is not None else None
+        received_at = _latest_runtime_received_at
+    if snapshot is None or received_at is None:
+        return None
+    if time.monotonic() - received_at > max(0.0, max_age_seconds):
+        return None
+    if snapshot.get("source_mode") != "live":
+        return None
+    return _spot_is_available(snapshot, spot_id)
 
 
 def _latest_runtime_id() -> Optional[str]:
@@ -196,7 +210,33 @@ class GateSessionCoordinator:
         self.parked_confirm_seconds = max(0.0, float(parked_confirm_seconds))
         self._clock = clock
         self._parked_candidates: dict[int, tuple[str, float]] = {}
+        self._departure_candidates: dict[int, tuple[int, int]] = {}
+        self._last_observed_at: dict[int, float] = {}
+        self._last_frame_index: Optional[int] = None
         self.runtime_id: Optional[str] = None
+
+    def _apply_alias_table(
+        self, aliases: Any, runtime_id: Optional[str]
+    ) -> None:
+        if not isinstance(aliases, dict):
+            return
+        for old_value, new_value in aliases.items():
+            try:
+                old_id, new_id = int(old_value), int(new_value)
+            except (TypeError, ValueError):
+                continue
+            if old_id == new_id or find_session_by_global_id(
+                old_id, runtime_id=runtime_id
+            ) is None:
+                continue
+            remap_global_vehicle_id(old_id, new_id, runtime_id=runtime_id)
+            if old_id in self.previous_positions:
+                self.previous_positions[new_id] = self.previous_positions.pop(old_id)
+            if old_id in self._last_observed_at:
+                self._last_observed_at[new_id] = self._last_observed_at.pop(old_id)
+            candidate = self._parked_candidates.pop(old_id, None)
+            if candidate is not None:
+                self._parked_candidates[new_id] = candidate
 
     def _apply_merge_events(
         self, events: Any, runtime_id: Optional[str]
@@ -236,9 +276,27 @@ class GateSessionCoordinator:
             if self.runtime_id != next_runtime_id:
                 self.previous_positions.clear()
                 self._parked_candidates.clear()
+                self._departure_candidates.clear()
+                self._last_observed_at.clear()
+                self._last_frame_index = None
                 self.runtime_id = next_runtime_id
         runtime_id = self.runtime_id
+        raw_frame_index = snapshot.get("frame_index")
+        frame_index = (
+            int(raw_frame_index)
+            if isinstance(raw_frame_index, (int, float))
+            else None
+        )
+        if (
+            frame_index is not None
+            and self._last_frame_index is not None
+            and frame_index <= self._last_frame_index
+        ):
+            return
+        if frame_index is not None:
+            self._last_frame_index = frame_index
         _remember_runtime_snapshot(snapshot)
+        self._apply_alias_table(snapshot.get("retired_global_ids"), runtime_id)
         self._apply_merge_events(snapshot.get("recent_events"), runtime_id)
         vehicles = snapshot.get("vehicles", [])
         if not isinstance(vehicles, list):
@@ -255,11 +313,20 @@ class GateSessionCoordinator:
                 continue
             position = _point(raw_position)
             previous = self.previous_positions.get(global_id)
+            observed = bool(vehicle.get("observed", True))
+            now = self._clock()
+            previous_observed_at = self._last_observed_at.get(global_id)
+            observation_is_continuous = (
+                observed
+                and previous is not None
+                and previous_observed_at is not None
+                and now - previous_observed_at <= 1.0
+            )
             session = find_session_by_global_id(
                 global_id, runtime_id=runtime_id
             )
 
-            if previous is not None and _crossed_in_valid_direction(
+            if observation_is_continuous and _crossed_in_valid_direction(
                 previous, position, self.gate_config["entry_gate"]
             ):
                 if session is None:
@@ -270,7 +337,7 @@ class GateSessionCoordinator:
                     session = get_session(session_id)
                     print(f"[ENTRY] Global ID #{global_id} -> session {session_id}")
 
-            if previous is not None and session is not None and _crossed_in_valid_direction(
+            if observation_is_continuous and session is not None and _crossed_in_valid_direction(
                 previous, position, self.gate_config["exit_gate"]
             ):
                 deleted = delete_session_by_global_id(
@@ -278,10 +345,14 @@ class GateSessionCoordinator:
                 )
                 self.previous_positions.pop(global_id, None)
                 self._parked_candidates.pop(global_id, None)
+                self._departure_candidates.pop(global_id, None)
+                self._last_observed_at.pop(global_id, None)
                 print(f"[EXIT] Global ID #{global_id} -> deleted session {deleted['sessionId']}")
                 continue
 
-            self.previous_positions[global_id] = position
+            if observed:
+                self.previous_positions[global_id] = position
+                self._last_observed_at[global_id] = now
             session = find_session_by_global_id(
                 global_id, runtime_id=runtime_id
             )
@@ -289,7 +360,7 @@ class GateSessionCoordinator:
                 self._parked_candidates.pop(global_id, None)
                 continue
 
-            if vehicle.get("observed", True):
+            if observed:
                 update_global_vehicle_observation(
                     global_id, position, runtime_id=runtime_id
                 )
@@ -297,6 +368,7 @@ class GateSessionCoordinator:
             parked_slot_id = vehicle.get("parked_slot_id")
             if session.get("state") == "EXIT_NAVIGATION":
                 self._parked_candidates.pop(global_id, None)
+                self._departure_candidates.pop(global_id, None)
                 continue
 
             if parked_slot_id:
@@ -308,7 +380,6 @@ class GateSessionCoordinator:
                     self._parked_candidates.pop(global_id, None)
                     continue
 
-                now = self._clock()
                 candidate = self._parked_candidates.get(global_id)
                 if candidate is None or candidate[0] != parked_slot_id:
                     evidence_seconds = min(
@@ -330,14 +401,38 @@ class GateSessionCoordinator:
                         runtime_id=runtime_id,
                     )
                 self._parked_candidates.pop(global_id, None)
+                self._departure_candidates.pop(global_id, None)
                 continue
 
             self._parked_candidates.pop(global_id, None)
-            if session.get("state") == "PARKED" and vehicle.get("observed", True):
-                set_exit_navigation(str(session["sessionId"]))
+            if session.get("state") == "PARKED" and observed:
+                movement = (
+                    float(math.hypot(
+                        position["x"] - previous["x"],
+                        position["y"] - previous["y"],
+                    ))
+                    if previous is not None
+                    else 0.0
+                )
+                count, last_frame = self._departure_candidates.get(
+                    global_id, (0, -2)
+                )
+                next_count = count + 1 if frame_index is None or last_frame + 1 == frame_index else 1
+                if str(vehicle.get("state", "active")) == "active" and movement >= 0.25:
+                    self._departure_candidates[global_id] = (
+                        next_count,
+                        frame_index if frame_index is not None else last_frame + 1,
+                    )
+                    if next_count >= 2:
+                        set_exit_navigation(str(session["sessionId"]))
+                        self._departure_candidates.pop(global_id, None)
+                else:
+                    self._departure_candidates.pop(global_id, None)
 
         for global_id in set(self._parked_candidates) - seen_global_ids:
             self._parked_candidates.pop(global_id, None)
+        for global_id in set(self._departure_candidates) - seen_global_ids:
+            self._departure_candidates.pop(global_id, None)
 
 
 def _runtime_snapshot(url: str) -> dict[str, Any]:
@@ -453,7 +548,21 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
                 self._json(session)
             elif path == "/api/session/select":
                 spot_id = payload.get("spotId")
-                if spot_id and _latest_spot_availability(str(spot_id)) is False:
+                availability = (
+                    _latest_spot_availability(str(spot_id))
+                    if spot_id
+                    else True
+                )
+                if spot_id and availability is None:
+                    self._json(
+                        {
+                            "error": "Runtime parking data is unavailable or stale",
+                            "code": "RUNTIME_UNAVAILABLE",
+                        },
+                        503,
+                    )
+                    return
+                if spot_id and availability is False:
                     self._json(
                         {
                             "error": f"Parking spot is no longer available: {spot_id}",

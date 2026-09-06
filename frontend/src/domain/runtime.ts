@@ -23,6 +23,8 @@ export interface RuntimeSlot {
   decision_source: string;
   tracking_state: string;
   stopped_for_ms: number;
+  evidence_frame_idx?: number | null;
+  applied_frame_idx?: number | null;
 }
 
 export interface RuntimeSlotLayout {
@@ -71,6 +73,7 @@ export interface RuntimeSnapshot {
   slot_layout: RuntimeSlotLayout[];
   vehicles: RuntimeVehicle[];
   pending_handoffs: RuntimeEvent[];
+  retired_global_ids?: Record<string, number>;
   recent_events: RuntimeEvent[];
 }
 

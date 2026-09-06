@@ -127,3 +127,19 @@ def test_schema_three_rejects_duplicate_event_uid(tmp_path):
     errors, _ = validate(tmp_path)
 
     assert any("event_uid" in error and "bi lap" in error for error in errors)
+
+
+def test_schema_three_rejects_session_marked_as_incomplete(tmp_path):
+    _valid_v3_session(tmp_path)
+    metadata_path = tmp_path / "session_info.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata.update({
+        "status": "incomplete_interrupted_frame_write",
+        "record_counts_consistent": False,
+    })
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    errors, _ = validate(tmp_path)
+
+    assert any("khong hoan chinh" in error for error in errors)
+    assert any("so frame lech" in error for error in errors)

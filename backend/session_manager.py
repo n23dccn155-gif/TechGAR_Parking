@@ -458,6 +458,8 @@ def remap_global_vehicle_id(
                 f"Global ID merge would create duplicate sessions: {old_global_id} -> {new_global_id}"
             )
         source["globalVehicleId"] = new_global_id
+        source["revision"] = int(source.get("revision") or 0) + 1
+        source["updatedAt"] = now_iso()
         save_sessions(sessions)
         return dict(source)
 

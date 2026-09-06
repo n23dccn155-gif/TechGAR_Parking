@@ -422,6 +422,30 @@ def test_unbound_fragment_opens_only_its_parked_slot_predeparture_token():
     assert token["predeparture"] is True
 
 
+def test_rejected_global_reservation_is_removed_from_local_binder_output():
+    binder = SlotVehicleBinder(policy="vision_primary")
+    result = slot_result(occupied=True)
+    binder.update_vision([result], 0, 0.0, camera_id="cam1")
+    state = binder._vehicle_states.setdefault(2, VehicleParkingState(global_id=2))
+    state.last_bbox = (20, 20, 60, 60)
+    binder._bind_vehicle(2, "P001", 1, 0.8, 1000)
+
+    binder.reconcile_identity_reservations(
+        {2: {"global_id": 2, "camera_id": "cam2", "slot_id": "F03"}},
+        2,
+    )
+
+    output = binder.get_slot_state("P001")
+    assert output["occupied"] is True  # Vision evidence remains authoritative.
+    assert output["vehicle_id"] is None
+    assert output["tracking_occupied"] is False
+    assert binder.get_identity_reservations() == []
+    assert any(
+        event["type"] == "parked_reservation_reconciled_rejected"
+        for event in binder.events
+    )
+
+
 def test_legacy_track_expiry_keeps_existing_auto_park_behavior():
     binder = SlotVehicleBinder(policy="legacy", stop_seconds=1.0)
     binder.update_vision([slot_result(occupied=False)], 0, 0.0)

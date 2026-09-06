@@ -1,17 +1,13 @@
-"""Lightweight DeepReID for vehicle appearance matching.
+"""Experimental CNN feature extractor requiring explicit trained weights.
 
-Priority 9: Drop-in replacement for histogram-based appearance descriptors.
-Uses a small CNN (4-layer) that works efficiently on CPU.
-
-Usage:
-    >>> from deep_reid_model import DeepReIDExtractor
-    >>> extractor = DeepReIDExtractor()
-    >>> features = extractor.extract(crop_image)  # returns 128-d vector
-    >>> distance = extractor.distance(features_a, features_b)  # cosine distance
+This module is deliberately not enabled by the motion-tracking pipeline.  A
+randomly initialized network is not a Re-ID model and must never contribute to
+production identity decisions.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional, Tuple
 
 import cv2
@@ -84,9 +80,21 @@ if HAS_TORCH:
             >>> dist = extractor.distance(feat1, feat2)
         """
 
-        def __init__(self, feature_dim: int = 128, device: str = "cpu") -> None:
+        def __init__(
+            self,
+            feature_dim: int = 128,
+            device: str = "cpu",
+            *,
+            weights_path: str | Path | None = None,
+        ) -> None:
+            if weights_path is None:
+                raise ValueError(
+                    "DeepReID requires explicit trained weights; random "
+                    "initialization is not supported"
+                )
             self.feature_dim = feature_dim
             self.device = torch.device(device)
+            self.weights_path = Path(weights_path)
             self._model: Optional[nn.Module] = None
             self._initialized = False
 
@@ -95,7 +103,19 @@ if HAS_TORCH:
                 return
             if not HAS_TORCH:
                 raise ImportError("PyTorch not installed — cannot use DeepReID")
+            if not self.weights_path.is_file():
+                raise FileNotFoundError(
+                    f"DeepReID weights not found: {self.weights_path}"
+                )
             self._model = _LightweightReID(feature_dim=self.feature_dim).to(self.device)
+            state = torch.load(
+                self.weights_path,
+                map_location=self.device,
+                weights_only=True,
+            )
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            self._model.load_state_dict(state, strict=True)
             self._model.eval()
             self._initialized = True
 
@@ -142,19 +162,14 @@ if HAS_TORCH:
 else:
 
     class DeepReIDExtractor:  # type: ignore[no-redef]
-        """Fallback: histogram-based descriptor if PyTorch missing."""
+        """Unavailable implementation used when the optional dependency is absent."""
 
-        def __init__(self, feature_dim: int = 416, **kwargs: object) -> None:  # type: ignore[override]
-            self.feature_dim = feature_dim
+        def __init__(self, **kwargs: object) -> None:  # type: ignore[override]
+            raise ImportError("PyTorch is required for the experimental DeepReID extractor")
 
         def extract(self, image: np.ndarray) -> np.ndarray:
-            """Fallback to HSV+LAB histogram (same as tracklet_descriptor)."""
-            from .tracklet_descriptor import hsv_histogram
-
-            return hsv_histogram(image, (0, 0, image.shape[1], image.shape[0]))
+            raise RuntimeError("DeepReID extractor is unavailable")
 
         @staticmethod
         def distance(features_a: np.ndarray, features_b: np.ndarray) -> float:
-            from .tracklet_descriptor import histogram_distance
-
-            return histogram_distance(features_a, features_b)
+            raise RuntimeError("DeepReID extractor is unavailable")

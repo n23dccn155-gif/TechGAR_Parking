@@ -138,11 +138,14 @@ def test_remap_global_id_and_delete_on_confirmed_exit(monkeypatch, tmp_path):
     use_temporary_store(monkeypatch, tmp_path)
     session_id = session_manager.create_session(global_vehicle_id=42, session_id="remapped")
 
+    before = session_manager.get_session(session_id)
     remapped = session_manager.remap_global_vehicle_id(42, 9)
     deleted = session_manager.delete_session_by_global_id(9)
 
     assert remapped["sessionId"] == session_id
     assert remapped["globalVehicleId"] == 9
+    assert remapped["revision"] == before["revision"] + 1
+    assert remapped["updatedAt"] >= before["updatedAt"]
     assert deleted["sessionId"] == session_id
     assert session_manager.load_sessions() == {}
 
@@ -251,4 +254,3 @@ def test_parked_at_set_on_first_park_and_stable_on_repeat(monkeypatch, tmp_path)
 
     assert first is not None
     assert first == second
-

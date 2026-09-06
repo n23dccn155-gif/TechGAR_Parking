@@ -30,6 +30,7 @@ class SlotResult:
     polygon: np.ndarray          # (N, 2) int32 — tọa độ đã scale
     center: Tuple[int, int]
     vehicle_id: Optional[int] = None   # Sẽ được binder gán sau
+    evidence: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -56,6 +57,7 @@ class _ROIEvidence:
     core_component_ratio: float
     core_component_count: int
     filtered_mask: np.ndarray = field(repr=False)
+    removed_ratio: float = 0.0
 
 
 class TemporalSmoother:
@@ -108,6 +110,11 @@ class ParkingDetector:
         core_scale: float = 0.55,
         core_ratio_threshold: float = 0.18,
         core_component_threshold: float = 0.08,
+        stable_evidence: bool = False,
+        exit_ratio_thr: float = 0.08,
+        occupied_seconds: float = 0.5,
+        empty_seconds: float = 1.0,
+        selective_line_filter: bool = True,
     ):
         self.base_gamma = base_gamma
         self.base_clahe = base_clahe
@@ -122,6 +129,15 @@ class ParkingDetector:
         self.core_scale = min(0.95, max(0.10, float(core_scale)))
         self.core_ratio_threshold = min(1.0, max(0.0, float(core_ratio_threshold)))
         self.core_component_threshold = min(1.0, max(0.0, float(core_component_threshold)))
+        self.stable_evidence = bool(stable_evidence)
+        self.exit_ratio_thr = float(exit_ratio_thr)
+        self.occupied_seconds = max(0.0, float(occupied_seconds))
+        self.empty_seconds = max(0.0, float(empty_seconds))
+        self.selective_line_filter = bool(selective_line_filter)
+        self.core_rescue_raw_ratio = 0.30
+        self._stable_slots: dict = {}
+        self._accepted_timestamp = float('-inf')
+        self._debug_cache = None
 
         # Load slots
         path = Path(slots_file)
@@ -298,12 +314,15 @@ class ParkingDetector:
             )
 
         self._smoother = TemporalSmoother(len(self._rois), self.smoothing_frames)
+        for state in self._stable_slots.values():
+            state.update(pending=None, count=0)
         self._initialized = True
 
     def _filter_roi_threshold(
         self,
         roi_threshold: np.ndarray,
         roi: _PrecomputedROI,
+        full_evidence: bool = True,
     ) -> _ROIEvidence:
         """Remove thin boundary-connected components while preserving central blobs."""
         raw_masked = cv2.bitwise_and(roi_threshold, roi_threshold, mask=roi.mask)
@@ -312,11 +331,14 @@ class ParkingDetector:
         filtered = cv2.bitwise_and(
             roi_threshold, roi_threshold, mask=roi.analysis_mask
         )
+        before_filter_count = cv2.countNonZero(filtered)
         count, labels, stats, _ = cv2.connectedComponentsWithStats(filtered, connectivity=8)
         analysis_width, analysis_height = roi.analysis_size
         analysis_min_dimension = max(1, min(analysis_width, analysis_height))
         boundary_labels = labels[roi.analysis_boundary > 0]
         core_labels = labels[roi.core_mask > 0]
+        boundary_counts = np.bincount(boundary_labels, minlength=count)
+        core_counts = np.bincount(core_labels, minlength=count)
 
         for label in range(1, count):
             component_area = int(stats[label, cv2.CC_STAT_AREA])
@@ -328,9 +350,9 @@ class ParkingDetector:
                 component_height / analysis_height,
             )
             thickness_ratio = (component_area / long_axis) / analysis_min_dimension
-            touches_boundary = bool(np.any(boundary_labels == label))
+            touches_boundary = bool(boundary_counts[label])
             component_core_ratio = (
-                float(np.count_nonzero(core_labels == label)) / max(1, roi.core_area)
+                float(core_counts[label]) / max(1, roi.core_area)
             )
             substantial_core = component_core_ratio >= self.core_component_threshold
             vehicle_like_core = (
@@ -344,14 +366,36 @@ class ParkingDetector:
                 and not vehicle_like_core
             )
             if is_border_line:
-                filtered[labels == label] = 0
+                component = np.uint8(labels == label) * 255
+                if not self.selective_line_filter:
+                    filtered[labels == label] = 0
+                    continue
+                # A one-pixel bridge must not erase the entire car. Fit a
+                # narrow line and remove only its thin, locally supported part.
+                ys, xs = np.nonzero(component)
+                points = np.column_stack((xs, ys)).astype(np.float32)
+                vx, vy, cx, cy = cv2.fitLine(points, cv2.DIST_HUBER, 0, .01, .01).ravel()
+                residual = np.abs((xs - cx) * vy - (ys - cy) * vx)
+                half_width = max(1.5, min(analysis_min_dimension * .04,
+                                        float(np.percentile(residual, 60)) + .75))
+                thickness = cv2.distanceTransform(component, cv2.DIST_L2, 5)
+                # Thick vehicle regions are protected even when attached to
+                # a thin straight stripe. Dilate protection to retain edges.
+                protected = np.uint8(thickness > half_width + 1.0) * 255
+                protected = cv2.dilate(protected, np.ones((5, 5), np.uint8))
+                remove = (residual <= half_width + .75) & (protected[ys, xs] == 0)
+                filtered[ys[remove], xs[remove]] = 0
 
         filtered_count = cv2.countNonZero(filtered)
+        if not full_evidence:
+            return _ROIEvidence(raw_ratio, filtered_count/max(1,roi.analysis_area),
+                0.0, 0.0, 0, filtered,
+                (before_filter_count-filtered_count)/max(1,roi.analysis_area))
         core_pixels = cv2.bitwise_and(filtered, filtered, mask=roi.core_mask)
         core_count = cv2.countNonZero(core_pixels)
         core_component_ratio = 0.0
         core_component_count = 0
-        if core_count:
+        if full_evidence and core_count:
             core_components, _, core_stats, _ = cv2.connectedComponentsWithStats(
                 core_pixels, connectivity=8
             )
@@ -368,6 +412,7 @@ class ParkingDetector:
             core_component_ratio=core_component_ratio,
             core_component_count=core_component_count,
             filtered_mask=filtered,
+            removed_ratio=(before_filter_count-filtered_count)/max(1, roi.analysis_area),
         )
 
     def _has_core_rescue(self, evidence: _ROIEvidence) -> bool:
@@ -376,7 +421,7 @@ class ParkingDetector:
             and evidence.core_component_ratio >= self.core_component_threshold
         )
         textured_dense_blob = (
-            evidence.raw_ratio >= min(1.0, self.ratio_thr * 1.5)
+            evidence.raw_ratio >= self.core_rescue_raw_ratio
             and evidence.core_ratio >= self.core_component_threshold * 0.25
             and evidence.core_component_count >= 2
         )
@@ -414,6 +459,7 @@ class ParkingDetector:
         l_channel = lab[:, :, 0]
         kernel = np.ones((3, 3), np.uint8)
         empty_votes = [0] * len(self._rois)
+        exit_votes = [0] * len(self._rois)
         base_evidence: List[Optional[_ROIEvidence]] = [None] * len(self._rois)
         vote_masks: List[Optional[np.ndarray]] = [None] * len(self._rois)
 
@@ -471,11 +517,17 @@ class ParkingDetector:
                         continue
                     x1, y1, x2, y2 = roi.bbox
                     roi_thresh = dilated[y1:y2, x1:x2]
-                    filtered = cv2.bitwise_and(
-                        roi_thresh, roi_thresh, mask=vote_masks[i]
-                    )
-                    if cv2.countNonZero(filtered) / roi.analysis_area < ratio_thr:
+                    # Filter each variant independently: a bridge in the base
+                    # image must not veto all 25 independent pixel counts.
+                    if self.selective_line_filter:
+                        filtered = self._filter_roi_threshold(roi_thresh, roi, full_evidence=False).filtered_mask
+                    else:
+                        filtered = cv2.bitwise_and(roi_thresh, roi_thresh, mask=vote_masks[i])
+                    ratio = cv2.countNonZero(filtered) / roi.analysis_area
+                    if ratio < ratio_thr:
                         empty_votes[i] += 1
+                    if ratio < min(self.ratio_thr, self.exit_ratio_thr):
+                        exit_votes[i] += 1
 
         # ── Pass 1: Threshold + Center Cluster ──
         required_votes = total_combinations // 2
@@ -529,10 +581,68 @@ class ParkingDetector:
                     occupied=not is_free,
                     polygon=roi.polygon_pts,
                     center=roi.center,
+                    evidence={
+                        "raw_ratio": base_evidence[i].raw_ratio,
+                        "filtered_ratio": base_evidence[i].filtered_ratio,
+                        "removed_ratio": base_evidence[i].removed_ratio,
+                        "empty_votes": empty_votes[i],
+                        "exit_empty_votes": exit_votes[i],
+                        "required_votes": required_votes,
+                        "rescue": self._has_core_rescue(base_evidence[i]),
+                        "instant_occupied": not is_free_list[i],
+                        "enter_ratio": float(self.ratio_thr),
+                        "exit_ratio": float(min(self.ratio_thr, self.exit_ratio_thr)),
+                    },
                 )
             )
 
+        self._debug_cache = (frame, base_threshold, base_evidence, results)
         return results
+
+    def accept_evidence(self, results: List[SlotResult], timestamp_s: float,
+                        frame_idx: int) -> bool:
+        """Commit fresh worker evidence exactly once, on the coordinator thread.
+
+        Rejected/late worker jobs never alter this state. Source time, not
+        display FPS or polling count, determines dwell and release duration.
+        """
+        now = float(timestamp_s)
+        if not np.isfinite(now) or now <= self._accepted_timestamp:
+            return False
+        gap = now - self._accepted_timestamp
+        self._accepted_timestamp = now
+        for result in results:
+            ev = result.evidence
+            ev.update(evidence_frame_idx=int(frame_idx), evidence_timestamp_s=now)
+            if not self.stable_evidence:
+                ev['stable_occupied'] = bool(result.occupied)
+                continue
+            state = self._stable_slots.setdefault(result.slot_id, {
+                'occupied': False, 'pending': None, 'since': now, 'count': 0,
+                'initialized': False,
+            })
+            if gap > 1.5:
+                state.update(pending=None, count=0, since=now)
+            if state['occupied']:
+                desired = not (ev.get('exit_empty_votes', 0) >= ev.get('required_votes', 12)
+                               and not ev.get('rescue', False))
+            else:
+                desired = bool(ev.get('instant_occupied', result.occupied))
+            if desired == state['occupied'] and state['initialized']:
+                state.update(pending=None, count=0, since=now)
+            else:
+                if state['pending'] != desired:
+                    state.update(pending=desired, count=0, since=now)
+                state['count'] += 1
+                duration = self.occupied_seconds if desired else self.empty_seconds
+                count = 2 if desired else 3
+                if state['count'] >= count and now - state['since'] + 1e-6 >= duration:
+                    state.update(occupied=desired, pending=None, count=0, initialized=True)
+            # Unknown at startup is not an available parking place. Binder
+            # waits for ready evidence rather than reserving this placeholder.
+            result.occupied = bool(state['occupied']) if state['initialized'] else True
+            ev.update(stable_occupied=result.occupied, pending=state['pending'], ready=state['initialized'])
+        return True
 
     def get_roi_polygon(self, slot_id: str) -> Optional[np.ndarray]:
         """Trả polygon đã scale cho 1 slot ID."""
@@ -541,42 +651,32 @@ class ParkingDetector:
                 return roi.polygon_pts
         return None
 
-    def build_debug_images(self, frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def build_debug_images(self, frame: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
         """Render raw and border-filtered black/white evidence without changing state."""
-        if not self._initialized:
-            self._compute_rois(frame.shape)
-
-        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
-        clahe = cv2.createCLAHE(
-            clipLimit=max(0.1, self.base_clahe),
-            tileGridSize=(self.clahe_grid, self.clahe_grid),
-        )
-        light = clahe.apply(lab[:, :, 0])
-        light = cv2.LUT(light, self._get_gamma_lut(max(0.1, self.base_gamma)))
-        threshold = cv2.adaptiveThreshold(
-            cv2.GaussianBlur(light, (3, 3), 1), 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16,
-        )
-        threshold = cv2.dilate(
-            cv2.medianBlur(threshold, 5), np.ones((3, 3), np.uint8), iterations=1,
-        )
+        if frame is not None and (self._debug_cache is None or self._debug_cache[0] is not frame):
+            self.detect(frame, apply_smoothing=False)
+        if self._debug_cache is None:
+            raise ValueError('No parking evidence available to render')
+        frame, threshold, cached_evidence, results = self._debug_cache
+        states = {result.slot_id: result for result in results}
 
         filtered_threshold = np.zeros_like(threshold)
         raw_view = cv2.cvtColor(threshold, cv2.COLOR_GRAY2BGR)
         debug_rows = []
-        for roi in self._rois:
+        for index, roi in enumerate(self._rois):
             if roi is None or roi.analysis_area <= 0:
                 continue
             x1, y1, x2, y2 = roi.bbox
             roi_threshold = threshold[y1:y2, x1:x2]
-            evidence = self._filter_roi_threshold(roi_threshold, roi)
+            evidence = cached_evidence[index]
             target = filtered_threshold[y1:y2, x1:x2]
             cv2.bitwise_or(target, evidence.filtered_mask, dst=target)
             debug_rows.append((roi, evidence))
 
         filtered_view = cv2.cvtColor(filtered_threshold, cv2.COLOR_GRAY2BGR)
         for roi, evidence in debug_rows:
-            occupied = evidence.filtered_ratio >= self.ratio_thr or self._has_core_rescue(evidence)
+            result = states[roi.slot_id]
+            occupied = result.evidence.get('stable_occupied', result.evidence['instant_occupied'])
             raw_color = (0, 0, 255) if evidence.raw_ratio >= self.ratio_thr else (0, 255, 0)
             filtered_color = (0, 0, 255) if occupied else (0, 255, 0)
             cv2.polylines(raw_view, [roi.polygon_pts], True, raw_color, 2)
@@ -605,7 +705,7 @@ class ParkingDetector:
             for text, y_offset in (
                 (roi.slot_id, -9),
                 (f"F{evidence.filtered_ratio:.2f}", 1),
-                (f"C{evidence.core_ratio:.2f}", 11),
+                (f"V{result.evidence['empty_votes']}/25" + (' WAIT' if result.evidence.get('pending') is not None else ''), 11),
             ):
                 cv2.putText(
                     filtered_view, text,

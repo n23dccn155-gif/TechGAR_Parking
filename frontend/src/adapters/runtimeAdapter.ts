@@ -47,3 +47,31 @@ export function runtimeParkingSpots(snapshot: RuntimeSnapshot): ParkingSpotState
     };
   });
 }
+
+/** Extract RuntimeVehicle array from snapshot for session resolution. */
+export function runtimeVehicles(snapshot: RuntimeSnapshot): import("../domain/runtime").RuntimeVehicle[] {
+  return snapshot.vehicles.map((vehicle) => ({
+    global_id: vehicle.global_id,
+    state: vehicle.state ?? "active",
+    observed: vehicle.observed ?? true,
+    camera_ids: vehicle.camera_ids ?? ["cam1"],
+    position: vehicle.position,
+    parked_slot_id: vehicle.parked_slot_id ?? null,
+    last_seen_frame: vehicle.last_seen_frame ?? snapshot.frame_index,
+    last_seen_time: vehicle.last_seen_time ?? Date.now() / 1000,
+  }));
+}
+
+/** Extract RuntimeSlot array from snapshot for session resolution. */
+export function runtimeSlots(snapshot: RuntimeSnapshot): import("../domain/runtime").RuntimeSlot[] {
+  return snapshot.parking_slots.map((slot) => ({
+    slot_id: slot.slot_id,
+    camera_id: slot.camera_id,
+    status: slot.status,
+    occupied: Boolean(slot.occupied),
+    vehicle_id: slot.vehicle_id ?? null,
+    decision_source: slot.decision_source ?? "unknown",
+    tracking_state: slot.tracking_state ?? "moving",
+    stopped_for_ms: slot.stopped_for_ms ?? 0,
+  }));
+}

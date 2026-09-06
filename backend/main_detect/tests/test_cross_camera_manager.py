@@ -66,6 +66,39 @@ def attach_tracklet(track: DummyTrack, *histograms: np.ndarray) -> DummyTrack:
     return track
 
 
+def test_rejected_dormant_alias_merge_keeps_handoff_source_identity():
+    manager = make_manager()
+    histogram = one_hot_histogram(3)
+    old_track = attach_tracklet(DummyTrack(120, 200), histogram, histogram)
+    state = manager._observe_identity(1, "cam3", 4, old_track, 10, 0.4)
+    state.state = "dormant"
+
+    current = attach_tracklet(DummyTrack(120, 200), histogram, histogram)
+    manager._bind("cam3", 9, 2)
+    # Reserving the handoff source forces the merge transaction to reject.
+    # The dormant candidate happens to be the smaller ID, which previously
+    # leaked out of _reconcile_handoff_dormant_alias despite that rejection.
+    manager._parked_reservations[2] = {"global_id": 2, "slot_id": "F01"}
+
+    result = manager._reconcile_handoff_dormant_alias(
+        2,
+        "cam3",
+        9,
+        current,
+        11,
+        0.44,
+        {"cam3": {9: current}},
+    )
+
+    assert result == 2
+    assert manager._canonical_id(2) == 2
+    assert 2 not in manager._global_aliases
+    assert any(
+        event["type"] == "handoff_dormant_alias_merge_rejected"
+        for event in manager.to_json({})["recent_events"]
+    )
+
+
 def _trajectory_sample(frame_idx, camera_id, local_track_id, x, y=0.0):
     return TrajectorySample(
         frame_idx=frame_idx,
@@ -486,9 +519,44 @@ def test_parked_reservation_detaches_local_track_and_blocks_id_theft():
         manager.bind_external_id("cam3", 9, 1, 3, source="dormant_reid")
 
     assert manager.bind_external_id(
-        "cam3", 9, 1, 4, source="parking_departure_token"
+        "cam3",
+        9,
+        1,
+        4,
+        source="parking_departure_token",
+        source_slot_id="F01",
+        source_camera_id="cam3",
     ) == 1
     assert manager.parked_global_ids == set()
+
+
+def test_departure_recovery_rejects_token_from_another_slot():
+    manager = make_manager()
+    parked = DummyTrack(120, 160)
+    assert manager.update_all_tracks({"cam3": {2: parked}}, 1)["cam3"][2] == 1
+    manager.sync_parked_reservations(
+        [{
+            "global_id": 1,
+            "slot_id": "F01",
+            "camera_id": "cam3",
+            "state": "parked",
+        }],
+        2,
+    )
+
+    with pytest.raises(ValueError, match="does not own"):
+        manager.bind_external_id(
+            "cam3",
+            9,
+            1,
+            3,
+            source="parking_departure_token",
+            source_slot_id="F03",
+            source_camera_id="cam3",
+        )
+
+    assert manager.parked_global_ids == {1}
+    assert manager.get_global_id("cam3", 9) is None
 
 
 def test_parked_reservation_cancels_stale_pending_handoff():
@@ -1169,7 +1237,7 @@ def test_strong_same_camera_fragment_recovers_just_outside_base_distance():
     )
 
 
-def test_established_identity_reenters_far_away_by_unique_same_view_fingerprint():
+def test_long_absence_is_not_recovered_by_appearance_alone():
     manager = make_real_two_camera_manager()
     manager.dormant_match_distance = 35.0
     appearance = one_hot_histogram(0)
@@ -1234,8 +1302,11 @@ def test_established_identity_reenters_far_away_by_unique_same_view_fingerprint(
         {"cam2": {9: returning}}, 350, {"cam2": 50.0}
     )
 
-    assert ids == {"cam2": {9: 1}}
-    assert any(
+    # The record is retained for diagnostics, but ordinary same-camera Re-ID
+    # is deliberately limited to 12 seconds.  After 49 seconds a colour match
+    # alone must not steal the old identity from a potentially different car.
+    assert ids == {"cam2": {}}
+    assert not any(
         event["type"] == "dormant_appearance_reentry_recovered"
         and event["global_id"] == 1
         for event in manager.to_json({})["recent_events"]

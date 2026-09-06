@@ -120,5 +120,8 @@ def build_runtime_snapshot(
         "slot_layout": _slot_layout(calibration),
         "vehicles": sorted(vehicles, key=lambda item: item["global_id"]),
         "pending_handoffs": registry.get("pending_handoffs", []),
+        # Durable alias state lets consumers recover even if they missed the
+        # short rolling event list containing ``global_id_merged``.
+        "retired_global_ids": registry.get("retired_global_ids", {}),
         "recent_events": registry.get("recent_events", [])[-100:],
     }

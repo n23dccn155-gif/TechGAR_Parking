@@ -20,7 +20,15 @@ class FakeManager:
     def get_global_id(self, camera_id, local_id):
         return self.bindings.get((camera_id, local_id))
 
-    def bind_external_id(self, camera_id, local_id, global_id, frame_idx, source):
+    def bind_external_id(
+        self,
+        camera_id,
+        local_id,
+        global_id,
+        frame_idx,
+        source,
+        **_proof,
+    ):
         self.bindings[(camera_id, local_id)] = global_id
 
     @staticmethod

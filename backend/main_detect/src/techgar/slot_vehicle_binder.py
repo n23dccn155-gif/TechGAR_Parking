@@ -357,6 +357,89 @@ class SlotVehicleBinder:
             )
         return list(reservations.values())
 
+    def reconcile_identity_reservations(
+        self,
+        accepted: Dict[int, dict],
+        frame_idx: int,
+        canonicalize: Callable[[int], int] = int,
+    ) -> None:
+        """Drop local ownership claims rejected by the global coordinator.
+
+        Multiple camera binders may briefly claim the same canonical ID or
+        the same physical slot.  ``CrossCameraManager`` is the authority that
+        selects one winner.  Without this acknowledgement step, a losing
+        binder continued publishing its rejected ``vehicle_id`` even though
+        the manager had protected only the winner.
+        """
+        canonical_accepted = {
+            int(canonicalize(int(global_id))): dict(reservation)
+            for global_id, reservation in accepted.items()
+        }
+
+        for binding in self._bindings.values():
+            if binding.vehicle_id is None:
+                continue
+            raw_global_id = int(binding.vehicle_id)
+            global_id = int(canonicalize(raw_global_id))
+            winner = canonical_accepted.get(global_id)
+            winner_matches = bool(
+                winner is not None
+                and str(winner.get("slot_id")) == str(binding.slot_id)
+                and str(winner.get("camera_id")) == str(binding.camera_id)
+            )
+            if winner_matches:
+                continue
+
+            if self._vehicle_to_slot.get(raw_global_id) == binding.slot_id:
+                self._vehicle_to_slot.pop(raw_global_id, None)
+            if self._vehicle_to_slot.get(global_id) == binding.slot_id:
+                self._vehicle_to_slot.pop(global_id, None)
+            binding.vehicle_id = None
+            binding.tracking_occupied = False
+            binding.tracking_state = "moving"
+            binding.vehicle_overlap = 0.0
+            binding.stopped_for_ms = 0
+            state = self._vehicle_states.get(raw_global_id) or self._vehicle_states.get(global_id)
+            if state is not None and state.parked_slot_id == binding.slot_id:
+                state.movement_state = "moving"
+                state.parked_slot_id = None
+                state.candidate_slot_id = None
+                state.candidate_since = None
+                state.outside_since = None
+            for claim_key, claim in list(self._arrival_claims.items()):
+                if (
+                    int(canonicalize(int(claim.global_id))) == global_id
+                    and claim.slot_id == binding.slot_id
+                ):
+                    self._arrival_claims.pop(claim_key, None)
+            self._event(
+                "parked_reservation_reconciled_rejected",
+                global_id=global_id,
+                slot_id=binding.slot_id,
+                camera_id=binding.camera_id,
+                kept_slot_id=winner.get("slot_id") if winner else None,
+                kept_camera_id=winner.get("camera_id") if winner else None,
+                frame_idx=int(frame_idx),
+            )
+            self._sync_result(binding)
+
+        for slot_id, token in list(self._departure_tokens.items()):
+            global_id = int(canonicalize(int(token.global_id)))
+            winner = canonical_accepted.get(global_id)
+            if (
+                winner is not None
+                and str(winner.get("slot_id")) == str(token.slot_id)
+                and str(winner.get("camera_id")) == str(token.camera_id)
+            ):
+                continue
+            self._departure_tokens.pop(slot_id, None)
+            self._event(
+                "departure_token_cancelled",
+                global_id=global_id,
+                slot_id=token.slot_id,
+                reason="global_reservation_rejected",
+            )
+
     def prepare_predeparture_tokens(
         self,
         unbound_tracks: Dict[Hashable, object],
@@ -1679,6 +1762,8 @@ class SlotVehicleBinder:
         self._last_frame_idx = int(frame_idx)
         self._last_timestamp_s = float(timestamp_s)
         for result in slot_results:
+            if not getattr(result, 'evidence', {}).get('ready', True):
+                continue
             slot_id = str(result.slot_id)
             polygon = self._offset_polygon(result.polygon, coordinate_offset)
             center = (
@@ -2821,6 +2906,7 @@ class SlotVehicleBinder:
         token = self._departure_tokens.get(binding.slot_id)
         payload = {
             "occupied": bool(binding.occupied),
+            "parking_evidence": dict(getattr(binding.result_ref, 'evidence', {}) or {}),
             "status": "occupied" if binding.occupied else "empty",
             "vehicle_id": binding.vehicle_id,
             "raw_occupied": bool(binding.vision_occupied),
@@ -2830,6 +2916,12 @@ class SlotVehicleBinder:
             "tracking_state": binding.tracking_state,
             "vehicle_overlap": round(float(binding.vehicle_overlap), 4),
             "stopped_for_ms": int(binding.stopped_for_ms),
+            "evidence_frame_idx": (
+                int(binding.bound_at_frame)
+                if binding.vehicle_id is not None and binding.bound_at_frame >= 0
+                else None
+            ),
+            "applied_frame_idx": int(self._last_frame_idx),
         }
         if token is None:
             payload.update(

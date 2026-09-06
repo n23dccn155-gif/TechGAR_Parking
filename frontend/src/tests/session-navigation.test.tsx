@@ -170,7 +170,11 @@ describe("session-aware navigation", () => {
     let acceptSelection: (() => void) | undefined;
     backendMocks.selectSpot.mockImplementation((_sessionId: string, spotId: string) => new Promise<VehicleSession>((resolve) => {
       acceptSelection = () => {
-        currentSession = session({ targetSpotId: spotId });
+        currentSession = session({
+          targetSpotId: spotId,
+          revision: 4,
+          updatedAt: "2026-08-23T10:00:01+07:00",
+        });
         resolve(currentSession);
       };
     }));
@@ -216,6 +220,8 @@ describe("session-aware navigation", () => {
       targetSpotId: null,
       parkedSpotId: "A02",
       parkedAt: "2026-08-23T10:00:05+07:00",
+      revision: 4,
+      updatedAt: "2026-08-23T10:00:05+07:00",
     });
 
     expect(await screen.findByTestId("parked-success")).toHaveTextContent("A02");
