@@ -8,7 +8,7 @@ import { ParkingMap, type GateMapOverlay } from "../components/ParkingMap";
 import type { RuntimeCameraId, RuntimeEvent, RuntimeGateConfig, RuntimeGateLine, RuntimePoint, RuntimeSnapshot } from "../domain/runtime";
 import { PARKING_GEOMETRY, type Point } from "../geometry/parkingGeometry";
 
-const POLL_INTERVAL_MS = 500;
+const POLL_INTERVAL_MS = 200;
 const MAX_RETRY_INTERVAL_MS = 5_000;
 const STALE_AFTER_MS = 5_000;
 
@@ -103,11 +103,27 @@ export function MonitorApp() {
     let retryDelay = POLL_INTERVAL_MS;
     let timeout: number | undefined;
     let controller: AbortController | null = null;
+    let cursor: { runtime: string | undefined; frame: number } | null = null;
+    let progressedAt = Date.now();
+    const watchdog = window.setInterval(() => {
+      if (Date.now() - progressedAt > 5000) {
+        setRuntimeConnected(false);
+        setError("Camera không có frame mới trong 5 giây");
+      }
+    }, 500);
     const refresh = async () => {
       controller = new AbortController();
       try {
         const next = await getRuntimeSnapshot(controller.signal);
         if (!active) return;
+        if (next.source_mode !== "live" || !Number.isFinite(Date.parse(next.published_at))
+          || Date.now() - Date.parse(next.published_at) > 5000) throw new Error("Nguồn không phải live hoặc đã cũ");
+        if (cursor && cursor.runtime === next.runtime_id && next.frame_index < cursor.frame) throw new Error("Frame đến ngược thứ tự");
+        if (!cursor || cursor.runtime !== next.runtime_id || next.frame_index > cursor.frame) {
+          cursor = { runtime: next.runtime_id, frame: next.frame_index };
+          progressedAt = Date.now();
+        }
+        if (Date.now() - progressedAt > 5000) throw new Error("Camera không tiến triển");
         setSnapshot(next);
         setError(null);
         setRuntimeConnected(true);
@@ -125,6 +141,7 @@ export function MonitorApp() {
     return () => {
       active = false;
       controller?.abort();
+      window.clearInterval(watchdog);
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, []);

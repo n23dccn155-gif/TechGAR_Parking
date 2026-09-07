@@ -147,3 +147,14 @@ until the driver explicitly starts exit guidance.
 Implementation uses the current 48-spot shared map (A01-F08). The older
 160-spot geometry sections above remain historical prototype notes rather than
 current acceptance criteria.
+
+# Integration continuation — 2026-09-07
+
+Implement the user-approved PLAN_full.md against the existing real-camera UI.
+Preserve map geometry/calibration and sample mode. Connect runtime v2 parking
+episodes to session identity, relocation/exit actions, fresh snapshots and
+one-time completion notifications. Validate with unit/integration, typecheck,
+lint, build and browser tests; document unverified replay/performance separately.
+The approved-desktop/mobile PNGs named by AGENTS.md are absent; retain current
+layout rather than inventing replacements. Current user instructions supersede
+the old mock-only scope of those specifications.

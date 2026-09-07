@@ -92,6 +92,8 @@ class GlobalIdentityState:
     camera_bbox_sizes: Dict[str, Tuple[int, int]]
     last_seen_frame: int
     last_seen_time: Optional[float]
+    retention_anchor_frame: Optional[int] = None
+    retention_anchor_time: Optional[float] = None
     dormant_since_frame: Optional[int] = None
     dormant_since_time: Optional[float] = None
     exited_at_frame: Optional[int] = None
@@ -727,6 +729,104 @@ class CrossCameraManager:
                     local_track_id=local_track_id, source=source)
         return bound
 
+    def reconcile_departure_identity(
+        self, cam_id: str, local_track_id: int, track, frame_idx: int,
+        *, token: dict, binder, timestamp_s: float,
+    ) -> MergeResult:
+        """Verified parking departure is the only exception to reservation merge guards.
+
+        Called by the single runtime writer. Validation is read-only, including
+        the real binder token; no identity/reservation/token changes on rejection.
+        """
+        owner = self._canonical_id(int(token["global_id"]))
+        current = self.get_global_id(cam_id, local_track_id)
+        reason = "late_departure_token_reconciliation"
+        def rejected(detail):
+            return MergeResult(accepted=False, canonical_id=owner,
+                               retired_id=current, reason=reason, rejection_reason=detail)
+        reservation = self._parked_reservations.get(owner)
+        if (current is None or current == owner or reservation is None
+            or reservation.get("slot_id") != token.get("slot_id")
+            or reservation.get("camera_id") != token.get("camera_id")
+            or not binder.validate_recovery_token(token, timestamp_s)):
+            return rejected("token_reservation_mismatch")
+        current = self._canonical_id(current)
+        if current < owner or current in self._parked_reservations:
+            return rejected("candidate_is_another_owner")
+        samples = self.trajectory.global_samples(current)
+        if not samples or min(s.timestamp_s for s in samples) < float(token["created_at_s"]):
+            return rejected("candidate_predates_departure")
+        evidence = self.parking_recovery_trajectory_evidence(
+            owner, cam_id, local_track_id, track,
+            recent_window_s=binder.recovery_retention_seconds,
+            candidate_global_id=current,
+        )
+        if (evidence.get("hard_reject_reason") or not evidence.get("stable")
+            or (evidence.get("score") or 0) < 0.78
+            or evidence.get("observations", 0) < 3
+            or (evidence.get("topology_score") or 0) <= 0
+            or evidence.get("origin_distance_cm") is None
+            or evidence["origin_distance_cm"] > self.dormant_match_distance
+            or evidence.get("appearance_distance") is None
+            or evidence["appearance_distance"] > binder.recovery_appearance_threshold
+            or (evidence.get("appearance_support") or 0) <= 0):
+            return rejected(evidence.get("hard_reject_reason") or "departure_evidence_insufficient")
+        result = self._merge_global_ids(owner, current, frame_idx, reason,
+                                       verified_transfer=True, _departure_owner=owner)
+        if not result.accepted:
+            return result
+        self.complete_late_departure_recovery(
+            result.canonical_id, cam_id, local_track_id, frame_idx,
+            source_slot_id=token["slot_id"], source_camera_id=token["camera_id"],
+        )
+        binder.cancel_recovery_for_global_id(owner, reason="late_departure_token_reconciled")
+        return result
+
+    def complete_late_departure_recovery(
+        self,
+        canonical_id: int,
+        cam_id: str,
+        local_track_id: int,
+        frame_idx: int,
+        *,
+        source_slot_id: Optional[str] = None,
+        source_camera_id: Optional[str] = None,
+    ) -> None:
+        """Finalize bookkeeping after a late departure reconciliation merge.
+
+        Only called after ``_merge_global_ids`` accepted: aliases and local
+        bindings already point at the canonical identity, so this merely
+        consumes the parking reservation and unparks the merged trajectory.
+        The merge is the transaction boundary; when it is rejected none of
+        this runs and no state has changed.
+        """
+        canonical_id = self._canonical_id(int(canonical_id))
+        reservation = self._parked_reservations.get(canonical_id)
+        if reservation is not None:
+            if (
+                source_slot_id is not None
+                and str(reservation.get("slot_id")) != str(source_slot_id)
+            ) or (
+                source_camera_id is not None
+                and str(reservation.get("camera_id")) != str(source_camera_id)
+            ):
+                # Fail closed: departure proof does not own this reservation.
+                return
+            self._parked_reservations.pop(canonical_id, None)
+        self.trajectory.set_parked(canonical_id, False)
+        previous_processing_frame = self._processing_frame_idx
+        self._processing_frame_idx = int(frame_idx)
+        self._bind(cam_id, local_track_id, canonical_id)
+        self._processing_frame_idx = previous_processing_frame
+        self._event(
+            "global_id_recovered",
+            frame_idx,
+            canonical_id,
+            camera=cam_id,
+            local_track_id=local_track_id,
+            source="parking_departure_token",
+        )
+
     @property
     def parked_global_ids(self) -> set[int]:
         return set(self._parked_reservations)
@@ -876,10 +976,10 @@ class CrossCameraManager:
                 # slot was reserved the vehicle was deliberately unobserved,
                 # so retention restarts at departure instead of expiring one
                 # frame after the reservation drops (P0 hiep2/D01).
-                identity.last_seen_frame = int(frame_idx)
+                identity.retention_anchor_frame = int(frame_idx)
                 latest_timestamp_s = self._latest_camera_timestamp_s()
                 if latest_timestamp_s is not None:
-                    identity.last_seen_time = float(latest_timestamp_s)
+                    identity.retention_anchor_time = float(latest_timestamp_s)
         for global_id in previously_parked - set(selected):
             self.trajectory.set_parked(global_id, False)
         self._parked_reservations = selected
@@ -892,7 +992,7 @@ class CrossCameraManager:
         retention TTL prefers wall-clock seconds.  ``_update_camera_timing``
         already maintains the per-camera last processed timestamps, so their
         maximum is the best available "now" when a dropped reservation
-        re-anchors a parked identity's last-seen time at departure.
+        re-anchors retention at departure, without inventing an observation.
         """
         timestamps = [
             float(timestamp)
@@ -958,6 +1058,7 @@ class CrossCameraManager:
         frame_idx: int,
         *,
         verified_transfer: bool = False,
+        _departure_owner: Optional[int] = None,
     ) -> Optional[str]:
         """Check if merging two GIDs would create an identity collision.
 
@@ -974,8 +1075,8 @@ class CrossCameraManager:
         # has already gone dormant and its in-memory state was pruned.  Check
         # ownership before relying on optional identity-state records.
         if (
-            canonical_id in self._parked_reservations
-            or duplicate_id in self._parked_reservations
+            (canonical_id in self._parked_reservations and canonical_id != _departure_owner)
+            or (duplicate_id in self._parked_reservations and duplicate_id != _departure_owner)
         ):
             return "one_identity_has_slot_reservation"
 
@@ -1072,6 +1173,7 @@ class CrossCameraManager:
         reason: str,
         *,
         verified_transfer: bool = False,
+        _departure_owner: Optional[int] = None,
     ) -> MergeResult:
         canonical_id = self._canonical_id(canonical_id)
         duplicate_id = self._canonical_id(duplicate_id)
@@ -1097,6 +1199,7 @@ class CrossCameraManager:
             duplicate_id,
             frame_idx,
             verified_transfer=verified_transfer,
+            _departure_owner=_departure_owner,
         )
         if rejection_reason is not None:
             self._event(
@@ -1462,15 +1565,37 @@ class CrossCameraManager:
             else 1.0
         )
         last_camera = identity.last_camera if identity is not None else None
+        origin_camera = last_camera
+        origin_reservation = self._parked_reservations.get(global_id)
+        if origin_reservation is not None and origin_reservation.get("camera_id"):
+            # Judge the departure against the camera where the vehicle
+            # actually parked, not wherever the dormant identity was last
+            # glimpsed: a same-camera recovery is valid on that camera.
+            origin_camera = str(origin_reservation["camera_id"])
         topology_score = (
             1.0
-            if last_camera == camera_id
+            if origin_camera == str(camera_id)
             or (
-                last_camera is not None
-                and self._are_adjacent(last_camera, camera_id)
+                origin_camera is not None
+                and self._are_adjacent(origin_camera, camera_id)
             )
             else 0.0
         )
+        candidate_samples = self.trajectory.provisional_samples(
+            (str(camera_id), int(local_track_id))
+        )
+        if not candidate_samples and candidate_global_id is not None:
+            # Late reconciliation evaluates a fragment already bound to the
+            # candidate Global ID: its samples were promoted out of the
+            # provisional store, so read the candidate's bound world trail
+            # on this camera instead.
+            candidate_samples = tuple(
+                sample
+                for sample in self.trajectory.global_samples(
+                    self._canonical_id(int(candidate_global_id))
+                )
+                if sample.camera_id == str(camera_id)
+            )
         evidence = self.trajectory.match_departure(
             global_id,
             (str(camera_id), int(local_track_id)),
@@ -1483,11 +1608,13 @@ class CrossCameraManager:
             ),
             size_score=max(0.0, 1.0 - float(size_distance)),
             topology_score=topology_score,
+            fragment_samples=candidate_samples or None,
         )
         payload = {
             "appearance_distance": appearance_distance,
             "appearance_support": appearance["support"],
             "appearance_samples": len(appearance_samples(track)),
+            "topology_score": float(topology_score),
             "score": None,
             "observations": 0,
             "stable": False,
@@ -1504,21 +1631,6 @@ class CrossCameraManager:
                     "direction_cosine": evidence.direction_cosine,
                     "components": dict(evidence.components or {}),
                 }
-            )
-        candidate_samples = self.trajectory.provisional_samples(
-            (str(camera_id), int(local_track_id))
-        )
-        if not candidate_samples and candidate_global_id is not None:
-            # Late reconciliation evaluates a fragment already bound to the
-            # candidate Global ID: its samples were promoted out of the
-            # provisional store, so read the candidate's bound world trail
-            # on this camera instead.
-            candidate_samples = tuple(
-                sample
-                for sample in self.trajectory.global_samples(
-                    self._canonical_id(int(candidate_global_id))
-                )
-                if sample.camera_id == str(camera_id)
             )
         intended_origin = self.trajectory.parked_origin(global_id)
         intended_origin_distance = (
@@ -1851,6 +1963,12 @@ class CrossCameraManager:
     def _has_fresh_detection(track) -> bool:
         """Return false for Kalman-only LOST/coasting placeholders."""
         if int(getattr(track, "consecutive_invisible_count", 0)) > 0:
+            return False
+        # A merged blob covers two vehicles: its appearance histogram and its
+        # midpoint position are not clean evidence for either identity. It
+        # must never refresh galleries, sizes or world trails (PLAN 2.3); the
+        # pre-merge frozen evidence stays authoritative until the pair splits.
+        if getattr(track, "observation_kind", "detection") != "detection":
             return False
         association_state = str(
             getattr(track, "association_state", "matched")
@@ -3960,6 +4078,13 @@ class CrossCameraManager:
         # Retention is not permission to associate. Occlusion blocks matching
         # at its call sites, not this lifetime check used by cleanup().
         elapsed, uses_seconds = self._identity_elapsed(identity, frame_idx, timestamp_s)
+        # Only cleanup may use the departure retention clock. Matching still
+        # measures age from a real observation, including its moving-ID limit.
+        if target_camera is None:
+            if uses_seconds and identity.retention_anchor_time is not None:
+                elapsed = min(elapsed, max(0.0, timestamp_s - identity.retention_anchor_time))
+            elif not uses_seconds and identity.retention_anchor_frame is not None:
+                elapsed = min(elapsed, float(max(0, frame_idx - identity.retention_anchor_frame)))
         limit = self.identity_retention_seconds if uses_seconds else self.identity_retention_frames
         if self._identity_is_established(identity):
             # A mature identity that has been observed in both calibrated

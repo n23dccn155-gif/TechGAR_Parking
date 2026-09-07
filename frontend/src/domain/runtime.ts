@@ -12,6 +12,7 @@ export interface RuntimeCamera {
   height: number;
   captured_at_monotonic_ns: number;
   online: boolean;
+  age_ms?: number;
 }
 
 export interface RuntimeSlot {
@@ -57,6 +58,7 @@ export interface RuntimeEvent {
 }
 
 export interface RuntimeSnapshot {
+  parking_episodes?: ParkingEpisode[];
   schema_version: number;
   runtime_id?: string;
   timestamp: string;
@@ -96,6 +98,7 @@ export interface RuntimeGateConfig {
 }
 
 export interface ActiveVehicle {
+  observed?: boolean;
   trackId: number;
   x: number;
   y: number;
@@ -108,4 +111,30 @@ export interface ActiveVehicle {
 export interface FrameSize {
   width: number;
   height: number;
+}
+
+export interface ParkingEpisode {
+  parking_episode_id: string;
+  global_id: number;
+  slot_id: string;
+  state: "pending" | "parked" | "departing" | "released";
+  evidence_frame_idx: number | null;
+  evidence_timestamp_s: number | null;
+  applied_frame_idx: number;
+  applied_timestamp_s: number;
+  reason: string;
+}
+
+/** Follow the runtime's durable aliases only; proximity is never identity. */
+export function canonicalRuntimeId(gid: number, aliases: Record<string, number> = {}): number | null {
+  const visited = new Set<number>();
+  while (Object.hasOwn(aliases, String(gid))) {
+    if (visited.has(gid)) return null;
+    visited.add(gid);
+    const next = aliases[String(gid)];
+    if (next === undefined || !Number.isSafeInteger(next) || next < 0) return null;
+    if (next === gid) return gid;
+    gid = next;
+  }
+  return gid;
 }

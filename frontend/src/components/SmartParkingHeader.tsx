@@ -7,6 +7,7 @@ interface SmartParkingHeaderProps {
   cameras: Record<CameraId, CameraState>;
   lastUpdated?: string;
   runtimeState?: "connecting" | "live" | "error";
+  lockRealtime?: boolean;
 }
 
 function formatTime(value?: string): string {
@@ -20,7 +21,7 @@ function formatTime(value?: string): string {
   }).format(new Date(value));
 }
 
-export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState }: SmartParkingHeaderProps) {
+export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState, lockRealtime = false }: SmartParkingHeaderProps) {
   const online = areAllCamerasOnline(cameras);
   const trackingSource = useParkingStore((state) => state.trackingSource);
   const setTrackingSource = useParkingStore((state) => state.setTrackingSource);
@@ -38,7 +39,7 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState }:
       </div>
 
       {/* ── Selector nguồn dữ liệu (Dữ liệu mẫu vs Camera thật) ── */}
-      <div style={{
+      <div className="source-selector" style={{
         display: "flex",
         alignItems: "center",
         gap: "6px",
@@ -53,6 +54,8 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState }:
         <button
           type="button"
           data-testid="source-sample"
+          disabled={lockRealtime}
+          title={lockRealtime ? "Phiên xe thật chỉ sử dụng camera realtime" : undefined}
           onClick={() => setTrackingSource("sample")}
           style={{
             background: trackingSource === "sample" ? "#0284c7" : "transparent",
@@ -105,4 +108,3 @@ export function SmartParkingHeader({ mode, cameras, lastUpdated, runtimeState }:
     </header>
   );
 }
-

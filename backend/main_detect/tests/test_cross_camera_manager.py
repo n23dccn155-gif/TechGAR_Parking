@@ -99,6 +99,67 @@ def test_rejected_dormant_alias_merge_keeps_handoff_source_identity():
     )
 
 
+def test_merged_blob_never_updates_identity_gallery_or_position():
+    # PLAN 2.3: a bbox containing two vehicles must not update the clean
+    # appearance of one vehicle. The pre-merge identity stays frozen until
+    # the occlusion guard splits the pair.
+    manager = make_manager()
+    clean = one_hot_histogram(5)
+    track = attach_tracklet(DummyTrack(120, 200), clean, clean)
+    manager._bind("cam1", 1, 1)
+    manager._refresh_identity_states({"cam1": {1: track}}, 10, {"cam1": 0.4})
+    identity = manager._identities[1]
+    gallery_before = identity.appearance_samples
+    last_world_before = identity.last_world
+    samples_before = len(identity.appearance_samples)
+
+    dirty = one_hot_histogram(200)
+    merged = attach_tracklet(DummyTrack(180, 200, w=120), dirty, dirty)
+    merged.observation_kind = "merged"
+    manager._refresh_identity_states({"cam1": {1: merged}}, 11, {"cam1": 0.44})
+
+    identity = manager._identities[1]
+    assert identity.appearance_samples == gallery_before
+    assert len(identity.appearance_samples) == samples_before
+    assert identity.last_world == last_world_before
+    assert identity.last_seen_frame == 10  # merged frame did not count
+
+
+def test_merged_blob_never_appends_world_trajectory_samples():
+    # The midpoint of a two-vehicle blob is not a real world observation.
+    manager = make_manager()
+    clean = one_hot_histogram(5)
+    manager._bind("cam1", 1, 1)
+    for frame_idx in (1, 2, 3):
+        track = attach_tracklet(
+            DummyTrack(100 + frame_idx, 200), clean, clean
+        )
+        manager.observe_trajectories(
+            {"cam1": {1: track}}, frame_idx, {"cam1": frame_idx / 25.0}
+        )
+    clean_samples = len(manager.trajectory.global_samples(1))
+    assert clean_samples == 3
+
+    merged = attach_tracklet(DummyTrack(140, 200, w=120), clean, clean)
+    merged.observation_kind = "merged"
+    manager.observe_trajectories({"cam1": {1: merged}}, 4, {"cam1": 4 / 25.0})
+    assert len(manager.trajectory.global_samples(1)) == clean_samples
+
+
+def test_predicted_and_provisional_kinds_are_never_fresh_evidence():
+    class KindTrack(DummyTrack):
+        pass
+
+    for kind in ("merged", "prediction", "occluded_prediction",
+                 "watershed_provisional"):
+        track = KindTrack(120, 200)
+        track.observation_kind = kind
+        assert not CrossCameraManager._has_fresh_detection(track)
+
+    real = DummyTrack(120, 200)  # default observation_kind: detection
+    assert CrossCameraManager._has_fresh_detection(real)
+
+
 def _trajectory_sample(frame_idx, camera_id, local_track_id, x, y=0.0):
     return TrajectorySample(
         frame_idx=frame_idx,

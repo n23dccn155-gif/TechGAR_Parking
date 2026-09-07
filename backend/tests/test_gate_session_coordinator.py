@@ -66,6 +66,7 @@ def coordinator(monkeypatch, tmp_path, *, clock=None):
         GATES,
         parked_confirm_seconds=2.0,
         clock=clock or FakeClock(),
+        allow_legacy=True,  # These fixtures intentionally exercise the explicit sample/v1 adapter.
     )
 
 

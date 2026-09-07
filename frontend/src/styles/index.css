@@ -134,6 +134,9 @@ select:focus-visible,
   gap: 10px;
 }
 
+.source-selector { flex-shrink: 0; }
+.source-selector button { min-height: 44px; white-space: nowrap; }
+
 .updated-time {
   margin-left: 14px;
 }
@@ -1124,7 +1127,9 @@ main {
 
 @media (max-width: 900px) {
   .app-shell { padding: 0 10px 88px; }
-  .app-header { min-height: 70px; }
+  .app-header { min-height: 70px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 10px 0; }
+  .app-header .source-selector { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  .app-header .header-status { grid-column: 2; grid-row: 1; }
   .brand-mark { width: 40px; height: 40px; }
   .brand-lockup { gap: 9px; }
   .brand-lockup strong { font-size: 19px; }

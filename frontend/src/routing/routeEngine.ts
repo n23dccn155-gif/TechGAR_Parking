@@ -99,12 +99,7 @@ export function findVehicleRoute(graph: LaneGraph, spotId: SpotId): RouteResult 
 export function findExitRoute(graph: LaneGraph, spotId: SpotId): RouteResult | null {
   const startNodeId = graph.spotEntryNodeIds[spotId];
   if (!startNodeId) return null;
-  // Tạo đồ thị hai chiều tạm thời cho luồng ra cổng exit
-  const exitGraph: LaneGraph = {
-    ...graph,
-    edges: graph.edges.map((e) => ({ ...e, direction: "two-way" })),
-  };
-  return findRoute(exitGraph, startNodeId, graph.exitNodeId);
+  return findRoute(graph, startNodeId, graph.exitNodeId);
 }
 
 /**
@@ -125,17 +120,30 @@ function findKNearestNodes(graph: LaneGraph, x: number, y: number, k: number = 2
 }
 
 function routeFromPos(graph: LaneGraph, vehicleX: number, vehicleY: number, targetNodeId: string): RouteResult | null {
-  const nearestNodes = findKNearestNodes(graph, vehicleX, vehicleY, 2);
-  if (nearestNodes.length === 0) return null;
-
+  // Start ON a drivable edge. Never draw a straight connector through slots
+  // to an arbitrary nearest node, nor reverse a one-way lane for an exit.
+  const nodes = new Map(graph.nodes.map(n => [n.id, n]));
+  const projections = graph.edges.flatMap(edge => {
+    const a = nodes.get(edge.from), b = nodes.get(edge.to);
+    if (!a || !b || [a.kind, b.kind].some(k => k === "access-anchor" || k === "spot-entry")) return [];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const length2 = dx * dx + dy * dy;
+    if (!length2) return [];
+    const t = Math.max(0, Math.min(1, ((vehicleX - a.x) * dx + (vehicleY - a.y) * dy) / length2));
+    const x = a.x + t * dx, y = a.y + t * dy;
+    return [{ edge, a, b, x, y, distance: Math.hypot(x - vehicleX, y - vehicleY) }];
+  }).sort((a, b) => a.distance - b.distance);
+  const nearest = projections[0];
+  if (!nearest || nearest.distance > 60) return null;
   const vehicleNodeId = "vehicle-pos";
-  const vehicleNode: LaneNode = { id: vehicleNodeId, kind: "junction", x: vehicleX, y: vehicleY };
+  const vehicleNode: LaneNode = { id: vehicleNodeId, kind: "junction", x: nearest.x, y: nearest.y };
   
-  const tempEdges: LaneEdge[] = nearestNodes.map(node => ({
+  const destinations = nearest.edge.direction === "two-way" ? [nearest.a, nearest.b] : [nearest.b];
+  const tempEdges: LaneEdge[] = destinations.map(node => ({
     id: `vehicle=>${node.id}`,
     from: vehicleNodeId,
     to: node.id,
-    distance: Math.hypot(node.x - vehicleX, node.y - vehicleY),
+    distance: Math.hypot(node.x - nearest.x, node.y - nearest.y),
     direction: "one-way"
   }));
 
@@ -159,12 +167,7 @@ export function findExitRouteFromPos(
   vehicleY: number,
   fallbackSpotId?: SpotId,
 ): RouteResult | null {
-  const exitGraph: LaneGraph = {
-    ...graph,
-    edges: graph.edges.map((e) => ({ ...e, direction: "two-way" })),
-  };
-  
-  const result = routeFromPos(exitGraph, vehicleX, vehicleY, graph.exitNodeId);
+  const result = routeFromPos(graph, vehicleX, vehicleY, graph.exitNodeId);
   if (result) return result;
 
   // Fallback: tính từ ô đỗ ban đầu nếu không tìm được nút gần xe
@@ -191,7 +194,7 @@ export function findInboundRouteFromPos(
   if (result) return result;
 
   // Fallback: tính từ Cổng Vào nếu không tìm được nút gần xe
-  return findVehicleRoute(graph, spotId);
+  return null;
 }
 
 export function routeUsesOnlyValidEdges(graph: LaneGraph, route: RouteResult): boolean {

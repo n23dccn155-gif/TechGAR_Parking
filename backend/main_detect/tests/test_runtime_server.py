@@ -32,6 +32,24 @@ def test_runtime_state_exposes_snapshot_and_latest_jpeg():
     state.close()
 
 
+def test_json_only_runtime_does_not_request_jpeg_work(monkeypatch):
+    import runtime_server
+    now = [10.]
+    monkeypatch.setattr(runtime_server.time, "monotonic", lambda: now[0])
+    state = RuntimeState(stream_fps=8)
+    state.publish_snapshot({"frame_index": 1})
+    assert not state.needs_frame("cam1")
+    assert state.frame("cam1") is None  # first viewer requests a frame
+    assert state.needs_frame("cam1")
+    state.publish_frame("cam1", np.zeros((10, 10, 3), np.uint8), frame_index=1, timestamp="")
+    assert not state.needs_frame("cam1")  # enforce stream FPS before rendering
+    now[0] += .13
+    assert state.needs_frame("cam1")
+    assert not state.needs_frame("cam2")
+    now[0] += 5.
+    assert not state.needs_frame("cam1")  # disconnected viewer expires
+
+
 def gate_config(unit="cm"):
     return {
         "coordinate_space": "world",

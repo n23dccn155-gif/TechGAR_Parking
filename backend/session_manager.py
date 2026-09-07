@@ -33,6 +33,20 @@ WATCH_INTERVAL = 2.0
 QR_DISPLAY_SECONDS = 10.0
 
 _STORE_LOCK = threading.RLock()
+_LIVE_OBSERVATIONS: dict[tuple[str, str], tuple[tuple, dict]] = {}
+
+
+def _observation_key(session: dict) -> tuple[str, str]:
+    return str(SESSIONS_FILE.resolve()), str(session["sessionId"])
+
+
+def _with_live_observation(session: dict) -> dict:
+    result = dict(session)
+    cached = _LIVE_OBSERVATIONS.get(_observation_key(session))
+    identity = (session.get("runtimeId"), session.get("globalVehicleId"), session.get("createdAt"))
+    if cached is not None and cached[0] == identity:
+        result["lastKnownPosition"] = dict(cached[1])
+    return result
 
 
 class SessionError(RuntimeError):
@@ -45,6 +59,12 @@ class SessionNotFound(SessionError):
 
 class InvalidSessionState(SessionError):
     """Raised when an action is not valid for the current lifecycle state."""
+
+
+class SessionConflict(SessionError):
+    def __init__(self, message: str, current: Optional[dict] = None):
+        super().__init__(message)
+        self.current = current
 
 
 def now_iso() -> str:
@@ -118,6 +138,8 @@ def _normalize_session(session_id: str, value: dict) -> dict:
     session.setdefault("runtimeId", None)
     session.setdefault("targetSpotId", None)
     session.setdefault("parkedSpotId", None)
+    session.setdefault("parkingEpisodeId", None)
+    session.setdefault("actualParkedSpotId", session.get("parkedSpotId") if session.get("state") == "PARKED" else None)
     session.setdefault("claimed", False)
     session.setdefault("lastKnownPosition", None)
     session.setdefault("claimedAt", None)
@@ -150,10 +172,11 @@ def save_sessions(sessions: dict[str, dict]) -> None:
 
 
 def get_session(session_id: str) -> dict:
-    session = load_sessions().get(str(session_id))
-    if session is None:
-        raise SessionNotFound(f"Session not found: {session_id}")
-    return session
+    with _STORE_LOCK:
+        session = load_sessions().get(str(session_id))
+        if session is None:
+            raise SessionNotFound(f"Session not found: {session_id}")
+        return _with_live_observation(session)
 
 
 def _matches_runtime(session: dict, runtime_id: Optional[str]) -> bool:
@@ -258,14 +281,25 @@ def create_session(
     return sid
 
 
-def _mutate_session(session_id: str, mutate) -> dict:
+def _mutate_session(session_id: str, mutate, *, expected_revision=None,
+                    action_id=None, action_signature=None) -> dict:
     with _STORE_LOCK:
         sessions = load_sessions()
         session = sessions.get(str(session_id))
         if session is None:
             raise SessionNotFound(f"Session not found: {session_id}")
+        receipts = dict(session.get("actionReceipts") or {})
+        if action_id and str(action_id) in receipts:
+            if receipts[str(action_id)] != action_signature:
+                raise SessionConflict("Action ID was reused for a different action", dict(session))
+            return dict(session)
+        if expected_revision is not None and int(expected_revision) != int(session.get("revision", 0)):
+            raise SessionConflict("Session changed; refresh before retrying", dict(session))
         before = dict(session)
         mutate(session)
+        if action_id:
+            receipts[str(action_id)] = action_signature
+            session["actionReceipts"] = dict(list(receipts.items())[-32:])
         after = dict(session)
         changed = any(
             before.get(key) != after.get(key)
@@ -278,11 +312,15 @@ def _mutate_session(session_id: str, mutate) -> dict:
         else:
             session["revision"] = int(before.get("revision") or 0)
             session.setdefault("updatedAt", before.get("updatedAt") or now_iso())
-        save_sessions(sessions)
+        if changed:
+            # Persist the latest position at a real session transition, not
+            # every camera observation. Runtime snapshots own live markers.
+            session["lastKnownPosition"] = _with_live_observation(session).get("lastKnownPosition")
+            save_sessions(sessions)
         return dict(session)
 
 
-def claim_session(session_id: str) -> dict:
+def claim_session(session_id: str, **options) -> dict:
     def mutate(session: dict) -> None:
         if session.get("state") == "WAITING_FOR_SCAN":
             session["state"] = "SELECTING_SPOT"
@@ -295,31 +333,40 @@ def claim_session(session_id: str) -> dict:
             f"Cannot claim session in state {session.get('state')}"
         )
 
-    return _mutate_session(session_id, mutate)
+    return _mutate_session(session_id, mutate, action_signature="claim", **options)
 
 
-def select_spot(session_id: str, spot_id: Optional[str]) -> dict:
+def select_spot(session_id: str, spot_id: Optional[str], *, validate_selection=None, **options) -> dict:
     def mutate(session: dict) -> None:
-        if session.get("state") not in {"SELECTING_SPOT", "NAVIGATING_TO_SPOT"}:
+        if session.get("state") not in {"SELECTING_SPOT", "NAVIGATING_TO_SPOT", "PARKED", "RELOCATING", "EXIT_NAVIGATION"}:
             raise InvalidSessionState(
                 f"Cannot select a spot in state {session.get('state')}"
             )
         if spot_id:
-            session["state"] = "NAVIGATING_TO_SPOT"
+            if validate_selection is not None:
+                validate_selection(session, str(spot_id))
+            session["state"] = "RELOCATING" if session.get("actualParkedSpotId") else "NAVIGATING_TO_SPOT"
             session["targetSpotId"] = str(spot_id)
             session["claimed"] = True
             session["claimedAt"] = session.get("claimedAt") or now_iso()
             session["spotSelectedAt"] = now_iso()
         else:
-            session["state"] = "SELECTING_SPOT"
+            session["state"] = "PARKED" if session.get("actualParkedSpotId") else "SELECTING_SPOT"
             session["targetSpotId"] = None
 
-    return _mutate_session(session_id, mutate)
+    return _mutate_session(session_id, mutate, action_signature=f"select:{spot_id}", **options)
 
 
-def set_parked(session_id: str, parked_spot: str) -> dict:
+def set_parked(session_id: str, parked_spot: str, *, parking_episode_id=None, **options) -> dict:
     def mutate(session: dict) -> None:
         current_state = session.get("state")
+        if parking_episode_id and session.get("parkingEpisodeId") == parking_episode_id:
+            # False-empty rollback can restore physical occupancy, but must
+            # never cancel a driver's explicit relocation/exit intent.
+            session["actualParkedSpotId"] = str(parked_spot)
+            if current_state == "SELECTING_SPOT":
+                session["state"] = "PARKED"
+            return
         if current_state == "EXIT_NAVIGATION":
             raise InvalidSessionState(
                 "Cannot park session while exiting the facility"
@@ -330,12 +377,14 @@ def set_parked(session_id: str, parked_spot: str) -> dict:
         previous_parked_at = _parse_iso(session.get("parkedAt"))
         session["state"] = "PARKED"
         session["parkedSpotId"] = str(parked_spot)
+        session["actualParkedSpotId"] = str(parked_spot)
+        session["parkingEpisodeId"] = parking_episode_id
         session["targetSpotId"] = None
         session["activeTrackId"] = None
         if previous_parked_at is None or current_state != "PARKED" or current_spot != str(parked_spot):
             session["parkedAt"] = now_iso()
 
-    return _mutate_session(session_id, mutate)
+    return _mutate_session(session_id, mutate, **options)
 
 
 def set_parked_by_global_id(
@@ -343,21 +392,35 @@ def set_parked_by_global_id(
     parked_spot: str,
     *,
     runtime_id: Optional[str] = None,
+    parking_episode_id: Optional[str] = None,
 ) -> dict:
     session = find_session_by_global_id(
         global_vehicle_id, runtime_id=runtime_id
     )
     if session is None:
         raise SessionNotFound(f"No active session for Global ID {global_vehicle_id}")
-    return set_parked(str(session["sessionId"]), parked_spot)
+    return set_parked(str(session["sessionId"]), parked_spot,
+                      parking_episode_id=parking_episode_id,
+                      expected_revision=session["revision"])
+
+
+def apply_departure_episode(session_id: str, episode_id: str) -> dict:
+    def mutate(session):
+        if session.get("parkingEpisodeId") != episode_id:
+            return
+        session["actualParkedSpotId"] = None
+        if session.get("state") == "PARKED":
+            session["state"] = "SELECTING_SPOT"
+    return _mutate_session(session_id, mutate)
 
 
 def set_exit_navigation(
     session_id: str,
     new_track_id: Optional[int] = None,
+    **options,
 ) -> dict:
     def mutate(session: dict) -> None:
-        if session.get("state") not in {"PARKED", "EXIT_NAVIGATION"}:
+        if session.get("state") not in {"PARKED", "EXIT_NAVIGATION", "SELECTING_SPOT", "NAVIGATING_TO_SPOT", "RELOCATING"}:
             raise InvalidSessionState(
                 f"Cannot start exit navigation in state {session.get('state')}"
             )
@@ -370,7 +433,7 @@ def set_exit_navigation(
         session["activeTrackId"] = new_track_id
         session["exitStartedAt"] = now_iso()
 
-    return _mutate_session(session_id, mutate)
+    return _mutate_session(session_id, mutate, action_signature="exit", **options)
 
 
 def update_global_vehicle_observation(
@@ -379,12 +442,22 @@ def update_global_vehicle_observation(
     *,
     active_track_id: Optional[int] = None,
     runtime_id: Optional[str] = None,
+    persist: bool = True,
 ) -> Optional[dict]:
     session = find_session_by_global_id(
         global_vehicle_id, runtime_id=runtime_id
     )
     if session is None:
         return None
+
+    if not persist:
+        with _STORE_LOCK:
+            key = _observation_key(session)
+            identity = (session.get("runtimeId"), session.get("globalVehicleId"), session.get("createdAt"))
+            _LIVE_OBSERVATIONS[key] = (identity, {"x": position.get("x"), "y": position.get("y")})
+            while len(_LIVE_OBSERVATIONS) > 1024:
+                _LIVE_OBSERVATIONS.pop(next(iter(_LIVE_OBSERVATIONS)))
+            return _with_live_observation(session)
 
     def mutate(current: dict) -> None:
         current["lastKnownPosition"] = {
@@ -457,6 +530,8 @@ def remap_global_vehicle_id(
             raise SessionError(
                 f"Global ID merge would create duplicate sessions: {old_global_id} -> {new_global_id}"
             )
+        source["lastKnownPosition"] = _with_live_observation(source).get("lastKnownPosition")
+        _LIVE_OBSERVATIONS.pop(_observation_key(source), None)
         source["globalVehicleId"] = new_global_id
         source["revision"] = int(source.get("revision") or 0) + 1
         source["updatedAt"] = now_iso()
@@ -471,6 +546,7 @@ def delete_session(session_id: str) -> dict:
         if session is None:
             raise SessionNotFound(f"Session not found: {session_id}")
         save_sessions(sessions)
+        _LIVE_OBSERVATIONS.pop(_observation_key(session), None)
         return session
 
 

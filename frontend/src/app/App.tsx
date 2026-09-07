@@ -24,6 +24,7 @@ import { runtimeCameraStates, runtimeParkingSpots, runtimeSlots, runtimeVehicles
 import { createWorldToSvg, runtimeVehiclesOnSvg } from "../calibration/worldToSvg";
 import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
 import type { ActiveVehicle, FrameSize, RuntimeSnapshot } from "../domain/runtime";
+import { canonicalRuntimeId } from "../domain/runtime";
 import { buildSessionCompletionKey } from "../domain/session";
 import { BackendApiError } from "../api/backendApi";
 import { useVehicleSession } from "../hooks/useVehicleSession";
@@ -46,6 +47,8 @@ export function App({ sessionId }: AppProps = {}) {
     selectSpot: selectSessionSpot,
     startExit: startSessionExit,
     busyAction: sessionBusyAction,
+    error: sessionError,
+    refresh: refreshSession,
   } = useVehicleSession(sessionId ?? null);
   const [runtimeState, setRuntimeState]     = useState<"connecting" | "live" | "error">("connecting");
   const [runtimeError, setRuntimeError]     = useState<string | null>(null);
@@ -99,27 +102,34 @@ export function App({ sessionId }: AppProps = {}) {
   const sessionState = sessionInfo?.state ?? null;
   const sessionTargetSpot = sessionInfo?.targetSpotId ?? null;
   const sessionParkedSpot = sessionInfo?.parkedSpotId ?? null;
-  const targetVehicleId = sessionInfo?.globalVehicleId ?? null;
+  const targetVehicleId = sessionInfo ? canonicalRuntimeId(sessionInfo.globalVehicleId,
+    sessionInfo.runtimeId === runtimeSnapshot?.runtime_id ? runtimeSnapshot?.retired_global_ids : undefined) : null;
   const runtimeParkedSpot = targetVehicleId === null
     ? null
     : activeVehicles.find((vehicle) => vehicle.trackId === targetVehicleId)?.parkedSlotId ?? null;
   const sessionParkingDecision = useMemo(() => {
     if (!sessionInfo || !runtimeSnapshot) return null;
+    if (sessionInfo.runtimeId && sessionInfo.runtimeId !== runtimeSnapshot.runtime_id) {
+      return { kind: "runtime_unavailable" as const, targetSpotId: sessionInfo.targetSpotId, reason: "Phiên xe thuộc lần chạy camera khác" };
+    }
+    if (targetVehicleId === null) return {kind: "identity_invariant_error" as const,
+      reason: "Bảng ID có vòng lặp hoặc giá trị không hợp lệ", spotIds: []};
     return resolveSessionParking({
-      session: sessionInfo,
+      session: {...sessionInfo, globalVehicleId: targetVehicleId},
       vehicles: runtimeVehicles(runtimeSnapshot),
       slots: runtimeSlots(runtimeSnapshot),
       dwellThresholdMs: PARKING_DWELL_MS,
+      episodes: runtimeSnapshot.parking_episodes,
     });
-  }, [sessionInfo, runtimeSnapshot]);
+  }, [sessionInfo, runtimeSnapshot, targetVehicleId]);
 
   useEffect(() => {
     if (sessionId) setTrackingSource("opencv");
   }, [sessionId, setTrackingSource]);
 
   useEffect(() => {
-    sessionTrackIdRef.current = sessionInfo?.globalVehicleId ?? null;
-  }, [sessionInfo?.globalVehicleId]);
+    sessionTrackIdRef.current = targetVehicleId;
+  }, [targetVehicleId]);
 
   useEffect(() => {
     if (trackingSource !== "sample") return;
@@ -144,6 +154,7 @@ export function App({ sessionId }: AppProps = {}) {
         await claimVehicleSession();
       } catch (error) {
         console.warn("Không thể nhận phiên xe", error);
+        claimedRef.current = false;
       }
     };
     void doClaim();
@@ -178,6 +189,9 @@ export function App({ sessionId }: AppProps = {}) {
       if (!Number.isFinite(publishedAt) || Date.now() - publishedAt > 5000) {
         throw new Error("Dữ liệu camera đã cũ quá 5 giây");
       }
+      if (Object.values(runtime.cameras).some(camera => !camera.online || (camera.age_ms ?? 0) > 5000)) {
+        throw new Error("Một camera mất kết nối hoặc dữ liệu đã cũ; tạm dừng chỉ dẫn");
+      }
       const runtimeId = runtime.runtime_id ?? "legacy-runtime";
       const cursor = runtimeCursorRef.current;
       if (cursor?.runtimeId === runtimeId && runtime.frame_index < cursor.frameIndex) {
@@ -195,7 +209,9 @@ export function App({ sessionId }: AppProps = {}) {
     const fetchRealtimeStatus = async () => {
       try {
         if (trackingSource === "opencv") {
-          const runtime = requireLiveRuntime(await getRuntimeSnapshot());
+          const incoming = await getRuntimeSnapshot();
+          if (!active || !sourceIsCurrent()) return;
+          const runtime = requireLiveRuntime(incoming);
           const runtimeSpots = runtimeParkingSpots(runtime);
           if (!active || !sourceIsCurrent()) return;
           applySnapshot({
@@ -209,37 +225,6 @@ export function App({ sessionId }: AppProps = {}) {
           if (active) {
             setRuntimeState("live");
             setRuntimeError(null);
-          }
-        } else if (trackingSource === "sample") {
-          const res = await fetch(`/parking_status_sample.json?t=${Date.now()}`);
-          if (!res.ok || !active || !sourceIsCurrent()) return;
-          const data = await res.json();
-          if (data?.slots) {
-            const currentSpots = useParkingStore.getState().spots;
-            const updatedSpots: ParkingSpotState[] = PARKING_GEOMETRY.spots.map((geom) => {
-              const prev = currentSpots[geom.id];
-              const slotData = data.slots[geom.id];
-              const status: ParkingStatus = slotData?.status ?? prev?.status ?? "empty";
-              return {
-                id: geom.id,
-                zone: geom.zone,
-                number: geom.number,
-                row: geom.row,
-                owner: prev?.owner ?? getSpotOwner(geom.id),
-                status,
-                confidence: slotData?.confidence ?? 0.99,
-                revision: (prev?.revision ?? 0) + 1,
-                updatedAt: data.timestamp ?? new Date().toISOString(),
-              };
-            });
-            applySnapshot({
-              spots: updatedSpots,
-              cameras: {
-                "cam-left": { cameraId: "cam-left", health: "online", updatedAt: data.timestamp ?? "" },
-                "cam-right": { cameraId: "cam-right", health: "online", updatedAt: data.timestamp ?? "" },
-              },
-              capturedAt: data.timestamp ?? new Date().toISOString(),
-            });
           }
         }
       } catch (error) {
@@ -287,7 +272,13 @@ export function App({ sessionId }: AppProps = {}) {
     };
 
     void fetchRealtimeStatus();
-    const interval = setInterval(fetchRealtimeStatus, 500);
+    const interval = setInterval(() => {
+      if (trackingSource === "opencv" && Date.now() - runtimeProgressAtRef.current > 5000) {
+        setRuntimeState("error");
+        setRuntimeError("Camera không có frame mới trong 5 giây");
+      }
+      void fetchRealtimeStatus();
+    }, 200);
 
     // ── Đồng bộ CỔNG VÀO / CỔNG RA cho đồ thị dẫn đường ──
     const fetchGateRoi = async () => {
@@ -493,12 +484,14 @@ export function App({ sessionId }: AppProps = {}) {
   const [isExitGuideActive, setIsExitGuideActive] = useState<boolean>(false);
   // Completion keys that have already been shown (session-scoped + sessionStorage for reload safety).
   const consumedCompletionKeysRef = useRef<Set<string>>(new Set());
+  const completionDeadlineRef = useRef<{key: string; expiresAt: number} | null>(null);
   const [showParkedSuccess, setShowParkedSuccess] = useState<boolean>(false);
   const parkedCompletionKey = sessionInfo ? buildSessionCompletionKey(sessionInfo) : null;
 
   useEffect(() => {
     if (!sessionId) return;
-    if (sessionState === "NAVIGATING_TO_SPOT" && sessionTargetSpot) {
+    if ((sessionState === "NAVIGATING_TO_SPOT" || sessionState === "RELOCATING") && sessionTargetSpot) {
+      setIsExitGuideActive(false);
       setIsRouteDismissed(false);
       if (confirmedSpotId !== sessionTargetSpot) {
         confirmSpot(sessionTargetSpot as SpotId);
@@ -507,6 +500,11 @@ export function App({ sessionId }: AppProps = {}) {
     }
     if (sessionState === "SELECTING_SPOT" && mode === "entry") {
       enterBrowse("all");
+      return;
+    }
+    if (sessionState === "EXIT_NAVIGATION") {
+      setIsExitGuideActive(true);
+      setIsRouteDismissed(false);
       return;
     }
     if (sessionState === "PARKED") {
@@ -519,11 +517,19 @@ export function App({ sessionId }: AppProps = {}) {
 
   useEffect(() => {
     if (!sessionId || sessionState !== "PARKED" || !parkedCompletionKey) {
+      completionDeadlineRef.current = null;
       setShowParkedSuccess(false);
       return;
     }
     const completionKey = parkedCompletionKey;
     if (consumedCompletionKeysRef.current.has(completionKey)) {
+      const remaining = completionDeadlineRef.current?.key === completionKey
+        ? completionDeadlineRef.current.expiresAt - Date.now() : 0;
+      setShowParkedSuccess(remaining > 0);
+      if (remaining > 0) {
+        const timer = setTimeout(() => setShowParkedSuccess(false), remaining);
+        return () => clearTimeout(timer);
+      }
       return;
     }
     const storageKey = `techgar:parkedSuccess:${sessionId}`;
@@ -543,6 +549,7 @@ export function App({ sessionId }: AppProps = {}) {
       // ignore
     }
     setShowParkedSuccess(true);
+    completionDeadlineRef.current = {key: completionKey, expiresAt: Date.now() + 5000};
     if (sessionParkedSpot) {
       voiceManager.speak(`Đã đỗ xe thành công tại ô ${sessionParkedSpot}`, 6000, true);
     }
@@ -578,7 +585,7 @@ export function App({ sessionId }: AppProps = {}) {
 
   // ── Effect 1: Tính đường đi — CHỈ khi đích/mode thay đổi ──
   useEffect(() => {
-    if (!goalSpot) {
+    if ((!goalSpot && !isExitMode) || isRouteDismissed || runtimeError) {
       setRoute(null);
       setIsOffRoute(false);
       setNavInstruction(null);
@@ -594,35 +601,35 @@ export function App({ sessionId }: AppProps = {}) {
     let newRoute: RouteResult | null;
     if (isExitMode) {
       newRoute = targetVehicle
-        ? findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
-        : findExitRoute(LANE_GRAPH, goalSpot);
+        ? findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y)
+        : goalSpot ? findExitRoute(LANE_GRAPH, goalSpot) : null;
     } else {
       newRoute = targetVehicle
-        ? findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot)
-        : findVehicleRoute(LANE_GRAPH, goalSpot);
+        ? goalSpot ? findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot) : null
+        : goalSpot ? findVehicleRoute(LANE_GRAPH, goalSpot) : null;
     }
 
     routeRef.current = newRoute;
     setRoute(newRoute);
     currentGoalRef.current = { spot: goalSpot, exitMode: isExitMode };
 
-  }, [goalSpot, isExitMode, sessionId]); // Chỉ phụ thuộc đích — KHÔNG phụ thuộc activeVehicles
+  }, [goalSpot, isExitMode, sessionId, isRouteDismissed, runtimeError]);
 
   // ── Effect 2: Cập nhật hướng dẫn & giọng nói — theo vị trí xe (300ms) ──
   useEffect(() => {
     const activeRoute = routeRef.current;
-    if (!goalSpot || !activeRoute || activeRoute.points.length < 2) {
+    if ((!goalSpot && !isExitMode) || isRouteDismissed || runtimeError) {
       return;
     }
 
     const targetVehicleId = sessionTrackIdRef.current;
     const targetVehicle = activeVehicles.find((v) => v.trackId === targetVehicleId);
 
-    if (!targetVehicle) return;
+    if (!targetVehicle || targetVehicle.observed === false) return;
 
     const currentOffRoute = checkIsOffRoute(
       { x: targetVehicle.x, y: targetVehicle.y },
-      activeRoute.points,
+      activeRoute?.points ?? [],
       80
     );
     setIsOffRoute(currentOffRoute);
@@ -630,8 +637,8 @@ export function App({ sessionId }: AppProps = {}) {
     // Tính toán route mới nhất từ toạ độ hiện tại của xe
     let freshRoute: RouteResult | null = null;
     if (isExitMode) {
-      freshRoute = findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
-    } else {
+      freshRoute = findExitRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y);
+    } else if (goalSpot) {
       freshRoute = findInboundRouteFromPos(LANE_GRAPH, targetVehicle.x, targetVehicle.y, goalSpot);
     }
 
@@ -651,7 +658,7 @@ export function App({ sessionId }: AppProps = {}) {
       }
       const instruction = getNavigationInstruction(
         { x: targetVehicle.x, y: targetVehicle.y },
-        freshRoute ? freshRoute.points : activeRoute.points,
+        freshRoute ? freshRoute.points : activeRoute?.points ?? [],
         isExitMode,
         goalSpot
       );
@@ -660,12 +667,13 @@ export function App({ sessionId }: AppProps = {}) {
         voiceManager.speak(instruction, 6000, false);
       }
     }
-  }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted]); // Theo vị trí xe
+  }, [goalSpot, isExitMode, activeVehicles, sessionId, isMuted, isRouteDismissed, runtimeError]);
 
   // ── Xử lý khi bấm vào ô đỗ ──
   const handleConfirmSpot = useCallback(async (spotId: SpotId): Promise<boolean> => {
     const currentSpot = useParkingStore.getState().spots[spotId];
     if (currentSpot?.status !== "empty") return false;
+    if (sessionId && (runtimeError || sessionBusyAction)) return false;
 
     if (sessionId) {
       try {
@@ -695,12 +703,13 @@ export function App({ sessionId }: AppProps = {}) {
     setIsRouteDismissed(false);
     confirmSpot(spotId);
     return true;
-  }, [confirmSpot, sessionId, selectSessionSpot, activeNeed, spots, lastEventTime, showInvalidSpotWarning]);
+  }, [confirmSpot, sessionId, selectSessionSpot, activeNeed, spots, lastEventTime, showInvalidSpotWarning, runtimeError, sessionBusyAction]);
 
   const handleSpotClick = (spotId: SpotId): void => {
     const clickedSpot = spotsById[spotId];
     if (sessionId && clickedSpot?.status === "empty") {
-      void handleConfirmSpot(spotId);
+      enterBrowse("all");
+      inspectSpot(spotId);
       return;
     }
     if (mode === "browse") {
@@ -723,30 +732,32 @@ export function App({ sessionId }: AppProps = {}) {
   };
 
   const handleDismissRoute = useCallback(async () => {
-    setIsRouteDismissed(false);
-    cancelNavigation();
-    voiceManager.stop();
     if (sessionId) {
       try {
-        await selectSessionSpot(null);
+        if (!await selectSessionSpot(null)) return;
       } catch (error) {
         console.warn("Không thể hủy ô đỗ đã chọn", error);
+        return;
       }
     }
+    setIsRouteDismissed(true);
+    setIsExitGuideActive(false);
+    cancelNavigation();
+    voiceManager.stop();
   }, [sessionId, cancelNavigation, selectSessionSpot]);
 
   const handleStartExit = useCallback(async () => {
     if (!sessionId) return;
-    setIsRouteDismissed(false);
-    setShowParkedSuccess(false);
-    voiceManager.stop();
-    cancelNavigation();
     try {
       const accepted = await startSessionExit();
-      if (!accepted) setIsExitGuideActive(false);
+      if (!accepted) return;
+      setIsRouteDismissed(false);
+      setShowParkedSuccess(false);
+      voiceManager.stop();
+      cancelNavigation();
+      setIsExitGuideActive(true);
     } catch (error) {
       console.warn("Không thể bắt đầu chỉ đường ra cổng", error);
-      setIsExitGuideActive(false);
     }
   }, [sessionId, cancelNavigation, startSessionExit]);
 
@@ -756,6 +767,7 @@ export function App({ sessionId }: AppProps = {}) {
       case "SELECTING_SPOT":   return "ĐANG CHỌN Ô ĐỖ";
       case "NAVIGATING_TO_SPOT": return "ĐANG DẪN ĐƯỜNG";
       case "PARKED":           return "ĐÃ ĐỖ";
+      case "RELOCATING":       return "ĐANG ĐỔI Ô ĐỖ";
       case "EXIT_NAVIGATION":  return "ĐANG RA CỔNG";
       default:                 return "ĐANG TẢI...";
     }
@@ -773,6 +785,7 @@ export function App({ sessionId }: AppProps = {}) {
   };
 
   const displayedVehicles = useMemo(() => {
+    if (activeVehicles.some(v => v.trackId === targetVehicleId && v.observed)) return activeVehicles;
     if (sessionState !== "PARKED" || !sessionParkedSpot || targetVehicleId === null) {
       return activeVehicles;
     }
@@ -790,10 +803,23 @@ export function App({ sessionId }: AppProps = {}) {
 
   return (
     <div className="app-shell">
-      <SmartParkingHeader mode={mode} cameras={cameras} lastUpdated={lastEventTime} runtimeState={runtimeState} />
+      <SmartParkingHeader mode={mode} cameras={cameras} lastUpdated={lastEventTime} runtimeState={runtimeState} lockRealtime={Boolean(sessionId)} />
 
       <main className="app-main">
         <SummaryCards counts={counts} cameras={cameras} />
+        {sessionError && <div role="alert">
+          {sessionError.message}
+          <button disabled={Boolean(sessionBusyAction)} onClick={() => {
+            const retry = sessionError.action === "claim" ? claimVehicleSession
+              : sessionError.action === "exit" ? startSessionExit : refreshSession;
+            void retry().catch(() => undefined);
+          }}>{sessionError.action === "select" ? "Cập nhật trạng thái" : "Thử lại"}</button>
+        </div>}
+        {sessionParkingDecision?.kind === "identity_pending" && <div role="status">Đang xác nhận xe trong ô…</div>}
+        {sessionParkingDecision?.kind === "parking_confirmation_pending" && <div role="status">Đang xác nhận đỗ tại {sessionParkingDecision.actualSpotId}…</div>}
+        {sessionParkingDecision?.kind === "runtime_unavailable" && <div role="alert">{sessionParkingDecision.reason}</div>}
+        {sessionParkingDecision?.kind === "identity_invariant_error" && <div role="alert">Danh tính xe đang có xung đột; tạm dừng chỉ dẫn.</div>}
+        {sessionInfo?.claimed && !sessionEnded && <button disabled={Boolean(sessionBusyAction)} onClick={() => enterBrowse("empty")}>Chọn / đổi ô đỗ</button>}
         {trackingSource === "opencv" && runtimeError && (
           <div className="runtime-source-alert" role="alert">
             {runtimeError}. Hãy kiểm tra Runtime API tại cổng 8001 và URL camera thật.
@@ -809,7 +835,7 @@ export function App({ sessionId }: AppProps = {}) {
           <BrowseToolbar filter={browseFilter} onFilterChange={setBrowseFilter} onFindSpot={startRecommendation} />
         )}
         {mode === "navigation" && confirmedSpot && (
-          <NavigationStatusBar spotId={confirmedSpot.id} zone={confirmedSpot.zone} paused={Boolean(warning)} onCancel={cancelNavigation} />
+          <NavigationStatusBar spotId={confirmedSpot.id} zone={confirmedSpot.zone} paused={Boolean(warning || runtimeError)} onCancel={() => void handleDismissRoute()} />
         )}
 
         {/* ── Bảng trạng thái phiên làm việc (Session Status Banner) ── */}
@@ -855,7 +881,7 @@ export function App({ sessionId }: AppProps = {}) {
                 
                 {sessionState === "EXIT_NAVIGATION" && (
                   <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#fbbf24" }}>
-                    Đang hướng dẫn Xe #{targetVehicleId} rời bãi từ ô <strong>{sessionParkedSpot}</strong> ra CỔNG EXIT.
+                    Đang hướng dẫn Xe #{targetVehicleId} {sessionParkedSpot ? <>từ ô <strong>{sessionParkedSpot}</strong> </> : ""}ra CỔNG EXIT.
                   </p>
                 )}
 
@@ -930,12 +956,11 @@ export function App({ sessionId }: AppProps = {}) {
               )}
 
               {/* Nút "Chỉ lối ra" / "Thoát chỉ dẫn" — hiện khi PARKED hoặc EXIT_NAVIGATION */}
-              {(sessionState === "PARKED" || sessionState === "EXIT_NAVIGATION") && (
+              {sessionInfo?.claimed && (
                 isExitGuideActive ? (
                   <button
                     onClick={() => {
-                      setIsExitGuideActive(false);
-                      voiceManager.stop();
+                      void handleDismissRoute();
                     }}
                     style={{
                       background: "rgba(239, 68, 68, 0.2)",
@@ -955,13 +980,9 @@ export function App({ sessionId }: AppProps = {}) {
                   </button>
                 ) : (
                   <button
-                    disabled={sessionBusyAction === "exit"}
+                    disabled={Boolean(sessionBusyAction)}
                     onClick={() => {
-                      setIsExitGuideActive(true);
-                      setIsRouteDismissed(false);
-                      if (sessionState === "PARKED") {
-                        void handleStartExit();
-                      }
+                      void handleStartExit();
                     }}
                     style={{
                       background: "#38bdf8",
@@ -1052,7 +1073,7 @@ export function App({ sessionId }: AppProps = {}) {
               confirmedSpotId={confirmedSpotId ?? (sessionTargetSpot as SpotId | undefined)}
               activeNeed={activeNeed}
               route={route}
-              routePaused={Boolean(warning)}
+              routePaused={Boolean(warning || runtimeError || sessionParkingDecision?.kind === "runtime_unavailable" || sessionParkingDecision?.kind === "identity_invariant_error")}
               activeVehicles={displayedVehicles}
               frameSize={frameSize}
               onSpotClick={handleSpotClick}
@@ -1095,7 +1116,7 @@ export function App({ sessionId }: AppProps = {}) {
           onContinueMap={clearWarning}
         />
       )}
-      {import.meta.env.DEV && (
+      {import.meta.env.DEV && !sessionId && (
         <MockControlPanel
           source={mockParkingDataSource}
           recommendedSpotId={recommendation?.best.spotId}

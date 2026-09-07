@@ -72,9 +72,14 @@ class ArrivalClaim:
     max_overlap: float
     entered_from_outside: bool = False
     lost_at_s: Optional[float] = None
+    lost_frame_idx: Optional[int] = None
     last_bbox: Optional[BBox] = None
     last_appearance: Optional[np.ndarray] = None
     score: float = 0.0
+    # Fresh real observations of the same identity outside the claimed slot
+    # after the LOST transition. Two consecutive outside observations cancel
+    # the claim; a single frame of jitter must not.
+    disproof_observations: int = 0
 
 
 @dataclass
@@ -170,6 +175,8 @@ class SlotBinding:
     decision_source: str = "none"
     vision_occupied_streak: int = 0
     vision_changed_at_s: float = 0.0
+    vision_evidence_frame_idx: Optional[int] = None
+    vision_evidence_timestamp_s: Optional[float] = None
 
 
 class SlotVehicleBinder:
@@ -286,6 +293,12 @@ class SlotVehicleBinder:
         self._pending_release: Dict[str, Tuple[int, int]] = {}
         self._departure_tokens: Dict[str, DepartureToken] = {}
         self._arrival_claims: Dict[Tuple[str, int], ArrivalClaim] = {}
+        # One episode per physical parking occurrence. Sessions consume these
+        # by parking_episode_id instead of re-deriving parked state from
+        # polling counters (PLAN 3.1).
+        self._parking_episodes: Deque[dict] = deque(maxlen=64)
+        self._episode_by_slot: Dict[str, dict] = {}
+        self._defer_arrival_commits = False
         self._events: Deque[dict] = deque(maxlen=500)
         self._last_frame_idx = 0
         self._last_timestamp_s = 0.0
@@ -397,6 +410,7 @@ class SlotVehicleBinder:
             binding.vehicle_id = None
             binding.tracking_occupied = False
             binding.tracking_state = "moving"
+            self._transition_parking_episode(binding.slot_id, "released", "reservation_rejected")
             binding.vehicle_overlap = 0.0
             binding.stopped_for_ms = 0
             state = self._vehicle_states.get(raw_global_id) or self._vehicle_states.get(global_id)
@@ -439,6 +453,7 @@ class SlotVehicleBinder:
                 slot_id=token.slot_id,
                 reason="global_reservation_rejected",
             )
+            self._transition_parking_episode(slot_id, "released", "reservation_rejected")
 
     def prepare_predeparture_tokens(
         self,
@@ -589,6 +604,7 @@ class SlotVehicleBinder:
                     "global_id": int(token.global_id),
                     "camera_id": token.camera_id,
                     "created_at_s": float(token.created_at_s),
+                    "parking_episode_id": self._episode_by_slot.get(token.slot_id, {}).get("parking_episode_id"),
                     "expires_at_s": float(token.expires_at_s),
                     "age_ms": int(max(0.0, now_s - token.created_at_s) * 1000),
                     "remaining_ms": int(max(0.0, token.expires_at_s - now_s) * 1000),
@@ -722,6 +738,101 @@ class SlotVehicleBinder:
                     max_overlap=round(claim.max_overlap, 4),
                 )
 
+    def parking_episodes(self) -> List[dict]:
+        """Parking episode records for runtime snapshot consumers.
+
+        Each episode describes one physical parking occurrence: the slot,
+        the canonical owner GID, the lifecycle state, and both clocks - the
+        evidence clock (when the camera saw it) and the application clock
+        (when the binder decided).
+        """
+        return [dict(episode) for episode in (
+            *self._parking_episodes, *self._episode_by_slot.values()
+        )]
+
+    def _open_parking_episode(
+        self,
+        global_id: int,
+        slot_id: str,
+        frame_idx: int,
+        reason: str,
+    ) -> dict:
+        binding = self._bindings.get(slot_id)
+        current = self._episode_by_slot.get(slot_id)
+        if (
+            current is not None
+            and current["global_id"] == int(global_id)
+            and current["state"] in {"pending", "parked"}
+        ):
+            # Rebinding the same owner (jitter, strong-overlap refresh) must
+            # not create a second episode: sessions key their one-time
+            # completion notification on the episode id.
+            return current
+        episode = {
+            "parking_episode_id": (
+                f"{slot_id}:G{int(global_id)}:F{int(frame_idx)}"
+            ),
+            "global_id": int(global_id),
+            "slot_id": str(slot_id),
+            "state": "parked",
+            "evidence_frame_idx": (
+                binding.vision_evidence_frame_idx
+                if binding is not None
+                else None
+            ),
+            "evidence_timestamp_s": (
+                binding.vision_evidence_timestamp_s
+                if binding is not None
+                else None
+            ),
+            "applied_frame_idx": int(self._last_frame_idx),
+            "applied_timestamp_s": float(self._last_timestamp_s),
+            "reason": str(reason),
+        }
+        if current is not None:
+            self._transition_parking_episode(slot_id, "released", "replaced")
+        self._episode_by_slot[slot_id] = episode
+        self._event(
+            "parking_episode_opened",
+            global_id=int(global_id),
+            slot_id=str(slot_id),
+            parking_episode_id=episode["parking_episode_id"],
+            applied_frame_idx=int(self._last_frame_idx),
+        )
+        return episode
+
+    def _transition_parking_episode(
+        self,
+        slot_id: str,
+        new_state: str,
+        reason: str,
+        global_id: Optional[int] = None,
+    ) -> None:
+        episode = self._episode_by_slot.get(slot_id)
+        if episode is None or episode["state"] == new_state:
+            return
+        if global_id is not None and episode["global_id"] != int(global_id):
+            return
+        episode["state"] = new_state
+        episode["reason"] = str(reason)
+        episode["applied_frame_idx"] = int(self._last_frame_idx)
+        episode["applied_timestamp_s"] = float(self._last_timestamp_s)
+        binding = self._bindings.get(slot_id)
+        if binding is not None:
+            episode["evidence_frame_idx"] = binding.vision_evidence_frame_idx
+            episode["evidence_timestamp_s"] = binding.vision_evidence_timestamp_s
+        if new_state == "released":
+            self._episode_by_slot.pop(slot_id, None)
+            self._parking_episodes.append(episode)
+        self._event(
+            "parking_episode_state_changed",
+            global_id=episode["global_id"],
+            slot_id=str(slot_id),
+            parking_episode_id=episode["parking_episode_id"],
+            state=new_state,
+            reason=str(reason),
+        )
+
     def _best_arrival_slot(self, bbox: BBox) -> Optional[Tuple[str, float]]:
         center = (bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0)
         candidates = []
@@ -768,6 +879,60 @@ class SlotVehicleBinder:
                 reason="vehicle_left_roi_before_track_lost",
                 observations=claim.observations,
                 max_overlap=round(claim.max_overlap, 4),
+            )
+
+    def _disprove_arrival_claims(
+        self,
+        global_id: int,
+        matched_slot_id: Optional[str],
+        bbox: BBox,
+        frame_idx: int,
+        timestamp_s: float,
+    ) -> None:
+        """Cancel lost-track arrival claims disproved by newer motion.
+
+        Called only for fresh real observations. A Kalman/predicted position
+        can neither create nor disprove parking evidence. If the same identity
+        is observed again covering the claimed slot, the claim is left alone
+        (it resumes through ``_record_arrival_claim``). Two consecutive
+        outside observations cancel; entering another slot cancels at once.
+        """
+        global_id = int(global_id)
+        for key, claim in list(self._arrival_claims.items()):
+            if claim.global_id != global_id or claim.lost_at_s is None:
+                continue
+            if matched_slot_id == claim.slot_id:
+                claim.disproof_observations = 0
+                continue
+            binding = self._bindings.get(claim.slot_id)
+            outside_overlap = (
+                self._raw_vehicle_overlap(bbox, binding.polygon)
+                if binding is not None and binding.polygon is not None
+                else 0.0
+            )
+            if outside_overlap >= self.min_vehicle_overlap:
+                # A parked car may drift a few pixels between detections; it
+                # still physically covers the claimed slot.
+                claim.disproof_observations = 0
+                continue
+            if matched_slot_id is not None:
+                reason = "vehicle_entered_other_slot"
+            else:
+                claim.disproof_observations += 1
+                if claim.disproof_observations < 2:
+                    continue
+                reason = "newer_motion_disproves_arrival"
+            self._arrival_claims.pop(key, None)
+            self._event(
+                "slot_arrival_claim_rejected",
+                global_id=claim.global_id,
+                slot_id=claim.slot_id,
+                reason=reason,
+                observations=claim.observations,
+                max_overlap=round(claim.max_overlap, 4),
+                matched_slot_id=matched_slot_id,
+                outside_overlap=round(float(outside_overlap), 4),
+                applied_frame_idx=int(self._last_frame_idx),
             )
 
     def _record_arrival_claim(
@@ -857,6 +1022,8 @@ class SlotVehicleBinder:
         frame_idx: int,
         timestamp_s: float,
     ) -> Optional[int]:
+        if self._defer_arrival_commits:
+            return None
         binding = self._bindings.get(slot_id)
         if (
             binding is None
@@ -906,6 +1073,38 @@ class SlotVehicleBinder:
                 reason="no_inward_trajectory",
             )
             return None
+        if winner.lost_at_s is not None:
+            claimant_state = self._vehicle_states.get(winner.global_id)
+            if claimant_state is not None:
+                for observation in claimant_state.observations:
+                    if (
+                        not observation.fresh
+                        or observation.timestamp_s <= winner.lost_at_s
+                    ):
+                        continue
+                    if observation.slot_id == slot_id:
+                        continue
+                    if (
+                        self._raw_vehicle_overlap(
+                            observation.bbox, binding.polygon
+                        )
+                        >= self.min_vehicle_overlap
+                    ):
+                        continue
+                    # Defense in depth: a newer real observation proves the
+                    # identity left the slot before this (possibly stale)
+                    # vision result was applied. Never commit on top of it.
+                    self._arrival_claims.pop((slot_id, winner.global_id), None)
+                    self._event(
+                        "slot_arrival_claim_rejected",
+                        global_id=winner.global_id,
+                        slot_id=slot_id,
+                        reason="newer_motion_disproves_arrival",
+                        observations=winner.observations,
+                        evidence_frame_idx=binding.vision_evidence_frame_idx,
+                        applied_frame_idx=int(self._last_frame_idx),
+                    )
+                    return None
         state = self._vehicle_states.setdefault(
             winner.global_id,
             VehicleParkingState(global_id=winner.global_id),
@@ -927,6 +1126,9 @@ class SlotVehicleBinder:
             slot_id=slot_id,
             observations=winner.observations,
             vision_confirmations=binding.vision_occupied_streak,
+            evidence_frame_idx=binding.vision_evidence_frame_idx,
+            evidence_timestamp_s=binding.vision_evidence_timestamp_s,
+            applied_frame_idx=int(self._last_frame_idx),
         )
         for key, claim in list(self._arrival_claims.items()):
             if claim.slot_id == slot_id or claim.global_id == winner.global_id:
@@ -1190,6 +1392,12 @@ class SlotVehicleBinder:
         global_id = int(token.global_id)
         if self._vehicle_to_slot.get(global_id) == binding.slot_id:
             self._vehicle_to_slot.pop(global_id, None)
+        self._transition_parking_episode(
+            binding.slot_id,
+            "departing",
+            "vision_confirmed_empty",
+            global_id=global_id,
+        )
         binding.vehicle_id = None
         binding.tracking_occupied = False
         binding.tracking_state = "recovery_pending"
@@ -1251,6 +1459,12 @@ class SlotVehicleBinder:
                 float(self._last_timestamp_s)
                 + self.recovery_retention_seconds
             )
+            self._transition_parking_episode(
+                token.slot_id,
+                "parked",
+                "false_empty_restored",
+                global_id=token.global_id,
+            )
             self._event(
                 "departure_token_rearmed_after_vision_rebound",
                 global_id=token.global_id,
@@ -1259,6 +1473,12 @@ class SlotVehicleBinder:
             )
             return
         self._departure_tokens.pop(token.slot_id, None)
+        self._transition_parking_episode(
+            token.slot_id,
+            "parked",
+            "false_empty_restored",
+            global_id=token.global_id,
+        )
         self._event(
             "departure_token_cancelled",
             global_id=token.global_id,
@@ -1321,6 +1541,31 @@ class SlotVehicleBinder:
                         token.candidates.pop(key, None)
                 continue
             self._departure_tokens.pop(slot_id, None)
+            binding = self._bindings.get(slot_id)
+            if (
+                token.predeparture
+                and not token.confirmed_empty
+                and binding is not None
+                and binding.vision_occupied
+                and binding.vehicle_id == token.global_id
+                and binding.tracking_state == "parked"
+            ):
+                # The candidate track timed out, not the parked vehicle.
+                # hiep2/F1008: releasing the episode here contradicted the
+                # still-owned occupied slot and made the session lose parking.
+                self._event(
+                    "departure_token_cancelled",
+                    global_id=token.global_id,
+                    slot_id=slot_id,
+                    reason="provisional_expired_owner_still_parked",
+                )
+                continue
+            self._transition_parking_episode(
+                slot_id,
+                "released",
+                "recovery_expired",
+                global_id=token.global_id,
+            )
             self._event(
                 "parked_id_recovery_expired",
                 global_id=token.global_id,
@@ -1362,6 +1607,9 @@ class SlotVehicleBinder:
         binding.stopped_for_ms = int(stopped_ms)
         binding.tracking_state = "parked"
         self._vehicle_to_slot[global_id] = slot_id
+        self._open_parking_episode(
+            global_id, slot_id, frame_idx, "binder_binding_confirmed"
+        )
         state = self._vehicle_states[global_id]
         state.movement_state = "parked"
         state.parked_slot_id = slot_id
@@ -1392,6 +1640,9 @@ class SlotVehicleBinder:
         slot_id = self._vehicle_to_slot.pop(global_id, None)
         if slot_id is None:
             return
+        self._transition_parking_episode(
+            slot_id, "departing", f"released:{reason}", global_id=global_id
+        )
         binding = self._bindings.get(slot_id)
         if self.policy == "vision_primary" and binding is not None:
             if reason != "reassigned" and binding.vision_occupied and binding.polygon is not None:
@@ -1459,8 +1710,8 @@ class SlotVehicleBinder:
         coordinate_offset: Point = (0.0, 0.0),
     ) -> None:
         """Update motion/slot state from canonical global tracks every frame."""
-        self._last_frame_idx = int(frame_idx)
-        self._last_timestamp_s = float(timestamp_s)
+        self._last_frame_idx = max(self._last_frame_idx, int(frame_idx))
+        self._last_timestamp_s = max(self._last_timestamp_s, float(timestamp_s))
 
         normalized: Dict[int, object] = {}
         for raw_id, track in active_global_tracks.items():
@@ -1548,6 +1799,16 @@ class SlotVehicleBinder:
                         frame_idx,
                         timestamp_s,
                     )
+                # A fresh real observation outside the claimed slot disproves
+                # a lost-track arrival claim (hiep7: the identity kept moving
+                # while stale vision still argued it had parked).
+                self._disprove_arrival_claims(
+                    global_id,
+                    arrival[0] if arrival is not None else None,
+                    bbox,
+                    frame_idx,
+                    timestamp_s,
+                )
 
             if self.policy == "vision_primary" and not fresh_observation:
                 # LOST/predicted bboxes are useful for a very short continuity
@@ -1703,8 +1964,8 @@ class SlotVehicleBinder:
         the identity.  A claim still needs independent occupied-vision and
         inward-trajectory evidence before it can own the slot.
         """
-        self._last_frame_idx = int(frame_idx)
-        self._last_timestamp_s = float(timestamp_s)
+        self._last_frame_idx = max(self._last_frame_idx, int(frame_idx))
+        self._last_timestamp_s = max(self._last_timestamp_s, float(timestamp_s))
         global_id = int(global_id)
         candidates = [
             claim
@@ -1716,6 +1977,7 @@ class SlotVehicleBinder:
             return None
         winner = max(candidates, key=lambda item: (item.last_seen_s, item.score))
         winner.lost_at_s = float(timestamp_s)
+        winner.lost_frame_idx = int(frame_idx)
         return self._try_commit_arrival_claim(
             winner.slot_id,
             int(frame_idx),
@@ -1802,6 +2064,15 @@ class SlotVehicleBinder:
         )
         print(f"  🅿️ Auto-park: GID #{global_id} → {slot_id} (track expired, overlap={binding.vehicle_overlap:.2f})")
 
+    def begin_frame(self) -> None:
+        """Stage vision/tokens; do not park a LOST track before this frame's detections."""
+        self._defer_arrival_commits = True
+
+    def finalize_arrivals(self, frame_idx: int, timestamp_s: float) -> None:
+        self._defer_arrival_commits = False
+        for slot_id in list(self._bindings):
+            self._try_commit_arrival_claim(slot_id, frame_idx, timestamp_s)
+
     def update_vision(
         self,
         slot_results: list,
@@ -1809,10 +2080,30 @@ class SlotVehicleBinder:
         timestamp_s: float,
         camera_id: Optional[str] = None,
         coordinate_offset: Point = (0.0, 0.0),
+        evidence_frame_idx: Optional[int] = None,
+        evidence_timestamp_s: Optional[float] = None,
     ) -> None:
-        """Store unmodified detector evidence, then apply the tracking OR override."""
-        self._last_frame_idx = int(frame_idx)
-        self._last_timestamp_s = float(timestamp_s)
+        """Store unmodified detector evidence, then apply the tracking OR override.
+
+        ``frame_idx``/``timestamp_s`` carry the application clock: the frame at
+        which the decision becomes effective. The binder clock never moves
+        backwards toward a stale background-vision timestamp; the evidence
+        provenance is tracked separately via ``evidence_frame_idx`` /
+        ``evidence_timestamp_s`` so a late vision result can supplement history
+        without overriding newer motion evidence.
+        """
+        self._last_frame_idx = max(self._last_frame_idx, int(frame_idx))
+        self._last_timestamp_s = max(self._last_timestamp_s, float(timestamp_s))
+        resolved_evidence_frame = (
+            int(evidence_frame_idx)
+            if evidence_frame_idx is not None
+            else int(frame_idx)
+        )
+        resolved_evidence_time = (
+            float(evidence_timestamp_s)
+            if evidence_timestamp_s is not None
+            else float(timestamp_s)
+        )
         for result in slot_results:
             if not getattr(result, 'evidence', {}).get('ready', True):
                 continue
@@ -1823,6 +2114,13 @@ class SlotVehicleBinder:
                 float(result.center[1]) + float(coordinate_offset[1]),
             )
             binding = self._bindings.get(slot_id)
+            if binding is not None and (
+                (binding.vision_evidence_frame_idx is not None
+                 and resolved_evidence_frame <= binding.vision_evidence_frame_idx)
+                or (binding.vision_evidence_timestamp_s is not None
+                    and resolved_evidence_time <= binding.vision_evidence_timestamp_s)
+            ):
+                continue
             if binding is None:
                 binding = SlotBinding(slot_id=slot_id)
                 self._bindings[slot_id] = binding
@@ -1842,6 +2140,8 @@ class SlotVehicleBinder:
             binding.polygon = polygon
             binding.center = center
             binding.result_ref = result
+            binding.vision_evidence_frame_idx = resolved_evidence_frame
+            binding.vision_evidence_timestamp_s = resolved_evidence_time
 
             if self.policy == "vision_primary" and not binding.vision_occupied:
                 for state in self._vehicle_states.values():
@@ -1960,6 +2260,10 @@ class SlotVehicleBinder:
                 continue
             binding = self._bindings.pop(slot_id)
             self._pending_release.pop(slot_id, None)
+            self._transition_parking_episode(
+                slot_id, "released", "parking_slot_removed"
+            )
+            self._episode_by_slot.pop(slot_id, None)
             removed_token = self._departure_tokens.pop(slot_id, None)
             if removed_token is not None:
                 self._event(
@@ -2079,6 +2383,12 @@ class SlotVehicleBinder:
     ) -> int:
         self._departure_tokens.pop(token.slot_id, None)
         self._pending_release.pop(token.slot_id, None)
+        self._transition_parking_episode(
+            token.slot_id,
+            "released",
+            "departure_confirmed",
+            global_id=token.global_id,
+        )
         state = self._vehicle_states.setdefault(
             int(token.global_id),
             VehicleParkingState(global_id=int(token.global_id)),
@@ -2835,6 +3145,7 @@ class SlotVehicleBinder:
             if token.global_id != target:
                 continue
             self._departure_tokens.pop(slot_id, None)
+            self._transition_parking_episode(slot_id, "released", reason, global_id=target)
             self._event(
                 "departure_token_cancelled",
                 global_id=target,
@@ -2842,8 +3153,27 @@ class SlotVehicleBinder:
                 reason=reason,
             )
 
+    def validate_recovery_token(self, proof: dict, timestamp_s: float) -> bool:
+        token = self._departure_tokens.get(str(proof.get("slot_id")))
+        if token is None:
+            return False
+        return bool(
+            token.confirmed_empty
+            and token.created_at_s <= timestamp_s <= token.expires_at_s
+            and int(proof.get("global_id", -1)) == token.global_id
+            and proof.get("camera_id") == token.camera_id
+            and proof.get("created_at_s") == token.created_at_s
+            and proof.get("parking_episode_id") == (
+                self._episode_by_slot.get(token.slot_id, {}).get("parking_episode_id")
+            )
+        )
+
     def remap_vehicle_ids(self, canonicalize: Callable[[int], int]) -> None:
         """Move parked bindings/states to canonical IDs after a global-ID merge."""
+        for episode in (*self._parking_episodes, *self._episode_by_slot.values()):
+            episode["global_id"] = int(
+                canonicalize(int(episode["global_id"]))
+            )
         remapped_claims: Dict[Tuple[str, int], ArrivalClaim] = {}
         for claim in self._arrival_claims.values():
             new_id = int(canonicalize(int(claim.global_id)))

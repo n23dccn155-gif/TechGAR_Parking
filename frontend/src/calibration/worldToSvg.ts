@@ -1,6 +1,7 @@
 import type { ActiveVehicle, RuntimePoint, RuntimeSlotLayout, RuntimeSnapshot } from "../domain/runtime";
 import { PARKING_GEOMETRY, SPOT_GEOMETRY_BY_ID, type Point } from "../geometry/parkingGeometry";
 import type { SpotId } from "../domain/parking";
+import { canonicalRuntimeId } from "../domain/runtime";
 
 interface AffineTransform {
   x: [number, number, number];
@@ -38,7 +39,18 @@ function solve3(matrix: number[][], values: number[]): [number, number, number] 
   return [rows[0]![3]!, rows[1]![3]!, rows[2]![3]!];
 }
 
+let lastLayoutKey: string | null = null;
+let lastTransform: AffineTransform | null = null;
+
 function fitAffine(layout: RuntimeSlotLayout[]): AffineTransform | null {
+  const key = JSON.stringify(layout);
+  if (key === lastLayoutKey) return lastTransform;
+  lastTransform = computeAffine(layout);
+  lastLayoutKey = key;
+  return lastTransform;
+}
+
+function computeAffine(layout: RuntimeSlotLayout[]): AffineTransform | null {
   const anchors = layout.flatMap((slot) => {
     const geometry = SPOT_GEOMETRY_BY_ID.get(slot.slot_id as SpotId);
     const world = polygonCenter(slot.polygon);
@@ -102,8 +114,9 @@ export function createSvgToWorld(layout: RuntimeSlotLayout[]): ((point: Point) =
 
 export function runtimeVehiclesOnSvg(snapshot: RuntimeSnapshot, globalId?: number | null): ActiveVehicle[] {
   const project = createWorldToSvg(snapshot.slot_layout);
+  const canonical = globalId == null ? null : canonicalRuntimeId(globalId, snapshot.retired_global_ids);
   return snapshot.vehicles
-    .filter((vehicle) => globalId == null || vehicle.global_id === globalId)
+    .filter((vehicle) => globalId == null || vehicle.global_id === canonical)
     .map((vehicle) => {
       const point = project(vehicle.position);
       return {
@@ -112,6 +125,7 @@ export function runtimeVehiclesOnSvg(snapshot: RuntimeSnapshot, globalId?: numbe
         y: point.y,
         trail: [],
         state: vehicle.state,
+        observed: vehicle.observed,
         cameraIds: vehicle.camera_ids,
         parkedSlotId: vehicle.parked_slot_id,
       };

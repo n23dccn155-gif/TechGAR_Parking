@@ -1325,3 +1325,182 @@ def test_token_expiry_is_timestamp_based_and_remap_preserves_token():
     expiry = [event for event in binder.events if event["type"] == "parked_id_recovery_expired"]
     assert expiry[-1]["global_id"] == 12
     assert expiry[-1]["retained_in_global_gallery"] is True
+
+
+def test_hiep7_lost_claim_disproved_when_same_gid_reobserved_outside_slot():
+    # hiep7 regression: G#1 claimed D01 and the motion track went LOST, but the
+    # same identity was re-acquired moving outside the slot. A late occupied
+    # vision result (evidence older than the outside observations) must not
+    # commit the stale claim on top of newer motion evidence.
+    binder = SlotVehicleBinder(
+        policy="vision_primary",
+        arrival_min_samples=3,
+        arrival_vision_confirmations=2,
+    )
+    result = slot_result(slot_id="D01", occupied=False)
+    binder.update_vision([result], 0, 0.0, camera_id="cam1")
+    for frame, (ts, x) in enumerate(
+        ((0.0, -60), (0.2, -20), (0.4, -10), (0.6, 0)), start=1
+    ):
+        binder.update_tracks(
+            {1: track(x=x, consecutive_invisible_count=0)},
+            frame,
+            ts,
+            camera_id="cam1",
+        )
+    assert binder.notify_track_lost(1, 5, 0.70) is None
+
+    # Same GID re-acquired outside D01, driving away (two fresh observations).
+    for frame, (ts, x) in enumerate(((0.9, 130), (1.1, 170)), start=6):
+        binder.update_tracks(
+            {1: track(x=x, consecutive_invisible_count=0)},
+            frame,
+            ts,
+            camera_id="cam1",
+        )
+
+    result.occupied = True
+    binder.update_vision(
+        [result],
+        9,
+        1.50,
+        camera_id="cam1",
+        evidence_frame_idx=4,
+        evidence_timestamp_s=0.5,
+    )
+    binder.update_vision(
+        [result],
+        10,
+        2.00,
+        camera_id="cam1",
+        evidence_frame_idx=5,
+        evidence_timestamp_s=0.6,
+    )
+
+    state = binder.get_slot_state("D01")
+    assert state["vehicle_id"] is None
+    assert state["tracking_occupied"] is False
+    assert any(
+        event.get("reason") == "newer_motion_disproves_arrival"
+        for event in binder.events
+    )
+    assert not any(
+        event["type"] == "slot_arrival_claim_confirmed"
+        for event in binder.events
+    )
+
+
+def test_lost_claim_cancelled_when_same_gid_enters_other_slot():
+    # The claimed identity reappears settling into a different slot: the old
+    # claim is cancelled at once, without waiting for a second observation.
+    binder = SlotVehicleBinder(
+        policy="vision_primary",
+        arrival_min_samples=3,
+        arrival_vision_confirmations=2,
+    )
+    results = [
+        slot_result(slot_id="D01", occupied=False),
+        slot_result(slot_id="F05", occupied=False, x=300),
+    ]
+    binder.update_vision(results, 0, 0.0, camera_id="cam1")
+    for frame, (ts, x) in enumerate(
+        ((0.0, -60), (0.2, -20), (0.4, -10), (0.6, 0)), start=1
+    ):
+        binder.update_tracks(
+            {1: track(x=x, consecutive_invisible_count=0)},
+            frame,
+            ts,
+            camera_id="cam1",
+        )
+    assert binder.notify_track_lost(1, 5, 0.70) is None
+
+    binder.update_tracks(
+        {1: track(x=320, consecutive_invisible_count=0)}, 6, 0.90, camera_id="cam1"
+    )
+
+    assert not any(key[0] == "D01" for key in binder._arrival_claims)
+    assert any(
+        event.get("reason") == "vehicle_entered_other_slot"
+        for event in binder.events
+    )
+
+
+def test_parked_car_jittery_redetection_keeps_arrival_claim():
+    # Counter-case: a truly parked car re-detected still covering the claimed
+    # slot must NOT be disproved; the claim resumes and the late vision commit
+    # still succeeds (no regression for the genuine stop case).
+    binder = SlotVehicleBinder(
+        policy="vision_primary",
+        arrival_min_samples=3,
+        arrival_vision_confirmations=2,
+    )
+    result = slot_result(slot_id="D02", occupied=False)
+    binder.update_vision([result], 0, 0.0, camera_id="cam1")
+    for frame, (ts, x) in enumerate(
+        ((0.0, -60), (0.2, -20), (0.4, -10), (0.6, 0)), start=1
+    ):
+        binder.update_tracks(
+            {3: track(x=x, consecutive_invisible_count=0)},
+            frame,
+            ts,
+            camera_id="cam1",
+        )
+    assert binder.notify_track_lost(3, 5, 0.70) is None
+
+    # Re-acquired with a few pixels of drift, still inside the slot polygon.
+    binder.update_tracks(
+        {3: track(x=4, consecutive_invisible_count=0)}, 6, 0.90, camera_id="cam1"
+    )
+    # Motion tracker drops the stationary car again; the resumed claim gets a
+    # fresh LOST transition, so the genuine parking commit path stays intact.
+    binder.update_tracks({}, 7, 1.00, camera_id="cam1")
+    assert binder.notify_track_lost(3, 7, 1.00) is None
+
+    result.occupied = True
+    binder.update_vision(
+        [result], 8, 1.40, camera_id="cam1", evidence_frame_idx=6, evidence_timestamp_s=0.90
+    )
+    binder.update_vision(
+        [result], 9, 1.90, camera_id="cam1", evidence_frame_idx=7, evidence_timestamp_s=1.00
+    )
+
+    assert binder.get_slot_state("D02")["vehicle_id"] == 3
+    confirmed = [
+        event
+        for event in binder.events
+        if event["type"] == "slot_arrival_claim_confirmed"
+    ]
+    assert confirmed
+    assert confirmed[0]["evidence_frame_idx"] == 7
+    assert confirmed[0]["applied_frame_idx"] == 9
+
+
+@pytest.mark.parametrize("leaves_now", [True, False])
+def test_staged_vision_waits_for_current_motion_before_committing(leaves_now):
+    binder = SlotVehicleBinder(policy="vision_primary", arrival_min_samples=3,
+                               arrival_vision_confirmations=2)
+    result = slot_result(slot_id="D01")
+    other = slot_result(slot_id="F05", x=300)
+    binder.update_vision([result, other], 0, 0., camera_id="cam1")
+    for frame, x in enumerate((-60, -20, -10, 0), start=1):
+        binder.update_tracks({1: track(x=x)}, frame, frame*.15, camera_id="cam1")
+    binder.notify_track_lost(1, 5, .7)
+    result.occupied = True
+    binder.update_vision([result], 6, .8, camera_id="cam1")
+    binder.begin_frame()
+    result.occupied = True
+    binder.update_vision([result], 7, 1.2, camera_id="cam1")
+    assert binder.get_slot_state("D01")["vehicle_id"] is None
+    binder.update_tracks({1: track(x=320)} if leaves_now else {}, 7, 1.2, camera_id="cam1")
+    binder.finalize_arrivals(7, 1.2)
+    assert binder.get_slot_state("D01")["vehicle_id"] == (None if leaves_now else 1)
+
+
+def test_repeated_or_reversed_vision_cannot_advance_confirmation():
+    binder = SlotVehicleBinder(policy="vision_primary")
+    result = slot_result(occupied=False)
+    binder.update_vision([result], 10, 2., evidence_frame_idx=8, evidence_timestamp_s=1.)
+    for frame, stamp in [(8, 1.), (7, .9), (9, .8)]:
+        result.occupied = True
+        binder.update_vision([result], 11, 2.1, evidence_frame_idx=frame, evidence_timestamp_s=stamp)
+        assert binder.get_slot_state("P001")["vision_occupied"] is False

@@ -3,6 +3,7 @@ export type VehicleSessionState =
   | "SELECTING_SPOT"
   | "NAVIGATING_TO_SPOT"
   | "PARKED"
+  | "RELOCATING"
   | "EXIT_NAVIGATION";
 
 export interface VehicleSession {
@@ -14,6 +15,8 @@ export interface VehicleSession {
   activeTrackId: number | null;
   targetSpotId: string | null;
   parkedSpotId: string | null;
+  actualParkedSpotId?: string | null;
+  parkingEpisodeId?: string | null;
   claimed: boolean;
   lastKnownPosition: { x: number; y: number } | null;
   createdAt: string;
@@ -28,5 +31,6 @@ export interface VehicleSession {
 
 export function buildSessionCompletionKey(session: VehicleSession): string | null {
   if (session.state !== "PARKED" || !session.parkedSpotId || !session.parkedAt) return null;
-  return `${session.sessionId}:${session.parkedSpotId}:${session.parkedAt}`;
+  return session.parkingEpisodeId ? `${session.sessionId}:${session.parkingEpisodeId}`
+    : `${session.sessionId}:${session.parkedSpotId}:${session.parkedAt}`;
 }

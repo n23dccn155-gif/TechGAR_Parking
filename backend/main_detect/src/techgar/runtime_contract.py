@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 
-RUNTIME_SCHEMA_VERSION = 1
+# v2 adds ``parking_episodes`` (PLAN 3.3): one authoritative record per
+# physical parking occurrence, keyed by parking_episode_id. All v1 fields
+# (slots/vehicles/aliases) are unchanged, so v1 consumers keep working in
+# compatibility mode.
+RUNTIME_SCHEMA_VERSION = 2
 TERMINAL_IDENTITY_STATES = {"exited", "expired"}
 
 
@@ -43,6 +47,8 @@ def build_runtime_snapshot(
     calibration: Mapping[str, Any],
     camera_skew_ms: float,
     source_mode: str,
+    parking_episodes: Any = None,
+    applied_monotonic_ns: int | None = None,
 ) -> dict[str, Any]:
     """Normalize TechGAR internals without changing tracking decisions."""
     slots: list[dict[str, Any]] = []
@@ -58,7 +64,8 @@ def build_runtime_snapshot(
 
     map_vehicles = registry.get("map_vehicles", {})
     lifecycle = registry.get("identity_lifecycle", {})
-    reservations = registry.get("parked_identity_reservations", {})
+    episodes = [dict(e) for e in (parking_episodes or [])]
+    parked_owners = {int(e["global_id"]): e["slot_id"] for e in episodes if e.get("state") == "parked"}
     vehicles: list[dict[str, Any]] = []
     for global_id, identity in lifecycle.items():
         if not isinstance(identity, Mapping):
@@ -67,7 +74,6 @@ def build_runtime_snapshot(
         if state in TERMINAL_IDENTITY_STATES:
             continue
         active = map_vehicles.get(str(global_id), {})
-        reservation = reservations.get(str(global_id), {})
         position = active.get("position") or identity.get("last_world")
         if not isinstance(position, Mapping):
             continue
@@ -86,19 +92,22 @@ def build_runtime_snapshot(
                     "y": float(position.get("y", 0.0)),
                     "reference": registry.get("world_unit", "source_video_pixel"),
                 },
-                "parked_slot_id": reservation.get("slot_id"),
+                "parked_slot_id": parked_owners.get(int(identity.get("global_id", global_id))),
                 "last_seen_frame": identity.get("last_seen_frame"),
                 "last_seen_time": identity.get("last_seen_time"),
             }
         )
 
+    clock_ns = applied_monotonic_ns if applied_monotonic_ns is not None else max(camera_timestamps_ns.values(), default=0)
     cameras = {
         camera_id: {
             "camera_id": camera_id,
             "width": int(size[0]),
             "height": int(size[1]),
             "captured_at_monotonic_ns": int(camera_timestamps_ns.get(camera_id, 0)),
-            "online": True,
+            "age_ms": max(0.0, (clock_ns - camera_timestamps_ns.get(camera_id, 0)) / 1_000_000.0),
+            "online": camera_timestamps_ns.get(camera_id, 0) > 0 and
+                0 <= clock_ns - camera_timestamps_ns.get(camera_id, 0) <= 5_000_000_000,
         }
         for camera_id, size in camera_sizes.items()
     }
@@ -120,6 +129,8 @@ def build_runtime_snapshot(
         "slot_layout": _slot_layout(calibration),
         "vehicles": sorted(vehicles, key=lambda item: item["global_id"]),
         "pending_handoffs": registry.get("pending_handoffs", []),
+        # Schema v2: authoritative parking episodes from the binder.
+        "parking_episodes": episodes,
         # Durable alias state lets consumers recover even if they missed the
         # short rolling event list containing ``global_id_merged``.
         "retired_global_ids": registry.get("retired_global_ids", {}),

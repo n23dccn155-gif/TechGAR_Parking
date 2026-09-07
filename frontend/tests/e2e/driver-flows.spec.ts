@@ -86,7 +86,7 @@ test("camera offline state is degraded without clearing owned spot status", asyn
 test("mobile map controls and desktop geometry remain available", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await enterBrowse(page);
-  const svg = page.getByRole("img", { name: /Bản đồ 48 ô đỗ xe/ });
+  const svg = page.getByRole("img", { name: /Bản đồ 60 ô đỗ xe/ });
   const initialViewBox = await svg.getAttribute("viewBox");
   await page.getByLabel("Phóng to bản đồ").click();
   await expect.poll(async () => svg.getAttribute("viewBox")).not.toBe(initialViewBox);
@@ -94,7 +94,7 @@ test("mobile map controls and desktop geometry remain available", async ({ page 
   await expect(svg).toHaveAttribute("viewBox", "0 0 1200 900");
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator("[data-spot-id]")).toHaveCount(48);
+  await expect(page.locator("[data-spot-id]")).toHaveCount(60);
   await expect(page.getByTestId("spot-F08")).toBeVisible();
 });
 

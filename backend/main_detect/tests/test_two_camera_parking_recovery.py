@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from techgar.slot_vehicle_binder import RecoveryBatchResult
+from techgar.trajectory_memory import TrajectorySample, WorldTrajectoryMemory
 from two_camera import (
     _project_points_between_cameras,
     build_recovery_track_payload,
@@ -445,9 +446,26 @@ class LateReconciliationFakeManager(FakeManager):
     def __init__(self):
         super().__init__()
         self.merges = []
+        self.completed = []
         self._global_created_frames = {}
+        self._parked_reservations = {}
         self.dormant_match_distance = 160.0
         self.recovery_retention_seconds = 5.0
+        self.merge_should_accept = True
+
+    def complete_late_departure_recovery(
+        self, canonical_id, cam_id, local_track_id, frame_idx, **_proof
+    ):
+        self.completed.append((int(canonical_id), cam_id, int(local_track_id)))
+        self.bindings[(cam_id, int(local_track_id))] = int(canonical_id)
+
+    def reconcile_departure_identity(self, cam_id, local_track_id, track, frame_idx, *, token, binder, timestamp_s):
+        # Runner orchestration only; test_departure_transaction exercises the real manager.
+        result = self._merge_global_ids(token["global_id"], self.bindings[(cam_id, local_track_id)],
+                                        frame_idx, "late_departure_token_reconciliation")
+        if result.accepted:
+            self.complete_late_departure_recovery(result.canonical_id, cam_id, local_track_id, frame_idx)
+        return result
 
     def parking_recovery_trajectory_evidence(
         self, global_id, camera_id, local_track_id, track, *, recent_window_s,
@@ -463,12 +481,43 @@ class LateReconciliationFakeManager(FakeManager):
         )
         from techgar.cross_camera_manager import MergeResult
 
+        if not self.merge_should_accept:
+            return MergeResult(
+                accepted=False,
+                canonical_id=int(canonical_id),
+                retired_id=int(duplicate_id),
+                reason=reason,
+                rejection_reason="independently_observed_vehicles",
+            )
         return MergeResult(
             accepted=True,
             canonical_id=int(canonical_id),
             retired_id=int(duplicate_id),
             reason=reason,
         )
+
+
+def _reconciliation_rig(
+    manager, *, confirmed=True, created_frames=None, token_camera=None
+):
+    """Common rig: departing track bound to wrong G#4 on cam1, owner G#2."""
+    manager.bindings[("cam1", 9)] = 4
+    manager._global_created_frames = created_frames or {2: 167, 4: 1181}
+    manager._parked_reservations = {
+        2: {
+            "global_id": 2,
+            "slot_id": "D01",
+            "camera_id": token_camera or "cam1",
+            "state": "recovery_pending",
+        }
+    }
+    confirmed_token = token("D01", 2)
+    confirmed_token.update({"confirmed_empty": confirmed, "created_at_s": 9.0})
+    if token_camera is not None:
+        confirmed_token["camera_id"] = token_camera
+    binder = FakeBinder(confirmed_token)
+    binder.recovery_appearance_threshold = 0.55
+    return binder
 
 
 def _passing_reconciliation_evidence():
@@ -489,16 +538,11 @@ def test_late_reconciliation_restores_owner_and_retires_wrong_gid():
     # departing car was minted a wrong new Global ID.  The wrong ID must be
     # reconciled back to the parked owner, never merged unconditionally.
     manager = LateReconciliationFakeManager()
-    manager.bindings[("cam1", 9)] = 4  # departing car carries wrong G#4
-    manager._global_created_frames = {2: 167, 4: 1181}
+    binder = _reconciliation_rig(manager)  # departing car carries wrong G#4
     manager.parking_recovery_trajectory_evidence = (
         lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
         candidate_global_id=None: _passing_reconciliation_evidence()
     )
-    confirmed_token = token("D01", 2)
-    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
-    binder = FakeBinder(confirmed_token)
-    binder.recovery_appearance_threshold = 0.55
     binders = {"cam1": binder, "cam2": FakeBinder(None)}
     transforms = {camera_id: np.eye(3) for camera_id in binders}
 
@@ -514,6 +558,7 @@ def test_late_reconciliation_restores_owner_and_retires_wrong_gid():
 
     # Owner G#2 re-bound onto the leaving track, wrong G#4 retired via merge.
     assert manager.bindings[("cam1", 9)] == 2
+    assert manager.completed == [(2, "cam1", 9)]
     assert manager.merges == [(2, 4, "late_departure_token_reconciliation")]
     assert binder.cancelled == [(2, "late_departure_token_reconciled")]
     assert protected == {("cam1", 9)}
@@ -525,18 +570,13 @@ def test_late_reconciliation_restores_owner_and_retires_wrong_gid():
 
 def test_late_reconciliation_waits_when_evidence_fails():
     manager = LateReconciliationFakeManager()
-    manager.bindings[("cam1", 9)] = 4
-    manager._global_created_frames = {2: 167, 4: 1181}
+    binder = _reconciliation_rig(manager)
     weak = _passing_reconciliation_evidence()
     weak["score"] = 0.31  # trajectory evidence insufficient -> wait, no merge
     manager.parking_recovery_trajectory_evidence = (
         lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
         candidate_global_id=None: weak
     )
-    confirmed_token = token("D01", 2)
-    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
-    binder = FakeBinder(confirmed_token)
-    binder.recovery_appearance_threshold = 0.55
     binders = {"cam1": binder, "cam2": FakeBinder(None)}
     transforms = {camera_id: np.eye(3) for camera_id in binders}
 
@@ -573,16 +613,11 @@ def test_late_reconciliation_never_touches_unconfirmed_or_younger_ids():
     # never be reconciled (it is not the departing car), and unconfirmed
     # tokens grant no reconciliation right at all.
     manager = LateReconciliationFakeManager()
-    manager.bindings[("cam1", 9)] = 4
-    manager._global_created_frames = {2: 1200, 4: 1181}  # G#4 older than G#2
+    binder = _reconciliation_rig(manager, created_frames={2: 1200, 4: 1181})
     manager.parking_recovery_trajectory_evidence = (
         lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
         candidate_global_id=None: _passing_reconciliation_evidence()
     )
-    confirmed_token = token("D01", 2)
-    confirmed_token.update({"confirmed_empty": True, "created_at_s": 9.0})
-    binder = FakeBinder(confirmed_token)
-    binder.recovery_appearance_threshold = 0.55
     binders = {"cam1": binder, "cam2": FakeBinder(None)}
     transforms = {camera_id: np.eye(3) for camera_id in binders}
 
@@ -604,15 +639,11 @@ def test_late_reconciliation_never_touches_unconfirmed_or_younger_ids():
 
     # Unconfirmed token: no reconciliation even with perfect evidence.
     manager2 = LateReconciliationFakeManager()
-    manager2.bindings[("cam1", 9)] = 4
-    manager2._global_created_frames = {2: 167, 4: 1181}
+    binder2 = _reconciliation_rig(manager2, confirmed=False)
     manager2.parking_recovery_trajectory_evidence = (
         lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
         candidate_global_id=None: _passing_reconciliation_evidence()
     )
-    unconfirmed_token = token("D01", 2)
-    binder2 = FakeBinder(unconfirmed_token)
-    binder2.recovery_appearance_threshold = 0.55
     binders2 = {"cam1": binder2, "cam2": FakeBinder(None)}
 
     protected2, diagnostics2 = recover_departing_vehicle_ids(
@@ -629,3 +660,142 @@ def test_late_reconciliation_never_touches_unconfirmed_or_younger_ids():
     assert binder2.cancelled == []
     assert protected2 == set()
     assert diagnostics2 == []
+
+
+def test_late_reconciliation_rejected_merge_leaves_everything_unchanged():
+    # Transaction guarantee: when the merge guard rejects (e.g. the two IDs
+    # were independently observed vehicles), mapping, token and reservation
+    # must all stay exactly as they were. The token retries next frame.
+    manager = LateReconciliationFakeManager()
+    binder = _reconciliation_rig(manager)
+    manager.merge_should_accept = False
+    manager.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: _passing_reconciliation_evidence()
+    )
+    binders = {"cam1": binder, "cam2": FakeBinder(None)}
+    transforms = {camera_id: np.eye(3) for camera_id in binders}
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager,
+        binders,
+        transforms,
+        1197,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    assert manager.bindings[("cam1", 9)] == 4  # wrong ID untouched
+    assert manager.completed == []  # no departure bookkeeping ran
+    assert binder.token is not None  # token NOT consumed on rejection
+    assert binder.cancelled == []
+    assert protected == set()
+    blocked = [
+        item
+        for item in diagnostics
+        if item["type"] == "slot_recovery_late_reconciliation_blocked"
+    ]
+    assert blocked and blocked[0]["reason"] == "independently_observed_vehicles"
+    assert not any(
+        item["type"] == "slot_recovery_late_reconciliation_applied"
+        for item in diagnostics
+    )
+
+
+def test_late_reconciliation_waits_when_reservation_does_not_match_token():
+    # Token proof must agree with the durable reservation (slot AND camera),
+    # not just the caller's source chain. A mismatch waits, never merges.
+    manager = LateReconciliationFakeManager()
+    binder = _reconciliation_rig(manager)
+    # Reservation says the owner parked on cam2; the token was exported by
+    # the cam1 binder and carries no camera_id -> token camera resolves cam1.
+    manager._parked_reservations[2]["camera_id"] = "cam2"
+    manager.parking_recovery_trajectory_evidence = (
+        lambda global_id, camera_id, local_track_id, track, *, recent_window_s,
+        candidate_global_id=None: _passing_reconciliation_evidence()
+    )
+    binders = {"cam1": binder, "cam2": FakeBinder(None)}
+    transforms = {camera_id: np.eye(3) for camera_id in binders}
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {9: track_at()}, "cam2": {}},
+        manager,
+        binders,
+        transforms,
+        1197,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    assert manager.bindings[("cam1", 9)] == 4
+    assert manager.merges == []
+    assert manager.completed == []
+    assert binder.token is not None
+    assert binder.cancelled == []
+    assert protected == set()
+    assert diagnostics == [
+        {
+            "type": "slot_recovery_late_reconciliation_pending",
+            "reason": "token_reservation_mismatch",
+            "frame": 1197,
+            "camera": "cam1",
+            "local_track_id": 9,
+            "token_slot_id": "D01",
+            "token_global_id": 2,
+            "current_global_id": 4,
+        }
+    ]
+
+
+def test_match_departure_uses_promoted_global_trail_when_provisional_empty():
+    # hiep7 regression: once the departing fragment was minted a wrong GID,
+    # its trail moved from the provisional store into the global store, and
+    # late reconciliation reported trajectory_missing. The promoted trail
+    # must remain usable as departure evidence.
+    memory = WorldTrajectoryMemory()
+    memory.set_parked(2, True, origin=(100.0, 100.0))
+    samples = [
+        TrajectorySample(
+            frame_idx=1181 + index,
+            timestamp_s=10.0 + 0.2 * index,
+            camera_id="cam1",
+            local_track_id=9,
+            world=(102.0 + 8.0 * index, 100.0),
+            bbox_size=(20, 12),
+        )
+        for index in range(4)
+    ]
+    for sample in samples:
+        memory.append_global(4, sample)
+
+    # Without the promoted trail there is nothing to match.
+    assert (
+        memory.match_departure(
+            2,
+            ("cam1", 9),
+            prediction_radius=160.0,
+            recent_window_s=5.0,
+            appearance_score=0.8,
+            size_score=0.8,
+            topology_score=1.0,
+        )
+        is None
+    )
+
+    evidence = memory.match_departure(
+        2,
+        ("cam1", 9),
+        prediction_radius=160.0,
+        recent_window_s=5.0,
+        appearance_score=0.8,
+        size_score=0.8,
+        topology_score=1.0,
+        fragment_samples=tuple(samples),
+    )
+    assert evidence is not None
+    assert evidence.hard_reject_reason is None
+    assert evidence.stable
+    assert evidence.observations == 4
+    assert evidence.corridor_distance <= 160.0
+    assert evidence.direction_cosine is None or evidence.direction_cosine > 0.0

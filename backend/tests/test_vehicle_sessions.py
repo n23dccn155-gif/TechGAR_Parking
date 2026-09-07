@@ -126,12 +126,11 @@ def test_claim_is_idempotent_and_invalid_transitions_are_rejected(monkeypatch, t
     assert second["state"] == "SELECTING_SPOT"
 
     session_manager.set_parked(session_id, "D06")
-    try:
-        session_manager.select_spot(session_id, "A01")
-    except session_manager.InvalidSessionState:
-        pass
-    else:
-        raise AssertionError("PARKED session must not accept a new inbound target")
+    # Approved relocation workflow replaces the previous prohibition.
+    moved = session_manager.select_spot(session_id, "A01")
+    assert moved["state"] == "RELOCATING"
+    assert moved["actualParkedSpotId"] == "D06"
+    assert moved["globalVehicleId"] == 42
 
 
 def test_remap_global_id_and_delete_on_confirmed_exit(monkeypatch, tmp_path):

@@ -87,6 +87,7 @@ class RuntimeState:
         self._snapshot: Optional[dict[str, Any]] = None
         self._frames: dict[str, tuple[int, bytes]] = {}
         self._last_encoded_at: dict[str, float] = {}
+        self._frame_requested_at: dict[str, float] = {}
         self._stream_interval = 1.0 / max(float(stream_fps), 0.1)
         self._jpeg_quality = max(30, min(95, int(jpeg_quality)))
         self._closed = False
@@ -120,12 +121,22 @@ class RuntimeState:
             self._frames[camera_id] = (int(frame_index), encoded.tobytes())
             self._condition.notify_all()
 
+    def needs_frame(self, camera_id: str) -> bool:
+        """No debug rendering/encoding when only the JSON map is subscribed."""
+        now = time.monotonic()
+        with self._condition:
+            requested = self._frame_requested_at.get(camera_id)
+            return (not self._closed and requested is not None
+                    and now - requested <= 5.0
+                    and now - self._last_encoded_at.get(camera_id, 0.) >= self._stream_interval)
+
     def snapshot(self) -> Optional[dict[str, Any]]:
         with self._condition:
             return copy.deepcopy(self._snapshot)
 
     def frame(self, camera_id: str) -> Optional[tuple[int, bytes]]:
         with self._condition:
+            self._frame_requested_at[camera_id] = time.monotonic()
             return self._frames.get(camera_id)
 
     def wait_for_frame(
@@ -135,6 +146,7 @@ class RuntimeState:
         timeout: float = 2.0,
     ) -> Optional[tuple[int, bytes]]:
         with self._condition:
+            self._frame_requested_at[camera_id] = time.monotonic()
             self._condition.wait_for(
                 lambda: (
                     self._closed
@@ -270,6 +282,8 @@ class RuntimeRequestHandler(BaseHTTPRequestHandler):
 
     def _serve_jpeg(self, camera_id: str) -> None:
         item = self.server.runtime_state.frame(camera_id)
+        if item is None:
+            item = self.server.runtime_state.wait_for_frame(camera_id, -1)
         if item is None:
             self._json({"error": f"{camera_id} frame is not ready"}, 503)
             return

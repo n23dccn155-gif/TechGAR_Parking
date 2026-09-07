@@ -54,6 +54,7 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
         },
         camera_skew_ms=0.02,
         source_mode="replay",
+        parking_episodes=[{"parking_episode_id": "D01-1", "global_id": 8, "slot_id": "D01", "state": "parked"}],
     )
 
     assert [vehicle["global_id"] for vehicle in snapshot["vehicles"]] == [7, 8]
@@ -65,3 +66,18 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
     assert snapshot["parking_slots"][0]["stopped_for_ms"] == 2300
     assert snapshot["slot_layout"][0]["slot_id"] == "D01"
     assert snapshot["retired_global_ids"] == {"12": 7}
+
+
+def test_reservation_is_not_a_parking_episode_and_stale_camera_is_offline():
+    value = build_runtime_snapshot(runtime_id="run", timestamp="", published_at="", frame_index=20,
+        registry={"identity_lifecycle": {"2": {"global_id":2,"state":"recovery_pending",
+                    "last_world":{"x":1,"y":2}}},
+                  "parked_identity_reservations":{"2":{"slot_id":"D01"}}},
+        parking_by_camera={}, camera_sizes={"cam1":(100,100),"cam2":(100,100)},
+        camera_timestamps_ns={"cam1":1_000_000_000,"cam2":9_900_000_000}, calibration={},
+        camera_skew_ms=8900.,source_mode="live",applied_monotonic_ns=10_000_000_000)
+    assert value["vehicles"][0]["parked_slot_id"] is None
+    assert value["parking_episodes"] == []
+    assert not value["cameras"]["cam1"]["online"]
+    assert value["cameras"]["cam1"]["age_ms"] == 9000.
+    assert value["cameras"]["cam2"]["online"]

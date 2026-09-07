@@ -7,6 +7,7 @@ import type { RuntimeSnapshot } from "../domain/runtime";
 import type { VehicleSession } from "../domain/session";
 import { useDriverFlowStore } from "../stores/driverFlowStore";
 import { useParkingStore } from "../stores/parkingStore";
+import { LANE_GRAPH } from "../routing/laneGraph";
 
 const runtimeMocks = vi.hoisted(() => ({
   getRuntimeSnapshot: vi.fn(),
@@ -97,7 +98,9 @@ function runtimeSnapshot(options: {
       state: options.parkedSpotId ? "parked" : "active",
       observed: !options.parkedSpotId,
       camera_ids: ["cam2"],
-      position: { x: 997, y: 858, reference: "cm" },
+      // Use an actual drivable graph point; the old arbitrary point relied on
+      // straight-line routing through parking geometry.
+      position: { ...LANE_GRAPH.nodes.find(n => n.id === LANE_GRAPH.entranceNodeId)!, reference: "cm" },
       parked_slot_id: options.parkedSpotId ?? null,
       last_seen_frame: 1,
       last_seen_time: 1,
@@ -112,6 +115,7 @@ describe("session-aware navigation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     useParkingStore.getState().reset();
     useDriverFlowStore.getState().reset();
     currentSession = session();
@@ -183,7 +187,7 @@ describe("session-aware navigation", () => {
     expect(await screen.findByRole("alertdialog")).toBeVisible();
     await user.click(screen.getByTestId("switch-alternative"));
 
-    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02");
+    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) }));
     expect(screen.getByRole("alertdialog")).toBeVisible();
     expect(screen.queryByTestId("active-route")).not.toBeInTheDocument();
 
@@ -204,7 +208,7 @@ describe("session-aware navigation", () => {
     expect(await screen.findByRole("alertdialog")).toBeVisible();
     await user.click(screen.getByTestId("switch-alternative"));
 
-    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02");
+    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) }));
     expect(screen.getByRole("alertdialog")).toBeVisible();
     expect(screen.queryByTestId("active-route")).not.toBeInTheDocument();
     consoleWarn.mockRestore();
@@ -228,4 +232,36 @@ describe("session-aware navigation", () => {
     await waitFor(() => expect(screen.queryByTestId("active-route")).not.toBeInTheDocument());
     expect(useDriverFlowStore.getState().mode).toBe("browse");
   });
+
+  it("allows exit before any parking and waits for the accepted API state", async () => {
+    currentSession = session({state: "SELECTING_SPOT", targetSpotId: null});
+    runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({targetVehicleId: null}));
+    backendMocks.startExit.mockImplementation(async () => {
+      currentSession = session({state: "EXIT_NAVIGATION", targetSpotId: null, revision: 4});
+      return currentSession;
+    });
+    render(<App sessionId="session-42" />);
+    await userEvent.click(await screen.findByRole("button", {name: /Chỉ lối ra/i}));
+    await waitFor(() => expect(backendMocks.startExit).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId("active-route")).toBeInTheDocument();
+    expect(screen.queryByTestId("parked-success")).not.toBeInTheDocument();
+    expect(screen.getByTestId("source-sample")).toBeDisabled();
+    expect(screen.queryByTestId("mock-toggle")).not.toBeInTheDocument();
+  });
+
+  it("parking notification expires while polling and does not repeat on exit", async () => {
+    currentSession = session({state: "PARKED", targetSpotId: null, parkedSpotId: "A02",
+      actualParkedSpotId: "A02", parkingEpisodeId: "episode-1", parkedAt: "2026-09-07T10:00:00Z"});
+    runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({targetVehicleId: null, parkedSpotId: "A02"}));
+    backendMocks.startExit.mockImplementation(async () => {
+      currentSession = {...currentSession, state: "EXIT_NAVIGATION", revision: 4};
+      return currentSession;
+    });
+    render(<App sessionId="session-42" />);
+    expect(await screen.findByTestId("parked-success")).toBeVisible();
+    await waitFor(() => expect(screen.queryByTestId("parked-success")).not.toBeInTheDocument(), {timeout: 6200});
+    await userEvent.click(screen.getByRole("button", {name: /Chỉ lối ra/i}));
+    await waitFor(() => expect(backendMocks.startExit).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("parked-success")).not.toBeInTheDocument();
+  }, 10000);
 });

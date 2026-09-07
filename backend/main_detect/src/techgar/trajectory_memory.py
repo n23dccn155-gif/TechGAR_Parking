@@ -389,6 +389,7 @@ class WorldTrajectoryMemory:
         appearance_score: float,
         size_score: float,
         topology_score: float,
+        fragment_samples: Optional[Tuple[TrajectorySample, ...]] = None,
     ) -> Optional[TrajectoryMatchEvidence]:
         """Score an outward fragment against a frozen parking origin.
 
@@ -399,6 +400,11 @@ class WorldTrajectoryMemory:
         """
         global_id = int(global_id)
         candidate_samples = self._provisional.get(provisional_key, [])
+        if not candidate_samples and fragment_samples:
+            # Late reconciliation: the fragment was already promoted to its
+            # (wrong) Global ID, so its trail no longer lives in the
+            # provisional store. The caller supplies the promoted trail.
+            candidate_samples = list(fragment_samples)
         tail = self._camera_tail(candidate_samples)
         candidate = self._estimate(candidate_samples)
         origin = self._parked_origins.get(global_id)

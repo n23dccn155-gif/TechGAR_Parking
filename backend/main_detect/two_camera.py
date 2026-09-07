@@ -1188,22 +1188,21 @@ def recover_departing_vehicle_ids(
                             })
                             continue
                         local_key = (camera_id, int(local_id))
-                        try:
-                            manager.bind_external_id(
-                                camera_id,
-                                int(local_id),
-                                token_gid,
-                                frame_idx,
-                                source="parking_departure_token",
-                                source_slot_id=str(token["slot_id"]),
-                                source_camera_id=str(
-                                    token.get("camera_id") or token_owner
-                                ),
-                            )
-                        except ValueError:
+                        token_camera = str(
+                            token.get("camera_id") or token_owner
+                        )
+                        reservation = manager._parked_reservations.get(token_gid)
+                        if (
+                            reservation is None
+                            or str(reservation.get("slot_id"))
+                            != str(token.get("slot_id"))
+                            or str(reservation.get("camera_id")) != token_camera
+                        ):
+                            # The token proof must match the durable
+                            # reservation, not just the caller's source chain.
                             diagnostics.append({
                                 "type": "slot_recovery_late_reconciliation_pending",
-                                "reason": "rebind_rejected",
+                                "reason": "token_reservation_mismatch",
                                 "frame": int(frame_idx),
                                 "camera": camera_id,
                                 "local_track_id": int(local_id),
@@ -1212,17 +1211,16 @@ def recover_departing_vehicle_ids(
                                 "current_global_id": current_gid,
                             })
                             continue
-                        merge = manager._merge_global_ids(
-                            canonical_id=token_gid,
-                            duplicate_id=current_gid,
-                            frame_idx=frame_idx,
-                            reason="late_departure_token_reconciliation",
+                        # Transaction: the merge validates every guard before
+                        # mutating anything. Rejected -> mappings, aliases,
+                        # reservations and tokens all stay exactly as they
+                        # were; the token retries on the next frame.
+                        merge = manager.reconcile_departure_identity(
+                            camera_id, int(local_id), track, frame_idx,
+                            token=token, binder=binders[token_owner],
+                            timestamp_s=camera_timestamps_s[camera_id],
                         )
                         if not merge.accepted:
-                            # The owner is restored even when the wrongly
-                            # minted GID cannot merge (e.g. it was
-                            # independently observed); the duplicate retires
-                            # through normal retention.
                             diagnostics.append({
                                 "type": "slot_recovery_late_reconciliation_blocked",
                                 "reason": merge.rejection_reason,
@@ -1233,16 +1231,18 @@ def recover_departing_vehicle_ids(
                                 "token_global_id": token_gid,
                                 "current_global_id": current_gid,
                             })
-                        else:
-                            diagnostics.append({
-                                "type": "slot_recovery_late_reconciliation_applied",
-                                "frame": int(frame_idx),
-                                "camera": camera_id,
-                                "local_track_id": int(local_id),
-                                "slot_id": token.get("slot_id"),
-                                "token_global_id": token_gid,
-                                "retired_global_id": current_gid,
-                            })
+                            continue
+                        canonical_gid = int(merge.canonical_id)
+                        diagnostics.append({
+                            "type": "slot_recovery_late_reconciliation_applied",
+                            "frame": int(frame_idx),
+                            "camera": camera_id,
+                            "local_track_id": int(local_id),
+                            "slot_id": token.get("slot_id"),
+                            "token_global_id": token_gid,
+                            "canonical_global_id": canonical_gid,
+                            "retired_global_id": int(merge.retired_id),
+                        })
                         # Retire the consumed token so it is never offered
                         # twice.  Keep the key protected this frame so the
                         # allocator cannot immediately re-bind it elsewhere.
@@ -1543,10 +1543,13 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--max-camera-skew-ms", type=float, default=120.0)
     parser.add_argument("--sync-catchup-reads", type=int, default=3)
+    parser.add_argument("--opencv-threads", type=int, default=1,
+                        help="So luong OpenCV threads moi tien trinh; 1 tranh tranh chap voi hai vision workers")
     return parser
 
 
 def run(args: argparse.Namespace, runtime_publisher=None) -> None:
+    cv2.setNumThreads(max(1, int(getattr(args, "opencv_threads", 1))))
     arrival_lookback_seconds = resolve_slot_arrival_lookback_seconds(args)
     replay_session_path = (
         Path(args.replay_session).resolve() if args.replay_session else None
@@ -2008,6 +2011,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             ):
                 tuning_panel.apply()
 
+            for binder in binders.values():
+                binder.begin_frame()
+
             # Apply parking evidence before identity allocation.  A completed
             # occupied->empty result may create a five-second recovery token;
             # processing it later would let a just-created local track consume
@@ -2065,9 +2071,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     slot_results[camera_id] = completed_results
                     binders[camera_id].update_vision(
                         slot_results[camera_id],
-                        job.frame_idx,
-                        job.timestamp_s,
+                        frame_index,
+                        camera_timestamps_s[camera_id],
                         camera_id=camera_id,
+                        evidence_frame_idx=job.frame_idx,
+                        evidence_timestamp_s=job.timestamp_s,
                     )
                     if debug_images is not None:
                         threshold_debug[camera_id] = debug_images
@@ -2226,6 +2234,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     camera_timestamps_s[camera_id],
                     camera_id=camera_id,
                 )
+                binder.finalize_arrivals(frame_index, camera_timestamps_s[camera_id])
 
             parked_reservations = sync_parking_identity_reservations(
                 binders,
@@ -2276,19 +2285,32 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                             calibration=calibration_payload,
                             camera_skew_ms=abs(cam1_ns - cam2_ns) / 1_000_000.0,
                             source_mode="replay" if replay is not None else "live",
+                            applied_monotonic_ns=max(capture_timestamps_ns.values()) if replay is not None else time.monotonic_ns(),
+                            parking_episodes=[
+                                episode
+                                for binder in binders.values()
+                                for episode in binder.parking_episodes()
+                            ],
                         )
                     )
                 last_json_at = now
 
             tracking_frames = {}
             debug_frames = {}
-            if not args.no_display or writers or runtime_publisher is not None:
+            stream_needed = {
+                camera_id: runtime_publisher is not None and
+                getattr(runtime_publisher, "needs_frame", lambda _camera: True)(camera_id)
+                for camera_id in ("cam1", "cam2")
+            }
+            if not args.no_display or writers or any(stream_needed.values()):
                 parked_global_ids = {
                     global_id
                     for binder in binders.values()
                     for global_id in binder.get_all_parked_vehicle_ids()
                 }
                 for camera_id in ("cam1", "cam2"):
+                    if args.no_display and camera_id not in writers and not stream_needed[camera_id]:
+                        continue
                     moving_tracks, shown_ids = select_moving_tracks(
                         trackers[camera_id].active_tracks,
                         global_ids.get(camera_id, {}),
@@ -2347,7 +2369,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     debug_frames[camera_id] = detectors[camera_id].draw_results(
                         debug, slot_results[camera_id]
                     )
-                    if runtime_publisher is not None:
+                    if runtime_publisher is not None and stream_needed[camera_id]:
                         runtime_publisher.publish_frame(
                             camera_id,
                             debug_frames[camera_id],
@@ -2408,6 +2430,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     parking_recovery=recovery_diagnostics,
                     parked_identity_reservations=parked_reservations,
                 )
+                prediction_payload["parking_episodes"] = [
+                    episode for binder in binders.values() for episode in binder.parking_episodes()
+                ]
                 prediction_record = (
                     json.dumps(prediction_payload, ensure_ascii=False) + "\n"
                 )
@@ -2586,6 +2611,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 ).hexdigest(),
                 "git_commit": git_revision(PROJECT_ROOT),
                 "dependency_versions": dependency_versions(),
+                "opencv_threads": cv2.getNumThreads(),
                 "replay_source": str(replay_session_path) if replay_session_path else None,
                 "analysis_only": bool(args.no_session_video),
                 "detector_parameters": tuning_panel.snapshot() if tuning_panel is not None else {

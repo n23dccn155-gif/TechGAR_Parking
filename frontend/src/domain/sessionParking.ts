@@ -1,6 +1,6 @@
 import type { VehicleSession, VehicleSessionState } from "./session";
 import { buildSessionCompletionKey } from "./session";
-import type { RuntimeSlot, RuntimeVehicle } from "./runtime";
+import type { RuntimeSlot, RuntimeVehicle, ParkingEpisode } from "./runtime";
 
 export type SessionParkingDecision =
   | { kind: "guiding"; targetSpotId: string }
@@ -18,6 +18,7 @@ export interface ResolveInput {
   vehicles: RuntimeVehicle[];
   slots: RuntimeSlot[];
   dwellThresholdMs: number;
+  episodes?: ParkingEpisode[];
 }
 
 export function resolveSessionParking(input: ResolveInput): SessionParkingDecision {
@@ -37,7 +38,10 @@ export function resolveSessionParking(input: ResolveInput): SessionParkingDecisi
     }
   }
 
-  const ownSpots = collectOwnSpots(ownGid, vehicles, slots, dwellThresholdMs);
+  const ownSpots = input.episodes ? [...new Set(input.episodes
+    .filter(e => e.global_id === ownGid && e.state === "parked"
+      && !(session.state === "RELOCATING" && e.parking_episode_id === session.parkingEpisodeId))
+    .map(e => e.slot_id))] : collectOwnSpots(ownGid, vehicles, slots, dwellThresholdMs);
   if (ownSpots.length > 1) {
     return {
       kind: "identity_invariant_error",
@@ -74,7 +78,9 @@ export function resolveSessionParking(input: ResolveInput): SessionParkingDecisi
     return { kind: "parking_confirmation_pending", actualSpotId: targetSpotId };
   }
 
-  if (isConfirmedParked(targetSlot, dwellThresholdMs)) {
+  const otherEpisode = input.episodes?.some(e => e.state === "parked"
+    && e.slot_id === targetSpotId && e.global_id === targetSlot.vehicle_id);
+  if (input.episodes ? otherEpisode : isConfirmedParked(targetSlot, dwellThresholdMs)) {
     return {
       kind: "target_occupied_by_other",
       spotId: targetSpotId,

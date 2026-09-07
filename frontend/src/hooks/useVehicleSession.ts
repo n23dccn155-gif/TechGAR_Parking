@@ -25,6 +25,14 @@ export interface UseVehicleSessionResult {
 
 const POLL_INTERVAL_MS = 500;
 
+// DroidCam demos often open the driver UI via plain HTTP on a LAN IP.
+// randomUUID is secure-context-only; getRandomValues also works there.
+export function createSessionActionId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    value => value.toString(16).padStart(2, "0")).join("");
+}
+
 export function useVehicleSession(sessionId: string | null): UseVehicleSessionResult {
   const [session, setSession] = useState<VehicleSession | null>(null);
   const [error, setError] = useState<SessionError | null>(null);
@@ -57,6 +65,8 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
         && next.targetSpotId === current.targetSpotId
         && next.parkedSpotId === current.parkedSpotId
         && next.globalVehicleId === current.globalVehicleId
+        && next.actualParkedSpotId === current.actualParkedSpotId
+        && next.parkingEpisodeId === current.parkingEpisodeId
         && next.updatedAt === current.updatedAt;
       if (!identical) {
         console.warn(`[useVehicleSession] conflicting revision from ${source}`);
@@ -85,8 +95,8 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
     if (pendingGetRef.current) return pendingGetRef.current;
     const controller = new AbortController();
     pollControllerRef.current = controller;
-    let pending: Promise<VehicleSession | null>;
-    pending = backendApi.getSession(expectedId, controller.signal)
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const pending: Promise<VehicleSession | null> = backendApi.getSession(expectedId, controller.signal)
       .then((next) => commit(next, "GET", expectedId, lifecycle).accepted ? next : null)
       .catch((caught: unknown) => {
         if (controller.signal.aborted) return null;
@@ -94,6 +104,7 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
         return null;
       })
       .finally(() => {
+        clearTimeout(timeout);
         if (pollControllerRef.current === controller) pollControllerRef.current = null;
         if (pendingGetRef.current === pending) pendingGetRef.current = null;
       });
@@ -103,7 +114,7 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
 
   const runAction = useCallback(async (
     action: "claim" | "select" | "exit",
-    call: (id: string) => Promise<VehicleSession>,
+    call: (id: string, options: backendApi.ActionOptions) => Promise<VehicleSession>,
   ): Promise<VehicleSession | null> => {
     const expectedId = activeSessionIdRef.current;
     const lifecycle = lifecycleRef.current;
@@ -114,7 +125,10 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
     setError(null);
     setBusyAction(action);
     try {
-      const next = await call(expectedId);
+      const next = await call(expectedId, {
+        expected_revision: sessionRef.current?.revision,
+        action_id: createSessionActionId(),
+      });
       const result = commit(next, `POST:${action}`, expectedId, lifecycle);
       if (!result.accepted && result.reason === "stale_revision") {
         actionRef.current = null;
@@ -148,7 +162,7 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
 
   const claim = useCallback(() => runAction("claim", backendApi.claimSession), [runAction]);
   const selectSpot = useCallback(
-    (spotId: string | null) => runAction("select", (id) => backendApi.selectSpot(id, spotId)),
+    (spotId: string | null) => runAction("select", (id, options) => backendApi.selectSpot(id, spotId, options)),
     [runAction],
   );
   const startExit = useCallback(() => runAction("exit", backendApi.startExit), [runAction]);

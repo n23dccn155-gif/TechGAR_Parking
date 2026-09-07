@@ -469,7 +469,8 @@ export function ParkingMap({
                 <g
                   style={{
                     transform: `translate(${pos.x}px, ${pos.y}px)`,
-                    transition: "transform 0.35s linear",
+                    transition: "transform 0.12s linear",
+                    opacity: vehicle.observed === false ? 0.45 : 1,
                     willChange: "transform",
                   }}
                 >

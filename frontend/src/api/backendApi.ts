@@ -37,6 +37,7 @@ async function postJson<T>(path: string, body: object): Promise<T> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(2000),
   });
   return parseResponse<T>(response, "sessionId" in body ? String(body.sessionId) : undefined);
 }
@@ -50,14 +51,16 @@ export function getWaitingSessions(signal?: AbortSignal): Promise<VehicleSession
   return getJson<VehicleSession[]>("/api/sessions/waiting", signal);
 }
 
-export function claimSession(sessionId: string): Promise<VehicleSession> {
-  return postJson<VehicleSession>("/api/session/claim", { sessionId });
+export interface ActionOptions { expected_revision?: number; action_id?: string }
+
+export function claimSession(sessionId: string, options: ActionOptions = {}): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/claim", { sessionId, ...options });
 }
 
-export function selectSpot(sessionId: string, spotId: string | null): Promise<VehicleSession> {
-  return postJson<VehicleSession>("/api/session/select", { sessionId, spotId });
+export function selectSpot(sessionId: string, spotId: string | null, options: ActionOptions = {}): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/select", { sessionId, spotId, ...options });
 }
 
-export function startExit(sessionId: string): Promise<VehicleSession> {
-  return postJson<VehicleSession>("/api/session/exit", { sessionId });
+export function startExit(sessionId: string, options: ActionOptions = {}): Promise<VehicleSession> {
+  return postJson<VehicleSession>("/api/session/exit", { sessionId, ...options });
 }
