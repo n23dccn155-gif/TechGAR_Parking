@@ -6,7 +6,7 @@ import { MonitorApp } from "../app/MonitorApp";
 import type { RuntimeGateConfig, RuntimeSnapshot } from "../domain/runtime";
 
 const snapshot: RuntimeSnapshot = {
-  schema_version: 1,
+  schema_version: 2,
   timestamp: "2026-08-23T10:00:00+07:00",
   published_at: new Date().toISOString(),
   frame_index: 42,
@@ -14,8 +14,8 @@ const snapshot: RuntimeSnapshot = {
   coordinate_space: { unit: "cm", bounds: null },
   camera_skew_ms: 3.2,
   cameras: {
-    cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true },
-    cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true },
+    cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true, age_ms: 10 },
+    cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true, age_ms: 10 },
   },
   parking_slots: [
     { slot_id: "F01", camera_id: "cam1", status: "empty", occupied: false, vehicle_id: null, decision_source: "vision", tracking_state: "idle", stopped_for_ms: 0 },

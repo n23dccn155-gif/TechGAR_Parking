@@ -12,9 +12,12 @@ def episode(state="parked", slot="D06", eid="parking-1", frame=10):
 
 
 def snapshot(frame=10, episodes=None, **overrides):
-    return dict(schema_version=2, runtime_id="run-1", frame_index=frame,
-                source_mode="live", published_at=datetime.now(timezone.utc).isoformat(),
-                parking_episodes=episodes or [], vehicles=[], **overrides)
+    value = dict(schema_version=2, runtime_id="run-1", frame_index=frame,
+                 source_mode="live", published_at=datetime.now(timezone.utc).isoformat(),
+                 cameras={"cam1": {"camera_id": "cam1", "online": True, "age_ms": 0}},
+                 parking_episodes=episodes or [], vehicles=[])
+    value.update(overrides)
+    return value
 
 
 @pytest.fixture
@@ -62,7 +65,7 @@ def test_revision_and_idempotent_action(rig):
         sm.select_spot(sid, "D08", action_id="click-1")
 
 
-@pytest.mark.parametrize("invalid", ["replay", "stale", "runtime", "v1", "future_evidence"])
+@pytest.mark.parametrize("invalid", ["replay", "stale", "runtime", "v1", "future_evidence", "no_cameras"])
 def test_invalid_source_cannot_park(rig, invalid):
     gate, sid = rig
     value = snapshot(10, [episode()])
@@ -71,6 +74,7 @@ def test_invalid_source_cannot_park(rig, invalid):
     if invalid == "runtime": value["runtime_id"] = "run-2"
     if invalid == "v1": value["schema_version"] = 1
     if invalid == "future_evidence": value["parking_episodes"][0]["evidence_frame_idx"] = 99
+    if invalid == "no_cameras": value["cameras"] = {}
     gate.process_snapshot(value)
     assert sm.get_session(sid)["state"] == "SELECTING_SPOT"
 

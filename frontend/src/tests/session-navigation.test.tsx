@@ -59,7 +59,7 @@ function runtimeSnapshot(options: {
   const ownParkedAtA02 = options.parkedSpotId === "A02";
   const targetOccupied = options.targetOccupied ?? options.targetVehicleId != null;
   return {
-    schema_version: 1,
+    schema_version: 2,
     timestamp: now,
     published_at: now,
     frame_index: Date.now(),
@@ -67,8 +67,8 @@ function runtimeSnapshot(options: {
     coordinate_space: { unit: "cm", bounds: null },
     camera_skew_ms: 1,
     cameras: {
-      cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true },
-      cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true },
+      cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true, age_ms: 10 },
+      cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true, age_ms: 10 },
     },
     parking_slots: [
       {
@@ -92,7 +92,10 @@ function runtimeSnapshot(options: {
         stopped_for_ms: ownParkedAtA02 ? 2200 : 0,
       },
     ],
-    slot_layout: [],
+    slot_layout: [
+      { slot_id: "A01", camera_id: "cam2", polygon: [[10, 0], [12, 0], [12, 2], [10, 2]] },
+      { slot_id: "A02", camera_id: "cam2", polygon: [[20, 0], [22, 0], [22, 2], [20, 2]] },
+    ],
     vehicles: [{
       global_id: 42,
       state: options.parkedSpotId ? "parked" : "active",

@@ -107,3 +107,21 @@ The visual test hides the development-only mock toggle before capture. The C10 s
 ## Definition Of Done
 
 PASS. The frontend runs without a backend, renders the required 160-spot layout with the corrected road topology, implements all four driver modes, enforces stable-empty eligibility, models two independent cameras with deterministic scenarios, renders graph-derived routes, pauses invalid routes without silent redirection, and passes every required validation command.
+
+## Audit-Fix Revalidation — 2026-09-07
+
+The following is the post-fix verification on branch `an5_9`, based on commit `2527e03f` plus the uncommitted audit-fix changes in the working tree. The historical results above are intentionally preserved.
+
+| Check | Result |
+| --- | --- |
+| `pnpm lint` | PASS, 0 errors/warnings |
+| `pnpm typecheck` | PASS |
+| `pnpm test -- --run` | PASS, 16 files / 66 tests |
+| `pnpm build` | PASS, Vite transformed 1,669 modules |
+| `pnpm playwright test` | PASS, 10 Chromium tests |
+
+The browser suite includes the real Python API flow for pending identity, parking in another spot, relocation and exit while stationary. The browser console printed a few expected 404 resource warnings during the run; no test failed.
+
+The shared frontend runtime contract now rejects schema-v1/replay/stale snapshots, missing or offline cameras and invalid camera ages before rendering live guidance. Map and gate overlay share an in-flight snapshot request; a missing `slot_layout` only defers the gate overlay and does not discard static parking state.
+
+These checks establish frontend contract and interaction behavior. They do not establish physical parking accuracy or IDF1 without labeled ground truth, and they do not replace a live DroidCam latency measurement.

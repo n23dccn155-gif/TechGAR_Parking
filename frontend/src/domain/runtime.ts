@@ -79,6 +79,39 @@ export interface RuntimeSnapshot {
   recent_events: RuntimeEvent[];
 }
 
+/**
+ * Validate the immutable parts of the live runtime contract before a
+ * consumer renders it or uses it for a user action.  Cursor/frame ordering is
+ * deliberately handled by the caller because it is subscription state, not
+ * a property of one snapshot.
+ */
+export function liveRuntimeError(
+  runtime: RuntimeSnapshot,
+  nowMs: number = Date.now(),
+): string | null {
+  if (runtime.schema_version !== 2) {
+    return "Runtime chưa dùng schema v2";
+  }
+  if (runtime.source_mode !== "live") {
+    return "Nguồn dữ liệu không phải camera realtime";
+  }
+  const publishedAt = Date.parse(runtime.published_at);
+  if (!Number.isFinite(publishedAt) || nowMs - publishedAt < -1000 || nowMs - publishedAt > 5000) {
+    return "Dữ liệu camera đã cũ quá 5 giây";
+  }
+  const cameras = Object.values(runtime.cameras);
+  if (cameras.length === 0) {
+    return "Runtime chưa công bố camera nào";
+  }
+  if (cameras.some((camera) => {
+    const ageMs = Number(camera.age_ms);
+    return !camera.online || !Number.isFinite(ageMs) || ageMs < 0 || ageMs > 5000;
+  })) {
+    return "Một camera mất kết nối hoặc dữ liệu đã cũ; tạm dừng chỉ dẫn";
+  }
+  return null;
+}
+
 export type GateDirection = "positive" | "negative";
 
 export interface RuntimeGateLine {

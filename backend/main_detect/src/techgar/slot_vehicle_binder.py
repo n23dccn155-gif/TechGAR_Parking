@@ -775,15 +775,20 @@ class SlotVehicleBinder:
             "global_id": int(global_id),
             "slot_id": str(slot_id),
             "state": "parked",
+            # A tracking-only stop has no vision worker timestamp, but the
+            # real detection that triggered _bind_vehicle is still valid
+            # source evidence.  Falling back to the current binder clocks
+            # keeps the v2 episode consumable by the gate/session controller
+            # without inventing an earlier observation time.
             "evidence_frame_idx": (
                 binding.vision_evidence_frame_idx
-                if binding is not None
-                else None
+                if binding is not None and binding.vision_evidence_frame_idx is not None
+                else int(self._last_frame_idx)
             ),
             "evidence_timestamp_s": (
                 binding.vision_evidence_timestamp_s
-                if binding is not None
-                else None
+                if binding is not None and binding.vision_evidence_timestamp_s is not None
+                else float(self._last_timestamp_s)
             ),
             "applied_frame_idx": int(self._last_frame_idx),
             "applied_timestamp_s": float(self._last_timestamp_s),

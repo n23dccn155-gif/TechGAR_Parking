@@ -19,7 +19,7 @@ vi.mock("../api/backendApi", async (importOriginal) => {
 function runtimeSnapshot(sourceMode: "live" | "replay" = "live"): RuntimeSnapshot {
   const now = new Date().toISOString();
   return {
-    schema_version: 1,
+    schema_version: 2,
     timestamp: now,
     published_at: now,
     frame_index: 84,
@@ -27,8 +27,8 @@ function runtimeSnapshot(sourceMode: "live" | "replay" = "live"): RuntimeSnapsho
     coordinate_space: { unit: "cm", bounds: null },
     camera_skew_ms: 2.4,
     cameras: {
-      cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true },
-      cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true },
+      cam1: { camera_id: "cam1", width: 1280, height: 720, captured_at_monotonic_ns: 1, online: true, age_ms: 10 },
+      cam2: { camera_id: "cam2", width: 1280, height: 720, captured_at_monotonic_ns: 2, online: true, age_ms: 10 },
     },
     parking_slots: [
       { slot_id: "A01", camera_id: "cam2", status: "occupied", occupied: true, vehicle_id: 42, decision_source: "vision_and_tracking", tracking_state: "parked", stopped_for_ms: 800 },

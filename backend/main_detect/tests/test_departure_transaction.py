@@ -65,6 +65,28 @@ def test_rejected_real_transaction_keeps_identity_and_episode(failure):
     assert binder.parking_episodes()[0]["state"] == "departing"
 
 
+def test_bind_external_id_keeps_reservation_when_bind_raises(monkeypatch):
+    manager, binder, _, proof = rig()
+    original = manager._bind
+
+    def fail_once(*args, **kwargs):
+        raise RuntimeError("simulated bind failure")
+
+    monkeypatch.setattr(manager, "_bind", fail_once)
+    with pytest.raises(RuntimeError, match="simulated bind failure"):
+        manager.bind_external_id(
+            "cam1", 9, 2, 110,
+            source="parking_departure_token",
+            source_slot_id=proof["slot_id"],
+            source_camera_id=proof["camera_id"],
+        )
+    assert manager.parked_global_ids == {2}
+    # The rig starts with local #9 already carrying the wrong candidate G#4;
+    # a failed bind must preserve that mapping rather than deleting it.
+    assert manager.get_global_id("cam1", 9) == 4
+    monkeypatch.setattr(manager, "_bind", original)
+
+
 def test_active_episode_survives_more_than_64_completed_episodes():
     binder = SlotVehicleBinder()
     binder._open_parking_episode(1, "D01", 1, "test")
@@ -113,3 +135,23 @@ def test_expired_confirmed_departure_releases_episode():
     binder._cleanup_tokens(token.expires_at_s + 1)
     assert binder.parking_episodes()[0]["state"] == "released"
     assert binder.get_slot_for_vehicle(2) is None
+
+
+def test_tracking_only_episode_has_current_source_evidence_for_session_contract():
+    binder = SlotVehicleBinder(policy="vision_primary")
+    binder._last_frame_idx = 42
+    binder._last_timestamp_s = 3.5
+    binder._bindings["D02"] = SlotBinding(
+        slot_id="D02",
+        camera_id="cam1",
+        center=(100, 100),
+        vehicle_id=7,
+        polygon=np.array([[80, 80], [120, 80], [120, 120], [80, 120]], np.float32),
+        vision_occupied=False,
+        vision_evidence_frame_idx=None,
+        vision_evidence_timestamp_s=None,
+    )
+    binder._vehicle_to_slot[7] = "D02"
+    episode = binder._open_parking_episode(7, "D02", 42, "tracking_stop")
+    assert episode["evidence_frame_idx"] == 42
+    assert episode["evidence_timestamp_s"] == 3.5

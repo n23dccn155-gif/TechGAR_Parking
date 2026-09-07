@@ -701,6 +701,7 @@ class CrossCameraManager:
         """
         global_id = self._canonical_id(global_id)
         self._global_created_frames.setdefault(global_id, int(frame_idx))
+        reservation_to_release = None
         if global_id in self._parked_reservations:
             reservation = self._parked_reservations[global_id]
             if source != "parking_departure_token":
@@ -719,12 +720,21 @@ class CrossCameraManager:
                     f"expected {reservation.get('camera_id')}/"
                     f"{reservation.get('slot_id')}"
                 )
-            self._parked_reservations.pop(global_id, None)
-        self.trajectory.set_parked(global_id, False)
+            # Do not consume the reservation until the local→global bind has
+            # completed.  This keeps a failed/exceptional bind retryable and
+            # makes the departure operation transactional for callers.
+            reservation_to_release = reservation
         previous_processing_frame = self._processing_frame_idx
         self._processing_frame_idx = int(frame_idx)
-        bound = self._bind(cam_id, local_track_id, global_id)
+        try:
+            bound = self._bind(cam_id, local_track_id, global_id)
+        except Exception:
+            self._processing_frame_idx = previous_processing_frame
+            raise
         self._processing_frame_idx = previous_processing_frame
+        if reservation_to_release is not None:
+            self._parked_reservations.pop(global_id, None)
+        self.trajectory.set_parked(global_id, False)
         self._event("global_id_recovered", frame_idx, global_id, camera=cam_id,
                     local_track_id=local_track_id, source=source)
         return bound

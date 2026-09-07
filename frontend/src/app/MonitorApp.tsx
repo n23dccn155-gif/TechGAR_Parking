@@ -6,6 +6,7 @@ import { createSvgToWorld, createWorldToSvg, runtimeVehiclesOnSvg } from "../cal
 import { ParkingLegend } from "../components/ParkingLegend";
 import { ParkingMap, type GateMapOverlay } from "../components/ParkingMap";
 import type { RuntimeCameraId, RuntimeEvent, RuntimeGateConfig, RuntimeGateLine, RuntimePoint, RuntimeSnapshot } from "../domain/runtime";
+import { liveRuntimeError } from "../domain/runtime";
 import { PARKING_GEOMETRY, type Point } from "../geometry/parkingGeometry";
 
 const POLL_INTERVAL_MS = 200;
@@ -116,8 +117,8 @@ export function MonitorApp() {
       try {
         const next = await getRuntimeSnapshot(controller.signal);
         if (!active) return;
-        if (next.source_mode !== "live" || !Number.isFinite(Date.parse(next.published_at))
-          || Date.now() - Date.parse(next.published_at) > 5000) throw new Error("Nguồn không phải live hoặc đã cũ");
+        const contractError = liveRuntimeError(next);
+        if (contractError) throw new Error(contractError);
         if (cursor && cursor.runtime === next.runtime_id && next.frame_index < cursor.frame) throw new Error("Frame đến ngược thứ tự");
         if (!cursor || cursor.runtime !== next.runtime_id || next.frame_index > cursor.frame) {
           cursor = { runtime: next.runtime_id, frame: next.frame_index };

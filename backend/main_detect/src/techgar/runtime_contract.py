@@ -73,7 +73,16 @@ def build_runtime_snapshot(
         state = str(identity.get("state", "dormant"))
         if state in TERMINAL_IDENTITY_STATES:
             continue
-        active = map_vehicles.get(str(global_id), {})
+        # JSON writers normally serialize registry keys as strings, while
+        # direct Python callers/tests may retain integer keys.  Accept both so
+        # a live observed vehicle is never downgraded to ``observed=false``
+        # merely because the contract was built before JSON encoding.
+        active = map_vehicles.get(str(global_id))
+        if not isinstance(active, Mapping):
+            try:
+                active = map_vehicles.get(int(global_id), {})
+            except (TypeError, ValueError):
+                active = {}
         position = active.get("position") or identity.get("last_world")
         if not isinstance(position, Mapping):
             continue

@@ -93,8 +93,19 @@ def _fresh_live(snapshot: dict[str, Any]) -> bool:
     if snapshot.get("source_mode") != "live":
         return False
     try:
-        for camera in (snapshot.get("cameras") or {}).values():
-            if not camera.get("online", False) or float(camera.get("age_ms", 0)) > 5000:
+        cameras = snapshot.get("cameras")
+        if not isinstance(cameras, dict) or not cameras:
+            return False
+        for camera in cameras.values():
+            if not isinstance(camera, dict):
+                return False
+            age_ms = float(camera.get("age_ms"))
+            if (
+                not camera.get("online", False)
+                or not math.isfinite(age_ms)
+                or age_ms < 0.0
+                or age_ms > 5000.0
+            ):
                 return False
         stamp = datetime.fromisoformat(str(snapshot["published_at"]).replace("Z", "+00:00"))
         age = (datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds()

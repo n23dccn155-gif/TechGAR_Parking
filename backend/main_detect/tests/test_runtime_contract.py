@@ -81,3 +81,46 @@ def test_reservation_is_not_a_parking_episode_and_stale_camera_is_offline():
     assert not value["cameras"]["cam1"]["online"]
     assert value["cameras"]["cam1"]["age_ms"] == 9000.
     assert value["cameras"]["cam2"]["online"]
+
+
+def test_runtime_snapshot_keeps_observed_vehicle_with_integer_registry_keys():
+    value = build_runtime_snapshot(
+        runtime_id="run-int-keys",
+        timestamp="2026-09-07T10:00:00+07:00",
+        published_at="2026-09-07T10:00:00+07:00",
+        frame_index=7,
+        registry={
+            "world_unit": "cm",
+            "map_vehicles": {
+                3: {
+                    "position": {"x": 12, "y": 34},
+                    "camera_ids": ["cam1"],
+                }
+            },
+            "identity_lifecycle": {
+                "3": {
+                    "global_id": 3,
+                    "state": "active",
+                    "last_camera": "cam1",
+                    "last_world": {"x": 10, "y": 30},
+                }
+            },
+        },
+        parking_by_camera={},
+        camera_sizes={"cam1": (100, 100)},
+        camera_timestamps_ns={"cam1": 1_000_000_000},
+        calibration={},
+        camera_skew_ms=0.0,
+        source_mode="live",
+        applied_monotonic_ns=1_000_000_000,
+    )
+    assert value["vehicles"] == [{
+        "global_id": 3,
+        "state": "active",
+        "observed": True,
+        "camera_ids": ["cam1"],
+        "position": {"x": 12.0, "y": 34.0, "reference": "cm"},
+        "parked_slot_id": None,
+        "last_seen_frame": None,
+        "last_seen_time": None,
+    }]

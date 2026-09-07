@@ -24,7 +24,7 @@ import { runtimeCameraStates, runtimeParkingSpots, runtimeSlots, runtimeVehicles
 import { createWorldToSvg, runtimeVehiclesOnSvg } from "../calibration/worldToSvg";
 import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
 import type { ActiveVehicle, FrameSize, RuntimeSnapshot } from "../domain/runtime";
-import { canonicalRuntimeId } from "../domain/runtime";
+import { canonicalRuntimeId, liveRuntimeError } from "../domain/runtime";
 import { buildSessionCompletionKey } from "../domain/session";
 import { BackendApiError } from "../api/backendApi";
 import { useVehicleSession } from "../hooks/useVehicleSession";
@@ -163,7 +163,20 @@ export function App({ sessionId }: AppProps = {}) {
   // ── Fetch dữ liệu ô đỗ & tracking feed ──
   useEffect(() => {
     let active = true;
+    let runtimeRequest: Promise<RuntimeSnapshot> | null = null;
     const sourceIsCurrent = () => useParkingStore.getState().trackingSource === trackingSource;
+
+    // The map and gate overlay are two consumers of the same runtime frame.
+    // Share one in-flight request so a slow API response cannot be applied by
+    // competing callbacks in a different order.
+    const loadRuntimeSnapshot = (): Promise<RuntimeSnapshot> => {
+      if (!runtimeRequest) {
+        runtimeRequest = getRuntimeSnapshot().finally(() => {
+          runtimeRequest = null;
+        });
+      }
+      return runtimeRequest;
+    };
 
     if (trackingSource === "sample") {
       setRuntimeError(null);
@@ -181,17 +194,9 @@ export function App({ sessionId }: AppProps = {}) {
       setActiveVehicles([]);
     }
 
-    const requireLiveRuntime = (runtime: Awaited<ReturnType<typeof getRuntimeSnapshot>>) => {
-      if (runtime.source_mode !== "live") {
-        throw new Error("Nguồn dữ liệu không phải camera realtime");
-      }
-      const publishedAt = Date.parse(runtime.published_at);
-      if (!Number.isFinite(publishedAt) || Date.now() - publishedAt > 5000) {
-        throw new Error("Dữ liệu camera đã cũ quá 5 giây");
-      }
-      if (Object.values(runtime.cameras).some(camera => !camera.online || (camera.age_ms ?? 0) > 5000)) {
-        throw new Error("Một camera mất kết nối hoặc dữ liệu đã cũ; tạm dừng chỉ dẫn");
-      }
+    const requireLiveRuntime = (runtime: RuntimeSnapshot) => {
+      const contractError = liveRuntimeError(runtime);
+      if (contractError) throw new Error(contractError);
       const runtimeId = runtime.runtime_id ?? "legacy-runtime";
       const cursor = runtimeCursorRef.current;
       if (cursor?.runtimeId === runtimeId && runtime.frame_index < cursor.frameIndex) {
@@ -209,7 +214,7 @@ export function App({ sessionId }: AppProps = {}) {
     const fetchRealtimeStatus = async () => {
       try {
         if (trackingSource === "opencv") {
-          const incoming = await getRuntimeSnapshot();
+          const incoming = await loadRuntimeSnapshot();
           if (!active || !sourceIsCurrent()) return;
           const runtime = requireLiveRuntime(incoming);
           const runtimeSpots = runtimeParkingSpots(runtime);
@@ -286,10 +291,19 @@ export function App({ sessionId }: AppProps = {}) {
         if (trackingSource === "opencv") {
           const [gateConfig, runtime] = await Promise.all([
             getRuntimeGateConfig(),
-            getRuntimeSnapshot(),
+            loadRuntimeSnapshot(),
           ]);
           if (!gateConfig || !active || !sourceIsCurrent()) return;
-          const project = createWorldToSvg(runtime.slot_layout);
+          // Gate geometry must never be projected from a stale/replay frame,
+          // even when the main map request is currently failing.
+          const freshRuntime = requireLiveRuntime(runtime);
+          if (!Array.isArray(freshRuntime.slot_layout) || freshRuntime.slot_layout.length === 0) {
+            // Session/map state can still be useful with the static geometry;
+            // defer only the world-coordinate gate overlay until calibration
+            // is present instead of marking the whole runtime unavailable.
+            return;
+          }
+          const project = createWorldToSvg(freshRuntime.slot_layout);
           updateGateNodesInGraph(LANE_GRAPH, {
             entry_gate: {
               p1: project(gateConfig.entry_gate.p1),

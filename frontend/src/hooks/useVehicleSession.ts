@@ -52,6 +52,12 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
       return { accepted: false, reason: "session_mismatch" };
     }
     if (deletedRef.current) return { accepted: false, reason: "deleted" };
+    // A GET started before a user action may still resolve after the POST.
+    // Never let that older response overwrite the action's in-flight state;
+    // the action response (or its explicit reconciliation GET) is authoritative.
+    if (source === "GET" && actionRef.current !== null) {
+      return { accepted: false, reason: "stale_revision" };
+    }
     const current = sessionRef.current;
     if (next.runtimeId && current?.runtimeId && next.runtimeId !== current.runtimeId) {
       console.warn(`[useVehicleSession] runtime mismatch from ${source}`);

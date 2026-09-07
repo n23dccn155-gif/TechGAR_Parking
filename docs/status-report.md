@@ -1,5 +1,59 @@
 # TechGar2 — Trạng thái triển khai và lỗi còn tồn tại
 
+## Cập nhật audit-fix toàn dự án — 07/09/2026
+
+Đã hoàn tất một đợt rà soát theo skill `full-audit-fix`: lập bản đồ các nguồn ghi/đọc dữ liệu, gom các lỗi theo giao dịch, sửa theo batch rồi chạy một ma trận kiểm tra đầy đủ. Các thay đổi hiện đang ở working tree trên branch `an5_9`, dựa trên commit `2527e03f`; **chưa commit**.
+
+### Những lỗi đã sửa trong đợt này
+
+- Runtime/frontend cùng kiểm tra schema v2, `source_mode=live`, `published_at`, tuổi từng camera, camera online và thứ tự `runtime_id + frame_index`. Snapshot cũ, replay hoặc thiếu camera không còn được dùng cho chỉ dẫn.
+- Map và gate overlay dùng chung một request runtime đang chờ; không còn hai vòng gọi trả kết quả trái thứ tự. Gate chỉ vẽ khi có `slot_layout` hợp lệ, còn trạng thái ô/map tĩnh không bị vô hiệu hóa oan.
+- API lấy cấu hình gate có timeout 2 giây; hook session không cho GET cũ ghi đè POST đang chờ, đồng thời giữ session đã xóa không sống lại.
+- `bind_external_id()` chỉ tiêu thụ reservation sau khi bind thành công; lỗi giữa giao dịch còn retry được, không làm mất quyền chủ ô.
+- Runtime contract đọc được cả key Global ID dạng chuỗi (sau JSON) và số nguyên (gọi Python trực tiếp), tránh hạ một xe đang quan sát thành `observed=false`.
+- Episode đỗ tracking-only có mốc bằng chứng frame/thời gian hiện tại khi không có worker vision, nên session controller có thể xác nhận bằng chứng hợp lệ thay vì bỏ qua episode.
+
+### Ma trận kiểm tra cuối
+
+| Lớp | Lệnh/kết quả |
+|---|---|
+| Python import/compile | `compileall -q` đạt |
+| Tracking | `backend/main_detect/tests`: **373 passed** |
+| Backend session | `backend/tests`: **49 passed** |
+| Frontend lint | **PASS**, 0 lỗi/cảnh báo |
+| Frontend typecheck | **PASS** |
+| Frontend unit | **16 files, 66 tests passed** |
+| Frontend build | **PASS**, Vite 1.669 modules |
+| Playwright | **10 passed**, 0 failed; có vài cảnh báo resource 404 không làm test thất bại |
+
+### Replay hồi quy và tính nhất quán
+
+Replay được chạy lại từ các phiên `droidcam_shared_hiep2`, `droidcam_shared_hiep7`, `droidcam_shared_hiep8`, `droidcam_shared_live15` vào thư mục mới, không sửa phiên gốc. Validator và structural audit đều đạt:
+
+| Phiên audit mới | Frame/metadata/prediction/timestamp/performance | Audit |
+|---|---:|---|
+| `audit_fullfix_20260907_droidcam_shared_hiep2` | 2340/2340/2340/2340 | PASS |
+| `audit_fullfix_20260907_droidcam_shared_hiep7` | 2503/2503/2503/2503 | PASS |
+| `audit_fullfix_20260907_droidcam_shared_hiep8` | 906/906/906/906 | PASS |
+| `audit_fullfix_20260907_droidcam_shared_live15` | 5730/5730/5730/5730 | PASS |
+
+Các audit này chứng minh dữ liệu tiến theo frame, episode có bằng chứng hợp lệ và không có một GID cùng lúc sở hữu nhiều ô. Chúng **không phải ground truth** và không đủ để công bố IDF1, ID switch hay độ đúng vật lý của ô. Riêng replay hiep2 mới chỉ tạo 2 GID mới, có 3 lần `parked_id_recovered` và không có chuỗi tạo GID 4 như báo cáo lịch sử; đây là bằng chứng hồi quy tốt hơn, chưa phải chứng minh mọi video live đều hoàn hảo.
+
+### Hiệu năng đo được
+
+- End-to-end trên `performance.csv`: p50/p95 lần lượt là hiep2 **96.3/838.4 ms**, hiep7 **101.6/865.3 ms**, hiep8 **85.9/799.6 ms**, live15 **119.7/950.2 ms**; processing FPS khoảng **3.10–4.00** do pipeline OpenCV + ghi telemetry.
+- Benchmark detector hai camera, cùng frame/config, cho chữ ký đầu ra giống nhau ở mọi số luồng. Tại frame 350, p50 khoảng **628 ms (1 thread)** và **762 ms (16 threads)**; tại frame 1190, **494 ms (1)** và **708 ms (16)**. Trên máy này không nên tăng thread mù; cần đo lại trên máy trình diễn.
+
+### Giới hạn còn lại và cách diễn giải
+
+- Chưa có nhãn xe vật lý/ground truth, nên chưa được gọi các con số trên là độ chính xác nhận diện hay không có ID switch. Cần gán nhãn A/B theo thời gian rồi chạy evaluator riêng.
+- Replay dùng nguồn video đã ghi; không chứng minh độ trễ mạng DroidCam hoặc tốc độ live. p95 gần 1 giây cho thấy còn việc tối ưu worker vision/ghi đĩa nếu cần realtime mượt.
+- Hai camera trong runtime là nguồn live/replay theo cấu hình hiện tại; các crop cũ trong tài liệu lịch sử không phải camera vật lý độc lập. Motion tracker không có ngữ nghĩa xe; HSV/Re-ID yếu khi xe giống màu hoặc bị che khuất.
+- DeepReID vẫn là tùy chọn chưa có trọng số huấn luyện; backend mặc định vẫn là motion tracker. Camera thật cần homography, đồng bộ timestamp và vùng bàn giao đã khảo sát.
+- Các đoạn có nhiều `merged_detection_frozen` được cố ý đóng băng khi mơ hồ để ưu tiên không cướp ID; nhãn có thể tạm ẩn, đây là trade-off an toàn chứ không tự động xem là lỗi nhận diện.
+
+Phần bên dưới giữ nguyên lịch sử ngày 06/09/2026 để đối chiếu; các kết luận “chưa sửa” ở phần lịch sử không mô tả working tree sau audit 07/09.
+
 Cập nhật: **06/09/2026**, sau khi kiểm tra phiên **droidcam_shared_hiep2**.
 Branch hiện tại: `an5_9`; HEAD lúc kiểm tra: `3c74cbd4 — fix: stabilize live parking tracking and runtime integration`.
 

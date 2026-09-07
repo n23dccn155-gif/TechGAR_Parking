@@ -42,7 +42,9 @@ export function runtimeCameraStreamUrl(cameraId: RuntimeCameraId): string {
 export async function getRuntimeGateConfig(signal?: AbortSignal): Promise<RuntimeGateConfig | null> {
   const response = await fetch(`${RUNTIME_BASE}/api/runtime/gates`, {
     cache: "no-store",
-    signal,
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(2000)])
+      : AbortSignal.timeout(2000),
   });
   if (response.status === 404) return null;
   if (!response.ok) {
