@@ -10,7 +10,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from urllib.parse import urlparse
 
 import cv2
@@ -85,16 +85,32 @@ class RuntimeState:
     def __init__(self, stream_fps: float = 8.0, jpeg_quality: int = 80) -> None:
         self._condition = threading.Condition()
         self._snapshot: Optional[dict[str, Any]] = None
+        self._snapshot_json: Optional[bytes] = None
         self._frames: dict[str, tuple[int, bytes]] = {}
         self._last_encoded_at: dict[str, float] = {}
+        self._last_submitted_at: dict[str, float] = {}
         self._frame_requested_at: dict[str, float] = {}
+        self._pending_frames: dict[
+            str, tuple[int, object, Optional[Callable[[object], object]]]
+        ] = {}
         self._stream_interval = 1.0 / max(float(stream_fps), 0.1)
         self._jpeg_quality = max(30, min(95, int(jpeg_quality)))
         self._closed = False
+        self._encoder_thread = threading.Thread(
+            target=self._encode_latest_frames,
+            name="runtime-jpeg-encoder",
+            daemon=True,
+        )
+        self._encoder_thread.start()
 
     def publish_snapshot(self, snapshot: dict[str, Any]) -> None:
+        # Freeze and serialize outside the shared condition. HTTP readers only
+        # hold the lock long enough to copy an immutable bytes reference.
+        frozen = copy.deepcopy(snapshot)
+        encoded = json.dumps(frozen, ensure_ascii=False).encode("utf-8")
         with self._condition:
-            self._snapshot = copy.deepcopy(snapshot)
+            self._snapshot = frozen
+            self._snapshot_json = encoded
             self._condition.notify_all()
 
     def publish_frame(
@@ -104,22 +120,55 @@ class RuntimeState:
         *,
         frame_index: int,
         timestamp: str,
+        renderer: Optional[Callable[[object], object]] = None,
     ) -> None:
         del timestamp
         now = time.monotonic()
-        if now - self._last_encoded_at.get(camera_id, 0.0) < self._stream_interval:
-            return
-        ok, encoded = cv2.imencode(
-            ".jpg",
-            frame,
-            [cv2.IMWRITE_JPEG_QUALITY, self._jpeg_quality],
-        )
-        if not ok:
-            return
+        owned_frame = frame.copy()
         with self._condition:
-            self._last_encoded_at[camera_id] = now
-            self._frames[camera_id] = (int(frame_index), encoded.tobytes())
+            if self._closed:
+                return
+            if now - self._last_submitted_at.get(camera_id, 0.0) < self._stream_interval:
+                return
+            self._last_submitted_at[camera_id] = now
+            # Latest-only mailbox: a slow browser/JPEG encoder cannot build a
+            # queue that stalls tracking or shows increasingly old frames.
+            self._pending_frames[camera_id] = (
+                int(frame_index), owned_frame, renderer
+            )
             self._condition.notify_all()
+
+    def _encode_latest_frames(self) -> None:
+        while True:
+            with self._condition:
+                self._condition.wait_for(
+                    lambda: self._closed or bool(self._pending_frames)
+                )
+                if self._closed and not self._pending_frames:
+                    return
+                camera_id, (frame_index, frame, renderer) = min(
+                    self._pending_frames.items(), key=lambda item: item[1][0]
+                )
+                self._pending_frames.pop(camera_id, None)
+            try:
+                rendered = renderer(frame) if renderer is not None else frame
+                ok, encoded = cv2.imencode(
+                    ".jpg",
+                    rendered,
+                    [cv2.IMWRITE_JPEG_QUALITY, self._jpeg_quality],
+                )
+            except Exception as error:  # pragma: no cover - runtime boundary
+                print(f"[runtime-stream] Khong render duoc {camera_id}: {error}")
+                continue
+            if not ok:
+                continue
+            completed_at = time.monotonic()
+            with self._condition:
+                previous = self._frames.get(camera_id)
+                if previous is None or frame_index > previous[0]:
+                    self._frames[camera_id] = (frame_index, encoded.tobytes())
+                    self._last_encoded_at[camera_id] = completed_at
+                    self._condition.notify_all()
 
     def needs_frame(self, camera_id: str) -> bool:
         """No debug rendering/encoding when only the JSON map is subscribed."""
@@ -128,16 +177,26 @@ class RuntimeState:
             requested = self._frame_requested_at.get(camera_id)
             return (not self._closed and requested is not None
                     and now - requested <= 5.0
-                    and now - self._last_encoded_at.get(camera_id, 0.) >= self._stream_interval)
+                    and now - self._last_submitted_at.get(camera_id, 0.) >= self._stream_interval)
 
     def snapshot(self) -> Optional[dict[str, Any]]:
         with self._condition:
-            return copy.deepcopy(self._snapshot)
+            snapshot = self._snapshot
+        return copy.deepcopy(snapshot)
+
+    def snapshot_json(self) -> Optional[bytes]:
+        with self._condition:
+            return self._snapshot_json
 
     def frame(self, camera_id: str) -> Optional[tuple[int, bytes]]:
         with self._condition:
             self._frame_requested_at[camera_id] = time.monotonic()
             return self._frames.get(camera_id)
+
+    def available_cameras(self) -> list[str]:
+        """Read status without subscribing to or activating expensive streams."""
+        with self._condition:
+            return list(self._frames)
 
     def wait_for_frame(
         self,
@@ -163,7 +222,10 @@ class RuntimeState:
     def close(self) -> None:
         with self._condition:
             self._closed = True
+            self._pending_frames.clear()
             self._condition.notify_all()
+        if threading.current_thread() is not self._encoder_thread:
+            self._encoder_thread.join(timeout=2.0)
 
 
 class RuntimeHTTPServer(ThreadingHTTPServer):
@@ -190,6 +252,9 @@ class RuntimeRequestHandler(BaseHTTPRequestHandler):
 
     def _json(self, payload: Any, status: int = 200) -> None:
         encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self._json_bytes(encoded, status)
+
+    def _json_bytes(self, encoded: bytes, status: int = 200) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
@@ -213,15 +278,18 @@ class RuntimeRequestHandler(BaseHTTPRequestHandler):
                     "running": snapshot is not None,
                     "frame_index": snapshot.get("frame_index") if snapshot else None,
                     "timestamp": snapshot.get("timestamp") if snapshot else None,
-                    "cameras": [
-                        camera_id
-                        for camera_id in ("cam1", "cam2")
-                        if self.server.runtime_state.frame(camera_id) is not None
-                    ],
+                    "cameras": self.server.runtime_state.available_cameras(),
                 }
             )
             return
         if path in {"/api/runtime/snapshot", "/api/runtime/map"}:
+            if path.endswith("/snapshot"):
+                encoded = self.server.runtime_state.snapshot_json()
+                if encoded is None:
+                    self._json({"error": "Runtime snapshot is not ready"}, 503)
+                else:
+                    self._json_bytes(encoded)
+                return
             snapshot = self.server.runtime_state.snapshot()
             if snapshot is None:
                 self._json({"error": "Runtime snapshot is not ready"}, 503)
@@ -233,7 +301,11 @@ class RuntimeRequestHandler(BaseHTTPRequestHandler):
                     }
                 )
             else:
-                self._json(snapshot)
+                encoded = self.server.runtime_state.snapshot_json()
+                if encoded is None:
+                    self._json({"error": "Runtime snapshot is not ready"}, 503)
+                else:
+                    self._json_bytes(encoded)
             return
         if path == "/api/runtime/events":
             snapshot = self.server.runtime_state.snapshot()

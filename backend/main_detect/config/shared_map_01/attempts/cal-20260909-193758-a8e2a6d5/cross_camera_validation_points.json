@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "description": "Legacy-compatible view of held-out validation pairs",
+  "pairs": [
+    {
+      "label": "V1",
+      "role": "held_out_validation",
+      "cam1": [
+        325,
+        132
+      ],
+      "cam2": [
+        999,
+        59
+      ]
+    },
+    {
+      "label": "V2",
+      "role": "held_out_validation",
+      "cam1": [
+        484,
+        128
+      ],
+      "cam2": [
+        830,
+        108
+      ]
+    },
+    {
+      "label": "V3",
+      "role": "held_out_validation",
+      "cam1": [
+        590,
+        124
+      ],
+      "cam2": [
+        715,
+        117
+      ]
+    },
+    {
+      "label": "V4",
+      "role": "held_out_validation",
+      "cam1": [
+        640,
+        123
+      ],
+      "cam2": [
+        656,
+        119
+      ]
+    },
+    {
+      "label": "V5",
+      "role": "held_out_validation",
+      "cam1": [
+        338,
+        199
+      ],
+      "cam2": [
+        921,
+        46
+      ]
+    },
+    {
+      "label": "V6",
+      "role": "held_out_validation",
+      "cam1": [
+        450,
+        140
+      ],
+      "cam2": [
+        812,
+        100
+      ]
+    }
+  ]
+}

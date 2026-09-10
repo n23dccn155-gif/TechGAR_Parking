@@ -7,6 +7,7 @@ from techgar.motion_tracker import MotionVehicleTracker
 from techgar.latest_frame_capture import LatestFrameCapture
 from techgar.vehicle_tracker import TrackStatus, TrackedVehicle
 from two_camera import (
+    adapt_calibration_to_frame_sizes,
     load_calibration,
     save_json,
     select_moving_tracks,
@@ -134,7 +135,7 @@ def test_load_calibration_accepts_multi_vertex_world_overlap(tmp_path):
     assert overlap[("cam1", "cam2")].shape == (6, 2)
 
 
-def test_tracking_prefers_full_lens_overlap_over_small_active_roi(tmp_path):
+def test_legacy_tracking_uses_active_overlap_not_unverified_full_frame(tmp_path):
     calibration = tmp_path / "calibration.json"
     full_overlap = [[0, 0], [100, 0], [100, 80], [0, 80]]
     calibration.write_text(json.dumps({
@@ -152,7 +153,62 @@ def test_tracking_prefers_full_lens_overlap_over_small_active_roi(tmp_path):
 
     _transforms, _adjacency, overlap, _exit_zones = load_calibration(calibration)
 
-    assert np.allclose(overlap[("cam1", "cam2")], full_overlap)
+    assert np.allclose(
+        overlap[("cam1", "cam2")],
+        [[40, 30], [60, 30], [60, 50], [40, 50]],
+    )
+
+
+def test_tracking_prefers_validated_ground_overlap(tmp_path):
+    calibration = tmp_path / "calibration.json"
+    verified = [[5, 10], [55, 10], [55, 70], [5, 70]]
+    calibration.write_text(json.dumps({
+        "schema_version": 5,
+        "calibration_status": "passed",
+        "camera_transforms": {"cam1": np.eye(3).tolist(), "cam2": np.eye(3).tolist()},
+        "edge_adjacency": [
+            {"source_camera": "cam1", "exit_edge": "right", "target_camera": "cam2"},
+            {"source_camera": "cam2", "exit_edge": "left", "target_camera": "cam1"},
+        ],
+        "overlap_world_polygon": [[40, 30], [60, 30], [60, 50], [40, 50]],
+        "validated_ground_overlap_world_polygon": verified,
+    }), encoding="utf-8")
+
+    _transforms, _adjacency, overlap, _exit_zones = load_calibration(calibration)
+
+    assert np.allclose(overlap[("cam1", "cam2")], verified)
+
+
+def test_runtime_rejects_schema_v5_draft_calibration(tmp_path):
+    calibration = tmp_path / "draft.json"
+    calibration.write_text(json.dumps({
+        "schema_version": 5,
+        "calibration_status": "draft_failed",
+    }), encoding="utf-8")
+    import pytest
+    with pytest.raises(ValueError, match="chua duoc kich hoat"):
+        load_calibration(calibration)
+
+
+def test_calibration_uniform_resize_is_adapted_but_crop_is_rejected():
+    payload = {
+        "source": {"capture_manifest": {"cameras": {
+            "cam1": {"width": 1280, "height": 720},
+            "cam2": {"width": 1280, "height": 720},
+        }}}
+    }
+    transforms = {"cam1": np.eye(3), "cam2": np.eye(3)}
+
+    adapted = adapt_calibration_to_frame_sizes(
+        payload, transforms, {"cam1": (640, 360), "cam2": (640, 360)}
+    )
+    assert np.allclose(adapted["cam1"], np.diag([2.0, 2.0, 1.0]))
+
+    import pytest
+    with pytest.raises(ValueError, match="khac ti le runtime"):
+        adapt_calibration_to_frame_sizes(
+            payload, transforms, {"cam1": (640, 480), "cam2": (640, 360)}
+        )
 
 
 def test_synchronize_live_frames_advances_the_older_camera():

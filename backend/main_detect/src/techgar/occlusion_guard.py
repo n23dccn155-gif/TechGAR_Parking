@@ -135,6 +135,7 @@ class OcclusionGuard:
             tracks[tid].observation_kind = 'occluded_prediction'
             tracks[tid].last_ambiguous_timestamp_s = self.now
             tracks[tid].last_ambiguous_frame = self.frame_idx
+            tracks[tid].last_ambiguous_kind = 'merged'
 
     def annotate(self, detections, tracks, predictions):
         for detection in detections:

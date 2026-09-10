@@ -321,6 +321,10 @@ class CrossCameraManager:
         ] = {}
         self._events: List[dict] = []
         self._parked_reservations: Dict[int, dict] = {}
+        # Qualified slot-arrival claims are temporary holds, not parked
+        # reservations. They only prevent expiry/automatic Re-ID while the
+        # asynchronous vision worker is still deciding the slot.
+        self._provisional_identity_holds: set[int] = set()
         self._same_camera_duplicate_evidence: Dict[
             Tuple[str, int, int], Tuple[int, int]
         ] = {}
@@ -1080,6 +1084,8 @@ class CrossCameraManager:
         """
         canonical_state = self._identities.get(canonical_id)
         duplicate_state = self._identities.get(duplicate_id)
+        if {canonical_id, duplicate_id} & self._provisional_identity_holds:
+            return "identity_waiting_for_parking_vision"
 
         # A slot reservation is authoritative even when the motion identity
         # has already gone dormant and its in-memory state was pruned.  Check
@@ -1873,7 +1879,29 @@ class CrossCameraManager:
         zig-zags that look like one vehicle jumping between two cars.  Debug
         rendering must never join those fragments.
         """
-        height, width = frame.shape[:2]
+        for global_id, projected in self.motion_trail_polylines(
+            camera_id, frame.shape[:2]
+        ):
+            color = (
+                64 + (global_id * 83) % 192,
+                64 + (global_id * 47) % 192,
+                64 + (global_id * 131) % 192,
+            )
+            for index, (first, second) in enumerate(
+                zip(projected, projected[1:]), start=1
+            ):
+                thickness = 1 if index < len(projected) - 2 else 2
+                cv2.line(frame, first, second, color, thickness, cv2.LINE_AA)
+        return frame
+
+    def motion_trail_polylines(
+        self,
+        camera_id: str,
+        frame_shape: Tuple[int, int],
+    ) -> list[tuple[int, list[tuple[int, int]]]]:
+        """Freeze display-only trail geometry for an asynchronous renderer."""
+        height, width = frame_shape
+        polylines: list[tuple[int, list[tuple[int, int]]]] = []
         for global_id in sorted(self._identities):
             samples = self._debug_trail_samples(
                 self.trajectory.global_samples(global_id),
@@ -1891,17 +1919,8 @@ class CrossCameraManager:
                     projected.append((int(round(x)), int(round(y))))
             if len(projected) < 2:
                 continue
-            color = (
-                64 + (global_id * 83) % 192,
-                64 + (global_id * 47) % 192,
-                64 + (global_id * 131) % 192,
-            )
-            for index, (first, second) in enumerate(
-                zip(projected, projected[1:]), start=1
-            ):
-                thickness = 1 if index < len(projected) - 2 else 2
-                cv2.line(frame, first, second, color, thickness, cv2.LINE_AA)
-        return frame
+            polylines.append((int(global_id), projected))
+        return polylines
 
     @staticmethod
     def _debug_trail_samples(samples, camera_id: str):
@@ -2314,6 +2333,8 @@ class CrossCameraManager:
         global_id = self._local_to_global.get((cam_id, local_track_id))
         if global_id is None:
             return
+        if self._canonical_id(global_id) in self._provisional_identity_holds:
+            return
         world = self._track_world(cam_id, track)
         velocity_world = self._world_velocity(cam_id, track)
         # Once an early handoff has been opened, keep its motion evidence and
@@ -2564,6 +2585,8 @@ class CrossCameraManager:
         timestamp_s: Optional[float] = None,
     ) -> Tuple[Optional[float], str, dict]:
         """Return a conservative handoff cost, otherwise its rejection reason."""
+        if self._canonical_id(entry.global_id) in self._provisional_identity_holds:
+            return None, "identity_waiting_for_parking_vision", {}
         if self._canonical_id(entry.global_id) in self._occluded_global_ids:
             return None, 'identity_temporarily_occluded', {}
         overlap_handoff = entry.exit_edge == "overlap"
@@ -3614,7 +3637,7 @@ class CrossCameraManager:
                     continue
                 global_id = self._canonical_id(global_id)
                 graph_key = (cam_id, global_id)
-                if global_id in self._occluded_global_ids:
+                if global_id in self._occluded_global_ids or global_id in self._provisional_identity_holds:
                     continue
                 previous = bound.get(graph_key)
                 area = float(getattr(track, "area", track.w * track.h))
@@ -3675,6 +3698,7 @@ class CrossCameraManager:
                 global_id = self._canonical_id(int(claim["global_id"]))
                 if (global_id not in self._parked_reservations
                     and global_id not in self._occluded_global_ids
+                    and global_id not in self._provisional_identity_holds
                     and not self._has_confirmed_camera_member(global_id, cam_id, all_tracks, exclude_local_id=local_id)):
                     self._bind(cam_id, local_id, global_id)
                     self._event(
@@ -4298,6 +4322,8 @@ class CrossCameraManager:
             for identity in self._identities.values()
             if identity.state in {"dormant", "handoff"}
             and self._canonical_id(identity.global_id) not in self._occluded_global_ids
+            and self._canonical_id(identity.global_id)
+            not in self._provisional_identity_holds
         ]
         if not candidates or not identities:
             return set()
@@ -5019,6 +5045,8 @@ class CrossCameraManager:
             if identity.state not in {"parked", "exited", "expired"}
             and self._canonical_id(identity.global_id)
             not in self._parked_reservations
+            and self._canonical_id(identity.global_id)
+            not in self._provisional_identity_holds
             and self._canonical_id(identity.global_id) not in self._occluded_global_ids
         ]
         live_candidate_keys = {
@@ -5429,6 +5457,8 @@ class CrossCameraManager:
                 global_id = self._local_to_global.get((other_cam, other_local_id))
                 if global_id is None:
                     continue
+                if self._canonical_id(global_id) in self._provisional_identity_holds:
+                    continue
                 if self._canonical_id(global_id) in self._occluded_global_ids or not self._has_fresh_detection(other_track):
                     continue
                 if self._has_confirmed_camera_member(
@@ -5596,7 +5626,9 @@ class CrossCameraManager:
             if tuple(sorted((int(local_track_id), int(other_local_id)))) in self._independent_local_pairs.get(cam_id, set()):
                 continue
             global_id = self._local_to_global.get((cam_id, other_local_id))
-            if global_id is not None and self._canonical_id(global_id) in self._occluded_global_ids:
+            if global_id is not None and self._canonical_id(global_id) in (
+                self._occluded_global_ids | self._provisional_identity_holds
+            ):
                 continue
             if global_id is None:
                 other_fragment_observations = int(
@@ -6015,6 +6047,11 @@ class CrossCameraManager:
                 identity.dormant_since_frame = None
                 identity.dormant_since_time = None
                 continue
+            if global_id in self._provisional_identity_holds:
+                identity.state = "parking_verification_pending"
+                identity.dormant_since_frame = None
+                identity.dormant_since_time = None
+                continue
             if identity.dormant_since_frame is None:
                 identity.dormant_since_frame = frame_idx
                 identity.dormant_since_time = current_time_s
@@ -6026,6 +6063,7 @@ class CrossCameraManager:
         frame_idx: int,
         camera_timestamps_s: Optional[Dict[str, float]] = None,
         protected_local_keys: Optional[Iterable[Tuple[str, int]]] = None,
+        protected_global_ids: Optional[Iterable[int]] = None,
     ) -> Dict[str, Dict[int, int]]:
         """Assign global IDs for current observations from every camera.
 
@@ -6045,6 +6083,10 @@ class CrossCameraManager:
         """
         self._processing_frame_idx = int(frame_idx)
         self._ownership_tracks = all_tracks
+        self._provisional_identity_holds = {
+            self._canonical_id(int(global_id))
+            for global_id in (protected_global_ids or ())
+        }
         self._update_camera_timing(camera_timestamps_s)
         self._cleanup_world_trajectory_deferrals(all_tracks)
         self.observe_trajectories(
@@ -6411,6 +6453,8 @@ class CrossCameraManager:
                         target_camera=entry.target_cam, source_local_id=entry.source_local_track_id)
         self._handoffs = retained
         for global_id, identity in self._identities.items():
+            if global_id in self._provisional_identity_holds:
+                continue
             if identity.state not in {"dormant", "handoff"}:
                 continue
             if self._identity_is_recent(identity, frame_idx, timestamp_s):
@@ -6452,6 +6496,15 @@ class CrossCameraManager:
                 observation = {
                     "camera_id": cam_id, "local_track_id": local_id,
                     "local_position": {"x": track.cx, "y": track.cy},
+                    # This is association telemetry, not the rendered trail.
+                    # A predicted point is never advertised as a fresh
+                    # measurement to the web map.
+                    "association_source": str(
+                        getattr(track, "prediction_source", "measurement")
+                    ),
+                    "prediction_age_s": round(
+                        float(getattr(track, "prediction_age_s", 0.0)), 3
+                    ),
                     "shared_map_anchor": {
                         "x": round(local_anchor[0], 2),
                         "y": round(local_anchor[1], 2),
@@ -6518,6 +6571,10 @@ class CrossCameraManager:
         return {
             "world_unit": self.world_unit,
             "next_global_id": self._next_global_id,
+            "trail_render_only": True,
+            "association_trajectory_policy": (
+                "trajectory_is_secondary_evidence"
+            ),
             "retired_global_ids": {str(old_id): canonical_id for old_id, canonical_id in sorted(self._global_aliases.items())},
             "active_global_vehicles": active,
             "map_vehicles": map_vehicles,

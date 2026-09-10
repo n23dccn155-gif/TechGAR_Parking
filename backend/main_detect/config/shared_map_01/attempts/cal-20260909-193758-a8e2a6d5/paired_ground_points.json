@@ -1,0 +1,239 @@
+{
+  "schema_version": 2,
+  "calibration_id": "cal-20260909-193758-1cbb34fb",
+  "description": "Distributed ground fitting pairs plus disjoint held-out validation",
+  "fit_pairs": [
+    {
+      "label": "A",
+      "role": "metric_anchor",
+      "cam1": [
+        1015,
+        210
+      ],
+      "cam2": [
+        288,
+        30
+      ]
+    },
+    {
+      "label": "B",
+      "role": "metric_anchor",
+      "cam1": [
+        974,
+        68
+      ],
+      "cam2": [
+        254,
+        194
+      ]
+    },
+    {
+      "label": "C",
+      "role": "metric_anchor",
+      "cam1": [
+        692,
+        64
+      ],
+      "cam2": [
+        601,
+        196
+      ]
+    },
+    {
+      "label": "D",
+      "role": "metric_anchor",
+      "cam1": [
+        693,
+        208
+      ],
+      "cam2": [
+        601,
+        37
+      ]
+    },
+    {
+      "label": "P1",
+      "role": "distributed_fit",
+      "cam1": [
+        487,
+        167
+      ],
+      "cam2": [
+        795,
+        75
+      ]
+    },
+    {
+      "label": "P2",
+      "role": "distributed_fit",
+      "cam1": [
+        564,
+        167
+      ],
+      "cam2": [
+        727,
+        75
+      ]
+    },
+    {
+      "label": "P3",
+      "role": "distributed_fit",
+      "cam1": [
+        388,
+        167
+      ],
+      "cam2": [
+        885,
+        76
+      ]
+    },
+    {
+      "label": "P4",
+      "role": "distributed_fit",
+      "cam1": [
+        636,
+        164
+      ],
+      "cam2": [
+        658,
+        78
+      ]
+    },
+    {
+      "label": "P5",
+      "role": "distributed_fit",
+      "cam1": [
+        747,
+        164
+      ],
+      "cam2": [
+        548,
+        76
+      ]
+    },
+    {
+      "label": "P6",
+      "role": "distributed_fit",
+      "cam1": [
+        827,
+        164
+      ],
+      "cam2": [
+        466,
+        80
+      ]
+    },
+    {
+      "label": "P7",
+      "role": "distributed_fit",
+      "cam1": [
+        903,
+        165
+      ],
+      "cam2": [
+        389,
+        75
+      ]
+    },
+    {
+      "label": "P8",
+      "role": "distributed_fit",
+      "cam1": [
+        965,
+        167
+      ],
+      "cam2": [
+        318,
+        71
+      ]
+    }
+  ],
+  "validation_pairs": [
+    {
+      "label": "V1",
+      "role": "held_out_validation",
+      "cam1": [
+        325,
+        132
+      ],
+      "cam2": [
+        999,
+        59
+      ]
+    },
+    {
+      "label": "V2",
+      "role": "held_out_validation",
+      "cam1": [
+        484,
+        128
+      ],
+      "cam2": [
+        830,
+        108
+      ]
+    },
+    {
+      "label": "V3",
+      "role": "held_out_validation",
+      "cam1": [
+        590,
+        124
+      ],
+      "cam2": [
+        715,
+        117
+      ]
+    },
+    {
+      "label": "V4",
+      "role": "held_out_validation",
+      "cam1": [
+        640,
+        123
+      ],
+      "cam2": [
+        656,
+        119
+      ]
+    },
+    {
+      "label": "V5",
+      "role": "held_out_validation",
+      "cam1": [
+        338,
+        199
+      ],
+      "cam2": [
+        921,
+        46
+      ]
+    },
+    {
+      "label": "V6",
+      "role": "held_out_validation",
+      "cam1": [
+        450,
+        140
+      ],
+      "cam2": [
+        812,
+        100
+      ]
+    }
+  ],
+  "validation_layout": {
+    "left": [
+      "V1",
+      "V2"
+    ],
+    "center": [
+      "V3",
+      "V4"
+    ],
+    "right": [
+      "V5",
+      "V6"
+    ]
+  }
+}

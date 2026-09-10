@@ -1067,6 +1067,109 @@ def test_association_gate_fails_open_for_an_uninformed_fragment():
     assert tracker._association_gate(track, 0, 180.0) == pytest.approx(180.0)
 
 
+def test_stopped_lineage_cannot_win_a_tied_neighbour_prediction():
+    """A reversing car must not inherit the ID of a stopped neighbour."""
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        max_prediction_age_seconds=0.40,
+        association_ambiguity_margin=0.08,
+    )
+    frame = np.zeros((120, 300, 3), dtype=np.uint8)
+    appearance = np.zeros(416, dtype=np.float32)
+    appearance[10] = 1.0
+
+    stopped = _moving_vehicle(tracker, frame, 40, hist=appearance)
+    moving = _moving_vehicle(tracker, frame, 90, hist=appearance)
+    tracker._frame_idx = 1
+    tracker._create_or_reid(stopped)
+    tracker._create_or_reid(moving)
+    stopped_track = tracker._tracks[1]
+    moving_track = tracker._tracks[2]
+    stopped_track.status = TrackStatus.LOST
+    stopped_track.consecutive_invisible_count = 1
+    stopped_track.last_seen_timestamp_s = 0.0
+    stopped_track.last_measured_timestamp_s = 0.0
+    stopped_track.last_measured_center = (54.0, 44.0)
+    moving_track.last_seen_timestamp_s = 0.1
+    moving_track.last_measured_timestamp_s = 0.1
+    # Both Kalman predictions arrive at the same foreground blob.  A
+    # deterministic LAPJV tie-break must not decide which physical car won.
+    stopped_track.kalman.statePost[0, 0] = 104.0
+    stopped_track.kalman.statePost[2, 0] = 0.0
+    moving_track.kalman.statePost[0, 0] = 104.0
+    moving_track.kalman.statePost[2, 0] = 14.0
+    tracker._current_timestamp_s = 0.1
+    tracker._predictions_frame = -1
+
+    detection = _moving_vehicle(tracker, frame, 90, hist=appearance)
+    assignments, unmatched_tracks, unmatched_detections = tracker._assign(
+        [detection]
+    )
+
+    assert assignments == []
+    assert set(unmatched_tracks) == {1, 2}
+    assert unmatched_detections == []
+    assert any(
+        event["type"] == "association_deferred_competing_tracks"
+        for event in tracker.association_events
+    )
+    assert stopped_track.cx == 40 + 14
+    assert moving_track.cx == 90 + 14
+
+
+def test_stale_prediction_is_rejected_before_it_can_claim_a_neighbour():
+    tracker = MotionVehicleTracker(
+        min_visible_count=1,
+        min_confirm_displacement=0,
+        max_prediction_age_seconds=0.40,
+        reacquire_max_seconds=1.5,
+    )
+    frame = np.zeros((100, 240, 3), dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._current_timestamp_s = 0.0
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    old = tracker._tracks[1]
+    old.status = TrackStatus.LOST
+    old.consecutive_invisible_count = 1
+    old.last_seen_timestamp_s = 0.0
+    old.last_measured_timestamp_s = 0.0
+    tracker._current_timestamp_s = 0.6
+    tracker._predictions_frame = -1
+
+    assignments, unmatched_tracks, unmatched_detections = tracker._assign(
+        [_detection(tracker, frame, 44, priority=False)]
+    )
+
+    assert assignments == []
+    assert unmatched_tracks == [1]
+    assert unmatched_detections == [0]
+    assert any(
+        event["type"] == "association_rejected_stale_prediction"
+        for event in tracker.association_events
+    )
+    assert old.prediction_source == "stale_prediction"
+
+
+def test_reacquire_uses_last_real_measurement_without_stale_extrapolation():
+    tracker = MotionVehicleTracker(min_visible_count=1, min_confirm_displacement=0,
+                                   max_prediction_age_seconds=.40, reacquire_max_seconds=1.5)
+    frame = np.zeros((100, 240, 3), dtype=np.uint8)
+    frame[20:44, 30:58] = (0, 0, 230)
+    tracker._frame_idx = 1
+    tracker._current_timestamp_s = 0.
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    old = tracker._tracks[1]
+    old.status = TrackStatus.LOST
+    old.consecutive_invisible_count = 1
+    old.last_seen_timestamp_s = old.last_measured_timestamp_s = 0.
+    tracker._current_timestamp_s = .6
+    tracker._predictions_frame = -1
+    assignments, _, _ = tracker._assign([_detection(tracker, frame, 31, priority=False)])
+    assert [(entry[0], entry[1]) for entry in assignments] == [(1, 0)]
+    assert tracker._pair_metrics[(1, 0)]["association_source"] == "last_measurement_anchor"
+
+
 def test_far_detection_outside_the_velocity_budget_starts_its_own_track(
     monkeypatch,
 ):
@@ -1164,5 +1267,3 @@ def test_assignment_cost_limit_is_configurable_and_bounded():
     assert MotionVehicleTracker(
         assignment_cost_limit=5.0
     ).assignment_cost_limit == pytest.approx(1.0)
-
-

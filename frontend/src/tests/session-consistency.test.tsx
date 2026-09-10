@@ -65,3 +65,27 @@ it("follows durable alias chains, never guesses an ID on a cycle", () => {
   expect(canonicalRuntimeId(4, {"4":Number.NaN})).toBeNull();
   expect(canonicalRuntimeId(5, {"4":2})).toBe(5);
 });
+
+it("surfaces session polling failures instead of waiting silently", async () => {
+  vi.mocked(api.getSession).mockRejectedValue(new Error("session backend offline"));
+  const {result, unmount} = renderHook(() => useVehicleSession("s1"));
+  await waitFor(() => {
+    expect(result.current.error?.message).toContain("session backend offline");
+  });
+  expect(result.current.lastSyncedAt).toBeNull();
+  unmount();
+});
+
+it("clears a polling error after a healthy response with unchanged revision", async () => {
+  vi.mocked(api.getSession).mockResolvedValue(session());
+  const {result, unmount} = renderHook(() => useVehicleSession("s1"));
+  await waitFor(() => expect(result.current.session?.revision).toBe(1));
+  vi.mocked(api.getSession).mockRejectedValue(new Error("offline"));
+  await act(async () => { await result.current.refresh(); });
+  expect(result.current.error?.message).toBe("offline");
+  vi.mocked(api.getSession).mockResolvedValue(session());
+  await act(async () => { await result.current.refresh(); });
+  expect(result.current.error).toBeNull();
+  expect(result.current.lastSyncedAt).not.toBeNull();
+  unmount();
+});

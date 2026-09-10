@@ -74,6 +74,11 @@ class MotionVehicleTracker:
         velocity_gate_scale: float = 2.0,
         velocity_gate_size_ratio: float = 1.0,
         velocity_gate_min_observations: int = 3,
+        max_prediction_age_seconds: float = 0.40,
+        prediction_velocity_decay_seconds: float = 0.25,
+        prediction_max_distance_scale: float = 1.25,
+        association_ambiguity_margin: Optional[float] = None,
+        ambiguous_recovery_frames: int = 3,
         split_assignment_margin: float = 0.08,
         lost_appearance_threshold: float = 0.30,
         min_reacquire_area_ratio: float = 0.35,
@@ -156,6 +161,24 @@ class MotionVehicleTracker:
         self.velocity_gate_scale = max(1.0, float(velocity_gate_scale))
         self.velocity_gate_size_ratio = max(0.0, float(velocity_gate_size_ratio))
         self.velocity_gate_min_observations = max(2, int(velocity_gate_min_observations))
+        self.max_prediction_age_seconds = max(
+            0.05, float(max_prediction_age_seconds)
+        )
+        self.prediction_velocity_decay_seconds = max(
+            0.05, float(prediction_velocity_decay_seconds)
+        )
+        self.prediction_max_distance_scale = max(
+            1.0, float(prediction_max_distance_scale)
+        )
+        self.association_ambiguity_margin = max(
+            0.0,
+            float(
+                split_assignment_margin
+                if association_ambiguity_margin is None
+                else association_ambiguity_margin
+            ),
+        )
+        self.ambiguous_recovery_frames = max(1, int(ambiguous_recovery_frames))
         self.lost_appearance_threshold = max(0.0, float(lost_appearance_threshold))
         self.min_reacquire_area_ratio = max(0.01, float(min_reacquire_area_ratio))
         self.max_reacquire_area_ratio = max(
@@ -208,10 +231,81 @@ class MotionVehicleTracker:
         if self._predictions_frame != self._frame_idx:
             self._predictions = {}
             for tid, track in self._tracks.items():
+                if str(getattr(track, "association_state", "")).startswith(
+                    "suspended_"
+                ):
+                    continue
                 predicted = track.kalman.predict()
-                self._predictions[tid] = int(predicted[0, 0]), int(predicted[1, 0])
+                raw_point = np.asarray(
+                    [float(predicted[0, 0]), float(predicted[1, 0])],
+                    dtype=np.float64,
+                )
+                measured = getattr(track, "last_measured_center", None)
+                if measured is None:
+                    measured = (float(track.cx), float(track.cy))
+                measured_point = np.asarray(measured, dtype=np.float64)
+                age = self._prediction_age_seconds(track)
+                track.prediction_age_s = float(age)
+                if int(getattr(track, "consecutive_invisible_count", 0)) > 0:
+                    # A stopped car often leaves no foreground pixels.  Do not
+                    # let its old velocity carry the identity along the path
+                    # of a neighbouring moving car.
+                    merged_freeze = getattr(track, "last_ambiguous_kind", None) == "merged"
+                    decay = float(
+                        np.exp(-age / self.prediction_velocity_decay_seconds)
+                    )
+                    if age > self._prediction_age_limit_seconds(track):
+                        point = measured_point
+                        track.prediction_source = "stale_prediction"
+                        track.velocity_confidence = 0.0
+                    elif merged_freeze:
+                        # An explicit two-car occlusion is the exception: the
+                        # occlusion guard needs the constant-velocity corridor
+                        # until the pair separates.
+                        point = raw_point
+                        track.prediction_source = "kalman_prediction"
+                        track.velocity_confidence = 1.0
+                    else:
+                        point = measured_point + (raw_point - measured_point) * decay
+                        track.prediction_source = "kalman_prediction"
+                        track.velocity_confidence = float(
+                            np.clip(
+                                1.0
+                                - age
+                                / max(self._prediction_age_limit_seconds(track), 1e-6),
+                                0.0,
+                                1.0,
+                            )
+                        )
+                else:
+                    point = raw_point
+                    track.prediction_source = "kalman_prediction"
+                    track.velocity_confidence = 1.0
+                self._predictions[tid] = int(round(point[0])), int(round(point[1]))
             self._predictions_frame = self._frame_idx
         return self._predictions
+
+    def _prediction_age_seconds(self, track: TrackedVehicle) -> float:
+        """Age of the last real measurement, independent of display FPS."""
+        last_timestamp = getattr(track, "last_measured_timestamp_s", None)
+        if last_timestamp is None:
+            last_timestamp = getattr(track, "last_seen_timestamp_s", None)
+        if self._current_timestamp_s is not None and last_timestamp is not None:
+            return max(0.0, float(self._current_timestamp_s) - float(last_timestamp))
+        last_frame = getattr(track, "last_seen_frame", self._frame_idx)
+        return max(0.0, float(self._frame_idx - int(last_frame)) / 30.0)
+
+    def _prediction_age_limit_seconds(self, track: TrackedVehicle) -> float:
+        """Maximum age for an ordinary Kalman prediction to claim a blob."""
+        if (
+            getattr(track, "last_ambiguous_kind", None) == "merged"
+            and self._has_recent_merged_freeze(track)
+        ):
+            return max(
+                self.max_prediction_age_seconds,
+                self.merged_reacquire_max_seconds,
+            )
+        return self.max_prediction_age_seconds
 
     def _remember_clean(self, track, detection):
         now = self._current_timestamp_s
@@ -914,6 +1008,12 @@ class MotionVehicleTracker:
         initial zero velocity, so a budget derived from it would reject the
         vehicle's real displacement.
         """
+        if (
+            invisible > 0
+            and self._prediction_age_seconds(track)
+            > self._prediction_age_limit_seconds(track)
+        ):
+            return 0.0
         if int(getattr(track, "total_visible_count", 0)) < self.velocity_gate_min_observations:
             return float(ceiling)
         velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
@@ -999,6 +1099,12 @@ class MotionVehicleTracker:
         return (history_score + visible_score + fragment_score + age_score) / 4.0
 
     def _has_recent_merged_freeze(self, track: TrackedVehicle) -> bool:
+        # Competition freezes and explicit two-car occlusions use the same
+        # timestamp fields, but only the latter earns the longer merged
+        # reacquire corridor.  Without this discriminator a normal close
+        # competition could keep stale Kalman motion alive for several seconds.
+        if getattr(track, "last_ambiguous_kind", None) != "merged":
+            return False
         timestamp = getattr(track, "last_ambiguous_timestamp_s", None)
         if (
             timestamp is not None
@@ -1018,6 +1124,117 @@ class MotionVehicleTracker:
             0 <= self._frame_idx - int(frame)
             <= int(round(self.merged_reacquire_max_seconds * 30.0))
         )
+
+    def _mark_competing_assignments(
+        self,
+        costs: np.ndarray,
+        track_ids: Sequence[int],
+        predictions: Dict[int, Tuple[int, int]],
+        detections: List[dict],
+    ) -> None:
+        """Freeze a detection when two lineages can claim it almost equally.
+
+        LAPJV is deterministic, but its deterministic tie-break is not
+        physical evidence.  In particular, a stationary car and a nearby
+        reversing car can produce a single foreground blob on the old
+        stationary trajectory.  Marking that column ambiguous prevents the
+        selected row from poisoning the other track's identity or appearance.
+        """
+        if not track_ids or not detections:
+            return
+        viable_limit = min(self.assignment_cost_limit, 0.95)
+        for col, detection in enumerate(detections):
+            if detection.get("ambiguous_merged"):
+                continue
+            viable_rows = [
+                row
+                for row in range(len(track_ids))
+                if float(costs[row, col]) < viable_limit
+            ]
+            if len(viable_rows) < 2:
+                continue
+            # If there are separate detections for the competing tracks, the
+            # one-to-one solver has real evidence to use.  Freeze only the
+            # genuinely under-observed case: one merged/ambiguous blob that
+            # could belong to two lineages.  Freezing every close pair would
+            # break ordinary crossings where both cars remain separately
+            # detected.
+            viable_columns = [
+                candidate_col
+                for candidate_col in range(len(detections))
+                if any(
+                    float(costs[row, candidate_col]) < viable_limit
+                    for row in viable_rows
+                )
+            ]
+            if len(viable_columns) > 1:
+                continue
+            viable_rows.sort(key=lambda row: float(costs[row, col]))
+            first_row, second_row = viable_rows[:2]
+            cost_gap = float(costs[second_row, col] - costs[first_row, col])
+            first_track = self._tracks[track_ids[first_row]]
+            second_track = self._tracks[track_ids[second_row]]
+            first_point = np.asarray(predictions[track_ids[first_row]], dtype=float)
+            second_point = np.asarray(predictions[track_ids[second_row]], dtype=float)
+            prediction_gap = float(np.linalg.norm(first_point - second_point))
+            diagonal = max(
+                1.0,
+                float(
+                    max(
+                        np.hypot(first_track.w, first_track.h),
+                        np.hypot(second_track.w, second_track.h),
+                    )
+                ),
+            )
+            close_predictions = prediction_gap <= 1.10 * diagonal
+            if cost_gap >= self.association_ambiguity_margin and not close_predictions:
+                continue
+            selected_cost = float(costs[first_row, col])
+            detection["ambiguous_assignment"] = True
+            self._ambiguous_detection_ids.add(col)
+            self._viable_pairs.update(
+                (track_ids[row], col) for row in viable_rows
+            )
+            for row in viable_rows:
+                track = self._tracks[track_ids[row]]
+                track.last_ambiguous_frame = int(self._frame_idx)
+                track.last_ambiguous_timestamp_s = self._current_timestamp_s
+                track.last_ambiguous_kind = "competition"
+            costs[:, col] = 10.0
+            self._last_association_events.append({
+                "type": "association_deferred_competing_tracks",
+                "detection_id": int(col),
+                "local_track_ids": [int(track_ids[row]) for row in viable_rows],
+                "selected_cost": round(selected_cost, 4),
+                "cost_gap": round(float(cost_gap), 4),
+                "prediction_gap": round(float(prediction_gap), 2),
+                "prediction_source": [
+                    str(
+                        getattr(
+                            self._tracks[track_ids[row]],
+                            "prediction_source",
+                            "unknown",
+                        )
+                    )
+                    for row in viable_rows
+                ],
+            })
+            # Keep the legacy telemetry name for a merged contour that is
+            # deferred during a split.  Consumers and older tests use this
+            # event to distinguish a normal competition from a post-merge
+            # recovery delay.
+            if any(
+                self._has_recent_merged_freeze(self._tracks[track_ids[row]])
+                for row in viable_rows
+            ):
+                self._last_association_events.append({
+                    "type": "split_assignment_deferred",
+                    "local_track_ids": [
+                        int(track_ids[row]) for row in viable_rows
+                    ],
+                    "detection_id": int(col),
+                    "reason": "competing_single_detection",
+                })
 
     def _assign(self, detections: List[dict]) -> Tuple[List[Tuple[int, int, Tuple[int, int]]], List[int], List[int]]:
         track_ids = list(self._tracks)
@@ -1043,6 +1260,7 @@ class MotionVehicleTracker:
             track = self._tracks[track_id]
             predicted_point = predictions[track_id]
             predicted_box = self._predicted_box(track, predicted_point)
+            stale_anchor_reacquire = False
             invisible = int(track.consecutive_invisible_count)
             last_seen_timestamp = getattr(track, "last_seen_timestamp_s", None)
             lost_seconds = None
@@ -1067,6 +1285,39 @@ class MotionVehicleTracker:
                         ),
                     })
                     continue
+            prediction_age = self._prediction_age_seconds(track)
+            prediction_limit = self._prediction_age_limit_seconds(track)
+            if invisible > 0 and prediction_age > prediction_limit:
+                # Stop extrapolating stale velocity, but keep the documented
+                # reacquire window usable through the last real measurement.
+                # Hard appearance/size gates below prevent this stationary
+                # anchor from following a neighbouring vehicle.
+                measured = getattr(track, "last_measured_center", None)
+                if measured is None:
+                    continue
+                predicted_point = (
+                    int(round(float(measured[0]))),
+                    int(round(float(measured[1]))),
+                )
+                predicted_box = self._predicted_box(track, predicted_point)
+                stale_anchor_reacquire = True
+                self._last_association_events.append({
+                    "type": "track_frozen_stationary",
+                    "local_track_id": int(track_id),
+                    "reason": "kalman_prediction_age_exceeded",
+                    "prediction_age_s": round(float(prediction_age), 3),
+                })
+                self._last_association_events.append({
+                    "type": "stale_prediction_replaced_by_measurement_anchor",
+                    "local_track_id": int(track_id),
+                    "prediction_age_s": round(float(prediction_age), 3),
+                    "prediction_age_limit_s": round(
+                        float(prediction_limit), 3
+                    ),
+                    "prediction_source": str(
+                        getattr(track, "prediction_source", "unknown")
+                    ),
+                })
             if invisible > 0 or self._has_recent_merged_freeze(track):
                 split_margin_track_ids.add(track_id)
             reacquire_eligible_track_ids.add(track_id)
@@ -1074,15 +1325,29 @@ class MotionVehicleTracker:
             # normalised by the scene-wide ceiling so that costs stay
             # comparable across tracks with different motion budgets.
             max_distance = self.max_distance * min(
-                1.25,
+                self.prediction_max_distance_scale,
                 1.0 + min(invisible, 15) / 60.0,
             )
             gate_distance = self._association_gate(track, invisible, max_distance)
+            if stale_anchor_reacquire:
+                clean_w, clean_h = self._clean_size(track)
+                # _association_gate intentionally returns zero for stale
+                # extrapolation. This separate measured-position gate must
+                # not inherit that zero budget.
+                gate_distance = min(max_distance, max(3.0, 0.30 * np.hypot(clean_w, clean_h)))
+                predictions[track_id] = predicted_point
             for col, detection in enumerate(detections):
                 if detection.get('ambiguous_merged'):
                     continue
                 distance = float(np.linalg.norm(np.subtract(predicted_point, detection["point"])))
                 if distance > gate_distance:
+                    if stale_anchor_reacquire:
+                        self._last_association_events.append({
+                            "type": "association_rejected_stale_prediction",
+                            "local_track_id": int(track_id),
+                            "reason": "outside_last_measurement_anchor",
+                            "prediction_age_s": round(float(prediction_age), 3),
+                        })
                     continue
                 iou = self._iou(predicted_box, detection["box"])
                 current_appearance_distance = (
@@ -1101,6 +1366,10 @@ class MotionVehicleTracker:
                 if zone_distance is not None and self.enable_spatial_appearance:
                     appearance_distance = .70 * appearance_distance + .30 * zone_distance
                 if invisible > 0 and appearance_distance > self.lost_appearance_threshold:
+                    continue
+                if stale_anchor_reacquire and appearance_distance > min(
+                    self.lost_appearance_threshold, 0.22
+                ):
                     continue
                 clean_w, clean_h = self._clean_size(track)
                 track_area = max(1.0, clean_w * clean_h)
@@ -1140,17 +1409,36 @@ class MotionVehicleTracker:
                     "size": round(size_error, 4),
                     "total": round(float(cost), 4),
                     "lost_seconds": round(float(lost_seconds or 0.0), 3),
+                    "association_source": (
+                        "last_measurement_anchor"
+                        if stale_anchor_reacquire
+                        else "kalman_prediction"
+                    ),
                 }
+
+        # Resolve competition before LAPJV: a one-to-one optimizer cannot
+        # distinguish two equally plausible lineages on its own.
+        self._mark_competing_assignments(
+            costs, track_ids, predictions, detections
+        )
 
         # One large contour that covers nearby cars is not a valid measurement.
         # Usually it encloses two predicted tracks; it can also enclose one
         # live track while the second car is still tentative/LOST.  In both
         # cases, coast rather than stretching one track over both cars.
         for col, detection in enumerate(detections):
-            if detection.get('ambiguous_merged'):
+            if detection.get('ambiguous_merged') or detection.get(
+                'ambiguous_assignment'
+            ):
                 self._ambiguous_detection_ids.add(col)
                 for tid in detection.get('occlusion_members', ()):
                     self._viable_pairs.add((tid, col))
+                    if tid in self._tracks:
+                        # OcclusionGuard marks this as an explicit merged
+                        # interval, so retain the longer reacquire corridor
+                        # for the two clean lineages.  Generic competition
+                        # must still use the short stale-prediction limit.
+                        self._tracks[tid].last_ambiguous_kind = "merged"
                 costs[:, col] = 10.0
                 continue
             x, y, width, height = detection["box"]
@@ -1242,6 +1530,7 @@ class MotionVehicleTracker:
                 track = self._tracks[track_id]
                 track.last_ambiguous_frame = int(self._frame_idx)
                 track.last_ambiguous_timestamp_s = self._current_timestamp_s
+                track.last_ambiguous_kind = "merged"
             for row in range(len(track_ids)):
                 costs[row, col] = 10.0
             self._last_association_events.append({
@@ -1265,13 +1554,31 @@ class MotionVehicleTracker:
                 # Adjust margin: new tracks (low score) require 2x margin,
                 # established tracks (high score) require normal margin.
                 adjusted_margin = self.split_assignment_margin * (2.0 - lineage_score)
-
-                if not self._assignment_has_margin(
+                has_margin = self._assignment_has_margin(
                     costs,
                     row,
                     col,
                     adjusted_margin,
-                ):
+                )
+                last_ambiguous_frame = getattr(track, "last_ambiguous_frame", None)
+                recently_ambiguous = (
+                    last_ambiguous_frame is not None
+                    and int(self._frame_idx) - int(last_ambiguous_frame)
+                    <= self.ambiguous_recovery_frames
+                )
+                pair_metrics = self._pair_metrics.get((track_id, col), {})
+                # A unique, clean appearance/size/position observation is
+                # stronger evidence than a generic close-by detection.  It
+                # can close a merged interval immediately; otherwise require
+                # the configured clean-frame run before resuming a lineage.
+                clear_evidence = (
+                    has_margin
+                    and float(pair_metrics.get("total", 10.0)) <= 0.12
+                    and float(pair_metrics.get("appearance", 1.0)) <= 0.08
+                    and float(pair_metrics.get("size", 1.0)) <= 0.20
+                    and float(pair_metrics.get("position", 1.0)) <= 0.20
+                )
+                if not has_margin:
                     # After a merged/lost interval, near-equal alternatives are
                     # precisely where ID switches happen. Keep both lineages
                     # coasting and suppress a new fragment until the split is
@@ -1289,7 +1596,30 @@ class MotionVehicleTracker:
                         "base_margin": round(self.split_assignment_margin, 4),
                         "lineage_score": round(lineage_score, 3),
                     })
+                elif recently_ambiguous and not clear_evidence and (
+                    int(getattr(track, "ambiguous_clear_streak", 0)) + 1
+                    < self.ambiguous_recovery_frames
+                ):
+                    # Do not resume a lineage on its first apparently clear
+                    # frame after a competition. Require a short clean run so
+                    # a moving car cannot inherit the stopped car's ID while
+                    # the two boxes are still touching.
+                    track.ambiguous_clear_streak = int(
+                        getattr(track, "ambiguous_clear_streak", 0)
+                    ) + 1
+                    unmatched_tracks.append(track_id)
+                    self._ambiguous_detection_ids.add(col)
+                    self._last_association_events.append({
+                        "type": "association_recovery_pending",
+                        "local_track_id": int(track_id),
+                        "detection_id": int(col),
+                        "clear_streak": int(track.ambiguous_clear_streak),
+                        "required_clear_frames": int(
+                            self.ambiguous_recovery_frames
+                        ),
+                    })
                 else:
+                    track.ambiguous_clear_streak = 0
                     assignments.append((track_id, col, predictions[track_id]))
                     unmatched_detections.discard(col)
             else:
@@ -1348,6 +1678,11 @@ class MotionVehicleTracker:
         track.first_observation_frame = self._frame_idx
         track.first_observation_timestamp_s = self._current_timestamp_s
         track.last_seen_timestamp_s = self._current_timestamp_s
+        track.last_measured_center = (float(point[0]), float(point[1]))
+        track.last_measured_timestamp_s = self._current_timestamp_s
+        track.prediction_age_s = 0.0
+        track.velocity_confidence = 1.0
+        track.prediction_source = "measurement"
         measured_at = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
         measurements = list(getattr(track, 'measurement_observations', []))
         if not measurements or measured_at > measurements[-1][0]:
@@ -1419,6 +1754,11 @@ class MotionVehicleTracker:
         track.consecutive_invisible_count = 0
         track.last_seen_frame = self._frame_idx
         track.last_seen_timestamp_s = self._current_timestamp_s
+        track.last_measured_center = (float(point[0]), float(point[1]))
+        track.last_measured_timestamp_s = self._current_timestamp_s
+        track.prediction_age_s = 0.0
+        track.velocity_confidence = 1.0
+        track.prediction_source = "measurement"
         track.ground_point = self._ground_point(point)
         measured_at = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
         measurements = list(getattr(track, 'measurement_observations', []))
@@ -1524,6 +1864,12 @@ class MotionVehicleTracker:
             track = self._tracks[track_id]
             track.age += 1
             track.consecutive_invisible_count += 1
+            track.prediction_age_s = self._prediction_age_seconds(track)
+            if track.prediction_age_s > self._prediction_age_limit_seconds(track):
+                track.prediction_source = "stale_prediction"
+                track.velocity_confidence = 0.0
+            elif track.prediction_source == "measurement":
+                track.prediction_source = "kalman_prediction"
             frozen = track_id in self.occlusion_guard.frozen or any(
                 detection_id in self._ambiguous_detection_ids
                 and (track_id, detection_id) in self._viable_pairs
@@ -1657,6 +2003,8 @@ class MotionVehicleTracker:
         global_ids = global_ids or {}
         records = []
         for local_id, track in sorted(self._tracks.items()):
+            velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
+            predicted_center = self._predictions.get(int(local_id))
             records.append({
                 "local_track_id": int(local_id),
                 "global_id": (
@@ -1671,6 +2019,24 @@ class MotionVehicleTracker:
                 ),
                 "assignment_cost": dict(
                     getattr(track, "assignment_cost", {}) or {}
+                ),
+                "prediction_source": str(
+                    getattr(track, "prediction_source", "unknown")
+                ),
+                "predicted_center": (
+                    [int(predicted_center[0]), int(predicted_center[1])]
+                    if predicted_center is not None
+                    else None
+                ),
+                "velocity_px_per_frame": [
+                    round(float(velocity_x), 3),
+                    round(float(velocity_y), 3),
+                ],
+                "prediction_age_s": round(
+                    float(getattr(track, "prediction_age_s", 0.0)), 3
+                ),
+                "velocity_confidence": round(
+                    float(getattr(track, "velocity_confidence", 0.0)), 3
                 ),
                 "observation_kind": getattr(track, 'observation_kind', 'detection'),
                 "occlusion_group": list(getattr(track, 'occlusion_group', None) or ()),

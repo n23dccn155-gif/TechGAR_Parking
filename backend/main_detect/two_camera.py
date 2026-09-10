@@ -70,6 +70,8 @@ class PendingParkingJob:
     future: Future
     frame_idx: int
     timestamp_s: float
+    job_id: str
+    submitted_at_s: float
 
 
 def finish_recording_actions(actions: list[Callable[[], object]]) -> bool:
@@ -280,13 +282,32 @@ def save_json(path: Path, payload: dict, *, tolerate_lock: bool = False) -> bool
 
 def load_calibration(path: Path) -> tuple[dict, dict, dict, dict]:
     data = json.loads(path.read_text(encoding="utf-8"))
+    reviewed_line_fit = False
+    if data.get("calibration_algorithm") == "rectangle_line_v1":
+        from tools.rectangle_line_calibration import fit_gate
+        quality = data.get("calibration_quality", {})
+        report = quality.get("rectangle_line_fit", {})
+        reviewed_line_fit = (
+            data.get("calibration_status") == "reviewed_fit"
+            and data.get("visual_review", {}).get("accepted") is True
+            and report.get("status") == "fit_ready"
+            and report.get("point_count") == 8
+            and set(quality.get("cameras", {})) == {"cam1", "cam2"}
+            and not fit_gate(report, quality["cameras"], report.get("max_error_cm_limit", 2.0))
+        )
+        if not reviewed_line_fit:
+            raise ValueError("Rectangle-line calibration chua duoc xem/xac nhan hoac fit khong dat")
+    if int(data.get("schema_version", 0)) >= 5 and data.get("calibration_status") != "passed" and not reviewed_line_fit:
+        raise ValueError(
+            f"Calibration schema v5 chua duoc kich hoat: status={data.get('calibration_status')}"
+        )
     transforms = data.get("camera_transforms", {})
     if set(transforms) != {"cam1", "cam2"}:
         raise ValueError("calibration phai co camera_transforms cho cam1 va cam2")
     matrices = {}
     for camera_id, matrix in transforms.items():
         value = np.asarray(matrix, dtype=np.float64)
-        if value.shape != (3, 3) or abs(np.linalg.det(value)) < 1e-12:
+        if value.shape != (3, 3) or not np.isfinite(value).all() or abs(np.linalg.det(value)) < 1e-12:
             raise ValueError(f"Homography khong hop le cho {camera_id}")
         matrices[camera_id] = value
 
@@ -297,15 +318,15 @@ def load_calibration(path: Path) -> tuple[dict, dict, dict, dict]:
     if adjacency != required:
         raise ValueError("edge_adjacency phai la cam1:right -> cam2 va cam2:left -> cam1")
 
-    # Cross-camera identity topology follows what both lenses can physically
-    # see, not the deliberately smaller parking/motion ROI intersection.
-    # Older calibration files have only ``overlap_world_polygon``.
+    # A visually reviewed eight-point fit has fitted support, not an
+    # independently validated whole-ground claim. Never substitute full frame.
     polygon = np.asarray(
-        data.get("full_view_overlap_world_polygon")
-        or data.get("overlap_world_polygon", []),
+        data.get("fitted_ground_overlap_world_polygon", []) if reviewed_line_fit else (
+            data.get("validated_ground_overlap_world_polygon") or data.get("overlap_world_polygon", [])
+        ),
         dtype=np.float32,
     )
-    if polygon.ndim != 2 or polygon.shape[0] < 3 or polygon.shape[1] != 2:
+    if polygon.ndim != 2 or polygon.shape[0] < 3 or polygon.shape[1] != 2 or not np.isfinite(polygon).all():
         raise ValueError("overlap_world_polygon phai co it nhat 3 diem [x, y]")
     exit_zones = {}
     for item in data.get("exit_zones", []):
@@ -317,6 +338,43 @@ def load_calibration(path: Path) -> tuple[dict, dict, dict, dict]:
             raise ValueError(f"exit_zone cua {camera_id} phai co it nhat 3 diem [x, y]")
         exit_zones.setdefault(camera_id, []).append(exit_polygon)
     return matrices, adjacency, {("cam1", "cam2"): polygon}, exit_zones
+
+
+def adapt_calibration_to_frame_sizes(
+    calibration: dict,
+    transforms: dict[str, np.ndarray],
+    frame_sizes: dict[str, tuple[int, int]],
+) -> dict[str, np.ndarray]:
+    """Adapt pixel-domain H for uniform resizing; reject crop/aspect changes."""
+    cameras = calibration.get("source", {}).get("capture_manifest", {}).get("cameras", {})
+    if not cameras:
+        return transforms
+    adapted = {}
+    for camera_id, transform in transforms.items():
+        source = cameras.get(camera_id, {})
+        if not source.get("width") or not source.get("height"):
+            adapted[camera_id] = transform
+            continue
+        calibration_width = float(source["width"])
+        calibration_height = float(source["height"])
+        runtime_width, runtime_height = frame_sizes[camera_id]
+        source_aspect = calibration_width / calibration_height
+        runtime_aspect = float(runtime_width) / float(runtime_height)
+        if abs(source_aspect - runtime_aspect) > 0.005:
+            raise ValueError(
+                f"{camera_id}: calibration {int(calibration_width)}x{int(calibration_height)} "
+                f"khac ti le runtime {runtime_width}x{runtime_height}; "
+                "khong duoc dung map cho crop/goc quay khac"
+            )
+        scale_x = calibration_width / float(runtime_width)
+        scale_y = calibration_height / float(runtime_height)
+        if abs(scale_x - scale_y) > max(scale_x, scale_y) * 0.005:
+            raise ValueError(f"{camera_id}: runtime resize khong dong deu")
+        adapted[camera_id] = transform @ np.asarray(
+            ((scale_x, 0.0, 0.0), (0.0, scale_y, 0.0), (0.0, 0.0, 1.0)),
+            dtype=np.float64,
+        )
+    return adapted
 
 
 # Identity distance thresholds only mean something relative to the size of the
@@ -1262,11 +1320,86 @@ def process_parking_frame(
     detector: ParkingDetector,
     frame: np.ndarray,
     include_debug: bool,
-) -> tuple[list, tuple[np.ndarray, np.ndarray] | None]:
+) -> tuple[list, tuple[np.ndarray, np.ndarray] | None, float]:
     """Run slow parking work outside the live display loop."""
     results = detector.detect(frame, apply_smoothing=not detector.stable_evidence)
     debug = detector.build_debug_images(frame) if include_debug else None
-    return results, debug
+    return results, debug, time.monotonic()
+
+
+def freeze_runtime_render_payload(
+    *,
+    moving_tracks: dict,
+    shown_ids: dict[int, int],
+    slot_results: list,
+    frame_index: int,
+    roi_points: Optional[np.ndarray] = None,
+    trails: Optional[list[tuple[int, list[tuple[int, int]]]]] = None,
+) -> dict:
+    """Copy only primitive overlay data for the runtime render worker."""
+    tracks = []
+    for local_id, track in moving_tracks.items():
+        tracks.append({
+            "bbox": tuple(int(value) for value in track.bbox),
+            "center": (int(track.cx), int(track.cy)),
+            "global_id": int(shown_ids.get(local_id, local_id)),
+        })
+    slots = [{
+        "slot_id": str(result.slot_id),
+        "occupied": bool(result.occupied),
+        "vehicle_id": (
+            int(result.vehicle_id) if result.vehicle_id is not None else None
+        ),
+        "polygon": np.asarray(result.polygon, dtype=np.int32).copy(),
+        "center": (int(result.center[0]), int(result.center[1])),
+    } for result in slot_results]
+    return {
+        "frame_index": int(frame_index),
+        "tracks": tracks,
+        "slots": slots,
+        "roi_points": None if roi_points is None else roi_points.copy(),
+        "trails": list(trails or []),
+    }
+
+
+def render_runtime_frame(frame: np.ndarray, payload: dict) -> np.ndarray:
+    """Render a frozen overlay without touching tracker/manager state."""
+    output = frame
+    roi_points = payload.get("roi_points")
+    if roi_points is not None:
+        cv2.polylines(output, [roi_points], True, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(output, "TRACKING ROI", tuple(roi_points[0]),
+                    cv2.FONT_HERSHEY_SIMPLEX, .45, (0, 255, 255), 1, cv2.LINE_AA)
+    for global_id, points in payload.get("trails", []):
+        color = (
+            64 + (global_id * 83) % 192,
+            64 + (global_id * 47) % 192,
+            64 + (global_id * 131) % 192,
+        )
+        for first, second in zip(points, points[1:]):
+            cv2.line(output, first, second, color, 2, cv2.LINE_AA)
+    for track in payload.get("tracks", []):
+        x, y, width, height = track["bbox"]
+        cv2.rectangle(output, (x, y), (x + width, y + height), (255, 0, 0), 2)
+        cv2.circle(output, track["center"], 3, (255, 0, 0), -1)
+        cv2.putText(output, f"G#{track['global_id']} moving", (x, max(14, y - 5)),
+                    cv2.FONT_HERSHEY_SIMPLEX, .45, (255, 0, 0), 1, cv2.LINE_AA)
+    slots = payload.get("slots", [])
+    for slot in slots:
+        color = (0, 0, 255) if slot["occupied"] else (0, 255, 0)
+        cv2.polylines(output, [slot["polygon"]], True, color, 2)
+        label = slot["slot_id"]
+        if slot["vehicle_id"] is not None:
+            label += f" #{slot['vehicle_id']}"
+        center = slot["center"]
+        cv2.putText(output, label, (center[0] - 12, center[1] + 4),
+                    cv2.FONT_HERSHEY_SIMPLEX, .3, (255, 255, 255), 1)
+    free_count = sum(1 for slot in slots if not slot["occupied"])
+    cv2.putText(output, f"Frame: {payload['frame_index']}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2)
+    cv2.putText(output, f"Parking: {free_count}/{len(slots)} free", (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX, .7, (255, 200, 0), 2)
+    return output
 
 
 class DetectorTuningPanel:
@@ -1327,6 +1460,10 @@ def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Hai camera that: tracking, parking va Global ID")
     parser.add_argument("--cam1-url")
     parser.add_argument("--cam2-url")
+    parser.add_argument("--replay-async-vision", action="store_true",
+                        help="Use the live vision worker path while replaying (non-deterministic scheduling)")
+    parser.add_argument("--replay-realtime", action="store_true",
+                        help="Pace replay using recorded timestamps without dropping source frames")
     parser.add_argument(
         "--replay-session",
         help=(
@@ -1433,6 +1570,30 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--motion-lost-appearance-threshold", type=float, default=0.30)
     parser.add_argument("--motion-merged-area-ratio", type=float, default=1.60)
     parser.add_argument(
+        "--motion-max-prediction-age-seconds",
+        type=float,
+        default=0.40,
+        help="Tuổi tối đa của dự đoán Kalman khi track mất detection",
+    )
+    parser.add_argument(
+        "--motion-prediction-decay-seconds",
+        type=float,
+        default=0.25,
+        help="Hằng số suy giảm vận tốc khi track đang coasting",
+    )
+    parser.add_argument(
+        "--motion-ambiguity-margin",
+        type=float,
+        default=0.08,
+        help="Độ chênh chi phí tối thiểu để chấp nhận ghép khi có cạnh tranh",
+    )
+    parser.add_argument(
+        "--motion-ambiguity-recovery-frames",
+        type=int,
+        default=3,
+        help="Số frame bằng chứng rõ ràng trước khi thoát trạng thái mơ hồ",
+    )
+    parser.add_argument(
         "--slot-recovery-seconds",
         type=float,
         default=5.0,
@@ -1469,6 +1630,12 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--slot-arrival-absence-seconds", type=float, default=0.75)
     parser.add_argument(
         "--slot-arrival-lost-commit-delay-seconds", type=float, default=0.35
+    )
+    parser.add_argument(
+        "--slot-arrival-processing-grace-seconds",
+        type=float,
+        default=5.0,
+        help="Thoi gian toi da giu GID trong khi worker vision dang xac nhan",
     )
     parser.add_argument("--handoff-ttl", type=int, default=45)
     parser.add_argument("--handoff-match-distance", type=float)
@@ -1659,7 +1826,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 "frame_idx", "capture_unix_ns", "wall_time_iso",
                 "cam1_monotonic_ns", "cam2_monotonic_ns", "camera_skew_ms",
             ])
-            csv.writer(performance_file).writerow(["frame_idx", "total_processing_ms"])
+            csv.writer(performance_file).writerow(["frame_idx", "total_processing_ms", "tracking_pipeline_ms"])
             ground_truth_headers = {
                 "ground_truth_slots.csv": [
                     "schema_version", "camera_id", "slot_id", "start_frame",
@@ -1685,6 +1852,15 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         
         transforms, adjacency, overlap_regions, exit_zones = load_calibration(calibration_path)
         calibration_payload = json.loads(calibration_path.read_text(encoding="utf-8"))
+        transforms = adapt_calibration_to_frame_sizes(
+            calibration_payload, transforms, sizes
+        )
+        print(
+            "  [calibration] "
+            f"id={calibration_payload.get('calibration_id', 'legacy')} "
+            f"status={calibration_payload.get('calibration_status', 'legacy_unverified')} "
+            f"path={calibration_path}"
+        )
         matching_defaults = calibration_payload.get("matching_defaults", {})
         tracking_defaults = calibration_payload.get("tracking_defaults", {})
         world_unit = str(calibration_payload.get("world", {}).get("unit", "source_video_pixel"))
@@ -1810,7 +1986,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             )
             for camera_id, slot_file in slot_files.items()
         }
-        if replay is None:
+        if replay is None or getattr(args, "replay_async_vision", False):
             parking_executor = ThreadPoolExecutor(
                 max_workers=2, thread_name_prefix="parking"
             )
@@ -1886,6 +2062,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 arrival_lost_commit_delay_seconds=(
                     args.slot_arrival_lost_commit_delay_seconds
                 ),
+                arrival_processing_grace_seconds=(
+                    args.slot_arrival_processing_grace_seconds
+                ),
             )
             for camera_id in frames
         }
@@ -1919,6 +2098,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 reacquire_max_seconds=args.motion_reacquire_seconds,
                 lost_appearance_threshold=args.motion_lost_appearance_threshold,
                 merged_detection_area_ratio=args.motion_merged_area_ratio,
+                max_prediction_age_seconds=args.motion_max_prediction_age_seconds,
+                prediction_velocity_decay_seconds=args.motion_prediction_decay_seconds,
+                association_ambiguity_margin=args.motion_ambiguity_margin,
+                ambiguous_recovery_frames=args.motion_ambiguity_recovery_frames,
                 slot_binder=None,
             )
             for camera_id in frames
@@ -1951,7 +2134,22 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         last_json_at = 0.0
         last_json_warning_at = 0.0
         parking_futures: dict[str, PendingParkingJob] = {}
+        parking_pipeline = {
+            camera_id: {
+                "state": "waiting",
+                "job_id": None,
+                "evidence_frame_idx": None,
+                "applied_frame_idx": None,
+                "result_age_ms": None,
+                "processing_ms": None,
+                "dropped_results": 0,
+                "last_rejection_reason": None,
+            }
+            for camera_id in frames
+        }
 
+        replay_wall_started = time.monotonic()
+        replay_source_started = max(capture_timestamps_ns.values()) / 1_000_000_000.0
         while True:
             started = time.perf_counter()
             stream_ended = False
@@ -2004,6 +2202,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 if replay is not None
                 else time.monotonic()
             )
+            if replay is not None and getattr(args, "replay_realtime", False):
+                due = replay_wall_started + now - replay_source_started
+                while time.monotonic() < due:
+                    time.sleep(min(0.05, max(0.0, due - time.monotonic())))
+            frame_ready_at = time.perf_counter()
             if (
                 tuning_panel is not None
                 and replay_detector_profile is None
@@ -2018,7 +2221,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             # occupied->empty result may create a five-second recovery token;
             # processing it later would let a just-created local track consume
             # a fresh, incorrect Global ID first.
-            if replay is not None:
+            if replay is not None and not getattr(args, "replay_async_vision", False):
                 for camera_id, detector in detectors.items():
                     camera_now = camera_timestamps_s[camera_id]
                     parking_due = (
@@ -2030,11 +2233,20 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     include_parking_debug = (
                         not args.no_display and not args.no_parking_debug
                     )
-                    result, debug_images = process_parking_frame(
+                    result, debug_images, completed_at_s = process_parking_frame(
                         detector,
                         frames[camera_id],
                         include_parking_debug,
                     )
+                    parking_pipeline[camera_id].update({
+                        "state": "healthy",
+                        "job_id": f"{camera_id}:{frame_index}",
+                        "evidence_frame_idx": int(frame_index),
+                        "applied_frame_idx": int(frame_index),
+                        "result_age_ms": 0.0,
+                        "processing_ms": 0.0,
+                        "last_rejection_reason": None,
+                    })
                     if not detector.accept_evidence(result, camera_now, frame_index):
                         continue
                     if debug_images is not None:
@@ -2053,18 +2265,48 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 for camera_id, job in list(parking_futures.items()):
                     if not job.future.done():
                         continue
-                    completed_results, debug_images = job.future.result()
+                    health = parking_pipeline[camera_id]
+                    parking_futures.pop(camera_id, None)
+                    try:
+                        completed_results, debug_images, completed_at_s = job.future.result()
+                    except Exception as error:
+                        binders[camera_id].finish_vision_job(job.job_id, accepted=False)
+                        health.update({"state": "degraded", "last_rejection_reason": "worker_error",
+                                       "error": str(error), "applied_frame_idx": int(frame_index)})
+                        health["dropped_results"] += 1
+                        continue
                     result_age_s = max(
                         0.0,
                         camera_timestamps_s[camera_id] - job.timestamp_s,
+                        time.monotonic() - job.submitted_at_s,
                     )
-                    parking_futures.pop(camera_id, None)
+                    health.update({
+                        "job_id": job.job_id,
+                        "evidence_frame_idx": int(job.frame_idx),
+                        "applied_frame_idx": int(frame_index),
+                        "result_age_ms": round(result_age_s * 1000.0, 3),
+                        "source_timestamp_s": job.timestamp_s,
+                        "completed_monotonic_s": completed_at_s,
+                        "applied_monotonic_s": time.monotonic(),
+                        "processing_ms": round(
+                            max(0.0, completed_at_s - job.submitted_at_s) * 1000.0,
+                            3,
+                        ),
+                    })
                     if result_age_s > max(
                         0.0, float(args.parking_max_result_age_seconds)
                     ):
+                        health["state"] = "degraded"
+                        health["dropped_results"] = int(health["dropped_results"]) + 1
+                        health["last_rejection_reason"] = "result_too_old"
+                        binders[camera_id].finish_vision_job(job.job_id, accepted=False)
                         continue
                     detector = detectors[camera_id]
                     if not detector.accept_evidence(completed_results, job.timestamp_s, job.frame_idx):
+                        health["state"] = "degraded"
+                        health["dropped_results"] = int(health["dropped_results"]) + 1
+                        health["last_rejection_reason"] = "evidence_not_monotonic"
+                        binders[camera_id].finish_vision_job(job.job_id, accepted=False)
                         continue
                     if debug_images is not None:
                         debug_images = detector.build_debug_images()
@@ -2079,6 +2321,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     )
                     if debug_images is not None:
                         threshold_debug[camera_id] = debug_images
+                    health["state"] = "healthy"
+                    health["last_rejection_reason"] = None
+                    health["last_accepted_monotonic_s"] = time.monotonic()
+                    binders[camera_id].finish_vision_job(job.job_id, accepted=True)
 
                 include_parking_debug = (
                     not args.no_display and not args.no_parking_debug
@@ -2091,18 +2337,43 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     )
                     if camera_id in parking_futures or not parking_due:
                         continue
+                    submitted_at_s = time.monotonic()
                     future = parking_executor.submit(
                         process_parking_frame,
                         detector,
                         frames[camera_id].copy(),
                         include_parking_debug,
                     )
+                    job_id = f"{camera_id}:{frame_index}"
                     parking_futures[camera_id] = PendingParkingJob(
                         future=future,
                         frame_idx=frame_index,
                         timestamp_s=camera_now,
+                        job_id=job_id,
+                        submitted_at_s=submitted_at_s,
                     )
+                    binders[camera_id].register_vision_job(job_id, frame_index, camera_now)
+                    parking_pipeline[camera_id].update({
+                        "pending_job_id": job_id,
+                        "pending_evidence_frame_idx": int(frame_index),
+                        "pending_submitted_monotonic_s": submitted_at_s,
+                    })
+                    if parking_pipeline[camera_id]["state"] == "waiting":
+                        parking_pipeline[camera_id]["state"] = "processing"
                     last_parking_at[camera_id] = camera_now
+
+                for camera_id, health in parking_pipeline.items():
+                    job = parking_futures.get(camera_id)
+                    age = max(0.0, time.monotonic() - job.submitted_at_s) if job else 0.0
+                    health["pending_age_ms"] = round(age * 1000.0, 3)
+                    accepted_at = health.get("last_accepted_monotonic_s")
+                    health["accepted_evidence_age_ms"] = (
+                        round((time.monotonic() - accepted_at) * 1000.0, 3)
+                        if accepted_at is not None else None
+                    )
+                    if age > args.parking_max_result_age_seconds:
+                        health["state"] = "degraded"
+                        health["last_rejection_reason"] = "worker_over_deadline"
 
             # A parked Global ID is a durable slot owner, not an ordinary LOST
             # motion track. Detach its old local fragment before association so
@@ -2208,10 +2479,16 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 args.slot_recovery_max_expand_ratio,
                 shared_map_anchor=shared_map_anchor,
             )
+            pending_arrival_global_ids = {
+                int(global_id)
+                for binder in binders.values()
+                for global_id in binder.pending_arrival_global_ids()
+            }
             global_ids = manager.update_all_tracks(
                 observable, frame_index,
                 camera_timestamps_s=camera_timestamps_s,
                 protected_local_keys=protected_local_keys,
+                protected_global_ids=pending_arrival_global_ids,
             )
 
             cancel_observed_recovery_tokens(
@@ -2291,6 +2568,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                                 for binder in binders.values()
                                 for episode in binder.parking_episodes()
                             ],
+                            pending_parking_confirmations=[
+                                claim
+                                for binder in binders.values()
+                                for claim in binder.pending_arrivals()
+                            ],
+                            parking_pipeline=parking_pipeline,
                         )
                     )
                 last_json_at = now
@@ -2317,7 +2600,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         parked_global_ids,
                         manager.canonical_global_id,
                     )
-                    debug_input = frames[camera_id].copy()
+                    roi_points = None
                     if args.show_tracking_roi:
                         roi_data = tracking_rois.get(camera_id)
                         if roi_data is not None:
@@ -2328,6 +2611,42 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                                 ],
                                 dtype=np.int32,
                             )
+                    runtime_stream_only = (
+                        args.no_display
+                        and camera_id not in writers
+                        and stream_needed[camera_id]
+                    )
+                    if runtime_stream_only:
+                        trails = (
+                            manager.motion_trail_polylines(
+                                camera_id, frames[camera_id].shape[:2]
+                            )
+                            if args.show_motion_trails
+                            else []
+                        )
+                        render_payload = freeze_runtime_render_payload(
+                            moving_tracks=moving_tracks,
+                            shown_ids=shown_ids,
+                            slot_results=slot_results[camera_id],
+                            frame_index=frame_index,
+                            roi_points=roi_points,
+                            trails=trails,
+                        )
+                        runtime_publisher.publish_frame(
+                            camera_id,
+                            frames[camera_id],
+                            frame_index=frame_index,
+                            timestamp=datetime.now().astimezone().isoformat(
+                                timespec="milliseconds"
+                            ),
+                            renderer=(
+                                lambda source, payload=render_payload:
+                                render_runtime_frame(source, payload)
+                            ),
+                        )
+                        continue
+                    debug_input = frames[camera_id].copy()
+                    if roi_points is not None:
                             cv2.polylines(
                                 debug_input,
                                 [roi_points],
@@ -2433,12 +2752,20 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 prediction_payload["parking_episodes"] = [
                     episode for binder in binders.values() for episode in binder.parking_episodes()
                 ]
+                prediction_payload["pending_parking_confirmations"] = [
+                    claim for binder in binders.values() for claim in binder.pending_arrivals()
+                ]
+                prediction_payload["parking_pipeline"] = {
+                    camera_id: dict(status)
+                    for camera_id, status in parking_pipeline.items()
+                }
                 prediction_record = (
                     json.dumps(prediction_payload, ensure_ascii=False) + "\n"
                 )
                 performance_record = (
                     f"{frame_index},"
-                    f"{(time.perf_counter() - started) * 1000.0:.3f}\n"
+                    f"{(time.perf_counter() - started) * 1000.0:.3f},"
+                    f"{(time.perf_counter() - frame_ready_at) * 1000.0:.3f}\n"
                 )
                 recording_actions.extend([
                     counted_recording_action(
@@ -2629,6 +2956,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "motion_reacquire_seconds": args.motion_reacquire_seconds,
                     "motion_lost_appearance_threshold": args.motion_lost_appearance_threshold,
                     "motion_merged_area_ratio": args.motion_merged_area_ratio,
+                    "motion_max_prediction_age_seconds": args.motion_max_prediction_age_seconds,
+                    "motion_prediction_decay_seconds": args.motion_prediction_decay_seconds,
+                    "motion_ambiguity_margin": args.motion_ambiguity_margin,
+                    "motion_ambiguity_recovery_frames": args.motion_ambiguity_recovery_frames,
                     "motion_max_bbox_width_ratio": args.motion_max_bbox_width_ratio,
                     "motion_max_bbox_height_ratio": args.motion_max_bbox_height_ratio,
                     "motion_max_bbox_area_ratio": args.motion_max_bbox_area_ratio,
@@ -2677,6 +3008,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "arrival_absence_seconds": args.slot_arrival_absence_seconds,
                     "arrival_lost_commit_delay_seconds": (
                         args.slot_arrival_lost_commit_delay_seconds
+                    ),
+                    "arrival_processing_grace_seconds": (
+                        args.slot_arrival_processing_grace_seconds
                     ),
                 },
                 "occlusion_features": {

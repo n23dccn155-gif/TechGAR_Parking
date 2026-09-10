@@ -299,6 +299,83 @@ def test_live_arrival_claim_survives_delayed_vision_and_tracks_true_stop_time():
     assert binder.get_identity_reservations()[0]["slot_id"] == "A01"
 
 
+def test_slow_frame_cadence_keeps_one_claim_while_async_vision_is_pending():
+    binder = SlotVehicleBinder(
+        policy="vision_primary",
+        arrival_lookback_seconds=3.0,
+        arrival_processing_grace_seconds=5.0,
+        arrival_min_samples=3,
+        arrival_vision_confirmations=2,
+    )
+    result = slot_result(slot_id="A01", occupied=False)
+    binder.update_vision([result], 0, 0.0, camera_id="cam2")
+    for frame, (timestamp, x) in enumerate(
+        ((0.0, -60), (0.70, -20), (1.40, -5), (2.10, 5)), start=1
+    ):
+        binder.update_tracks({22: track(x=x)}, frame, timestamp, camera_id="cam2")
+
+    binder.register_vision_job("cam2:4", 4, 2.10)
+    assert binder.notify_track_lost(22, 5, 2.30) is None
+    assert binder.pending_arrival_global_ids() == {22}
+    assert binder.pending_arrivals(2.30)[0]["state"] == "awaiting_vision"
+
+    result.occupied = True
+    binder.update_vision([result], 6, 5.80, camera_id="cam2")
+    binder.update_vision([result], 7, 6.30, camera_id="cam2")
+
+    state = binder.get_slot_state("A01")
+    assert state["vehicle_id"] == 22
+    assert state["tracking_state"] == "parked"
+
+
+def test_pending_arrival_hold_expires_without_vision_and_never_parks():
+    binder = SlotVehicleBinder(
+        policy="vision_primary",
+        arrival_processing_grace_seconds=5.0,
+        arrival_min_samples=3,
+    )
+    result = slot_result(slot_id="A01", occupied=False)
+    binder.update_vision([result], 0, 0.0, camera_id="cam1")
+    binder.update_tracks({8: track(x=-60)}, 1, 0.0, camera_id="cam1")
+    binder.update_tracks({8: track(x=-10)}, 2, 0.2, camera_id="cam1")
+    binder.update_tracks({8: track(x=0)}, 3, 0.4, camera_id="cam1")
+    binder.register_vision_job("cam1:3", 3, 0.4)
+    binder.notify_track_lost(8, 4, 0.5)
+
+    binder.update_tracks({}, 5, 5.6, camera_id="cam1")
+
+    assert binder.pending_arrival_global_ids() == set()
+    assert binder.get_slot_state("A01")["vehicle_id"] is None
+    assert any(
+        event.get("reason") == "arrival_claim_expired"
+        for event in binder.events
+    )
+
+
+@pytest.mark.parametrize("with_job", [False, True])
+def test_provisional_hold_requires_real_job_and_has_fixed_wall_deadline(monkeypatch, with_job):
+    import techgar.slot_vehicle_binder as module
+    clock = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    binder = SlotVehicleBinder(policy="vision_primary", arrival_min_samples=3)
+    binder.update_vision([slot_result(slot_id="A01", occupied=False)], 0, 0., camera_id="cam1")
+    for index, x in enumerate((-60, -20, -10, 0), start=1):
+        binder.update_tracks({8: track(x=x)}, index, index * .2, camera_id="cam1")
+    if with_job:
+        binder.register_vision_job("cam1:4", 4, .8)
+    binder.notify_track_lost(8, 5, .9)
+    assert binder.pending_arrival_global_ids() == ({8} if with_job else set())
+    if with_job:
+        clock[0] += 4.
+        binder.register_vision_job("cam1:6", 6, 1.0)
+        binder.notify_track_lost(8, 6, 1.0)
+        clock[0] += 1.1
+        binder.update_tracks({}, 7, 1.1, camera_id="cam1")
+        assert binder.pending_arrival_global_ids() == set()
+        assert binder.pending_arrivals()[0]["state"] == "insufficient_evidence"
+    assert binder.get_slot_state("A01")["vehicle_id"] is None
+
+
 def test_stationary_noise_without_inward_trajectory_cannot_claim_red_slot():
     binder = SlotVehicleBinder(
         policy="vision_primary",

@@ -303,6 +303,27 @@ class PredictionV3Builder:
                     "association_state": str(
                         track.get("association_state", "unknown")
                     ),
+                    "prediction_source": str(
+                        track.get("prediction_source", "measurement")
+                    ),
+                    "association_source": str(
+                        track.get(
+                            "association_source",
+                            track.get("prediction_source", "measurement"),
+                        )
+                    ),
+                    "predicted_anchor_pixel": _json_value(
+                        track.get("predicted_center")
+                    ),
+                    "velocity_px_per_frame": _json_value(
+                        track.get("velocity_px_per_frame", [0.0, 0.0])
+                    ),
+                    "prediction_age_s": float(
+                        track.get("prediction_age_s", 0.0)
+                    ),
+                    "velocity_confidence": float(
+                        track.get("velocity_confidence", 0.0)
+                    ),
                     "invisible_count": int(track.get("invisible_count", 0)),
                     "observation_kind": str(track.get('observation_kind', 'unknown')),
                     "occlusion_group": _json_value(track.get('occlusion_group', [])),
@@ -446,6 +467,13 @@ class PredictionV3Builder:
                 for key, value in camera_timestamps_ns.items()
             },
             "camera_skew_ms": round(float(camera_skew_ms), 3),
+            "trail_render_only": bool(registry.get("trail_render_only", True)),
+            "association_trajectory_policy": str(
+                registry.get(
+                    "association_trajectory_policy",
+                    "trajectory_is_secondary_evidence",
+                )
+            ),
             "observations": observations,
             "slots": slots,
             "gid_aliases": gid_aliases,

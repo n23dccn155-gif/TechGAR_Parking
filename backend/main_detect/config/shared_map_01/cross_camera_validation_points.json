@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "description": "Independent paired points excluded from homography fitting",
+  "pairs": [
+    {
+      "label": "V1",
+      "cam1": [
+        494,
+        69
+      ],
+      "cam2": [
+        809,
+        176
+      ]
+    },
+    {
+      "label": "V2",
+      "cam1": [
+        622,
+        167
+      ],
+      "cam2": [
+        668,
+        76
+      ]
+    },
+    {
+      "label": "V3",
+      "cam1": [
+        791,
+        107
+      ],
+      "cam2": [
+        498,
+        140
+      ]
+    }
+  ]
+}

@@ -136,6 +136,21 @@ def test_repeated_episode_is_not_applied_again(monkeypatch, rig):
     assert sm.get_session(sid)["state"] == "PARKED"
 
 
+def test_episode_transition_revision_advances_even_on_same_frame(rig):
+    gate, sid = rig
+    sm.select_spot(sid, "D07")
+    gate.process_snapshot(snapshot(10, [dict(episode(), revision=1)]))
+    assert sm.get_session(sid)["parkedSpotId"] == "D06"
+    sm.select_spot(sid, "D08")
+    gate.process_snapshot(snapshot(10, [dict(episode("departing"), revision=2)]))
+    assert sm.get_session(sid)["actualParkedSpotId"] is None
+    gate.process_snapshot(snapshot(10, [dict(episode(), revision=3)]))
+    assert sm.get_session(sid)["actualParkedSpotId"] == "D06"
+    assert sm.get_session(sid)["state"] == "RELOCATING"
+    gate.process_snapshot(snapshot(10, [dict(episode("departing"), revision=2)]))
+    assert sm.get_session(sid)["actualParkedSpotId"] == "D06"
+
+
 def test_live_motion_does_not_fsync_or_conflict_with_user_actions(monkeypatch, rig):
     gate, sid = rig
     initial = sm.get_session(sid)

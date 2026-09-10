@@ -48,6 +48,8 @@ def build_runtime_snapshot(
     camera_skew_ms: float,
     source_mode: str,
     parking_episodes: Any = None,
+    pending_parking_confirmations: Any = None,
+    parking_pipeline: Any = None,
     applied_monotonic_ns: int | None = None,
 ) -> dict[str, Any]:
     """Normalize TechGAR internals without changing tracking decisions."""
@@ -131,6 +133,8 @@ def build_runtime_snapshot(
         "coordinate_space": {
             "unit": registry.get("world_unit", world.get("unit", "source_video_pixel")),
             "bounds": world.get("bounds") or world.get("full_view_bounds"),
+            "calibration_id": calibration.get("calibration_id"),
+            "calibration_status": calibration.get("calibration_status", "legacy_unverified"),
         },
         "camera_skew_ms": round(float(camera_skew_ms), 3),
         "cameras": cameras,
@@ -140,6 +144,15 @@ def build_runtime_snapshot(
         "pending_handoffs": registry.get("pending_handoffs", []),
         # Schema v2: authoritative parking episodes from the binder.
         "parking_episodes": episodes,
+        # Provisional evidence is diagnostic only. Consumers must wait for a
+        # parking episode before declaring success.
+        "pending_parking_confirmations": [
+            dict(item) for item in (pending_parking_confirmations or [])
+        ],
+        "parking_pipeline": {
+            str(camera_id): dict(status)
+            for camera_id, status in (parking_pipeline or {}).items()
+        },
         # Durable alias state lets consumers recover even if they missed the
         # short rolling event list containing ``global_id_merged``.
         "retired_global_ids": registry.get("retired_global_ids", {}),

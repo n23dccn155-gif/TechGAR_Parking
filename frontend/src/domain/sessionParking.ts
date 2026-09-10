@@ -1,11 +1,12 @@
 import type { VehicleSession, VehicleSessionState } from "./session";
 import { buildSessionCompletionKey } from "./session";
-import type { RuntimeSlot, RuntimeVehicle, ParkingEpisode } from "./runtime";
+import type { RuntimeSlot, RuntimeVehicle, ParkingEpisode, PendingParkingConfirmation, ParkingPipelineStatus, RuntimeCameraId } from "./runtime";
 
 export type SessionParkingDecision =
   | { kind: "guiding"; targetSpotId: string }
   | { kind: "identity_pending"; spotId: string; reason: "no_vehicle_id" | "other_unconfirmed" }
   | { kind: "parking_confirmation_pending"; actualSpotId: string }
+  | { kind: "parking_processing_delayed"; actualSpotId: string | null; reason: string }
   | { kind: "parked"; actualSpotId: string; completionKey: string }
   | { kind: "target_occupied_by_other"; spotId: string; otherVehicleId: number }
   | { kind: "runtime_unavailable"; targetSpotId: string | null; reason: string }
@@ -19,6 +20,8 @@ export interface ResolveInput {
   slots: RuntimeSlot[];
   dwellThresholdMs: number;
   episodes?: ParkingEpisode[];
+  pendingConfirmations?: PendingParkingConfirmation[];
+  parkingPipeline?: Partial<Record<RuntimeCameraId, ParkingPipelineStatus>>;
 }
 
 export function resolveSessionParking(input: ResolveInput): SessionParkingDecision {
@@ -51,6 +54,23 @@ export function resolveSessionParking(input: ResolveInput): SessionParkingDecisi
   }
   if (ownSpots.length === 1) {
     return { kind: "parking_confirmation_pending", actualSpotId: ownSpots[0]! };
+  }
+
+  const ownPending = input.pendingConfirmations
+    ?.filter((claim) => claim.global_id === ownGid && claim.state !== "collecting")
+    .sort((left, right) => right.max_overlap - left.max_overlap)[0];
+  if (ownPending) {
+    const degraded = Object.values(input.parkingPipeline ?? {}).some(
+      (status) => status?.state === "degraded",
+    );
+    if (degraded || ownPending.age_ms >= 5_000 || ownPending.state === "insufficient_evidence") {
+      return {
+        kind: "parking_processing_delayed",
+        actualSpotId: ownPending.slot_id,
+        reason: "Chưa đủ dữ liệu xác nhận chủ ô. Hệ thống đang xử lý chậm hoặc mất bằng chứng; chưa thể kết luận đỗ thành công.",
+      };
+    }
+    return { kind: "parking_confirmation_pending", actualSpotId: ownPending.slot_id };
   }
 
   if (!targetSpotId) {

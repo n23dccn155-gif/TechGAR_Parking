@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import csv
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
@@ -24,6 +25,8 @@ import numpy as np
 
 MANIFEST_NAME = "capture_manifest.json"
 POINTS_NAME = "calibration_points.csv"
+VALIDATION_POINTS_NAME = "cross_camera_validation_points.json"
+PAIRED_POINTS_NAME = "paired_ground_points.json"
 CAMERA_IDS = ("cam1", "cam2")
 CSV_FIELDS = (
     "camera",
@@ -64,6 +67,14 @@ def _write_json(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _ensure_writable(path: Path, overwrite: bool) -> None:
     if path.exists() and not overwrite:
         raise FileExistsError(
@@ -71,8 +82,10 @@ def _ensure_writable(path: Path, overwrite: bool) -> None:
         )
 
 
-def capture_frame(source: str, warmup_frames: int = 15) -> np.ndarray:
-    """Read a recent frame instead of the first buffered network frame."""
+def capture_frame_with_metadata(
+    source: str, warmup_frames: int = 15
+) -> Tuple[np.ndarray, dict]:
+    """Read one fixed frame and retain enough provenance to reproduce it."""
     capture = cv2.VideoCapture(source)
     if hasattr(cv2, "CAP_PROP_OPEN_TIMEOUT_MSEC"):
         capture.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 8000)
@@ -88,9 +101,19 @@ def capture_frame(source: str, warmup_frames: int = 15) -> np.ndarray:
                 latest = frame
         if latest is None:
             raise RuntimeError(f"Khong doc duoc frame: {source}")
-        return latest
+        metadata = {
+            "capture_position_frame": int(round(capture.get(cv2.CAP_PROP_POS_FRAMES))),
+            "capture_position_ms": round(float(capture.get(cv2.CAP_PROP_POS_MSEC)), 3),
+            "source_fps": round(float(capture.get(cv2.CAP_PROP_FPS)), 6),
+        }
+        return latest, metadata
     finally:
         capture.release()
+
+
+def capture_frame(source: str, warmup_frames: int = 15) -> np.ndarray:
+    """Backward-compatible frame-only wrapper."""
+    return capture_frame_with_metadata(source, warmup_frames)[0]
 
 
 def _parse_labels(value: str) -> List[str]:
@@ -286,6 +309,206 @@ def load_measurements(path: Path) -> Dict[str, List[dict]]:
     return grouped
 
 
+def _load_pixel_pair(item: dict, index: int, role: str) -> dict:
+    label = str(item.get("label", f"{role}{index}")).strip()
+    try:
+        cam1 = np.asarray(item["cam1"], dtype=np.float64).reshape(2)
+        cam2 = np.asarray(item["cam2"], dtype=np.float64).reshape(2)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Cap diem {label} phai co cam1/cam2=[x,y]"
+        ) from exc
+    if not np.isfinite(cam1).all() or not np.isfinite(cam2).all():
+        raise ValueError(f"Cap diem {label} co toa do khong hop le")
+    return {"label": label, "role": role, "cam1": cam1, "cam2": cam2}
+
+
+def load_paired_ground_points(path: Path) -> Tuple[List[dict], List[dict], dict]:
+    """Load distributed fitting points and disjoint held-out validation points."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    fit = [
+        _load_pixel_pair(item, index, "fit")
+        for index, item in enumerate(payload.get("fit_pairs", []), start=1)
+    ]
+    validation = [
+        _load_pixel_pair(item, index, "validation")
+        for index, item in enumerate(payload.get("validation_pairs", []), start=1)
+    ]
+    line_mode = payload.get("mode") == "rectangle_line_v1"
+    if line_mode and (len(fit) != 8 or validation):
+        raise ValueError("Rectangle-line can dung 8 cap A-D,V1-V4; V la diem fit, khong phai validation")
+    if not line_mode and len(fit) < 12:
+        raise ValueError("Can A-D va it nhat 8 cap P de fit calibration (tong >= 12)")
+    if not line_mode and len(validation) < 6:
+        raise ValueError("Can it nhat 6 cap V doc lap de kiem chung trai/giua/phai")
+    fit_labels = {pair["label"] for pair in fit}
+    validation_labels = {pair["label"] for pair in validation}
+    if len(fit_labels) != len(fit) or len(validation_labels) != len(validation):
+        raise ValueError("Nhan cap diem calibration bi trung")
+    if fit_labels & validation_labels:
+        raise ValueError("Diem fit va diem kiem chung phai tach biet")
+    if not {"A", "B", "C", "D"}.issubset(fit_labels):
+        raise ValueError("Fit pairs phai chua du A, B, C, D")
+    if line_mode and fit_labels != {"A", "B", "C", "D", "V1", "V2", "V3", "V4"}:
+        raise ValueError("Nhan rectangle-line phai la A,B,C,D,V1,V2,V3,V4")
+    return fit, validation, payload
+
+
+def _pixel_normalizer(image_size: Tuple[int, int], target_width: float = 1280.0) -> np.ndarray:
+    width, height = (float(image_size[0]), float(image_size[1]))
+    if width <= 0 or height <= 0:
+        raise ValueError("Kich thuoc anh calibration khong hop le")
+    scale = float(target_width) / width
+    return np.asarray(((scale, 0.0, 0.0), (0.0, scale, 0.0), (0.0, 0.0, 1.0)))
+
+
+def _project(points: np.ndarray, homography: np.ndarray) -> np.ndarray:
+    return cv2.perspectiveTransform(
+        np.asarray(points, dtype=np.float32).reshape(-1, 1, 2),
+        np.asarray(homography, dtype=np.float64),
+    ).reshape(-1, 2).astype(np.float64)
+
+
+def _diagnose_world_mapping(measurements: Sequence[dict], homography: np.ndarray) -> dict:
+    pixels = np.asarray([row["pixel"] for row in measurements], dtype=np.float64)
+    expected = np.asarray([row["world"] for row in measurements], dtype=np.float64)
+    projected = _project(pixels, homography)
+    errors = np.linalg.norm(projected - expected, axis=1)
+    return {
+        "point_count": len(measurements),
+        "inlier_count": len(measurements),
+        "rms_error_cm": float(np.sqrt(np.mean(np.square(errors)))),
+        "max_error_cm": float(errors.max()),
+        "points": [
+            {
+                "label": row["label"],
+                "pixel": [round(float(v), 3) for v in row["pixel"]],
+                "world_cm": [round(float(v), 3) for v in row["world"]],
+                "projected_world_cm": [round(float(v), 3) for v in point],
+                "error_cm": round(float(error), 3),
+                "inlier": True,
+            }
+            for row, point, error in zip(measurements, projected, errors)
+        ],
+    }
+
+
+def compute_distributed_shared_homographies(
+    measurements: Dict[str, Sequence[dict]],
+    fit_pairs: Sequence[dict],
+    image_sizes: Dict[str, Tuple[int, int]],
+    ransac_threshold_px: float = 3.0,
+    min_inliers: int = 8,
+    min_inlier_ratio: float = 0.75,
+    *,
+    use_all_pairs: bool = False,
+) -> Tuple[Dict[str, np.ndarray], Dict[str, dict], dict]:
+    """Fit cam2->cam1 from distributed pairs, then attach the AB/AD cm frame."""
+    if len(fit_pairs) < 4:
+        raise ValueError("Can it nhat 4 cap diem de tinh phep chieu hai camera")
+    normalizers = {
+        camera_id: _pixel_normalizer(image_sizes[camera_id])
+        for camera_id in CAMERA_IDS
+    }
+    cam1 = np.asarray([pair["cam1"] for pair in fit_pairs], dtype=np.float64)
+    cam2 = np.asarray([pair["cam2"] for pair in fit_pairs], dtype=np.float64)
+    cam1_norm = _project(cam1, normalizers["cam1"])
+    cam2_norm = _project(cam2, normalizers["cam2"])
+    relative_norm, mask = cv2.findHomography(
+        cam2_norm.astype(np.float32),
+        cam1_norm.astype(np.float32),
+        method=0 if use_all_pairs else cv2.RANSAC,
+        ransacReprojThreshold=float(ransac_threshold_px),
+        maxIters=5000,
+        confidence=0.999,
+    )
+    if relative_norm is None or mask is None:
+        raise ValueError("Khong uoc luong duoc quan he cam2 -> cam1 tu cac cap diem")
+    inliers = np.ones(len(fit_pairs), dtype=bool) if use_all_pairs else mask.reshape(-1).astype(bool)
+    required = max(int(min_inliers), int(np.ceil(len(fit_pairs) * min_inlier_ratio)))
+    if int(inliers.sum()) < required:
+        rejected = [pair["label"] for pair, accepted in zip(fit_pairs, inliers) if not accepted]
+        raise ValueError(
+            f"distributed_fit_insufficient: chi {int(inliers.sum())}/{len(fit_pairs)} "
+            f"cap diem nhat quan, can >= {required}; bi loai={rejected}"
+        )
+    relative_norm, _ = cv2.findHomography(
+        cam2_norm[inliers].astype(np.float32),
+        cam1_norm[inliers].astype(np.float32),
+        method=0,
+    )
+    if relative_norm is None or abs(float(np.linalg.det(relative_norm))) < 1e-12:
+        raise ValueError("Phep chieu cam2 -> cam1 bi suy bien")
+    relative = (
+        np.linalg.inv(normalizers["cam1"])
+        @ relative_norm
+        @ normalizers["cam2"]
+    )
+    relative /= relative[2, 2]
+
+    world_by_label = {
+        row["label"]: np.asarray(row["world"], dtype=np.float64)
+        for row in measurements["cam1"]
+    }
+    fit_by_label = {pair["label"]: pair for pair in fit_pairs}
+    metric_pixels = []
+    metric_world = []
+    for label in ("A", "B", "C", "D"):
+        if label not in fit_by_label or label not in world_by_label:
+            raise ValueError(f"Thieu diem chuan {label} de gan he toa do cm")
+        pair = fit_by_label[label]
+        metric_pixels.append(pair["cam1"])
+        metric_pixels.append(_project(np.asarray([pair["cam2"]]), relative)[0])
+        metric_world.extend((world_by_label[label], world_by_label[label]))
+    metric, _ = cv2.findHomography(
+        np.asarray(metric_pixels, dtype=np.float32),
+        np.asarray(metric_world, dtype=np.float32),
+        method=0,
+    )
+    if metric is None or abs(float(np.linalg.det(metric))) < 1e-12:
+        raise ValueError("Khong gan duoc he toa do centimet tu AB/AD")
+    transforms = {
+        "cam1": np.asarray(metric, dtype=np.float64),
+        "cam2": np.asarray(metric @ relative, dtype=np.float64),
+    }
+    for value in transforms.values():
+        value /= value[2, 2]
+
+    inverse_relative = np.linalg.inv(relative)
+    forward_errors = np.linalg.norm(
+        _project(cam2, relative) - cam1, axis=1
+    ) * (1280.0 / image_sizes["cam1"][0])
+    reverse_errors = np.linalg.norm(
+        _project(cam1, inverse_relative) - cam2, axis=1
+    ) * (1280.0 / image_sizes["cam2"][0])
+    symmetric_errors = (forward_errors + reverse_errors) * 0.5
+    relative_diagnostic = {
+        "method": "all_eight_pairs_least_squares" if use_all_pairs else "distributed_cam2_to_cam1_ransac",
+        "point_count": len(fit_pairs),
+        "inlier_count": int(inliers.sum()),
+        "inlier_ratio": round(float(inliers.mean()), 6),
+        "ransac_threshold_px_at_1280": float(ransac_threshold_px),
+        "rms_symmetric_pixel_error": round(
+            float(np.sqrt(np.mean(np.square(symmetric_errors[inliers])))), 3
+        ),
+        "max_symmetric_pixel_error": round(float(symmetric_errors[inliers].max()), 3),
+        "points": [
+            {
+                "label": pair["label"],
+                "inlier": bool(accepted),
+                "symmetric_pixel_error": round(float(error), 3),
+            }
+            for pair, accepted, error in zip(fit_pairs, inliers, symmetric_errors)
+        ],
+        "cam2_to_cam1": relative.tolist(),
+    }
+    diagnostics = {
+        camera_id: _diagnose_world_mapping(measurements[camera_id], transforms[camera_id])
+        for camera_id in CAMERA_IDS
+    }
+    return transforms, diagnostics, relative_diagnostic
+
+
 def compute_homography(
     measurements: Sequence[dict],
     ransac_threshold_cm: float = 2.0,
@@ -346,6 +569,171 @@ def transform_polygon(points: Iterable[Sequence[float]], homography: np.ndarray)
     return transformed.astype(np.float32)
 
 
+def load_cross_camera_validation(path: Path) -> List[dict]:
+    """Load paired pixels that were deliberately excluded from homography fitting."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    pairs = payload.get("pairs", [])
+    result = []
+    for index, pair in enumerate(pairs, start=1):
+        label = str(pair.get("label", f"V{index}"))
+        try:
+            cam1 = np.asarray(pair["cam1"], dtype=np.float64).reshape(2)
+            cam2 = np.asarray(pair["cam2"], dtype=np.float64).reshape(2)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Validation {label} phai co cam1/cam2=[x,y]") from exc
+        if not np.isfinite(cam1).all() or not np.isfinite(cam2).all():
+            raise ValueError(f"Validation {label} co toa do khong hop le")
+        result.append({"label": label, "cam1": cam1, "cam2": cam2})
+    if len(result) < 3:
+        raise ValueError("Can it nhat 3 cap diem kiem chung doc lap V1-V3")
+    return result
+
+
+def cross_camera_validation_diagnostics(
+    pairs: Sequence[dict],
+    transforms: Dict[str, np.ndarray],
+    image_sizes: Dict[str, Tuple[int, int]] | None = None,
+) -> dict:
+    """Measure how far the same unused ground points land in shared-world space."""
+    errors = []
+    pixel_errors = []
+    details = []
+    relative_2_to_1 = np.linalg.inv(transforms["cam1"]) @ transforms["cam2"]
+    relative_1_to_2 = np.linalg.inv(transforms["cam2"]) @ transforms["cam1"]
+    cam1_x = np.asarray([float(pair["cam1"][0]) for pair in pairs])
+    x_min, x_max = float(cam1_x.min()), float(cam1_x.max())
+    x_span = max(x_max - x_min, 1.0)
+    for pair in pairs:
+        projected = {}
+        for camera_id in CAMERA_IDS:
+            point = np.asarray(pair[camera_id], dtype=np.float32).reshape(1, 1, 2)
+            projected[camera_id] = cv2.perspectiveTransform(
+                point, transforms[camera_id].astype(np.float64)
+            ).reshape(2)
+        error = float(np.linalg.norm(projected["cam1"] - projected["cam2"]))
+        predicted_cam1 = _project(np.asarray([pair["cam2"]]), relative_2_to_1)[0]
+        predicted_cam2 = _project(np.asarray([pair["cam1"]]), relative_1_to_2)[0]
+        scale1 = 1280.0 / float((image_sizes or {}).get("cam1", (1280, 1))[0])
+        scale2 = 1280.0 / float((image_sizes or {}).get("cam2", (1280, 1))[0])
+        pixel_error = 0.5 * (
+            float(np.linalg.norm(predicted_cam1 - pair["cam1"])) * scale1
+            + float(np.linalg.norm(predicted_cam2 - pair["cam2"])) * scale2
+        )
+        relative_x = (float(pair["cam1"][0]) - x_min) / x_span
+        zone = "left" if relative_x < 1.0 / 3.0 else "right" if relative_x > 2.0 / 3.0 else "center"
+        errors.append(error)
+        pixel_errors.append(pixel_error)
+        details.append({
+            "label": pair["label"],
+            "zone": zone,
+            "cam1_pixel": [round(float(value), 3) for value in pair["cam1"]],
+            "cam2_pixel": [round(float(value), 3) for value in pair["cam2"]],
+            "cam1_world_cm": [round(float(value), 3) for value in projected["cam1"]],
+            "cam2_world_cm": [round(float(value), 3) for value in projected["cam2"]],
+            "cross_camera_error_cm": round(error, 3),
+            "symmetric_pixel_error": round(pixel_error, 3),
+        })
+    values = np.asarray(errors, dtype=np.float64)
+    pixels = np.asarray(pixel_errors, dtype=np.float64)
+    zones = {}
+    total_y_span = {
+        camera_id: max(
+            float(max(pair[camera_id][1] for pair in pairs) - min(pair[camera_id][1] for pair in pairs)),
+            1.0,
+        )
+        for camera_id in CAMERA_IDS
+    }
+    for zone in ("left", "center", "right"):
+        selected = [item for item in details if item["zone"] == zone]
+        zone_cm = [item["cross_camera_error_cm"] for item in selected]
+        zone_px = [item["symmetric_pixel_error"] for item in selected]
+        zones[zone] = {
+            "point_count": len(selected),
+            "max_error_cm": round(float(max(zone_cm)), 3) if zone_cm else None,
+            "max_pixel_error": round(float(max(zone_px)), 3) if zone_px else None,
+            "near_far_spread_ratio": {
+                camera_id: round(
+                    (
+                        max(item[f"{camera_id}_pixel"][1] for item in selected)
+                        - min(item[f"{camera_id}_pixel"][1] for item in selected)
+                    ) / total_y_span[camera_id],
+                    6,
+                ) if len(selected) >= 2 else 0.0
+                for camera_id in CAMERA_IDS
+            },
+        }
+    return {
+        "point_count": len(details),
+        "mean_error_cm": round(float(values.mean()), 3),
+        "p95_error_cm": round(float(np.percentile(values, 95)), 3),
+        "max_error_cm": round(float(values.max()), 3),
+        "p95_symmetric_pixel_error": round(float(np.percentile(pixels, 95)), 3),
+        "max_symmetric_pixel_error": round(float(pixels.max()), 3),
+        "zones": zones,
+        "points": details,
+    }
+
+
+def cross_camera_validation_spread(
+    pairs: Sequence[dict], images: Dict[str, np.ndarray]
+) -> dict:
+    """Report whether validation points cover area, not merely one image row."""
+    ratios = {}
+    for camera_id in CAMERA_IDS:
+        points = np.asarray([pair[camera_id] for pair in pairs], dtype=np.float32)
+        hull_area = abs(float(cv2.contourArea(cv2.convexHull(points))))
+        image = images[camera_id]
+        ratios[camera_id] = round(
+            hull_area / max(float(image.shape[0] * image.shape[1]), 1.0), 6
+        )
+    return {
+        "hull_area_ratio_by_camera": ratios,
+        "min_hull_area_ratio": min(ratios.values()),
+    }
+
+
+def distributed_fit_coverage(
+    fit_pairs: Sequence[dict],
+    validation_pairs: Sequence[dict],
+    inlier_labels: Sequence[str],
+) -> dict:
+    """Measure fitted spatial support against all user-confirmed common ground."""
+    accepted = set(inlier_labels)
+    ratios = {}
+    for camera_id in CAMERA_IDS:
+        support = np.asarray(
+            [pair[camera_id] for pair in fit_pairs if pair["label"] in accepted],
+            dtype=np.float32,
+        )
+        declared = np.asarray(
+            [pair[camera_id] for pair in [*fit_pairs, *validation_pairs]],
+            dtype=np.float32,
+        )
+        if len(support) < 3 or len(declared) < 3:
+            ratios[camera_id] = 0.0
+            continue
+        support_area = abs(float(cv2.contourArea(cv2.convexHull(support))))
+        declared_area = abs(float(cv2.contourArea(cv2.convexHull(declared))))
+        ratios[camera_id] = round(min(1.0, support_area / max(declared_area, 1e-6)), 6)
+    return {
+        "definition": "inlier_fit_hull / all_confirmed_common_ground_hull",
+        "ratio_by_camera": ratios,
+        "minimum_ratio": min(ratios.values()),
+    }
+
+
+def calibration_extrapolation_ratio(
+    measurements: Sequence[dict], coverage_pixels: np.ndarray
+) -> float:
+    """Return active-ROI area divided by the measured four-point area."""
+    calibration_polygon = np.asarray(
+        [row["pixel"] for row in measurements], dtype=np.float32
+    )
+    calibration_area = abs(float(cv2.contourArea(cv2.convexHull(calibration_polygon))))
+    coverage_area = abs(float(cv2.contourArea(np.asarray(coverage_pixels, np.float32))))
+    return coverage_area / max(calibration_area, 1e-6)
+
+
 def load_coverage_pixels(path: Path | None, image_size: Tuple[int, int]) -> np.ndarray:
     width, height = image_size
     if path is None:
@@ -364,6 +752,22 @@ def load_coverage_pixels(path: Path | None, image_size: Tuple[int, int]) -> np.n
     polygon = np.asarray(points, dtype=np.float32)
     if polygon.ndim != 2 or polygon.shape[0] < 3 or polygon.shape[1] != 2:
         raise ValueError(f"Coverage polygon khong hop le: {path}")
+    source_size = data.get("image_size")
+    if source_size is None and data.get("imageWidth") and data.get("imageHeight"):
+        source_size = [data["imageWidth"], data["imageHeight"]]
+    if source_size is not None:
+        source_width, source_height = float(source_size[0]), float(source_size[1])
+        if source_width <= 0 or source_height <= 0:
+            raise ValueError(f"Coverage image_size khong hop le: {path}")
+        source_aspect = source_width / source_height
+        target_aspect = float(width) / float(height)
+        if abs(source_aspect - target_aspect) > 0.005:
+            raise ValueError(
+                f"Coverage {path} co ti le {source_width:g}x{source_height:g}, "
+                f"khac anh calibration {width}x{height}; khong tu scale crop/aspect khac"
+            )
+        polygon[:, 0] *= float(width) / source_width
+        polygon[:, 1] *= float(height) / source_height
     return polygon
 
 
@@ -556,7 +960,7 @@ def draw_full_view_preview(
     cv2.rectangle(canvas, (15, 12), (890, 94), (255, 255, 255), -1)
     cv2.putText(
         canvas,
-        "FULL CAMERA VIEW - 50/50 blend in shared world map",
+        "DIAGNOSTIC FULL FRAME - not the runtime tracking area",
         (30, 40),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.68,
@@ -565,7 +969,7 @@ def draw_full_view_preview(
     )
     cv2.putText(
         canvas,
-        "Check painted ground lines: aligned = H1/H2 good; moving cars may ghost because captures are sequential",
+        "Walls/table may warp: judge painted ground lines near calibration points only",
         (30, 74),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.53,
@@ -593,6 +997,8 @@ def draw_active_roi_preview(
     parking_slots: Dict[str, List[dict]],
     output_path: Path,
     bounds: Tuple[float, float, float, float],
+    validation_diagnostic: dict | None = None,
+    composite_mode: str = "blend",
 ) -> None:
     """Warp captured images clipped by active ROI, then overlay parking slots."""
     canvas_size = (1400, 900)
@@ -632,10 +1038,16 @@ def draw_active_roi_preview(
     both = first_valid & second_valid
     canvas[only_first] = warped_images["cam1"][only_first]
     canvas[only_second] = warped_images["cam2"][only_second]
-    blend = cv2.addWeighted(
-        warped_images["cam1"], 0.5, warped_images["cam2"], 0.5, 0
-    )
-    canvas[both] = blend[both]
+    if composite_mode == "checkerboard":
+        yy, xx = np.indices(first_valid.shape)
+        choose_first = ((xx // 48 + yy // 48) % 2) == 0
+        canvas[both & choose_first] = warped_images["cam1"][both & choose_first]
+        canvas[both & ~choose_first] = warped_images["cam2"][both & ~choose_first]
+    else:
+        blend = cv2.addWeighted(
+            warped_images["cam1"], 0.5, warped_images["cam2"], 0.5, 0
+        )
+        canvas[both] = blend[both]
 
     colors = {"cam1": (20, 20, 20), "cam2": (20, 20, 235)}
     # Faint complete-frame outlines make the difference from active ROI clear.
@@ -676,25 +1088,66 @@ def draw_active_roi_preview(
                 1,
             )
 
-    cv2.rectangle(canvas, (15, 12), (930, 94), (255, 255, 255), -1)
+    cv2.rectangle(canvas, (15, 12), (1040, 126), (255, 255, 255), -1)
     cv2.putText(
         canvas,
-        "ACTIVE ROI + PARKING SLOTS - used by tracking",
+        f"ACTIVE ROI + PARKING SLOTS - {composite_mode}",
         (30, 40),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.68,
         (30, 30, 30),
         2,
     )
+    line_fit_preview = validation_diagnostic is not None and validation_diagnostic.get("evidence_kind") == "training_fit_not_independent_validation"
     cv2.putText(
         canvas,
-        "Black=cam1 ROI | Red=cam2 ROI | Purple=operational overlap | Gray=full frame",
+        ("Black=cam1 ROI | Red=cam2 ROI | Purple=fitted ground support (runtime) | Gray=full frame"
+         if line_fit_preview else "Black=cam1 ROI | Red=cam2 ROI | Purple=operational overlap | Gray=full frame"),
         (30, 74),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.51,
         (70, 70, 70),
         1,
     )
+    if validation_diagnostic is not None:
+        for item in validation_diagnostic.get("points", []):
+            first = _world_to_canvas(
+                item["cam1_world_cm"], bounds, canvas_size, padding
+            )
+            second = _world_to_canvas(
+                item["cam2_world_cm"], bounds, canvas_size, padding
+            )
+            cv2.arrowedLine(canvas, first, second, (0, 140, 255), 2, cv2.LINE_AA, tipLength=0.25)
+            cv2.putText(
+                canvas,
+                f"{item['label']}:{item['cross_camera_error_cm']:.2f}cm",
+                (first[0] + 5, first[1] - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.38,
+                (0, 90, 220),
+                1,
+                cv2.LINE_AA,
+            )
+        passed = validation_diagnostic.get("status") == "passed"
+        is_fit = validation_diagnostic.get("evidence_kind") == "training_fit_not_independent_validation"
+        status_text = "PASS" if passed else "DRAFT - MODEL INADEQUATE"
+        if is_fit and validation_diagnostic.get("status") == "fit_ready":
+            status_text = "FIT READY - REVIEW REQUIRED"
+        status_color = (20, 145, 20) if passed else (0, 110, 200)
+        evidence_name = "8 fitted pairs, NOT independent" if is_fit else "independent cross-camera"
+        cv2.putText(
+            canvas,
+            (
+                f"CALIBRATION {status_text} - {evidence_name} "
+                f"p95={validation_diagnostic['p95_error_cm']:.3f} cm"
+            ),
+            (30, 108),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.56,
+            status_color,
+            2,
+            cv2.LINE_AA,
+        )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if not write_image(output_path, canvas):
         raise RuntimeError(f"Khong ghi duoc active-ROI preview: {output_path}")
@@ -818,28 +1271,106 @@ def build_command(args: argparse.Namespace) -> None:
         camera_id: path.resolve() if path else None
         for camera_id, path in raw_slot_paths.items()
     }
+    image_sizes = {}
     for camera_id in CAMERA_IDS:
-        homography, diagnostic = compute_homography(
-            measurements[camera_id], args.ransac_threshold_cm
-        )
-        transforms[camera_id] = homography
-        diagnostics[camera_id] = diagnostic
         camera_manifest = manifest["cameras"][camera_id]
         image_size = (
             int(camera_manifest["width"]),
             int(camera_manifest["height"]),
         )
+        image_sizes[camera_id] = image_size
         image_path = workspace / camera_manifest["image"]
         image = read_image(image_path)
         if image is None:
             raise FileNotFoundError(f"Khong doc duoc anh capture: {image_path}")
+        if (image.shape[1], image.shape[0]) != image_size:
+            raise ValueError(
+                f"{camera_id}: manifest={image_size}, anh thuc="
+                f"{image.shape[1]}x{image.shape[0]}"
+            )
         images[camera_id] = image
+
+    paired_path = workspace / PAIRED_POINTS_NAME
+    relative_diagnostic = None
+    fit_pairs = []
+    validation_pairs = []
+    paired_payload = None
+    fit_coverage = None
+    blocking_error = None
+    line_mode = False
+    line_report = None
+    if paired_path.is_file():
+        fit_pairs, validation_pairs, paired_payload = load_paired_ground_points(paired_path)
+        line_mode = paired_payload.get("mode") == "rectangle_line_v1"
+        if line_mode:
+            from tools.rectangle_line_calibration import compute_rectangle_line_homographies, fit_gate
+            if paired_payload.get("calibration_id") != manifest.get("calibration_id"):
+                raise ValueError("calibration_id cua diem va anh capture khong trung nhau")
+            transforms, diagnostics, relative_diagnostic, line_report = compute_rectangle_line_homographies(
+                measurements, fit_pairs, image_sizes,
+            )
+            limit = float(getattr(args, "max_cross_camera_validation_error_cm", 2.0))
+            reasons = fit_gate(line_report, diagnostics, limit)
+            line_report.update(status="model_inadequate" if reasons else "fit_ready",
+                               max_error_cm_limit=limit, rejection_reasons=reasons)
+            if reasons:
+                blocking_error = "rectangle_line_model_inadequate: " + "; ".join(reasons)
+            for item in line_report["points"]:
+                print(f"{item['label']}: truoc={item['before_symmetric_pixel_error']:.2f}px -> "
+                      f"sau={item['symmetric_pixel_error']:.2f}px; {item['cross_camera_error_cm']:.3f}cm")
+        else:
+            transforms, diagnostics, relative_diagnostic = compute_distributed_shared_homographies(
+                measurements,
+                fit_pairs,
+                image_sizes,
+                ransac_threshold_px=float(getattr(args, "ransac_threshold_px", 3.0)),
+                min_inliers=int(getattr(args, "minimum_fit_inliers", 8)),
+                min_inlier_ratio=float(getattr(args, "minimum_fit_inlier_ratio", 0.75)),
+            )
+        inlier_labels = [
+            item["label"]
+            for item in relative_diagnostic["points"]
+            if item["inlier"]
+        ]
+        fit_coverage = distributed_fit_coverage(
+            fit_pairs, validation_pairs, inlier_labels
+        )
+        minimum_coverage = float(getattr(args, "minimum_fit_coverage", 0.60))
+        if not line_mode and fit_coverage["minimum_ratio"] < minimum_coverage:
+            blocking_error = (
+                "distributed_fit_insufficient_coverage: fit chi phu "
+                f"{fit_coverage['minimum_ratio']:.1%} vung mat dat da xac nhan, "
+                f"can >= {minimum_coverage:.1%}. Hay bo sung diem P tai vung trai/xa; "
+                "ban nhap van duoc giu nguyen."
+            )
+    else:
+        for camera_id in CAMERA_IDS:
+            homography, diagnostic = compute_homography(
+                measurements[camera_id], args.ransac_threshold_cm
+            )
+            transforms[camera_id] = homography
+            diagnostics[camera_id] = diagnostic
+
+    for camera_id in CAMERA_IDS:
+        homography = transforms[camera_id]
+        diagnostic = diagnostics[camera_id]
+        image_size = image_sizes[camera_id]
         coverage_pixels = load_coverage_pixels(
             coverage_paths[camera_id],
             image_size,
         )
         coverage_pixels_by_camera[camera_id] = coverage_pixels
         coverages[camera_id] = transform_polygon(coverage_pixels, homography)
+        diagnostic["active_roi_to_calibration_area_ratio"] = round(
+            calibration_extrapolation_ratio(measurements[camera_id], coverage_pixels), 3
+        )
+        if diagnostic["active_roi_to_calibration_area_ratio"] > 8.0:
+            print(
+                f"Canh bao: {camera_id} ROI rong gap "
+                f"{diagnostic['active_roi_to_calibration_area_ratio']:.1f} lan tu giac 4 diem. "
+                "Map o xa 4 diem dang ngoai suy manh; nen dat hinh chuan lon hon "
+                "hoac them diem do phan bo quanh vung tracking."
+            )
         full_coverages[camera_id] = transform_polygon(
             full_frame_polygon(image_size), homography
         )
@@ -853,14 +1384,96 @@ def build_command(args: argparse.Namespace) -> None:
                 "--allow-high-error de chap nhan co chu y."
             )
 
+    validation_diagnostic = None
+    validation_path = workspace / VALIDATION_POINTS_NAME
+    if line_mode:
+        # V1-V4 are fitted observations. Never label them independent validation.
+        validation_diagnostic = line_report
+    elif validation_pairs:
+        validation_diagnostic = cross_camera_validation_diagnostics(
+            validation_pairs, transforms, image_sizes
+        )
+    elif validation_path.is_file():
+        validation_pairs = load_cross_camera_validation(validation_path)
+        validation_diagnostic = cross_camera_validation_diagnostics(
+            validation_pairs, transforms, image_sizes
+        )
+        validation_diagnostic.update(cross_camera_validation_spread(validation_pairs, images))
+
+    validation_status = "missing"
+    if line_mode:
+        validation_status = line_report["status"]
+    elif validation_diagnostic is not None:
+        zones = validation_diagnostic.get("zones", {})
+        minimum_zone_points = 2 if paired_path.is_file() else 1
+        missing_zones = [
+            name
+            for name in ("left", "center", "right")
+            if zones.get(name, {}).get("point_count", 0) < minimum_zone_points
+            or (
+                paired_path.is_file()
+                and min(zones.get(name, {}).get("near_far_spread_ratio", {}).values() or [0.0]) < 0.05
+            )
+        ]
+        max_validation_error_cm = float(
+            getattr(args, "max_cross_camera_validation_error_cm", 2.0)
+        )
+        max_validation_pixel_p95 = float(getattr(args, "max_validation_pixel_p95", 5.0))
+        max_validation_pixel_error = float(getattr(args, "max_validation_pixel_error", 8.0))
+        failed_zones = [
+            name for name, value in zones.items()
+            if value.get("max_error_cm") is not None
+            and value["max_error_cm"] > max_validation_error_cm
+        ]
+        validation_failed = (
+            bool(missing_zones)
+            or validation_diagnostic["p95_error_cm"] > max_validation_error_cm
+            or validation_diagnostic["p95_symmetric_pixel_error"] > max_validation_pixel_p95
+            or validation_diagnostic["max_symmetric_pixel_error"] > max_validation_pixel_error
+            or bool(failed_zones)
+        )
+        validation_status = "model_inadequate" if validation_failed else "passed"
+        validation_diagnostic["status"] = validation_status
+        validation_diagnostic["limits"] = {
+            "p95_error_cm": max_validation_error_cm,
+            "zone_max_error_cm": max_validation_error_cm,
+            "p95_symmetric_pixel_error": max_validation_pixel_p95,
+            "max_symmetric_pixel_error": max_validation_pixel_error,
+        }
+        if validation_failed and not bool(getattr(args, "allow_high_validation_error", False)):
+            details = ", ".join(
+                f"{item['label']}[{item['zone']}]={item['cross_camera_error_cm']:.2f}cm/"
+                f"{item['symmetric_pixel_error']:.1f}px"
+                for item in validation_diagnostic["points"]
+            )
+            blocking_error = blocking_error or (
+                "model_inadequate: phep bien doi hien tai chua khop cac diem "
+                f"kiem chung (p95={validation_diagnostic['p95_error_cm']:.2f}cm, "
+                f"pixel p95={validation_diagnostic['p95_symmetric_pixel_error']:.1f}px; "
+                f"thieu vung={missing_zones}, vuot nguong={failed_zones}; {details}). "
+                "Ket qua nay khong chung minh ban click sai. Hay xem mui ten sai so, "
+                "bo sung diem P tai vung lech hoac kiem tra meo ong kinh/mat phang. "
+                "Ban nhap duoc giu, calibration dang dung KHONG bi ghi de."
+            )
+    else:
+        print(
+            f"Canh bao: thieu diem V doc lap; khong the kich hoat calibration moi."
+        )
+        if paired_path.is_file():
+            blocking_error = blocking_error or "Thieu V1-V6 doc lap; ban nhap van duoc giu nguyen"
+    if blocking_error and validation_diagnostic is not None:
+        validation_diagnostic["status"] = "model_inadequate"
+
     output_path = args.output.resolve()
     _ensure_writable(output_path, args.overwrite)
     preview_path = workspace / "shared_map_preview.png"
     full_preview_path = workspace / "shared_map_full_view.png"
     active_preview_path = workspace / "shared_map_active_roi.png"
+    checkerboard_preview_path = workspace / "shared_map_checkerboard.png"
     _ensure_writable(preview_path, args.overwrite)
     _ensure_writable(full_preview_path, args.overwrite)
     _ensure_writable(active_preview_path, args.overwrite)
+    _ensure_writable(checkerboard_preview_path, args.overwrite)
 
     full_overlap_area, full_overlap = convex_intersection(
         full_coverages["cam1"], full_coverages["cam2"]
@@ -884,21 +1497,65 @@ def build_command(args: argparse.Namespace) -> None:
     overlap_area, overlap = convex_intersection(
         coverages["cam1"], coverages["cam2"]
     )
+    verified_coverages = {}
+    validated_overlap_area = 0.0
+    validated_overlap = np.empty((0, 2), dtype=np.float32)
+    if fit_pairs and (validation_pairs or line_mode):
+        for camera_id in CAMERA_IDS:
+            confirmed_pixels = np.asarray(
+                [pair[camera_id] for pair in [*fit_pairs, *validation_pairs]],
+                dtype=np.float32,
+            )
+            verified_pixels = cv2.convexHull(confirmed_pixels).reshape(-1, 2)
+            verified_coverages[camera_id] = transform_polygon(
+                verified_pixels, transforms[camera_id]
+            )
+        validated_overlap_area, validated_overlap = convex_intersection(
+            verified_coverages["cam1"], verified_coverages["cam2"]
+        )
+        if validated_overlap_area <= 0 or len(validated_overlap) < 3:
+            blocking_error = blocking_error or (
+                "Hai vung mat dat da chon khong giao nhau sau khi chieu; "
+                "kiem tra cac cap diem P/V."
+            )
+    else:
+        # Legacy calibration has no independently verified ground support.
+        validated_overlap = overlap.copy()
+        validated_overlap_area = float(overlap_area)
+    active_bounds_tuple = _preview_bounds([
+        *coverages.values(),
+        *([overlap] if len(overlap) >= 3 else []),
+    ])
+    preview_overlap = validated_overlap if line_mode else overlap
     draw_active_roi_preview(
         images,
         transforms,
         coverage_pixels_by_camera,
         coverages,
-        overlap,
+        preview_overlap,
         full_coverages,
         parking_slots,
         active_preview_path,
-        full_bounds_tuple,
+        active_bounds_tuple,
+        validation_diagnostic,
+    )
+    draw_active_roi_preview(
+        images,
+        transforms,
+        coverage_pixels_by_camera,
+        coverages,
+        preview_overlap,
+        full_coverages,
+        parking_slots,
+        checkerboard_preview_path,
+        active_bounds_tuple,
+        validation_diagnostic,
+        composite_mode="checkerboard",
     )
     if overlap_area <= 0 or len(overlap) < 3:
         print(
             "Canh bao: hai ROI quan ly khong giao nhau. Runtime van dung "
-            "full-view overlap va CrossCameraManager de ghep ID giua hai cam."
+            "vung mat dat da kiem chung neu calibration cung cap."
         )
 
     world_bounds = draw_map_preview(coverages, overlap, diagnostics, preview_path)
@@ -922,8 +1579,24 @@ def build_command(args: argparse.Namespace) -> None:
             "cross_camera_error_cm": round(distance, 3),
         })
 
+    calibration_id = str(manifest.get("calibration_id") or "").strip()
+    if not calibration_id:
+        identity_source = paired_path if paired_path.is_file() else workspace / POINTS_NAME
+        calibration_id = f"legacy-{_sha256_file(identity_source)[:16]}"
+    calibration_status = (
+        "draft_failed"
+        if blocking_error
+        else "fit_ready"
+        if line_mode
+        else "passed"
+        if paired_path.is_file() and validation_status == "passed"
+        else "legacy_unverified"
+    )
     payload = {
-        "schema_version": 4,
+        "schema_version": 5 if paired_path.is_file() else 4,
+        "calibration_id": calibration_id,
+        "calibration_status": calibration_status,
+        "calibration_algorithm": "rectangle_line_v1" if line_mode else "distributed-ground-v1",
         "world": {
             "unit": "cm",
             "coordinate_system": "measured_parking_ground_plane",
@@ -984,15 +1657,39 @@ def build_command(args: argparse.Namespace) -> None:
             ),
         },
         "calibration_quality": {
+            "status": calibration_status,
             "cameras": diagnostics,
+            "distributed_relative_fit": relative_diagnostic,
+            "distributed_fit_coverage": fit_coverage,
             "shared_point_checks": shared_point_checks,
+            "independent_cross_camera_validation": None if line_mode else validation_diagnostic,
+            "rectangle_line_fit": line_report,
             "overlap_area_cm2": round(overlap_area, 3),
             "active_roi_overlap_area_cm2": round(overlap_area, 3),
             "full_view_overlap_area_cm2": round(full_overlap_area, 3),
+            "validated_ground_overlap_area_cm2": round(validated_overlap_area, 3),
         },
         "source": {
             "workspace": str(workspace),
+            "capture_manifest": manifest,
             "measurements": POINTS_NAME,
+            "paired_ground_points": PAIRED_POINTS_NAME if paired_path.is_file() else None,
+            "independent_validation": (
+                None if line_mode else PAIRED_POINTS_NAME if paired_path.is_file()
+                else VALIDATION_POINTS_NAME if validation_diagnostic is not None else None
+            ),
+            "hashes": {
+                "measurements_sha256": _sha256_file(workspace / POINTS_NAME),
+                "paired_ground_points_sha256": (
+                    _sha256_file(paired_path) if paired_path.is_file() else None
+                ),
+                "capture_cam1_sha256": _sha256_file(
+                    workspace / manifest["cameras"]["cam1"]["image"]
+                ),
+                "capture_cam2_sha256": _sha256_file(
+                    workspace / manifest["cameras"]["cam2"]["image"]
+                ),
+            },
             "coverage_masks": {
                 camera_id: str(path) if path else None
                 for camera_id, path in coverage_paths.items()
@@ -1005,14 +1702,43 @@ def build_command(args: argparse.Namespace) -> None:
             "previews": {
                 "full_view": str(full_preview_path),
                 "active_roi": str(active_preview_path),
+                "checkerboard": str(checkerboard_preview_path),
                 "legacy_active_map": str(preview_path),
             },
         },
     }
+    if paired_path.is_file() and not line_mode:
+        payload["validated_ground_overlap_world_polygon"] = [
+            [round(float(x), 4), round(float(y), 4)] for x, y in validated_overlap
+        ]
+        payload["validated_ground_coverage_world"] = {
+            camera_id: [
+                [round(float(x), 4), round(float(y), 4)]
+                for x, y in verified_coverages[camera_id]
+            ]
+            for camera_id in CAMERA_IDS
+        }
+    if line_mode:
+        payload["fitted_ground_overlap_world_polygon"] = [
+            [round(float(x), 4), round(float(y), 4)] for x, y in validated_overlap
+        ]
+        payload["calibration_quality"]["fitted_ground_overlap_area_cm2"] = round(validated_overlap_area, 3)
+        payload["calibration_quality"].pop("validated_ground_overlap_area_cm2", None)
+        payload["calibration_quality"].pop("distributed_fit_coverage", None)
+    draft_path = workspace / "calibration_draft.json"
+    _write_json(draft_path, payload)
+    if blocking_error:
+        print(f"Da luu ban nhap va chan doan: {draft_path}")
+        raise ValueError(blocking_error)
+    if line_mode:
+        print(f"Da luu ban 8 diem: {draft_path}. CHUA thay calibration dang hoat dong.")
+        print("V1-V4 da tham gia fit; can xem vach son/checkerboard va xac nhan truoc khi kich hoat.")
+        return
     _write_json(output_path, payload)
     print(f"Da tao calibration: {output_path}")
     print(f"Da tao full-view preview: {full_preview_path}")
     print(f"Da tao active-ROI preview: {active_preview_path}")
+    print(f"Da tao checkerboard preview: {checkerboard_preview_path}")
     print(f"Da tao legacy map preview: {preview_path}")
     print(f"Full-view overlap: {full_overlap_area:.2f} cm^2")
     print(f"Active-ROI overlap: {overlap_area:.2f} cm^2")
@@ -1028,6 +1754,13 @@ def build_command(args: argparse.Namespace) -> None:
         print(
             f"Shared {item['label']}: cross-camera error "
             f"{item['cross_camera_error_cm']:.3f} cm"
+        )
+    if validation_diagnostic is not None:
+        print(
+            "Independent validation: "
+            f"mean={validation_diagnostic['mean_error_cm']:.3f} cm, "
+            f"p95={validation_diagnostic['p95_error_cm']:.3f} cm, "
+            f"max={validation_diagnostic['max_error_cm']:.3f} cm"
         )
 
 
@@ -1060,8 +1793,20 @@ def make_parser() -> argparse.ArgumentParser:
     build.add_argument("--slots-cam1", type=Path)
     build.add_argument("--slots-cam2", type=Path)
     build.add_argument("--ransac-threshold-cm", type=float, default=2.0)
+    build.add_argument("--ransac-threshold-px", type=float, default=3.0)
+    build.add_argument("--minimum-fit-inliers", type=int, default=8)
+    build.add_argument("--minimum-fit-inlier-ratio", type=float, default=0.75)
+    build.add_argument("--minimum-fit-coverage", type=float, default=0.60)
     build.add_argument("--max-rms-error-cm", type=float, default=3.0)
     build.add_argument("--allow-high-error", action="store_true")
+    build.add_argument(
+        "--max-cross-camera-validation-error-cm", type=float, default=2.0
+    )
+    build.add_argument("--max-validation-pixel-p95", type=float, default=5.0)
+    build.add_argument("--max-validation-pixel-error", type=float, default=8.0)
+    build.add_argument("--allow-high-validation-error", action="store_true")
+    build.add_argument("--min-validation-area-ratio", type=float, default=0.01)
+    build.add_argument("--allow-collinear-validation", action="store_true")
     build.add_argument("--handoff-match-distance-cm", type=float, default=15.0)
     build.add_argument("--handoff-prediction-radius-cm", type=float, default=25.0)
     build.add_argument("--dormant-match-distance-cm", type=float, default=35.0)

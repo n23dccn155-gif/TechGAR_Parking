@@ -17,6 +17,7 @@ export interface UseVehicleSessionResult {
   error: SessionError | null;
   ended: boolean;
   busyAction: "claim" | "select" | "exit" | null;
+  lastSyncedAt: number | null;
   claim: () => Promise<VehicleSession | null>;
   selectSpot: (spotId: string | null) => Promise<VehicleSession | null>;
   startExit: () => Promise<VehicleSession | null>;
@@ -38,6 +39,7 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
   const [error, setError] = useState<SessionError | null>(null);
   const [ended, setEnded] = useState(false);
   const [busyAction, setBusyAction] = useState<"claim" | "select" | "exit" | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
   const sessionRef = useRef<VehicleSession | null>(null);
   const activeSessionIdRef = useRef<string | null>(sessionId);
@@ -78,11 +80,15 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
         console.warn(`[useVehicleSession] conflicting revision from ${source}`);
         return { accepted: false, reason: "stale_revision" };
       }
+      setLastSyncedAt(Date.now());
+      setError(previous => previous?.action ? previous : null);
       return { accepted: true };
     }
     sessionRef.current = next;
     setSession(next);
     setEnded(false);
+    setError(null);
+    setLastSyncedAt(Date.now());
     return { accepted: true };
   }, []);
 
@@ -101,12 +107,29 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
     if (pendingGetRef.current) return pendingGetRef.current;
     const controller = new AbortController();
     pollControllerRef.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 2000);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 2000);
     const pending: Promise<VehicleSession | null> = backendApi.getSession(expectedId, controller.signal)
       .then((next) => commit(next, "GET", expectedId, lifecycle).accepted ? next : null)
       .catch((caught: unknown) => {
-        if (controller.signal.aborted) return null;
+        if (controller.signal.aborted && !timedOut) return null;
         if (caught instanceof backendApi.SessionNotFoundError) markDeleted(expectedId, lifecycle);
+        if (
+          lifecycle === lifecycleRef.current
+          && activeSessionIdRef.current === expectedId
+          && !deletedRef.current
+        ) {
+          setError({
+            message: timedOut
+              ? "Session API không phản hồi trong 2 giây"
+              : caught instanceof Error
+                ? caught.message
+                : "Không đồng bộ được phiên xe",
+          });
+        }
         return null;
       })
       .finally(() => {
@@ -185,6 +208,7 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
     setEnded(false);
     setError(null);
     setBusyAction(null);
+    setLastSyncedAt(null);
     if (!sessionId) return;
     void refresh();
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
@@ -194,5 +218,15 @@ export function useVehicleSession(sessionId: string | null): UseVehicleSessionRe
     };
   }, [sessionId, refresh]);
 
-  return { session, error, ended, busyAction, claim, selectSpot, startExit, refresh };
+  return {
+    session,
+    error,
+    ended,
+    busyAction,
+    lastSyncedAt,
+    claim,
+    selectSpot,
+    startExit,
+    refresh,
+  };
 }

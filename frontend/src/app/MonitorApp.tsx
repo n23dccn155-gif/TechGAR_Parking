@@ -69,7 +69,9 @@ function eventLabel(event: RuntimeEvent): string {
   return `${identity} · ${kind}${detail}`;
 }
 
-function CameraPanel({ cameraId, online }: { cameraId: RuntimeCameraId; online: boolean }) {
+function CameraPanel({ cameraId, online, frameAge, visionAge }: {
+  cameraId: RuntimeCameraId; online: boolean; frameAge?: number; visionAge?: number | null;
+}) {
   return (
     <section className="monitor-camera" aria-label={`Video trực tuyến ${cameraId}`}>
       <header>
@@ -79,6 +81,7 @@ function CameraPanel({ cameraId, online }: { cameraId: RuntimeCameraId; online: 
           {online ? "Trực tuyến" : "Mất tín hiệu"}
         </span>
       </header>
+      <small>Tuổi frame: {frameAge === undefined ? "—" : `${Math.round(frameAge)} ms`} · Tuổi bằng chứng ô: {visionAge == null ? "chưa có" : `${Math.round(visionAge)} ms`}</small>
       <div className="monitor-camera-frame">
         {online && <img src={runtimeCameraStreamUrl(cameraId)} alt={`Khung hình có nhận diện từ ${cameraId}`} />}
         {!online && <div className="monitor-camera-offline">Chưa nhận được frame mới</div>}
@@ -169,6 +172,9 @@ export function MonitorApp() {
   const occupied = snapshot?.parking_slots.filter((slot) => slot.occupied).length ?? 0;
   const free = snapshot ? snapshot.parking_slots.length - occupied : 0;
   const events = snapshot?.recent_events.slice(-8).reverse() ?? [];
+  const delayedParkingCameras = Object.entries(snapshot?.parking_pipeline ?? {})
+    .filter(([, status]) => status?.state === "degraded")
+    .map(([cameraId]) => cameraId.toUpperCase());
   const svgToWorld = useMemo(
     () => snapshot ? createSvgToWorld(snapshot.slot_layout) : null,
     [snapshot],
@@ -281,6 +287,11 @@ export function MonitorApp() {
         </section>
 
         {error && <div className="monitor-alert">{error}. Kiểm tra backend Runtime API tại cổng 8001.</div>}
+        {delayedParkingCameras.length > 0 && (
+          <div className="monitor-alert" role="alert">
+            Nhận diện ô đỗ đang chậm tại {delayedParkingCameras.join(", ")}; chưa dùng kết quả trễ để kết luận chủ ô.
+          </div>
+        )}
 
         <div className="monitor-workspace">
           <section className="monitor-map-panel">
@@ -362,8 +373,8 @@ export function MonitorApp() {
           </section>
 
           <aside className="monitor-camera-column">
-            <CameraPanel cameraId="cam1" online={runtimeConnected && Boolean(snapshot?.cameras.cam1?.online) && !stale} />
-            <CameraPanel cameraId="cam2" online={runtimeConnected && Boolean(snapshot?.cameras.cam2?.online) && !stale} />
+            <CameraPanel cameraId="cam1" frameAge={snapshot?.cameras.cam1?.age_ms} visionAge={snapshot?.parking_pipeline?.cam1?.accepted_evidence_age_ms} online={runtimeConnected && Boolean(snapshot?.cameras.cam1?.online) && !stale} />
+            <CameraPanel cameraId="cam2" frameAge={snapshot?.cameras.cam2?.age_ms} visionAge={snapshot?.parking_pipeline?.cam2?.accepted_evidence_age_ms} online={runtimeConnected && Boolean(snapshot?.cameras.cam2?.online) && !stale} />
           </aside>
         </div>
 

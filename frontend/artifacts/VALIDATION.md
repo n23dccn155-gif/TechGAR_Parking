@@ -1,5 +1,11 @@
 # Smart Parking Frontend Validation
 
+## 2026-09-08 — Parking confirmation / runtime load
+
+Final pass: typecheck, lint and build PASS; Vitest **70 tests / 16 files PASS**; Playwright **10 PASS**, including real Python session API: pending ownership, park elsewhere, relocate and exit while stationary. Polling failure/reconnection at unchanged revision is covered. Screenshots regenerated in `test-results/visual-capture-required-mobile-and-desktop-screenshots-chromium/`.
+
+Limits: not live-phone popup latency or physical ID accuracy. Async replay/load results and missing original calibration are documented in `../../docs/audit-parking-runtime-2026-09-08.md`. Vision result age still exceeds its deadline in part of the workload. Browser tests alone do not prove the live-camera issue resolved. Older validation follows for history.
+
 ## Session Navigation Update (2026-08-23)
 
 This update supersedes the older 160-spot prototype assertions below. The

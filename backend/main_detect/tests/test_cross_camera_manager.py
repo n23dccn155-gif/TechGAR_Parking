@@ -58,6 +58,35 @@ def one_hot_histogram(bin_index: int) -> np.ndarray:
     return histogram
 
 
+def test_pending_parking_claim_protects_dormant_gid_from_expiry_and_reid():
+    manager = make_manager()
+    track = DummyTrack(200, 200)
+    gid = manager._allocate_global_id()
+    manager._bind("cam1", 1, gid)
+    manager._observe_identity(gid, "cam1", 1, track, 1, 0.0)
+    manager.notify_track_expired(
+        "cam1", 1, track.cx, track.cy, track.w, track.h,
+        track.appearance, 2, timestamp_s=1.0,
+    )
+    identity = manager._identities[gid]
+    identity.dormant_since_frame = 2
+    identity.dormant_since_time = 1.0
+
+    manager.update_all_tracks(
+        {"cam1": {}, "cam2": {}, "cam3": {}, "cam4": {}},
+        10_000,
+        camera_timestamps_s={camera: 1000.0 for camera in ("cam1", "cam2", "cam3", "cam4")},
+        protected_global_ids={gid},
+    )
+
+    assert manager._identities[gid].state == "parking_verification_pending"
+    assert gid not in {
+        event.get("global_id")
+        for event in manager._events
+        if event.get("event") == "global_identity_expired"
+    }
+
+
 def attach_tracklet(track: DummyTrack, *histograms: np.ndarray) -> DummyTrack:
     descriptor = AppearanceTracklet(max_samples=8, sample_interval=1)
     for frame_idx, histogram in enumerate(histograms, start=1):
@@ -190,6 +219,28 @@ def test_debug_trail_uses_only_current_camera_fragment_and_latest_direction():
         ("cam1", 7),
     ]
     assert [sample.world[0] for sample in visible] == [5.0, 0.0]
+
+
+def test_debug_trail_render_does_not_change_identity_or_trajectory_state():
+    manager = make_manager()
+    track = attach_tracklet(
+        DummyTrack(120, 200, history=[(100, 200), (110, 200), (120, 200)]),
+        one_hot_histogram(1),
+        one_hot_histogram(1),
+    )
+    manager.bind_external_id("cam1", 7, 1, 3, source="test")
+    manager.observe_trajectories(
+        {"cam1": {7: track}}, 3, {"cam1": 0.12}
+    )
+    mapping_before = dict(manager._local_to_global)
+    samples_before = manager.trajectory.global_samples(1)
+    frame = np.zeros((380, 570, 3), dtype=np.uint8)
+
+    manager.draw_motion_trails(frame, "cam1")
+
+    assert manager._local_to_global == mapping_before
+    assert manager.trajectory.global_samples(1) == samples_before
+    assert manager.to_json({})["trail_render_only"] is True
 
 
 def fragment_track(

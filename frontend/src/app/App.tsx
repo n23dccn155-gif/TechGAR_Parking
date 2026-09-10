@@ -48,6 +48,7 @@ export function App({ sessionId }: AppProps = {}) {
     startExit: startSessionExit,
     busyAction: sessionBusyAction,
     error: sessionError,
+    lastSyncedAt: sessionLastSyncedAt,
     refresh: refreshSession,
   } = useVehicleSession(sessionId ?? null);
   const [runtimeState, setRuntimeState]     = useState<"connecting" | "live" | "error">("connecting");
@@ -58,6 +59,7 @@ export function App({ sessionId }: AppProps = {}) {
   const activeVehiclesRef = useRef<ActiveVehicle[]>([]);
   const runtimeCursorRef = useRef<{ runtimeId: string; frameIndex: number } | null>(null);
   const runtimeProgressAtRef = useRef(0);
+  const episodeRefreshKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeVehiclesRef.current = activeVehicles;
@@ -120,8 +122,28 @@ export function App({ sessionId }: AppProps = {}) {
       slots: runtimeSlots(runtimeSnapshot),
       dwellThresholdMs: PARKING_DWELL_MS,
       episodes: runtimeSnapshot.parking_episodes,
+      pendingConfirmations: runtimeSnapshot.pending_parking_confirmations,
+      parkingPipeline: runtimeSnapshot.parking_pipeline,
     });
   }, [sessionInfo, runtimeSnapshot, targetVehicleId]);
+
+  const ownParkedEpisode = useMemo(() => {
+    if (targetVehicleId === null || !runtimeSnapshot
+      || (sessionInfo?.runtimeId && sessionInfo.runtimeId !== runtimeSnapshot.runtime_id)) return null;
+    return runtimeSnapshot?.parking_episodes
+      ?.filter((episode) => (
+        episode.global_id === targetVehicleId && episode.state === "parked"
+      ))
+      .sort((left, right) => right.applied_frame_idx - left.applied_frame_idx)[0] ?? null;
+  }, [runtimeSnapshot, targetVehicleId, sessionInfo?.runtimeId]);
+
+  useEffect(() => {
+    if (!sessionId || !ownParkedEpisode || sessionState === "PARKED") return;
+    const refreshKey = `${sessionId}:${ownParkedEpisode.parking_episode_id}`;
+    if (episodeRefreshKeyRef.current === refreshKey) return;
+    episodeRefreshKeyRef.current = refreshKey;
+    void refreshSession().catch(() => undefined);
+  }, [ownParkedEpisode, refreshSession, sessionId, sessionState]);
 
   useEffect(() => {
     if (sessionId) setTrackingSource("opencv");
@@ -831,8 +853,10 @@ export function App({ sessionId }: AppProps = {}) {
         </div>}
         {sessionParkingDecision?.kind === "identity_pending" && <div role="status">Đang xác nhận xe trong ô…</div>}
         {sessionParkingDecision?.kind === "parking_confirmation_pending" && <div role="status">Đang xác nhận đỗ tại {sessionParkingDecision.actualSpotId}…</div>}
+        {sessionParkingDecision?.kind === "parking_processing_delayed" && <div role="alert">{sessionParkingDecision.reason}</div>}
         {sessionParkingDecision?.kind === "runtime_unavailable" && <div role="alert">{sessionParkingDecision.reason}</div>}
         {sessionParkingDecision?.kind === "identity_invariant_error" && <div role="alert">Danh tính xe đang có xung đột; tạm dừng chỉ dẫn.</div>}
+        {sessionId && sessionError && sessionLastSyncedAt && <small>Đồng bộ phiên gần nhất: {new Date(sessionLastSyncedAt).toLocaleTimeString("vi-VN")}</small>}
         {sessionInfo?.claimed && !sessionEnded && <button disabled={Boolean(sessionBusyAction)} onClick={() => enterBrowse("empty")}>Chọn / đổi ô đỗ</button>}
         {trackingSource === "opencv" && runtimeError && (
           <div className="runtime-source-alert" role="alert">
@@ -906,9 +930,12 @@ export function App({ sessionId }: AppProps = {}) {
                 )}
 
                 {(sessionParkingDecision?.kind === "identity_pending"
-                  || sessionParkingDecision?.kind === "parking_confirmation_pending") && (
+                  || sessionParkingDecision?.kind === "parking_confirmation_pending"
+                  || sessionParkingDecision?.kind === "parking_processing_delayed") && (
                   <p data-testid="parking-identity-pending" style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#fbbf24" }}>
-                    Đang xác nhận đúng xe và vị trí đỗ{sessionParkingDecision.kind === "identity_pending" ? ` tại ô ${sessionParkingDecision.spotId}` : ` tại ô ${sessionParkingDecision.actualSpotId}`}…
+                    {sessionParkingDecision.kind === "parking_processing_delayed"
+                      ? sessionParkingDecision.reason
+                      : <>Đang xác nhận đúng xe và vị trí đỗ{sessionParkingDecision.kind === "identity_pending" ? ` tại ô ${sessionParkingDecision.spotId}` : ` tại ô ${sessionParkingDecision.actualSpotId}`}…</>}
                   </p>
                 )}
 

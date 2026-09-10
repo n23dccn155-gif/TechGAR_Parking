@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "calibration_id": "cal-20260909-214641-6d506410",
+  "captured_at": "2026-09-09T21:46:41.940774+07:00",
+  "cameras": {
+    "cam1": {
+      "source": "D:\\TechGar2\\backend\\main_detect\\experiment_test\\output\\droidcam_shared_vd_19\\raw_cam1.mp4",
+      "image": "capture_cam1.png",
+      "width": 1280,
+      "height": 720,
+      "capture_position_frame": 15,
+      "capture_position_ms": 560.0,
+      "source_fps": 25.0
+    },
+    "cam2": {
+      "source": "D:\\TechGar2\\backend\\main_detect\\experiment_test\\output\\droidcam_shared_vd_19\\raw_cam2.mp4",
+      "image": "capture_cam2.png",
+      "width": 1280,
+      "height": 720,
+      "capture_position_frame": 15,
+      "capture_position_ms": 560.0,
+      "source_fps": 25.0
+    }
+  }
+}

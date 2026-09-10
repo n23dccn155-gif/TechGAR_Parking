@@ -1,5 +1,5 @@
 export type RuntimeCameraId = "cam1" | "cam2";
-export type RuntimeVehicleState = "active" | "handoff" | "dormant" | "parked";
+export type RuntimeVehicleState = "active" | "handoff" | "dormant" | "parked" | "parking_verification_pending";
 
 export interface RuntimePoint {
   x: number;
@@ -59,6 +59,8 @@ export interface RuntimeEvent {
 
 export interface RuntimeSnapshot {
   parking_episodes?: ParkingEpisode[];
+  pending_parking_confirmations?: PendingParkingConfirmation[];
+  parking_pipeline?: Partial<Record<RuntimeCameraId, ParkingPipelineStatus>>;
   schema_version: number;
   runtime_id?: string;
   timestamp: string;
@@ -77,6 +79,32 @@ export interface RuntimeSnapshot {
   pending_handoffs: RuntimeEvent[];
   retired_global_ids?: Record<string, number>;
   recent_events: RuntimeEvent[];
+}
+
+export interface PendingParkingConfirmation {
+  global_id: number;
+  slot_id: string;
+  state: "collecting" | "awaiting_vision" | "insufficient_evidence";
+  observations: number;
+  max_overlap: number;
+  started_at_s: number;
+  last_seen_s: number;
+  lost_at_s: number | null;
+  processing_deadline_s: number | null;
+  age_ms: number;
+}
+
+export interface ParkingPipelineStatus {
+  pending_age_ms?: number;
+  accepted_evidence_age_ms?: number | null;
+  state: "waiting" | "processing" | "healthy" | "degraded";
+  job_id: string | null;
+  evidence_frame_idx: number | null;
+  applied_frame_idx: number | null;
+  result_age_ms: number | null;
+  processing_ms: number | null;
+  dropped_results: number;
+  last_rejection_reason: string | null;
 }
 
 /**
@@ -147,6 +175,7 @@ export interface FrameSize {
 }
 
 export interface ParkingEpisode {
+  revision?: number;
   parking_episode_id: string;
   global_id: number;
   slot_id: string;

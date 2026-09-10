@@ -114,6 +114,65 @@ describe("sessionParking resolver", () => {
     });
   });
 
+  it("uses a provisional claim for the same GID even when it parked outside the target", () => {
+    const decision = resolveSessionParking({
+      session: baseSession(),
+      vehicles: [],
+      slots: [targetEmpty()],
+      dwellThresholdMs: DWELL_MS,
+      pendingConfirmations: [{
+        global_id: 42,
+        slot_id: "F07",
+        state: "awaiting_vision",
+        observations: 7,
+        max_overlap: 0.90,
+        started_at_s: 1,
+        last_seen_s: 2,
+        lost_at_s: 2.1,
+        processing_deadline_s: 7.1,
+        age_ms: 1_200,
+      }],
+      parkingPipeline: {
+        cam1: {
+          state: "processing",
+          job_id: "cam1:20",
+          evidence_frame_idx: 20,
+          applied_frame_idx: null,
+          result_age_ms: null,
+          processing_ms: null,
+          dropped_results: 0,
+          last_rejection_reason: null,
+        },
+      },
+    });
+    expect(decision).toEqual<SessionParkingDecision>({
+      kind: "parking_confirmation_pending",
+      actualSpotId: "F07",
+    });
+  });
+
+  it("reports delayed parking processing instead of waiting silently", () => {
+    const decision = resolveSessionParking({
+      session: baseSession(),
+      vehicles: [],
+      slots: [targetEmpty()],
+      dwellThresholdMs: DWELL_MS,
+      pendingConfirmations: [{
+        global_id: 42,
+        slot_id: "C04",
+        state: "awaiting_vision",
+        observations: 6,
+        max_overlap: 0.86,
+        started_at_s: 1,
+        last_seen_s: 2,
+        lost_at_s: 2.1,
+        processing_deadline_s: 7.1,
+        age_ms: 5_100,
+      }],
+    });
+    expect(decision.kind).toBe("parking_processing_delayed");
+  });
+
   it("no other warning when own GID fully confirmed", () => {
     const decision = resolveSessionParking({
       session: baseSession(),

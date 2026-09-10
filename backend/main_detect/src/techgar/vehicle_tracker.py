@@ -55,6 +55,20 @@ class TrackedVehicle:
     ground_point: Optional[Tuple[float, float]] = None
     appearance: Optional[np.ndarray] = field(default=None, repr=False)
     appearance_tracklet: Optional[AppearanceTracklet] = field(default=None, repr=False)
+    # Association telemetry.  These fields are deliberately separate from
+    # ``history``: history is also rendered as a debug trail, while the
+    # association code must know whether a point came from a real detection
+    # or from a Kalman extrapolation.
+    last_measured_center: Optional[Tuple[float, float]] = None
+    last_measured_timestamp_s: Optional[float] = None
+    prediction_age_s: float = 0.0
+    velocity_confidence: float = 0.0
+    prediction_source: str = "measurement"
+    association_state: str = "new_tentative"
+    last_ambiguous_frame: Optional[int] = None
+    last_ambiguous_timestamp_s: Optional[float] = None
+    last_ambiguous_kind: Optional[str] = None
+    ambiguous_clear_streak: int = 0
 
     @property
     def x(self) -> int:

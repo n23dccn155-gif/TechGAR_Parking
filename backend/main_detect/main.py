@@ -387,6 +387,10 @@ def run_detection(sim: CameraSimulator, source: str, args):
             min_area=args.motion_min_area,
             max_distance=args.motion_max_distance,
             min_confirm_displacement=args.motion_min_displacement,
+            max_prediction_age_seconds=args.motion_max_prediction_age_seconds,
+            prediction_velocity_decay_seconds=args.motion_prediction_decay_seconds,
+            association_ambiguity_margin=args.motion_ambiguity_margin,
+            ambiguous_recovery_frames=args.motion_ambiguity_recovery_frames,
             # Binder works with global IDs below.  Passing it to the local
             # tracker would incorrectly reuse a cam-local ID in another view.
             slot_binder=None,
@@ -739,6 +743,14 @@ def parse_args():
     parser.add_argument("--motion-min-area", type=int, default=900, help="Diện tích foreground tối thiểu")
     parser.add_argument("--motion-max-distance", type=float, default=180.0, help="Gate Kalman (pixel)")
     parser.add_argument("--motion-min-displacement", type=float, default=12.0, help="Pixel tối thiểu để confirm")
+    parser.add_argument("--motion-max-prediction-age-seconds", type=float, default=0.40,
+                        help="Tuổi tối đa của dự đoán Kalman khi track mất detection")
+    parser.add_argument("--motion-prediction-decay-seconds", type=float, default=0.25,
+                        help="Hằng số suy giảm vận tốc khi track đang coasting")
+    parser.add_argument("--motion-ambiguity-margin", type=float, default=0.08,
+                        help="Độ chênh chi phí tối thiểu để chấp nhận ghép khi có cạnh tranh")
+    parser.add_argument("--motion-ambiguity-recovery-frames", type=int, default=3,
+                        help="Số frame bằng chứng rõ ràng trước khi thoát trạng thái mơ hồ")
     parser.add_argument("--slot-release-grace", type=int, default=90, help="Số frame giữ global vehicle_id sau khi ô trống")
     parser.add_argument("--slot-bind-confirmations", type=int, default=2, help="Số lần detector phải xác nhận trước khi gán xe vào ô")
     parser.add_argument("--slot-stop-seconds", type=float, default=1.0, help="Số giây xe phải đứng ổn định trước khi gán ô")

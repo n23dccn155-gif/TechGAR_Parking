@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "captured_at": "2026-09-06T19:33:20.887099+07:00",
+  "captured_at": "2026-09-08T22:54:21.025061+07:00",
   "cameras": {
     "cam1": {
-      "source": "http://192.168.100.53:4747/video/force/1280x720",
+      "source": "experiment_test\\output\\droidcam_shared_vd_19\\raw_cam1.mp4",
       "image": "capture_cam1.png",
       "width": 1280,
       "height": 720
     },
     "cam2": {
-      "source": "http://192.168.100.198:4747/video/force/1280x720",
+      "source": "experiment_test\\output\\droidcam_shared_vd_19\\raw_cam2.mp4",
       "image": "capture_cam2.png",
       "width": 1280,
       "height": 720

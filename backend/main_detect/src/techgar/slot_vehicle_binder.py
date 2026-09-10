@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+import time
 from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple
 
 import cv2
@@ -80,6 +81,10 @@ class ArrivalClaim:
     # after the LOST transition. Two consecutive outside observations cancel
     # the claim; a single frame of jitter must not.
     disproof_observations: int = 0
+    awaiting_vision_since_s: Optional[float] = None
+    processing_deadline_s: Optional[float] = None
+    processing_started_monotonic_s: Optional[float] = None
+    vision_job_id: Optional[str] = None
 
 
 @dataclass
@@ -223,6 +228,7 @@ class SlotVehicleBinder:
         arrival_competitor_margin: float = 0.15,
         arrival_absence_seconds: float = 0.75,
         arrival_lost_commit_delay_seconds: float = 0.35,
+        arrival_processing_grace_seconds: float = 5.0,
     ):
         # Kept for backwards-compatible construction by older entry points.
         self.margin = float(margin)
@@ -286,6 +292,9 @@ class SlotVehicleBinder:
         self.arrival_lost_commit_delay_seconds = max(
             0.0, float(arrival_lost_commit_delay_seconds)
         )
+        self.arrival_processing_grace_seconds = min(5.0, max(
+            0.0, float(arrival_processing_grace_seconds),
+        ))
 
         self._bindings: Dict[str, SlotBinding] = {}
         self._vehicle_to_slot: Dict[int, str] = {}
@@ -293,6 +302,8 @@ class SlotVehicleBinder:
         self._pending_release: Dict[str, Tuple[int, int]] = {}
         self._departure_tokens: Dict[str, DepartureToken] = {}
         self._arrival_claims: Dict[Tuple[str, int], ArrivalClaim] = {}
+        self._vision_job: Optional[dict] = None
+        self._arrival_failures: Deque[dict] = deque(maxlen=16)
         # One episode per physical parking occurrence. Sessions consume these
         # by parking_episode_id instead of re-deriving parked state from
         # polling counters (PLAN 3.1).
@@ -723,12 +734,85 @@ class SlotVehicleBinder:
             "score": min(1.0, score),
         }
 
+    def register_vision_job(self, job_id: str, frame_idx: int, timestamp_s: float) -> None:
+        """Associate provisional protection with actual submitted vision work."""
+        self._vision_job = {"job_id": str(job_id), "frame_idx": int(frame_idx),
+                            "timestamp_s": float(timestamp_s), "state": "processing"}
+        for claim in self._arrival_claims.values():
+            self._link_arrival_job(claim)
+
+    def finish_vision_job(self, job_id: str, *, accepted: bool) -> None:
+        if self._vision_job is not None and self._vision_job["job_id"] == job_id:
+            self._vision_job["state"] = "applied" if accepted else "rejected"
+
+    def _qualified_arrival(self, claim: ArrivalClaim) -> bool:
+        binding = self._bindings.get(claim.slot_id)
+        if (binding is None or binding.polygon is None or claim.disproof_observations
+                or claim.observations < self.arrival_min_samples
+                or claim.max_overlap < self.min_vehicle_overlap):
+            return False
+        inward = (
+            claim.entered_from_outside
+            or claim.max_overlap - claim.first_overlap >= 0.10
+            or np.linalg.norm(np.subtract(claim.first_center, binding.center))
+            - np.linalg.norm(np.subtract(claim.last_center, binding.center))
+            >= max(2.0, self._slot_diagonal(binding.polygon) * 0.05)
+        )
+        competing = any(
+            other.global_id != claim.global_id and other.slot_id == claim.slot_id
+            and other.observations >= self.arrival_min_samples
+            and other.score >= claim.score - self.arrival_competitor_margin
+            for other in self._arrival_claims.values()
+        )
+        return bool(inward and not competing)
+
+    def _link_arrival_job(self, claim: ArrivalClaim) -> None:
+        job = self._vision_job
+        if (claim.lost_at_s is None or job is None or job["state"] != "processing"
+                or job["timestamp_s"] < claim.first_seen_s
+                or not self._qualified_arrival(claim)):
+            return
+        # The first loss owns the deadline. Repeated submissions never renew it.
+        claim.vision_job_id = job["job_id"]
+        claim.awaiting_vision_since_s = claim.lost_at_s
+        claim.processing_deadline_s = claim.lost_at_s + self.arrival_processing_grace_seconds
+
+    def _arrival_processing_pending(self, claim: ArrivalClaim, timestamp_s: float) -> bool:
+        return bool(
+            claim.vision_job_id is not None
+            and claim.processing_started_monotonic_s is not None
+            and self._qualified_arrival(claim)
+            and timestamp_s <= float(claim.processing_deadline_s or 0.0)
+            and time.monotonic() - claim.processing_started_monotonic_s
+            <= self.arrival_processing_grace_seconds
+        )
+
     def _cleanup_arrival_claims(self, timestamp_s: float) -> None:
-        cutoff = float(timestamp_s) - self.arrival_lookback_seconds
         for key, claim in list(self._arrival_claims.items()):
-            reference_time = claim.lost_at_s or claim.last_seen_s
-            if reference_time < cutoff:
+            ordinary_deadline = (
+                float(claim.lost_at_s if claim.lost_at_s is not None else claim.last_seen_s)
+                + self.arrival_lookback_seconds
+            )
+            deadline = ordinary_deadline
+            if self._arrival_processing_pending(claim, float(timestamp_s)):
+                deadline = max(deadline, float(claim.processing_deadline_s))
+            processing_timed_out = (
+                claim.vision_job_id is not None
+                and claim.processing_started_monotonic_s is not None
+                and time.monotonic() - claim.processing_started_monotonic_s
+                > self.arrival_processing_grace_seconds
+            )
+            if float(timestamp_s) > deadline or processing_timed_out:
                 self._arrival_claims.pop(key, None)
+                self._arrival_failures.append({
+                    "global_id": claim.global_id, "slot_id": claim.slot_id,
+                    "state": "insufficient_evidence", "reason": "arrival_claim_expired",
+                    "observations": claim.observations, "max_overlap": claim.max_overlap,
+                    "started_at_s": claim.first_seen_s, "last_seen_s": claim.last_seen_s,
+                    "lost_at_s": claim.lost_at_s, "processing_deadline_s": claim.processing_deadline_s,
+                    "age_ms": int(max(0., timestamp_s - claim.first_seen_s) * 1000),
+                    "failed_at_s": float(timestamp_s),
+                })
                 self._event(
                     "slot_arrival_claim_rejected",
                     global_id=claim.global_id,
@@ -736,7 +820,48 @@ class SlotVehicleBinder:
                     reason="arrival_claim_expired",
                     observations=claim.observations,
                     max_overlap=round(claim.max_overlap, 4),
+                    awaiting_vision=claim.awaiting_vision_since_s is not None,
+                    processing_deadline_s=round(deadline, 3),
                 )
+
+    def pending_arrivals(self, timestamp_s: Optional[float] = None) -> List[dict]:
+        """Return provisional claims for runtime diagnostics, never as parking proof."""
+        now_s = self._last_timestamp_s if timestamp_s is None else float(timestamp_s)
+        values = [dict(item) for item in self._arrival_failures
+                  if now_s - item["failed_at_s"] <= 30.0
+                  and not any(claim.global_id == item["global_id"] for claim in self._arrival_claims.values())
+                  and item["global_id"] not in self._vehicle_to_slot]
+        for claim in self._arrival_claims.values():
+            if claim.lost_at_s is None:
+                state = "collecting"
+            elif self._qualified_arrival(claim):
+                state = "awaiting_vision"
+            else:
+                state = "insufficient_evidence"
+            values.append({
+                "global_id": int(claim.global_id),
+                "slot_id": str(claim.slot_id),
+                "state": state,
+                "observations": int(claim.observations),
+                "max_overlap": round(float(claim.max_overlap), 4),
+                "started_at_s": float(claim.first_seen_s),
+                "last_seen_s": float(claim.last_seen_s),
+                "lost_at_s": claim.lost_at_s,
+                "processing_deadline_s": claim.processing_deadline_s,
+                "vision_job_id": claim.vision_job_id,
+                "age_ms": int(max(0.0, now_s - (claim.awaiting_vision_since_s
+                    if claim.awaiting_vision_since_s is not None else claim.first_seen_s)) * 1000),
+            })
+        return sorted(values, key=lambda item: (item["slot_id"], item["global_id"]))
+
+    def pending_arrival_global_ids(self) -> set[int]:
+        """IDs with qualified LOST evidence that must not be recycled yet."""
+        return {
+            int(claim.global_id)
+            for claim in self._arrival_claims.values()
+            if claim.lost_at_s is not None
+            and self._arrival_processing_pending(claim, self._last_timestamp_s)
+        }
 
     def parking_episodes(self) -> List[dict]:
         """Parking episode records for runtime snapshot consumers.
@@ -775,6 +900,7 @@ class SlotVehicleBinder:
             "global_id": int(global_id),
             "slot_id": str(slot_id),
             "state": "parked",
+            "revision": 1,
             # A tracking-only stop has no vision worker timestamp, but the
             # real detection that triggered _bind_vehicle is still valid
             # source evidence.  Falling back to the current binder clocks
@@ -819,6 +945,7 @@ class SlotVehicleBinder:
         if global_id is not None and episode["global_id"] != int(global_id):
             return
         episode["state"] = new_state
+        episode["revision"] = int(episode.get("revision", 1)) + 1
         episode["reason"] = str(reason)
         episode["applied_frame_idx"] = int(self._last_frame_idx)
         episode["applied_timestamp_s"] = float(self._last_timestamp_s)
@@ -957,10 +1084,12 @@ class SlotVehicleBinder:
         key = (slot_id, int(global_id))
         center = (bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0)
         claim = self._arrival_claims.get(key)
-        reset = (
-            claim is None
-            or float(timestamp_s) - claim.last_seen_s > 0.50
-            or int(frame_idx) - claim.last_frame_idx > 6
+        # Frame cadence is not evidence that a different vehicle appeared.
+        # Keep one claim across slow/irregular capture; explicit outside-ROI
+        # observations in _disprove_arrival_claims remain the rejection gate.
+        reset = claim is None or (
+            float(timestamp_s) - claim.last_seen_s
+            > self.arrival_lookback_seconds
         )
         entered_from_outside = bool(
             previous is not None
@@ -993,6 +1122,10 @@ class SlotVehicleBinder:
         elif claim.last_frame_idx != int(frame_idx):
             if claim.lost_at_s is not None:
                 claim.lost_at_s = None
+                claim.processing_started_monotonic_s = None
+                claim.awaiting_vision_since_s = None
+                claim.processing_deadline_s = None
+                claim.vision_job_id = None
                 self._event(
                     "slot_arrival_claim_resumed",
                     global_id=claim.global_id,
@@ -1043,7 +1176,6 @@ class SlotVehicleBinder:
             for (candidate_slot, _), claim in self._arrival_claims.items()
             if candidate_slot == slot_id
             and claim.lost_at_s is not None
-            and float(timestamp_s) - claim.lost_at_s <= self.arrival_lookback_seconds
             and float(timestamp_s) - claim.lost_at_s
             >= self.arrival_lost_commit_delay_seconds
             and claim.observations >= self.arrival_min_samples
@@ -1981,8 +2113,20 @@ class SlotVehicleBinder:
         if not candidates:
             return None
         winner = max(candidates, key=lambda item: (item.last_seen_s, item.score))
-        winner.lost_at_s = float(timestamp_s)
-        winner.lost_frame_idx = int(frame_idx)
+        if winner.lost_at_s is None:
+            winner.lost_at_s = float(timestamp_s)
+            winner.lost_frame_idx = int(frame_idx)
+            winner.processing_started_monotonic_s = time.monotonic()
+        self._link_arrival_job(winner)
+        if winner.vision_job_id is not None:
+            self._event(
+                "slot_arrival_awaiting_vision",
+                global_id=winner.global_id,
+                slot_id=winner.slot_id,
+                observations=winner.observations,
+                max_overlap=round(winner.max_overlap, 4),
+                processing_deadline_s=round(winner.processing_deadline_s, 3),
+            )
         return self._try_commit_arrival_claim(
             winner.slot_id,
             int(frame_idx),
@@ -3175,6 +3319,8 @@ class SlotVehicleBinder:
 
     def remap_vehicle_ids(self, canonicalize: Callable[[int], int]) -> None:
         """Move parked bindings/states to canonical IDs after a global-ID merge."""
+        for failure in self._arrival_failures:
+            failure["global_id"] = int(canonicalize(int(failure["global_id"])))
         for episode in (*self._parking_episodes, *self._episode_by_slot.values()):
             episode["global_id"] = int(
                 canonicalize(int(episode["global_id"]))

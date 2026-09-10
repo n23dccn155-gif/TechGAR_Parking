@@ -1,5 +1,27 @@
 # TechGar2 — Trạng thái triển khai và lỗi còn tồn tại
 
+## Cập nhật 08/09/2026 — Xác nhận đỗ khi có frontend/Monitor
+
+Đã sửa trong working tree `an8_9` (nền `6e0cf277`), chưa commit. Chi tiết: [audit-parking-runtime-2026-09-08.md](audit-parking-runtime-2026-09-08.md).
+
+- Render/JPEG stream chạy trên worker có hàng chờ mỗi camera một frame; snapshot JSON được cache.
+- Claim vào ô không reset chỉ vì lấy mẫu chậm; giữ ID chờ job vision thật có kiểm tra hướng vào/xe cạnh tranh và hạn cứng tối đa 5 giây. Không xuất chờ thành `parked`.
+- Tách ngân sách ngoại suy Kalman cũ khỏi nhánh nhận lại bằng điểm đo thật; bảo vệ ID chờ khỏi handoff, merge và Re-ID thông thường.
+- Episode có revision; session xử lý chuyển trạng thái cùng frame. Frontend nhận pending/failed confirmation, lỗi GET và refresh khi có episode mới; không giả lập đỗ thành công.
+- Telemetry có tuổi kết quả, job/frame nguồn, thời điểm hoàn tất/áp dụng và lý do vision bị bỏ; Monitor có tuổi frame/bằng chứng.
+
+Kiểm tra cuối: **434 test Python đạt, 70 test frontend đạt, 10 Playwright đạt**; typecheck/lint/build đạt. Hai ca đỏ lượt đầu đã được gom và sửa trong batch thứ hai theo `full-audit-fix`.
+
+Đo 350 frame với worker bất đồng bộ, bốn mức tải HTTP cùng cấu hình hiện tại: p95 vòng chính **252,31 ms** khi runtime không người xem và **280,17 ms** khi thêm tải mô phỏng driver + hai stream (**+11,04%**). Cả bốn output vượt validator. Không phải số đo popup trên điện thoại hay trước/sau với cấu hình video gốc.
+
+**Còn thiếu / chưa được kết luận hết lỗi:**
+
+1. Vision còn chậm: p95 tuổi kết quả khoảng **1,08–1,17 giây**, vượt ngưỡng 1 giây; kết quả cũ vẫn bị bỏ. Vẫn có nguy cơ không đủ bằng chứng chốt chủ ô. Cần tối ưu xử lý ảnh, không chỉ stream.
+2. Calibration, slots cam2 và hai mask hiện tại khác hash `vd_16`/`live20`; chưa tìm thấy bản gốc trong config và lịch sử gần nhất. Replay chính xác bị chặn. Không đè config hiện tại, không dùng ID/ô của benchmark hình học khác để báo đã sửa.
+3. Chưa chứng minh p95 episode → thông báo ≤1,5 giây trên thiết bị thật; chưa bảo đảm mượt 100%. Playwright kiểm chứng luồng API/session/giao diện, không thay thế ground truth từ camera.
+
+Các mục cũ bên dưới được giữ làm lịch sử; kết quả hiện tại lấy ở mục này.
+
 ## Cập nhật audit-fix toàn dự án — 07/09/2026
 
 Đã hoàn tất một đợt rà soát theo skill `full-audit-fix`: lập bản đồ các nguồn ghi/đọc dữ liệu, gom các lỗi theo giao dịch, sửa theo batch rồi chạy một ma trận kiểm tra đầy đủ. Các thay đổi hiện đang ở working tree trên branch `an5_9`, dựa trên commit `2527e03f`; **chưa commit**.

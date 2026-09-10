@@ -55,6 +55,12 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
         camera_skew_ms=0.02,
         source_mode="replay",
         parking_episodes=[{"parking_episode_id": "D01-1", "global_id": 8, "slot_id": "D01", "state": "parked"}],
+        pending_parking_confirmations=[{
+            "global_id": 7, "slot_id": "D02", "state": "awaiting_vision"
+        }],
+        parking_pipeline={
+            "cam1": {"state": "healthy", "result_age_ms": 40.0}
+        },
     )
 
     assert [vehicle["global_id"] for vehicle in snapshot["vehicles"]] == [7, 8]
@@ -66,6 +72,8 @@ def test_runtime_snapshot_keeps_current_global_ids_and_slot_layout():
     assert snapshot["parking_slots"][0]["stopped_for_ms"] == 2300
     assert snapshot["slot_layout"][0]["slot_id"] == "D01"
     assert snapshot["retired_global_ids"] == {"12": 7}
+    assert snapshot["pending_parking_confirmations"][0]["global_id"] == 7
+    assert snapshot["parking_pipeline"]["cam1"]["state"] == "healthy"
 
 
 def test_reservation_is_not_a_parking_episode_and_stale_camera_is_offline():

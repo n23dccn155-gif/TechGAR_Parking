@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "calibration_id": "cal-20260910-174859-c201e3b4",
+  "captured_at": "2026-09-10T17:48:59.998648+07:00",
+  "cameras": {
+    "cam1": {
+      "source": "http://192.168.100.53:4747/video/force/1280x720",
+      "image": "capture_cam1.png",
+      "width": 1280,
+      "height": 720,
+      "capture_position_frame": 15,
+      "capture_position_ms": 560.0,
+      "source_fps": 25.0
+    },
+    "cam2": {
+      "source": "http://192.168.100.198:4747/video/force/1280x720",
+      "image": "capture_cam2.png",
+      "width": 1280,
+      "height": 720,
+      "capture_position_frame": 15,
+      "capture_position_ms": 560.0,
+      "source_fps": 25.0
+    }
+  }
+}

@@ -263,7 +263,8 @@ class GateSessionCoordinator:
         self.runtime_id: Optional[str] = None
         self.allow_legacy = allow_legacy
         self.identity_conflicts: set[int] = set()
-        self._episode_cursors: dict[str, tuple[int, str, str]] = {}
+        self._episode_cursors: dict[str, tuple[int, str, str, float, int]] = {}
+        self.episode_diagnostics: dict[int, str] = {}
 
     def _apply_alias_table(
         self, aliases: Any, runtime_id: Optional[str]
@@ -346,6 +347,7 @@ class GateSessionCoordinator:
                 self.runtime_id = next_runtime_id
                 self.identity_conflicts.clear()
                 self._episode_cursors.clear()
+                self.episode_diagnostics.clear()
         runtime_id = self.runtime_id
         raw_frame_index = snapshot.get("frame_index")
         frame_index = (
@@ -353,10 +355,15 @@ class GateSessionCoordinator:
             if isinstance(raw_frame_index, (int, float))
             else None
         )
+        same_frame_update = (
+            frame_index is not None
+            and self._last_frame_index is not None
+            and frame_index == self._last_frame_index
+        )
         if (
             frame_index is not None
             and self._last_frame_index is not None
-            and frame_index <= self._last_frame_index
+            and frame_index < self._last_frame_index
         ):
             return
         if frame_index is not None:
@@ -366,6 +373,11 @@ class GateSessionCoordinator:
         self._apply_merge_events(snapshot.get("recent_events"), runtime_id)
         if v2:
             self._apply_parking_episodes(snapshot, runtime_id)
+        if same_frame_update:
+            # A background vision result may publish a new episode revision on
+            # the same capture frame. Episode cursors make this idempotent;
+            # motion/gate evidence must still be counted only once per frame.
+            return
         vehicles = snapshot.get("vehicles", [])
         if not isinstance(vehicles, list):
             return
@@ -526,6 +538,7 @@ class GateSessionCoordinator:
             self._departure_candidates.pop(global_id, None)
 
     def _apply_parking_episodes(self, snapshot: dict, runtime_id: Optional[str]) -> None:
+        state_rank = {"parked": 1, "departing": 2, "released": 3}
         latest: dict[int, dict] = {}
         owners: dict[int, set[str]] = {}
         slot_owners: dict[str, set[int]] = {}
@@ -545,19 +558,48 @@ class GateSessionCoordinator:
             if episode.get("state") == "parked":
                 owners.setdefault(gid, set()).add(str(episode["slot_id"]))
                 slot_owners.setdefault(str(episode["slot_id"]), set()).add(gid)
-            if gid not in latest or applied >= int(latest[gid]["applied_frame_idx"]):
+            current = latest.get(gid)
+            candidate_order = (
+                applied,
+                float(episode.get("applied_timestamp_s") or 0.0),
+                int(episode.get("revision", 0)),
+                state_rank.get(str(episode.get("state")), 0),
+            )
+            current_order = (
+                int(current["applied_frame_idx"]),
+                float(current.get("applied_timestamp_s") or 0.0),
+                int(current.get("revision", 0)),
+                state_rank.get(str(current.get("state")), 0),
+            ) if current is not None else None
+            if current_order is None or candidate_order > current_order:
                 latest[gid] = episode
         for gid, episode in latest.items():
             if (gid in self.identity_conflicts or len(owners.get(gid, set())) > 1
                     or len(slot_owners.get(str(episode["slot_id"]), set())) > 1):
+                self.episode_diagnostics[gid] = "identity_or_slot_owner_conflict"
                 continue
             session = find_session_by_global_id(gid, runtime_id=runtime_id)
             if session is None:
+                self.episode_diagnostics[gid] = "session_not_found_for_runtime_gid"
                 continue
-            cursor = (int(episode["applied_frame_idx"]), str(episode["parking_episode_id"]), str(episode["state"]))
+            cursor = (
+                int(episode["applied_frame_idx"]),
+                str(episode["parking_episode_id"]),
+                str(episode["state"]),
+                float(episode.get("applied_timestamp_s") or 0.0),
+                int(episode.get("revision", 0)),
+            )
             previous = self._episode_cursors.get(session["sessionId"])
-            if previous is not None and cursor[0] <= previous[0]:
-                continue
+            if previous is not None:
+                if cursor == previous:
+                    continue
+                if cursor[0] < previous[0]:
+                    self.episode_diagnostics[gid] = "episode_older_than_session_cursor"
+                    continue
+                newer_revision = cursor[1] == previous[1] and cursor[4] > previous[4]
+                if cursor[0] == previous[0] and cursor[3] <= previous[3] and not newer_revision:
+                    self.episode_diagnostics[gid] = "episode_not_newer_within_frame"
+                    continue
             try:
                 if episode["state"] == "parked" and session["state"] != "EXIT_NAVIGATION":
                     set_parked_by_global_id(gid, str(episode["slot_id"]), runtime_id=runtime_id,
@@ -567,7 +609,9 @@ class GateSessionCoordinator:
                 else:
                     continue
                 self._episode_cursors[session["sessionId"]] = cursor
+                self.episode_diagnostics[gid] = "applied"
             except SessionError as error:
+                self.episode_diagnostics[gid] = f"session_rejected:{error}"
                 print(f"[SESSION WAIT] {error}")
 
 

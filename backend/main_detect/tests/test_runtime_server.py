@@ -27,8 +27,32 @@ def test_runtime_state_exposes_snapshot_and_latest_jpeg():
         timestamp="current-time",
     )
     assert state.snapshot()["frame_index"] == 4
-    _, jpeg = state.frame("cam1")
+    _, jpeg = state.wait_for_frame("cam1", -1, timeout=2.0)
     assert jpeg[:2] == b"\xff\xd8"
+    state.close()
+
+
+def test_runtime_frame_render_and_jpeg_are_off_the_tracking_thread():
+    state = RuntimeState(stream_fps=30, jpeg_quality=70)
+    rendered_on = []
+    release_render = threading.Event()
+
+    def renderer(frame):
+        rendered_on.append(threading.current_thread().name)
+        assert release_render.wait(timeout=2.0)
+        frame[0, 0] = 255
+        return frame
+
+    state.publish_frame(
+        "cam1",
+        np.zeros((120, 160, 3), dtype=np.uint8),
+        frame_index=7,
+        timestamp="",
+        renderer=renderer,
+    )
+    release_render.set()  # publish returned while rendering was deliberately blocked
+    assert state.wait_for_frame("cam1", -1, timeout=2.0)[0] == 7
+    assert rendered_on == ["runtime-jpeg-encoder"]
     state.close()
 
 
@@ -48,6 +72,23 @@ def test_json_only_runtime_does_not_request_jpeg_work(monkeypatch):
     assert not state.needs_frame("cam2")
     now[0] += 5.
     assert not state.needs_frame("cam1")  # disconnected viewer expires
+    state.close()
+
+
+def test_status_read_does_not_subscribe_and_snapshot_cache_is_immutable():
+    state = RuntimeState()
+    original = {"frame_index": 2, "nested": {"owner": 4}}
+    try:
+        state.publish_snapshot(original)
+        cached = state.snapshot_json()
+        original["nested"]["owner"] = 99
+        state.snapshot()["nested"]["owner"] = 88
+        assert json.loads(cached)["nested"]["owner"] == 4
+        assert state.snapshot_json() is cached
+        assert state.available_cameras() == []
+        assert not state.needs_frame("cam1")
+    finally:
+        state.close()
 
 
 def gate_config(unit="cm"):
