@@ -150,7 +150,7 @@ def test_priority_region_allows_small_blob_but_normal_region_rejects_it(monkeypa
     assert priority_detections[0]["priority"] is True
 
 
-def test_mog_shadow_value_cannot_become_priority_candidate(monkeypatch):
+def test_mog_shadow_value_without_background_cannot_become_candidate(monkeypatch):
     tracker = MotionVehicleTracker(
         priority_min_area=350,
         reject_cast_shadows=True,
@@ -177,6 +177,132 @@ def test_mog_shadow_value_cannot_become_priority_candidate(monkeypatch):
     )
 
     assert detections == []
+
+
+def test_dark_vehicle_mislabeled_as_mog_shadow_is_recovered(monkeypatch):
+    box = (50, 40, 40, 40)
+    background, foreground = _synthetic_background_and_motion(box)
+    mog_shadow = np.where(foreground > 0, 127, 0).astype(np.uint8)
+    frame = background.copy()
+    x, y, width, height = box
+    frame[y:y + height, x:x + width] = 10
+    tracker = MotionVehicleTracker(reject_cast_shadows=True)
+    tracker.bg_sub = _FixedBackgroundModel(background, mog_shadow)
+    monkeypatch.setattr(
+        tracker,
+        "_temporal_motion_mask",
+        lambda _frame, timestamp_s=None: foreground.copy(),
+    )
+
+    detections, _ = tracker._detect(frame)
+
+    assert len(detections) == 1
+    assert detections[0]["dark_foreground_rescued"] is True
+    assert detections[0]["mog_shadow_marker_ratio"] >= 0.95
+    assert tracker.last_shadow_rejections == []
+
+
+def test_roi_context_completes_vehicle_touching_boundary_without_admitting_outside_blob(monkeypatch):
+    tracker = MotionVehicleTracker(
+        min_area=200,
+        motion_min_pixels=20,
+        motion_min_ratio=0.02,
+        roi_context_padding_px=25,
+        max_bbox_width_ratio=0.8,
+        max_bbox_height_ratio=0.8,
+        max_bbox_area_ratio=0.5,
+    )
+    strict_roi = np.zeros((100, 120), dtype=np.uint8)
+    strict_roi[50:100, :] = 255
+    tracker.roi_mask = strict_roi
+    foreground = np.zeros_like(strict_roi)
+    foreground[30:70, 40:80] = 255
+
+    class FixedBackground:
+        def apply(self, _frame):
+            return foreground.copy()
+
+    tracker.bg_sub = FixedBackground()
+    monkeypatch.setattr(
+        tracker,
+        "_temporal_motion_mask",
+        lambda _frame, timestamp_s=None: foreground.copy(),
+    )
+    detections, _ = tracker._detect(np.zeros((100, 120, 3), dtype=np.uint8))
+
+    assert len(detections) == 1
+    assert detections[0]["box"][1] <= 31
+    assert detections[0]["box"][3] >= 39
+    assert detections[0]["roi_clipped"] is True
+    assert 0.45 <= detections[0]["roi_support_ratio"] <= 0.55
+
+    foreground[:] = 0
+    foreground[10:30, 40:80] = 255
+    detections, _ = tracker._detect(np.zeros((100, 120, 3), dtype=np.uint8))
+    assert detections == []
+
+
+def test_overlapping_fragments_do_not_freeze_one_physical_vehicle_as_two_tracks():
+    tracker = MotionVehicleTracker(association_ambiguity_margin=0.08)
+    frame = np.full((100, 140, 3), 90, dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._current_timestamp_s = 1.0
+    tracker._create_or_reid(_detection(tracker, frame, 30, priority=False))
+    tracker._frame_idx = 2
+    tracker._current_timestamp_s = 1.1
+    tracker._create_or_reid(_detection(tracker, frame, 33, priority=False))
+    track_ids = list(tracker._tracks)
+    costs = np.asarray([[0.10], [0.12]], dtype=np.float64)
+    predictions = {
+        track_ids[0]: (44, 44),
+        track_ids[1]: (47, 44),
+    }
+    detection = _detection(tracker, frame, 34, priority=False)
+
+    tracker._mark_competing_assignments(
+        costs, track_ids, predictions, [detection]
+    )
+
+    assert not detection.get("ambiguous_assignment", False)
+    assert int(np.sum(costs[:, 0] < 10.0)) == 1
+    event = next(
+        event
+        for event in tracker.association_events
+        if event["type"] == "duplicate_lineage_competition_resolved"
+    )
+    assert len(event["suppressed_local_track_ids"]) == 1
+
+
+def test_two_proven_cars_competing_for_one_blob_are_still_frozen():
+    tracker = MotionVehicleTracker(association_ambiguity_margin=0.08)
+    frame = np.full((100, 180, 3), 90, dtype=np.uint8)
+    tracker._frame_idx = 1
+    tracker._current_timestamp_s = 1.0
+    tracker._create_or_reid(_detection(tracker, frame, 20, priority=False))
+    tracker._create_or_reid(_detection(tracker, frame, 90, priority=False))
+    track_ids = list(tracker._tracks)
+    # Both cars were measured at the same time as separate, non-overlapping
+    # objects before their foreground becomes one blob.
+    tracker._tracks[track_ids[0]].clean_observations = [
+        (1.0, (34, 44), (20, 20, 28, 24))
+    ]
+    tracker._tracks[track_ids[1]].clean_observations = [
+        (1.0, (104, 44), (90, 20, 28, 24))
+    ]
+    costs = np.asarray([[0.10], [0.12]], dtype=np.float64)
+    predictions = {track_ids[0]: (65, 44), track_ids[1]: (68, 44)}
+    detection = _detection(tracker, frame, 52, priority=False)
+
+    tracker._mark_competing_assignments(
+        costs, track_ids, predictions, [detection]
+    )
+
+    assert detection["ambiguous_assignment"] is True
+    assert np.all(costs[:, 0] == 10.0)
+    assert any(
+        event["type"] == "association_deferred_competing_tracks"
+        for event in tracker.association_events
+    )
 
 
 def _synthetic_background_and_motion(box=(50, 40, 40, 40)):
@@ -222,7 +348,8 @@ def test_achromatic_scaled_cast_shadow_is_rejected_even_in_priority_region(monke
         priority_min_area=350,
         reject_cast_shadows=True,
     )
-    tracker.bg_sub = _FixedBackgroundModel(background, foreground)
+    mog_shadow = np.where(foreground > 0, 127, 0).astype(np.uint8)
+    tracker.bg_sub = _FixedBackgroundModel(background, mog_shadow)
     monkeypatch.setattr(
         tracker,
         "_temporal_motion_mask",

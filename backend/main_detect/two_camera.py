@@ -24,6 +24,7 @@ from typing import Callable, Optional
 
 import cv2
 import numpy as np
+from lap import lapjv
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -808,6 +809,252 @@ def cancel_observed_recovery_tokens(
             )
 
 
+def _recover_departing_vehicle_ids_global(
+    observable: dict[str, dict],
+    manager: CrossCameraManager,
+    binders: dict[str, SlotVehicleBinder],
+    transforms: dict[str, np.ndarray],
+    frame_idx: int,
+    camera_timestamps_s: dict[str, float],
+    shared_map_anchor: str,
+) -> tuple[set[tuple[str, int]], list[dict]]:
+    """Evaluate token/track pairs globally before selecting an owner camera.
+
+    A physical fragment can be close to slots represented by both cameras.
+    The old dispatcher picked one camera from geometry alone and only then ran
+    appearance/direction gates.  A wrong provisional token could therefore
+    hide the correct confirmed token.  This function collects every pair that
+    passes the owning binder's hard gates, then performs one global one-to-one
+    assignment.
+    """
+    canonical = getattr(manager, "canonical_global_id", lambda value: int(value))
+    active_global_ids = {
+        int(canonical(global_id))
+        for camera_id, tracks in observable.items()
+        for local_id in tracks
+        if (global_id := manager.get_global_id(camera_id, local_id)) is not None
+    }
+    unbound = {
+        (camera_id, int(local_id)): track
+        for camera_id, tracks in observable.items()
+        for local_id, track in tracks.items()
+        if manager.get_global_id(camera_id, local_id) is None
+    }
+    if not unbound:
+        return set(), []
+
+    diagnostics: list[dict] = []
+    owned_tokens: dict[int, list[tuple[str, dict]]] = {}
+    for owner_camera, binder in binders.items():
+        for raw_token in binder.export_recovery_tokens(
+            camera_timestamps_s[owner_camera]
+        ):
+            token = dict(raw_token)
+            token["global_id"] = int(canonical(token["global_id"]))
+            if token["global_id"] in active_global_ids:
+                continue
+            owned_tokens.setdefault(token["global_id"], []).append(
+                (owner_camera, token)
+            )
+
+    tokens: list[tuple[str, dict]] = []
+    for global_id, choices in owned_tokens.items():
+        ranked = sorted(
+            choices,
+            key=lambda item: (
+                bool(item[1].get("confirmed_empty")),
+                float(item[1].get("created_at_s", 0.0)),
+                float(item[1].get("remaining_ms", 0.0)),
+            ),
+            reverse=True,
+        )
+        tokens.append(ranked[0])
+        for duplicate_camera, duplicate_token in ranked[1:]:
+            binders[duplicate_camera].cancel_recovery_for_global_id(
+                global_id, reason="duplicate_cross_camera_token"
+            )
+            diagnostics.append({
+                "type": "slot_recovery_duplicate_token_cancelled",
+                "frame": int(frame_idx),
+                "global_id": int(global_id),
+                "kept_camera": ranked[0][0],
+                "cancelled_camera": duplicate_camera,
+                "cancelled_slot": duplicate_token.get("slot_id"),
+            })
+    if not tokens:
+        return set(), diagnostics
+
+    protected: set[tuple[str, int]] = set()
+    eligible: list[dict] = []
+    trajectory_evidence_for = getattr(
+        manager, "parking_recovery_trajectory_evidence", None
+    )
+    for owner_camera, binder in binders.items():
+        owner_tokens = [token for camera, token in tokens if camera == owner_camera]
+        if not owner_tokens:
+            continue
+        candidates: dict[tuple[str, int], dict] = {}
+        for local_key, track in unbound.items():
+            source_camera, local_id = local_key
+            try:
+                payload = build_recovery_track_payload(
+                    track,
+                    source_camera,
+                    owner_camera,
+                    transforms,
+                    shared_map_anchor=shared_map_anchor,
+                )
+            except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+                continue
+            evidence = {}
+            if trajectory_evidence_for is not None:
+                for token in owner_tokens:
+                    global_id = int(token["global_id"])
+                    evidence[global_id] = trajectory_evidence_for(
+                        global_id,
+                        source_camera,
+                        int(local_id),
+                        track,
+                        recent_window_s=max(
+                            0.1, float(binder.recovery_retention_seconds)
+                        ),
+                    )
+            payload["recovery_identity_evidence"] = evidence
+            candidates[local_key] = payload
+
+        batch = binder.batch_recover_ids(
+            candidates,
+            frame_idx,
+            camera_timestamps_s[owner_camera],
+            camera_id=owner_camera,
+            allow_cross_camera=True,
+            consume_matches=False,
+            allowed_token_slots={str(token["slot_id"]) for token in owner_tokens},
+        )
+        protected.update(batch.protected_local_keys)
+        protected.update(batch.ambiguous_local_keys)
+        for local_key, detail in batch.diagnostics.items():
+            diagnostics.append({
+                "type": "slot_recovery_candidate",
+                "frame": int(frame_idx),
+                "camera": local_key[0],
+                "local_track_id": int(local_key[1]),
+                "owner_camera": owner_camera,
+                **dict(detail),
+            })
+        for pair in batch.eligible_pairs:
+            eligible.append({**pair, "owner_camera": owner_camera})
+
+    if not eligible:
+        return protected, diagnostics
+
+    token_keys = sorted({
+        (item["owner_camera"], item["token_slot_id"], int(item["token_global_id"]))
+        for item in eligible
+    })
+    candidate_keys = sorted({tuple(item["local_key"]) for item in eligible})
+    token_index = {key: index for index, key in enumerate(token_keys)}
+    candidate_index = {key: index for index, key in enumerate(candidate_keys)}
+    costs = np.full((len(token_keys), len(candidate_keys)), 10.0, dtype=np.float64)
+    details_by_pair: dict[tuple[int, int], dict] = {}
+    for item in eligible:
+        row = token_index[(
+            item["owner_camera"], item["token_slot_id"], int(item["token_global_id"])
+        )]
+        column = candidate_index[tuple(item["local_key"])]
+        cost = float(item["cost"])
+        if cost < costs[row, column]:
+            costs[row, column] = cost
+            details_by_pair[(row, column)] = item
+
+    _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.999)
+    for row, raw_column in enumerate(row_to_col):
+        column = int(raw_column)
+        if column < 0 or (row, column) not in details_by_pair:
+            continue
+        item = details_by_pair[(row, column)]
+        margin = float(binders[item["owner_camera"]].recovery_ambiguity_margin)
+        selected = float(costs[row, column])
+        alternatives = [
+            float(costs[row, other])
+            for other in range(costs.shape[1])
+            if other != column and costs[row, other] < 10.0
+        ] + [
+            float(costs[other, column])
+            for other in range(costs.shape[0])
+            if other != row and costs[other, column] < 10.0
+        ]
+        local_key = candidate_keys[column]
+        if alternatives and min(alternatives) - selected < margin:
+            protected.add(local_key)
+            diagnostics.append({
+                "type": "slot_recovery_token_ambiguous",
+                "frame": int(frame_idx),
+                "camera": local_key[0],
+                "local_track_id": int(local_key[1]),
+                "token_slot_id": item["token_slot_id"],
+                "token_global_id": int(item["token_global_id"]),
+                "cost": round(selected, 4),
+                "cost_gap": round(min(alternatives) - selected, 4),
+            })
+            continue
+
+        owner_camera = item["owner_camera"]
+        global_id = int(item["token_global_id"])
+        token_proof = next(
+            token for camera, token in tokens
+            if camera == owner_camera
+            and token["slot_id"] == item["token_slot_id"]
+            and int(token["global_id"]) == global_id
+        )
+        source_camera, local_id = local_key
+        try:
+            manager.bind_external_id(
+                source_camera,
+                int(local_id),
+                global_id,
+                frame_idx,
+                source="parking_departure_token",
+                source_slot_id=str(token_proof["slot_id"]),
+                source_camera_id=str(token_proof.get("camera_id") or owner_camera),
+            )
+        except (KeyError, ValueError) as exc:
+            protected.add(local_key)
+            diagnostics.append({
+                "type": "slot_recovery_bind_rejected",
+                "frame": int(frame_idx),
+                "camera": source_camera,
+                "local_track_id": int(local_id),
+                "token_slot_id": item["token_slot_id"],
+                "token_global_id": global_id,
+                "reason": str(exc),
+            })
+            continue
+        consumed = binders[owner_camera].consume_recovery_match(
+            item["token_slot_id"],
+            local_key,
+            camera_timestamps_s[owner_camera],
+            item,
+        )
+        if consumed is None:
+            raise RuntimeError(
+                "Recovery token changed after verified manager bind; "
+                f"owner={owner_camera} slot={item['token_slot_id']}"
+            )
+        protected.discard(local_key)
+        diagnostics.append({
+            "type": "slot_recovery_global_match_applied",
+            "frame": int(frame_idx),
+            "camera": source_camera,
+            "local_track_id": int(local_id),
+            "owner_camera": owner_camera,
+            "token_slot_id": item["token_slot_id"],
+            "global_id": global_id,
+            "cost": round(selected, 4),
+        })
+    return protected, diagnostics
+
+
 def recover_departing_vehicle_ids(
     observable: dict[str, dict],
     manager: CrossCameraManager,
@@ -844,7 +1091,30 @@ def recover_departing_vehicle_ids(
     ):
         return set(), []
 
-    diagnostics: list[dict] = []
+    # Real binders support evaluate-then-consume.  Keep the legacy dispatcher
+    # below for test doubles and older integrations, but never use its
+    # camera-first routing in the production two-camera runtime.
+    production_result = None
+    if binders and all(
+        hasattr(binder, "consume_recovery_match") for binder in binders.values()
+    ):
+        production_result = _recover_departing_vehicle_ids_global(
+            observable,
+            manager,
+            binders,
+            transforms,
+            frame_idx,
+            camera_timestamps_s,
+            shared_map_anchor,
+        )
+        # The global path already handled every unbound fragment.  Continue
+        # through the legacy function only for its separate late-
+        # reconciliation pass over tracks that already received a wrong GID.
+        unbound = {}
+
+    diagnostics: list[dict] = (
+        list(production_result[1]) if production_result is not None else []
+    )
     tokens_by_camera: dict[str, list[dict]] = {}
     tokens_by_global_id: dict[int, list[tuple[str, dict]]] = {}
     # Late reconciliation needs the full confirmed token list, including tokens
@@ -903,7 +1173,9 @@ def recover_departing_vehicle_ids(
             )
     payload_cache: dict[tuple[tuple[str, int], str], dict] = {}
     assigned_candidates: dict[str, dict] = {camera_id: {} for camera_id in binders}
-    protected: set[tuple[str, int]] = set()
+    protected: set[tuple[str, int]] = (
+        set(production_result[0]) if production_result is not None else set()
+    )
     trajectory_evidence_for = getattr(
         manager, "parking_recovery_trajectory_evidence", None
     )
@@ -1537,6 +1809,15 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--motion-min-pixels", type=int, default=100)
     parser.add_argument("--motion-min-ratio", type=float, default=0.05)
     parser.add_argument(
+        "--motion-roi-context-px",
+        type=int,
+        default=48,
+        help=(
+            "Vung dem chi de hoan thien contour da cham ROI; blob hoan toan "
+            "ngoai ROI van bi loai"
+        ),
+    )
+    parser.add_argument(
         "--motion-max-bbox-width-ratio",
         type=float,
         default=0.30,
@@ -2091,6 +2372,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 max_bbox_area_ratio=args.motion_max_bbox_area_ratio,
                 motion_join_kernel_size=args.motion_join_kernel_size,
                 motion_join_iterations=args.motion_join_iterations,
+                roi_context_padding_px=args.motion_roi_context_px,
                 enable_multiscale_motion=True,
                 reject_cast_shadows=True,
                 tracklet_max_samples=args.tracklet_max_samples,
@@ -2965,6 +3247,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "motion_max_bbox_area_ratio": args.motion_max_bbox_area_ratio,
                     "motion_join_kernel_size": args.motion_join_kernel_size,
                     "motion_join_iterations": args.motion_join_iterations,
+                    "motion_roi_context_px": args.motion_roi_context_px,
                     "tracking_roi_cam1": str(
                         args.tracking_roi_cam1 or args.mask_cam1
                     ),

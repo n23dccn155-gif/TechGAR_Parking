@@ -235,6 +235,59 @@ def _crossed_in_valid_direction(old: dict, new: dict, gate: dict) -> bool:
     return direction > 0 if gate["direction"] == "positive" else direction < 0
 
 
+def _recent_measured_entry_crossing(
+    vehicle: dict[str, Any],
+    gate: dict[str, Any],
+    *,
+    current_source_time: Optional[float],
+    max_gap_seconds: float = 1.0,
+) -> Optional[tuple[dict[str, float], dict[str, float]]]:
+    """Find a recent measured crossing that preceded first Global-ID output.
+
+    Motion tracks are intentionally tentative for a few frames.  A fast or
+    low-contrast vehicle can therefore cross the physical entry line before a
+    Global ID is published.  The manager exports the promoted provisional
+    measurements so the gate can inspect that short lineage.  We require two
+    consecutive measurements from the same camera *and* local track; a stale
+    path, Kalman prediction, or cross-camera jump cannot create a session.
+    """
+    raw_path = vehicle.get("recent_observed_path")
+    if not isinstance(raw_path, list) or len(raw_path) < 2:
+        return None
+    samples: list[tuple[float, int, str, int, dict[str, float]]] = []
+    for raw in raw_path[-12:]:
+        if not isinstance(raw, dict) or not isinstance(raw.get("position"), dict):
+            continue
+        try:
+            timestamp_s = float(raw["timestamp_s"])
+            frame_index = int(raw["frame_index"])
+            camera_id = str(raw["camera_id"])
+            local_track_id = int(raw["local_track_id"])
+            position = _point(raw["position"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not math.isfinite(timestamp_s):
+            continue
+        samples.append(
+            (timestamp_s, frame_index, camera_id, local_track_id, position)
+        )
+    samples.sort(key=lambda item: (item[0], item[1]))
+    for first, second in zip(samples, samples[1:]):
+        elapsed = second[0] - first[0]
+        if elapsed <= 0.0 or elapsed > max_gap_seconds:
+            continue
+        if first[2] != second[2] or first[3] != second[3]:
+            continue
+        if (
+            current_source_time is not None
+            and current_source_time - second[0] > max_gap_seconds
+        ):
+            continue
+        if _crossed_in_valid_direction(first[4], second[4], gate):
+            return first[4], second[4]
+    return None
+
+
 class GateSessionCoordinator:
     """Apply runtime observations to the persistent vehicle-session store."""
 
@@ -421,9 +474,23 @@ class GateSessionCoordinator:
                 global_id, runtime_id=runtime_id
             )
 
-            if observation_is_continuous and _crossed_in_valid_direction(
-                previous, position, self.gate_config["entry_gate"]
-            ):
+            direct_entry_crossing = (
+                observation_is_continuous
+                and _crossed_in_valid_direction(
+                    previous, position, self.gate_config["entry_gate"]
+                )
+            )
+            recovered_entry_crossing = (
+                observed
+                and session is None
+                and _recent_measured_entry_crossing(
+                    vehicle,
+                    self.gate_config["entry_gate"],
+                    current_source_time=source_time,
+                )
+                is not None
+            )
+            if direct_entry_crossing or recovered_entry_crossing:
                 if session is None:
                     session_id = create_session(
                         global_vehicle_id=global_id,

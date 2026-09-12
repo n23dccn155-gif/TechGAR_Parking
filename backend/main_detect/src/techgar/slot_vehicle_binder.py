@@ -160,6 +160,11 @@ class RecoveryBatchResult:
     protected_local_keys: Set[Hashable] = field(default_factory=set)
     ambiguous_local_keys: Set[Hashable] = field(default_factory=set)
     diagnostics: Dict[Hashable, dict] = field(default_factory=dict)
+    # Every pair that passed all hard gates.  The two-camera runner evaluates
+    # these pairs across *all* slot owners before consuming a token; selecting
+    # an owner camera first allowed a nearby occupied slot to hide the correct
+    # parked identity.
+    eligible_pairs: List[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -2568,6 +2573,8 @@ class SlotVehicleBinder:
         camera_id: Optional[str] = None,
         coordinate_offset: Point = (0.0, 0.0),
         allow_cross_camera: bool = False,
+        consume_matches: bool = True,
+        allowed_token_slots: Optional[Set[str]] = None,
     ) -> RecoveryBatchResult:
         """Safely associate all unbound local tracks with departure tokens.
 
@@ -2657,7 +2664,13 @@ class SlotVehicleBinder:
                 "identity_evidence": identity_evidence,
             }
 
-        tokens = list(self._departure_tokens.values())
+        tokens = [
+            token
+            for token in self._departure_tokens.values()
+            if allowed_token_slots is None or token.slot_id in allowed_token_slots
+        ]
+        if not tokens:
+            return result
         invalid_cost = 10.0
         costs = np.full((len(tokens), len(candidate_keys)), invalid_cost, dtype=np.float64)
         pair_details: Dict[Tuple[int, int], dict] = {}
@@ -2877,9 +2890,10 @@ class SlotVehicleBinder:
                         str(int(token.global_id))
                     )
                 trajectory_ready = False
+                trajectory_qualification = None
                 if trajectory_evidence is not None:
                     trajectory_score = trajectory_evidence.get("score")
-                    current_trajectory_ready = bool(
+                    strict_score_ready = bool(
                         trajectory_score is not None
                         and float(trajectory_score) >= 0.78
                         and int(trajectory_evidence.get("observations", 0)) >= 3
@@ -2892,6 +2906,42 @@ class SlotVehicleBinder:
                     target_camera_distance = trajectory_evidence.get(
                         "appearance_distance"
                     )
+                    components = trajectory_evidence.get("components") or {}
+                    direction_cosine = trajectory_evidence.get(
+                        "direction_cosine"
+                    )
+                    # A vehicle leaving at the edge of the other camera can
+                    # have a shortened bbox and a modest aggregate trajectory
+                    # score even though the camera-specific gallery identifies
+                    # it very clearly.  This alternate proof is deliberately
+                    # conjunctive: close to the parked origin, correct outward
+                    # direction, at least three real samples and a very strong
+                    # target-camera appearance.  It does not lower the normal
+                    # 0.78 trajectory threshold for other Re-ID paths.
+                    strong_target_camera_ready = bool(
+                        trajectory_score is not None
+                        and float(trajectory_score) >= 0.66
+                        and int(trajectory_evidence.get("observations", 0)) >= 3
+                        and int(
+                            trajectory_evidence.get("appearance_samples", 0)
+                        )
+                        >= 2
+                        and target_camera_distance is not None
+                        and float(target_camera_distance) <= 0.20
+                        and float(components.get("corridor", 0.0)) >= 0.35
+                        and direction_cosine is not None
+                        and float(direction_cosine) >= 0.25
+                        and not trajectory_evidence.get("hard_reject_reason")
+                    )
+                    current_trajectory_ready = bool(
+                        strict_score_ready or strong_target_camera_ready
+                    )
+                    if strict_score_ready:
+                        trajectory_qualification = "strict_score"
+                    elif strong_target_camera_ready:
+                        trajectory_qualification = (
+                            "strong_target_camera_evidence"
+                        )
                     if current_trajectory_ready:
                         evidence.world_trajectory_qualified = True
                         evidence.best_world_trajectory_score = max(
@@ -2933,6 +2983,9 @@ class SlotVehicleBinder:
                             ),
                             "target_camera_appearance_distance": (
                                 trajectory_evidence.get("appearance_distance")
+                            ),
+                            "strong_target_camera_ready": bool(
+                                strong_target_camera_ready
                             ),
                         }
                         continue
@@ -3065,11 +3118,26 @@ class SlotVehicleBinder:
                 )
                 radial_gain = radial_now - radial_first
                 moved_px = float(np.linalg.norm(movement))
+                world_direction_cosine = (
+                    trajectory_evidence.get("direction_cosine")
+                    if trajectory_evidence is not None
+                    else None
+                )
+                world_outward_ready = bool(
+                    is_cross_camera
+                    and trajectory_ready
+                    and world_direction_cosine is not None
+                    and float(world_direction_cosine) >= 0.25
+                    and int(trajectory_evidence.get("observations", 0)) >= 3
+                )
+                legacy_outward_ready = bool(
+                    moved_px >= self.recovery_min_movement_px
+                    and outward_px >= self.recovery_min_outward_px
+                    and radial_gain >= self.recovery_min_radial_gain_px
+                )
                 if (
                     evidence.observations < self.recovery_evidence_frames
-                    or moved_px < self.recovery_min_movement_px
-                    or outward_px < self.recovery_min_outward_px
-                    or radial_gain < self.recovery_min_radial_gain_px
+                    or not (legacy_outward_ready or world_outward_ready)
                 ):
                     result.diagnostics[key] = {
                         "reason": "insufficient_outward_evidence",
@@ -3077,6 +3145,11 @@ class SlotVehicleBinder:
                         "moved_px": round(moved_px, 3),
                         "outward_px": round(outward_px, 3),
                         "radial_gain_px": round(radial_gain, 3),
+                        "world_direction_cosine": (
+                            round(float(world_direction_cosine), 4)
+                            if world_direction_cosine is not None
+                            else None
+                        ),
                     }
                     continue
                 evidence.qualified_predeparture = True
@@ -3093,7 +3166,22 @@ class SlotVehicleBinder:
                     / max(1.0, token.slot_diagonal + radius),
                 )
                 size_cost = min(1.0, abs(float(np.log(max(size_ratio, 1e-6)))) / np.log(2.5))
-                direction_cost = max(0.0, 1.0 - outward_px / max(3.0, token.slot_diagonal * 0.10))
+                if world_outward_ready:
+                    direction_cost = 1.0 - float(
+                        np.clip(float(world_direction_cosine), 0.0, 1.0)
+                    )
+                    outward_evidence_source = "world_trajectory"
+                else:
+                    direction_cost = float(
+                        np.clip(
+                            1.0
+                            - outward_px
+                            / max(3.0, token.slot_diagonal * 0.10),
+                            0.0,
+                            1.0,
+                        )
+                    )
+                    outward_evidence_source = "owner_camera_polygon"
                 cost = (
                     0.45 * spatial_cost
                     + 0.35 * (appearance_distance / max(appearance_limit, 1e-6))
@@ -3116,8 +3204,15 @@ class SlotVehicleBinder:
                     "trajectory_best_score": round(
                         float(evidence.best_world_trajectory_score), 4
                     ),
+                    "trajectory_qualification": trajectory_qualification,
                     "size_ratio": round(float(size_ratio), 4),
                     "outward_px": round(float(outward_px), 3),
+                    "outward_evidence_source": outward_evidence_source,
+                    "world_direction_cosine": (
+                        round(float(world_direction_cosine), 4)
+                        if world_direction_cosine is not None
+                        else None
+                    ),
                     "recovery_radius_px": round(radius, 3),
                 }
                 costs[row, column] = float(cost)
@@ -3125,6 +3220,19 @@ class SlotVehicleBinder:
                 result.diagnostics[key] = details
 
         if not pair_details:
+            return result
+
+        result.eligible_pairs = [
+            {
+                **dict(details),
+                "local_key": candidate_keys[column],
+                "token_slot_id": tokens[row].slot_id,
+                "token_global_id": int(tokens[row].global_id),
+                "token_camera_id": tokens[row].camera_id,
+            }
+            for (row, column), details in pair_details.items()
+        ]
+        if not consume_matches:
             return result
 
         _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.999)
@@ -3177,6 +3285,32 @@ class SlotVehicleBinder:
             result.protected_local_keys.discard(key)
 
         return result
+
+    def consume_recovery_match(
+        self,
+        slot_id: str,
+        local_key: Hashable,
+        timestamp_s: float,
+        details: dict,
+    ) -> Optional[int]:
+        """Consume one pair previously returned by an evaluate-only batch.
+
+        The runner is the single writer.  Revalidation prevents a stale pair
+        from consuming a token after vision or another camera changed it.
+        """
+        token = self._departure_tokens.get(str(slot_id))
+        if token is None or not token.confirmed_empty:
+            return None
+        if int(token.global_id) != int(details.get("global_id", -1)):
+            return None
+        if local_key not in token.candidates:
+            return None
+        return self._consume_departure_token(
+            token,
+            local_key,
+            float(timestamp_s),
+            details,
+        )
 
     def try_recover_id(
         self,

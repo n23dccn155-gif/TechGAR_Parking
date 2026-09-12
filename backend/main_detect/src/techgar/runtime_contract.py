@@ -92,8 +92,7 @@ def build_runtime_snapshot(
         if not isinstance(camera_ids, list) or not camera_ids:
             last_camera = identity.get("last_camera")
             camera_ids = [last_camera] if last_camera else []
-        vehicles.append(
-            {
+        vehicle = {
                 "global_id": int(identity.get("global_id", global_id)),
                 "state": state,
                 "observed": bool(active),
@@ -107,7 +106,16 @@ def build_runtime_snapshot(
                 "last_seen_frame": identity.get("last_seen_frame"),
                 "last_seen_time": identity.get("last_seen_time"),
             }
-        )
+        recent_path = identity.get("recent_observed_path")
+        if isinstance(recent_path, list) and recent_path:
+            # Preserve only the small, manager-authored measured trail.  It is
+            # diagnostic/evidence data, not a replacement for the current
+            # observed position.
+            vehicle["recent_observed_path"] = [
+                dict(item) for item in recent_path[-12:]
+                if isinstance(item, Mapping)
+            ]
+        vehicles.append(vehicle)
 
     clock_ns = applied_monotonic_ns if applied_monotonic_ns is not None else max(camera_timestamps_ns.values(), default=0)
     cameras = {

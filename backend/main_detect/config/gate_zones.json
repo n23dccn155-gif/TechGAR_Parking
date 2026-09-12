@@ -2,29 +2,29 @@
   "schema_version": 1,
   "coordinate_space": "world",
   "unit": "cm",
-  "source_camera": "cam2",
+  "source": "frontend_shared_map",
   "entry_gate": {
-    "name": "entry_gate",
+    "name": "Cổng vào",
     "p1": {
-      "x": 47.7248,
-      "y": -9.5134
+      "x": 47.8441,
+      "y": 6.532
     },
     "p2": {
-      "x": 48.2432,
-      "y": 4.3591
-    },
-    "direction": "negative"
-  },
-  "exit_gate": {
-    "name": "exit_gate",
-    "p1": {
-      "x": 51.6555,
-      "y": 55.0124
-    },
-    "p2": {
-      "x": 50.7018,
-      "y": 67.4041
+      "x": 47.6366,
+      "y": -9.4986
     },
     "direction": "positive"
+  },
+  "exit_gate": {
+    "name": "Cổng ra",
+    "p1": {
+      "x": 48.0683,
+      "y": 59.3029
+    },
+    "p2": {
+      "x": 48.3541,
+      "y": 51.8413
+    },
+    "direction": "negative"
   }
 }

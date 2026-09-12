@@ -60,6 +60,42 @@ class FakeBinder:
         return [] if self.token is None else [self.token["polygon"]]
 
 
+class EvaluatingBinder(FakeBinder):
+    """Production evaluate/consume contract without hiding runner routing."""
+
+    def __init__(self, token_value, eligible=False):
+        super().__init__(token_value)
+        self.eligible = bool(eligible)
+        self.recovery_retention_seconds = 5.0
+        self.recovery_ambiguity_margin = 0.15
+        self.allowed_token_slots = None
+
+    def batch_recover_ids(self, candidates, *_args, **kwargs):
+        self.received = dict(candidates)
+        self.allowed_token_slots = kwargs.get("allowed_token_slots")
+        result = RecoveryBatchResult()
+        if not self.eligible or not candidates:
+            return result
+        local_key = next(iter(candidates))
+        result.eligible_pairs = [{
+            "local_key": local_key,
+            "slot_id": self.token["slot_id"],
+            "global_id": self.token["global_id"],
+            "token_slot_id": self.token["slot_id"],
+            "token_global_id": self.token["global_id"],
+            "token_camera_id": self.token.get("camera_id"),
+            "cost": 0.12,
+            "evidence_frames": 4,
+        }]
+        return result
+
+    def consume_recovery_match(self, slot_id, local_key, _timestamp_s, details):
+        assert slot_id == self.token["slot_id"]
+        assert int(details["global_id"]) == int(self.token["global_id"])
+        self.token = None
+        return int(details["global_id"])
+
+
 def token(slot_id="E07", global_id=30, center=(50.0, 50.0)):
     return {
         "slot_id": slot_id,
@@ -308,6 +344,46 @@ def test_candidate_between_two_token_owners_stays_protected_and_unbound():
     assert manager.bindings == {}
     assert diagnostics[0]["type"] == "slot_recovery_owner_ambiguous"
     assert all(binder.received is None for binder in binders.values())
+
+
+def test_global_recovery_uses_eligible_token_not_nearest_owner_camera():
+    manager = FakeManager()
+    wrong_nearby = token("C01", 30, center=(50.0, 50.0))
+    wrong_nearby.update({
+        "camera_id": "cam1",
+        "confirmed_empty": False,
+        "created_at_s": 9.0,
+    })
+    correct = token("D01", 31, center=(500.0, 500.0))
+    correct.update({
+        "camera_id": "cam2",
+        "confirmed_empty": True,
+        "created_at_s": 9.0,
+    })
+    cam1 = EvaluatingBinder(wrong_nearby, eligible=False)
+    cam2 = EvaluatingBinder(correct, eligible=True)
+
+    protected, diagnostics = recover_departing_vehicle_ids(
+        {"cam1": {7: track_at()}, "cam2": {}},
+        manager,
+        {"cam1": cam1, "cam2": cam2},
+        {"cam1": np.eye(3), "cam2": np.eye(3)},
+        100,
+        {"cam1": 10.0, "cam2": 10.0},
+        0.45,
+    )
+
+    assert manager.bindings[("cam1", 7)] == 31
+    assert cam1.token is wrong_nearby
+    assert cam2.token is None
+    assert cam1.allowed_token_slots == {"C01"}
+    assert cam2.allowed_token_slots == {"D01"}
+    assert protected == set()
+    assert any(
+        item["type"] == "slot_recovery_global_match_applied"
+        and item["token_slot_id"] == "D01"
+        for item in diagnostics
+    )
 
 
 def test_token_gid_already_visible_cannot_be_given_to_second_local_track():

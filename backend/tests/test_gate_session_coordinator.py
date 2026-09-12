@@ -350,6 +350,68 @@ def test_unobserved_vehicle_position_does_not_cross_gate(monkeypatch, tmp_path):
     assert session_manager.find_session_by_global_id(42) is None
 
 
+def test_recent_measured_path_recovers_entry_before_global_id_was_published(
+    monkeypatch, tmp_path
+):
+    gate = coordinator(monkeypatch, tmp_path)
+    late_identity = vehicle(42, 5, 8)
+    late_identity["last_seen_time"] = 1.1
+    late_identity["recent_observed_path"] = [
+        {
+            "frame_index": 10,
+            "timestamp_s": 1.0,
+            "camera_id": "cam2",
+            "local_track_id": 7,
+            "position": {"x": 5, "y": 12},
+        },
+        {
+            "frame_index": 11,
+            "timestamp_s": 1.1,
+            "camera_id": "cam2",
+            "local_track_id": 7,
+            "position": {"x": 5, "y": 8},
+        },
+    ]
+
+    gate.process_snapshot(snapshot(late_identity, runtime_id="late-id-run"))
+
+    created = session_manager.find_session_by_global_id(
+        42, runtime_id="late-id-run"
+    )
+    assert created is not None
+    assert created["state"] == "WAITING_FOR_SCAN"
+
+
+def test_recent_path_cannot_join_different_local_tracks_into_false_entry(
+    monkeypatch, tmp_path
+):
+    gate = coordinator(monkeypatch, tmp_path)
+    identity = vehicle(42, 5, 8)
+    identity["last_seen_time"] = 1.1
+    identity["recent_observed_path"] = [
+        {
+            "frame_index": 10,
+            "timestamp_s": 1.0,
+            "camera_id": "cam2",
+            "local_track_id": 7,
+            "position": {"x": 5, "y": 12},
+        },
+        {
+            "frame_index": 11,
+            "timestamp_s": 1.1,
+            "camera_id": "cam2",
+            "local_track_id": 8,
+            "position": {"x": 5, "y": 8},
+        },
+    ]
+
+    gate.process_snapshot(snapshot(identity, runtime_id="different-lineages"))
+
+    assert session_manager.find_session_by_global_id(
+        42, runtime_id="different-lineages"
+    ) is None
+
+
 def test_durable_alias_table_remaps_session_without_recent_event(
     monkeypatch, tmp_path
 ):

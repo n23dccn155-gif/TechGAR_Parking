@@ -889,6 +889,36 @@ def test_safe_batch_recovery_requires_three_frames_and_outward_motion():
     assert binder.export_recovery_tokens(timestamp + 0.11) == []
 
 
+def test_recovery_can_be_evaluated_globally_before_token_is_consumed():
+    binder, result, frame, timestamp, descriptor = parked_vision_primary_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+
+    batch = None
+    for offset, y in enumerate((30, 33, 36), start=1):
+        batch = binder.batch_recover_ids(
+            {("cam1", 58): track(y=y, appearance=descriptor)},
+            frame + offset,
+            timestamp + offset * 0.04,
+            camera_id="cam1",
+            consume_matches=False,
+            allowed_token_slots={"P001"},
+        )
+
+    assert batch is not None
+    assert batch.recovered_ids == {}
+    assert len(batch.eligible_pairs) == 1
+    pair = batch.eligible_pairs[0]
+    assert pair["token_slot_id"] == "P001"
+    assert pair["token_global_id"] == 30
+    assert binder.export_recovery_tokens(timestamp + 0.12)
+
+    recovered = binder.consume_recovery_match(
+        "P001", ("cam1", 58), timestamp + 0.12, pair
+    )
+    assert recovered == 30
+    assert binder.export_recovery_tokens(timestamp + 0.12) == []
+
+
 def test_departure_evidence_continues_across_replaced_local_track_ids():
     binder, result, frame, timestamp, descriptor = parked_vision_primary_binder()
     frame, timestamp = confirm_departure(binder, result, frame, timestamp)
@@ -1311,6 +1341,137 @@ def test_cross_camera_departure_uses_target_gallery_only_with_world_proof():
     assert batch.recovered_ids == {("cam2", 59): 30}
     assert batch.diagnostics[("cam2", 59)]["appearance_reference"] == (
         "target_camera_gallery"
+    )
+
+
+def test_cross_camera_departure_accepts_conjunctive_strong_target_proof():
+    binder, result, frame, timestamp, _descriptor = parked_vision_primary_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+    # Mirrors the dark D01 departure: aggregate score is below the ordinary
+    # 0.78 threshold, while target-camera appearance, origin corridor and
+    # outward direction independently agree.
+    world_proof = {
+        30: {
+            "score": 0.70,
+            "observations": 5,
+            "appearance_samples": 3,
+            "hard_reject_reason": None,
+            "appearance_distance": 0.12,
+            "direction_cosine": 0.62,
+            "components": {"corridor": 0.50, "time_topology": 0.60},
+        }
+    }
+
+    batch = None
+    for offset, y in enumerate((90.0, 93.0, 96.0)):
+        batch = binder.batch_recover_ids(
+            {
+                ("cam2", 59): track(
+                    appearance=appearance(4),
+                    camera_id="cam2",
+                    recovery_position=(50.0, y),
+                    recovery_first_position=(50.0, 90.0),
+                    recovery_size_ratio=1.0,
+                    recovery_identity_evidence=world_proof,
+                )
+            },
+            frame + offset,
+            timestamp + 0.03 + offset * 0.04,
+            camera_id="cam1",
+            allow_cross_camera=True,
+        )
+
+    assert batch.recovered_ids == {("cam2", 59): 30}
+    assert batch.diagnostics[("cam2", 59)]["trajectory_qualification"] == (
+        "strong_target_camera_evidence"
+    )
+
+
+def test_world_outward_proof_overrides_inverted_owner_camera_pixel_motion():
+    binder, result, frame, timestamp, _descriptor = parked_vision_primary_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+    world_proof = {
+        30: {
+            "score": 0.70,
+            "observations": 6,
+            "appearance_samples": 3,
+            "hard_reject_reason": None,
+            "appearance_distance": 0.12,
+            "direction_cosine": 0.62,
+            "components": {"corridor": 0.50, "time_topology": 0.60},
+        }
+    }
+
+    batch = None
+    # In the owning camera's transformed pixel polygon this path moves toward
+    # the slot centre (negative radial gain).  The shared-world path is the
+    # authoritative cross-camera direction and proves that the car leaves.
+    for offset, y in enumerate((90.0, 87.0, 84.0)):
+        batch = binder.batch_recover_ids(
+            {
+                ("cam2", 59): track(
+                    appearance=appearance(4),
+                    camera_id="cam2",
+                    recovery_position=(50.0, y),
+                    recovery_first_position=(50.0, 90.0),
+                    recovery_size_ratio=1.0,
+                    recovery_identity_evidence=world_proof,
+                )
+            },
+            frame + offset,
+            timestamp + 0.03 + offset * 0.04,
+            camera_id="cam1",
+            allow_cross_camera=True,
+        )
+
+    assert batch.recovered_ids == {("cam2", 59): 30}
+    assert batch.diagnostics[("cam2", 59)]["outward_evidence_source"] == (
+        "world_trajectory"
+    )
+    assert batch.diagnostics[("cam2", 59)]["world_direction_cosine"] == 0.62
+
+
+@pytest.mark.parametrize(
+    "appearance_distance,direction_cosine,corridor",
+    [(0.24, 0.62, 0.50), (0.12, -0.10, 0.50), (0.12, 0.62, 0.20)],
+)
+def test_weak_component_cannot_use_strong_target_departure_exception(
+    appearance_distance, direction_cosine, corridor
+):
+    binder, result, frame, timestamp, _descriptor = parked_vision_primary_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+    world_proof = {
+        30: {
+            "score": 0.70,
+            "observations": 5,
+            "appearance_samples": 3,
+            "hard_reject_reason": None,
+            "appearance_distance": appearance_distance,
+            "direction_cosine": direction_cosine,
+            "components": {"corridor": corridor, "time_topology": 0.60},
+        }
+    }
+
+    batch = binder.batch_recover_ids(
+        {
+            ("cam2", 59): track(
+                appearance=appearance(4),
+                camera_id="cam2",
+                recovery_position=(50.0, 96.0),
+                recovery_first_position=(50.0, 90.0),
+                recovery_size_ratio=1.0,
+                recovery_identity_evidence=world_proof,
+            )
+        },
+        frame,
+        timestamp + 0.03,
+        camera_id="cam1",
+        allow_cross_camera=True,
+    )
+
+    assert batch.recovered_ids == {}
+    assert batch.diagnostics[("cam2", 59)]["reason"] == (
+        "waiting_for_world_trajectory_evidence"
     )
 
 

@@ -69,6 +69,11 @@ class TrackedVehicle:
     last_ambiguous_timestamp_s: Optional[float] = None
     last_ambiguous_kind: Optional[str] = None
     ambiguous_clear_streak: int = 0
+    # OpenCV MOG2 marks both true cast shadows and dark physical vehicles with
+    # value 127.  MotionVehicleTracker may conservatively rescue those pixels
+    # and then run its own background/colour shadow discriminator.
+    dark_foreground_rescued: bool = False
+    mog_shadow_marker_ratio: float = 0.0
 
     @property
     def x(self) -> int:

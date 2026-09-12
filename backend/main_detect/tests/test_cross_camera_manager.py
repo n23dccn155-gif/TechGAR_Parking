@@ -87,6 +87,20 @@ def test_pending_parking_claim_protects_dormant_gid_from_expiry_and_reid():
     }
 
 
+def test_verified_transfer_can_reconcile_identity_held_for_parking_vision():
+    manager = make_manager()
+    owner = manager._allocate_global_id()
+    duplicate = manager._allocate_global_id()
+    manager._provisional_identity_holds = {owner}
+
+    assert manager._check_merge_collision_risk(
+        owner, duplicate, 10, verified_transfer=False
+    ) == "identity_waiting_for_parking_vision"
+    assert manager._check_merge_collision_risk(
+        owner, duplicate, 10, verified_transfer=True
+    ) is None
+
+
 def attach_tracklet(track: DummyTrack, *histograms: np.ndarray) -> DummyTrack:
     descriptor = AppearanceTracklet(max_samples=8, sample_interval=1)
     for frame_idx, histogram in enumerate(histograms, start=1):

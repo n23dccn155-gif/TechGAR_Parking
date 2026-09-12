@@ -92,6 +92,7 @@ class MotionVehicleTracker:
         enable_occlusion_guard: bool = True,
         enable_watershed: bool = True,
         enable_spatial_appearance: bool = True,
+        roi_context_padding_px: int = 0,
     ):
         self.min_visible_count = max(1, min_visible_count)
         self.lost_track_ttl = max(1, lost_track_ttl)
@@ -224,6 +225,9 @@ class MotionVehicleTracker:
         self.enable_occlusion_guard = bool(enable_occlusion_guard)
         self.enable_watershed = bool(enable_watershed)
         self.enable_spatial_appearance = bool(enable_spatial_appearance)
+        self.roi_context_padding_px = max(0, int(roi_context_padding_px))
+        self._roi_context_source_id: Optional[int] = None
+        self._roi_context_mask: Optional[np.ndarray] = None
         self._predictions_frame = -1
         self._predictions = {}
 
@@ -316,6 +320,33 @@ class MotionVehicleTracker:
             samples.append((now, detection['point'], detection['box']))
         track.clean_observations = samples[-8:]
         track.observation_kind = 'detection'
+
+    def _tracks_proven_independent(self, left: TrackedVehicle, right: TrackedVehicle) -> bool:
+        """Whether two lineages were simultaneously visible as separate cars.
+
+        A dark vehicle often appears first as a small fragment and one frame
+        later as a larger contour.  Treating those overlapping fragments as
+        two independent cars makes the ambiguity guard freeze the real car.
+        Independence therefore needs concurrent, spatially distinct clean
+        measurements rather than merely two local-track objects.
+        """
+        left_samples = list(getattr(left, "clean_observations", ()) or ())[-6:]
+        right_samples = list(getattr(right, "clean_observations", ()) or ())[-6:]
+        for left_time, left_point, left_box in reversed(left_samples):
+            for right_time, right_point, right_box in reversed(right_samples):
+                if abs(float(left_time) - float(right_time)) > 0.25:
+                    continue
+                left_diag = float(np.hypot(left_box[2], left_box[3]))
+                right_diag = float(np.hypot(right_box[2], right_box[3]))
+                separation = float(
+                    np.linalg.norm(np.subtract(left_point, right_point))
+                )
+                if (
+                    self._iou(left_box, right_box) <= 0.20
+                    and separation >= 0.35 * max(1.0, min(left_diag, right_diag))
+                ):
+                    return True
+        return False
 
     def _clean_size(self, track):
         if self.enable_occlusion_guard:
@@ -729,14 +760,55 @@ class MotionVehicleTracker:
         self._last_shadow_rejections = []
         self._last_detection_rejections = []
         background_image = self._background_reference()
-        background_mask = self.bg_sub.apply(frame)
-        _, background_mask = cv2.threshold(background_mask, 200, 255, cv2.THRESH_BINARY)
+        raw_background_mask = self.bg_sub.apply(frame)
+        _, definite_foreground = cv2.threshold(
+            raw_background_mask, 200, 255, cv2.THRESH_BINARY
+        )
+        # MOG2 reserves value 127 for pixels it believes are cast shadows.  A
+        # dark toy car on the grey road is frequently assigned that value too,
+        # especially after the phone exposure is raised.  The previous >200
+        # threshold permanently deleted the body before our more selective
+        # _is_cast_shadow() check could inspect it.  Admit 127 only when a
+        # learned background exists and the custom shadow discriminator is
+        # enabled; temporal motion remains mandatory and real shadows are
+        # rejected contour-by-contour below.
+        mog_shadow_markers = np.zeros_like(raw_background_mask)
+        if self.reject_cast_shadows and background_image is not None:
+            mog_shadow_markers = cv2.compare(
+                raw_background_mask, 127, cv2.CMP_EQ
+            )
+            background_mask = cv2.bitwise_or(
+                definite_foreground, mog_shadow_markers
+            )
+        else:
+            background_mask = definite_foreground
         temporal_motion = self._temporal_motion_mask(frame, timestamp_s=timestamp_s)
         # Motion mask là cổng bắt buộc: foreground đứng yên không được thành xe.
         support = cv2.dilate(temporal_motion, np.ones((17, 17), np.uint8), iterations=1)
         mask = cv2.bitwise_and(background_mask, support)
         if self.roi_mask is not None:
-            mask = cv2.bitwise_and(mask, self.roi_mask)
+            source_id = id(self.roi_mask)
+            if (
+                self._roi_context_mask is None
+                or self._roi_context_source_id != source_id
+                or self._roi_context_mask.shape != self.roi_mask.shape
+            ):
+                if self.roi_context_padding_px <= 0:
+                    self._roi_context_mask = self.roi_mask.copy()
+                else:
+                    size = self.roi_context_padding_px * 2 + 1
+                    kernel = cv2.getStructuringElement(
+                        cv2.MORPH_ELLIPSE, (size, size)
+                    )
+                    self._roi_context_mask = cv2.dilate(
+                        self.roi_mask, kernel, iterations=1
+                    )
+                self._roi_context_source_id = source_id
+            # Keep a bounded context band so a vehicle touching the configured
+            # ROI is measured as a whole object.  A component still needs real
+            # support inside the strict ROI below; this does not expand the
+            # area in which unrelated blobs may create identities.
+            mask = cv2.bitwise_and(mask, self._roi_context_mask)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         join_kernel = np.ones(
             (self.motion_join_kernel_size, self.motion_join_kernel_size),
@@ -759,6 +831,53 @@ class MotionVehicleTracker:
         for contour in contours:
             area = cv2.contourArea(contour)
             box = cv2.boundingRect(contour)
+            # No normal or priority-region detection can pass below these
+            # absolute limits. Reject it before allocating/filling a contour
+            # mask for strict-ROI support. Exposure changes can create
+            # hundreds of 3x3 speckles, and doing polygon work for all of them
+            # caused avoidable latency without changing any valid detection.
+            if (
+                area < min(self.min_area, self.priority_min_area)
+                or box[2] < self.min_width
+                or box[3] < self.min_height
+            ):
+                continue
+            roi_support_pixels = None
+            roi_support_ratio = 1.0
+            roi_clipped = False
+            if self.roi_mask is not None:
+                x0, y0, width0, height0 = box
+                contour_selection = np.zeros((height0, width0), dtype=np.uint8)
+                local_contour = contour.reshape((-1, 2)) - np.asarray(
+                    [x0, y0], dtype=np.int32
+                )
+                cv2.fillPoly(
+                    contour_selection,
+                    [local_contour.astype(np.int32)],
+                    255,
+                )
+                component_pixels = max(1, cv2.countNonZero(contour_selection))
+                strict_selection = cv2.bitwise_and(
+                    contour_selection,
+                    self.roi_mask[y0:y0 + height0, x0:x0 + width0],
+                )
+                roi_support_pixels = cv2.countNonZero(strict_selection)
+                roi_support_ratio = float(roi_support_pixels) / float(
+                    component_pixels
+                )
+                roi_clipped = roi_support_ratio < 0.98
+                required_support = max(
+                    20,
+                    min(self.motion_min_pixels, int(round(0.08 * component_pixels))),
+                )
+                if roi_support_pixels < required_support:
+                    self._last_detection_rejections.append({
+                        "type": "insufficient_strict_roi_support",
+                        "box": tuple(int(value) for value in box),
+                        "roi_support_pixels": int(roi_support_pixels),
+                        "roi_support_ratio": round(roi_support_ratio, 4),
+                    })
+                    continue
             group = (self.occlusion_guard.covering_group(box, self._tracks, self._predictions)
                      if self.enable_occlusion_guard else None)
             if group is not None:
@@ -772,7 +891,9 @@ class MotionVehicleTracker:
                     detections.append({'box': box, 'point': self._bottom_center(box),
                         'area': area, 'bbox_area': box[2]*box[3], 'hist': None,
                         'ambiguous_merged': True, 'occlusion_members': group.members,
-                        'observation_kind': 'merged', 'priority': False})
+                        'observation_kind': 'merged', 'priority': False,
+                        'roi_clipped': bool(roi_clipped),
+                        'roi_support_ratio': float(roi_support_ratio)})
                 else:
                     x0, y0, _, _ = box
                     for tid, child, selection in regions:
@@ -782,13 +903,13 @@ class MotionVehicleTracker:
                             'area': cv2.countNonZero(selection), 'bbox_area': child[2]*child[3],
                             'hist': self._histogram(frame, child, selected), 'priority': False,
                             'observation_kind': 'watershed_provisional',
-                            'occlusion_members': group.members, 'ambiguous_merged': False})
+                            'occlusion_members': group.members, 'ambiguous_merged': False,
+                            'roi_clipped': bool(roi_clipped),
+                            'roi_support_ratio': float(roi_support_ratio)})
                 continue
             if area > image_area * 0.22:
                 continue
             x, y, w, h = cv2.boundingRect(contour)
-            if w < self.min_width or h < self.min_height:
-                continue
             bbox_area = float(w * h)
             if (
                 w > max_bbox_width
@@ -809,9 +930,8 @@ class MotionVehicleTracker:
                 continue
             box = (x, y, w, h)
             point = self._bottom_center(box)
-            # A contour clipped by a polygon can still have a rectangular bbox
-            # whose bottom centre lies outside the observation area.  Do not
-            # create or update a vehicle beyond the camera's tracking ROI.
+            # A component may extend into the bounded context band, but it was
+            # admitted only after strict-ROI support was measured above.
             if self.roi_mask is not None:
                 px, py = point
                 if (
@@ -819,7 +939,10 @@ class MotionVehicleTracker:
                     or py < 0
                     or py >= self.roi_mask.shape[0]
                     or px >= self.roi_mask.shape[1]
-                    or self.roi_mask[py, px] == 0
+                    or (
+                        self.roi_mask[py, px] == 0
+                        and not roi_clipped
+                    )
                 ):
                     self._last_detection_rejections.append({
                         "type": "anchor_outside_roi",
@@ -837,20 +960,33 @@ class MotionVehicleTracker:
             min_ratio = self.priority_motion_min_ratio if is_priority else self.motion_min_ratio
             if motion_pixels < min_pixels or motion_pixels / float(w * h) < min_ratio:
                 continue
+            contour_selection = np.zeros((h, w), dtype=np.uint8)
+            local_contour = contour.reshape((-1, 2)) - np.asarray(
+                [x, y], dtype=np.int32
+            )
+            cv2.fillPoly(
+                contour_selection,
+                [local_contour.astype(np.int32)],
+                255,
+            )
+            contour_selection = cv2.bitwise_and(
+                contour_selection,
+                mask[y:y + h, x:x + w],
+            )
+            shadow_marker_pixels = cv2.countNonZero(
+                cv2.bitwise_and(
+                    contour_selection,
+                    mog_shadow_markers[y:y + h, x:x + w],
+                )
+            )
+            component_pixels = max(1, cv2.countNonZero(contour_selection))
+            shadow_marker_ratio = float(shadow_marker_pixels) / float(
+                component_pixels
+            )
+            dark_foreground_rescued = bool(
+                shadow_marker_pixels >= 20 and shadow_marker_ratio >= 0.08
+            )
             if self.reject_cast_shadows:
-                contour_selection = np.zeros((h, w), dtype=np.uint8)
-                local_contour = contour.reshape((-1, 2)) - np.asarray(
-                    [x, y], dtype=np.int32
-                )
-                cv2.fillPoly(
-                    contour_selection,
-                    [local_contour.astype(np.int32)],
-                    255,
-                )
-                contour_selection = cv2.bitwise_and(
-                    contour_selection,
-                    mask[y:y + h, x:x + w],
-                )
                 is_shadow, shadow_metrics = self._is_cast_shadow(
                     frame,
                     background_image,
@@ -861,6 +997,9 @@ class MotionVehicleTracker:
                     self._last_shadow_rejections.append({
                         "box": box,
                         "priority": bool(is_priority),
+                        "mog_shadow_marker_ratio": round(
+                            shadow_marker_ratio, 4
+                        ),
                         **(shadow_metrics or {}),
                     })
                     cv2.drawContours(mask, [contour], -1, 0, thickness=cv2.FILLED)
@@ -878,6 +1017,11 @@ class MotionVehicleTracker:
                 "ambiguous_merged": False,
                 "appearance_trusted": histogram is not None,
                 "observation_kind": "detection",
+                "roi_clipped": bool(roi_clipped),
+                "roi_support_pixels": int(roi_support_pixels or 0),
+                "roi_support_ratio": float(roi_support_ratio),
+                "dark_foreground_rescued": dark_foreground_rescued,
+                "mog_shadow_marker_ratio": shadow_marker_ratio,
                 "spatial_appearance": spatial_histograms(frame, box, mask) if self.enable_spatial_appearance else None,
             })
         return self._suppress_duplicate_detections(detections), mask
@@ -1188,6 +1332,49 @@ class MotionVehicleTracker:
             )
             close_predictions = prediction_gap <= 1.10 * diagonal
             if cost_gap >= self.association_ambiguity_margin and not close_predictions:
+                continue
+            independent = any(
+                self._tracks_proven_independent(
+                    self._tracks[track_ids[left_row]],
+                    self._tracks[track_ids[right_row]],
+                )
+                for left_index, left_row in enumerate(viable_rows)
+                for right_row in viable_rows[left_index + 1:]
+            )
+            if not independent:
+                # These rows are overlapping fragments of one not-yet-proven
+                # object, not two cars competing for one measurement. Keep the
+                # strongest/oldest lineage and stop the newer fragment from
+                # forcing both tracks into frozen_ambiguous.
+                preferred_row = max(
+                    viable_rows,
+                    key=lambda row: (
+                        int(getattr(
+                            self._tracks[track_ids[row]],
+                            "total_visible_count",
+                            0,
+                        )),
+                        self._lineage_score(self._tracks[track_ids[row]]),
+                        -int(getattr(
+                            self._tracks[track_ids[row]],
+                            "first_observation_frame",
+                            self._frame_idx,
+                        )),
+                    ),
+                )
+                suppressed = []
+                for row in viable_rows:
+                    if row == preferred_row:
+                        continue
+                    costs[row, col] = 10.0
+                    suppressed.append(int(track_ids[row]))
+                self._last_association_events.append({
+                    "type": "duplicate_lineage_competition_resolved",
+                    "detection_id": int(col),
+                    "kept_local_track_id": int(track_ids[preferred_row]),
+                    "suppressed_local_track_ids": suppressed,
+                    "reason": "no_concurrent_distinct_measurements",
+                })
                 continue
             selected_cost = float(costs[first_row, col])
             detection["ambiguous_assignment"] = True
@@ -1692,6 +1879,14 @@ class MotionVehicleTracker:
         track.fragment_area_history = [float(detection["area"])]
         track.priority_track = bool(detection.get("priority", False))
         track.priority_observation_count = 1 if track.priority_track else 0
+        track.roi_clipped = bool(detection.get("roi_clipped", False))
+        track.roi_support_ratio = float(detection.get("roi_support_ratio", 1.0))
+        track.dark_foreground_rescued = bool(
+            detection.get("dark_foreground_rescued", False)
+        )
+        track.mog_shadow_marker_ratio = float(
+            detection.get("mog_shadow_marker_ratio", 0.0)
+        )
         self._tracks[track_id] = track
 
     def _is_confirmable(self, track: TrackedVehicle) -> bool:
@@ -1760,6 +1955,14 @@ class MotionVehicleTracker:
         track.velocity_confidence = 1.0
         track.prediction_source = "measurement"
         track.ground_point = self._ground_point(point)
+        track.roi_clipped = bool(detection.get("roi_clipped", False))
+        track.roi_support_ratio = float(detection.get("roi_support_ratio", 1.0))
+        track.dark_foreground_rescued = bool(
+            detection.get("dark_foreground_rescued", False)
+        )
+        track.mog_shadow_marker_ratio = float(
+            detection.get("mog_shadow_marker_ratio", 0.0)
+        )
         measured_at = self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx/30.
         measurements = list(getattr(track, 'measurement_observations', []))
         if not measurements or measured_at > measurements[-1][0]:
@@ -1851,6 +2054,17 @@ class MotionVehicleTracker:
             timestamp_s=self._current_timestamp_s,
             priority_regions=priority_regions,
         )
+        for rejection in self._last_detection_rejections[:32]:
+            self._last_association_events.append({
+                **dict(rejection),
+                "stage": "motion_detection",
+            })
+        for rejection in self._last_shadow_rejections[:32]:
+            self._last_association_events.append({
+                "type": "cast_shadow_rejected",
+                **dict(rejection),
+                "stage": "motion_detection",
+            })
         assignments, unmatched_tracks, unmatched_detections = self._assign(detections)
         for track_id, detection_id, _ in assignments:
             self._apply_detection(self._tracks[track_id], detections[detection_id])
@@ -2045,6 +2259,16 @@ class MotionVehicleTracker:
                 ),
                 "first_observation_frame": int(
                     getattr(track, "first_observation_frame", self._frame_idx)
+                ),
+                "roi_clipped": bool(getattr(track, "roi_clipped", False)),
+                "roi_support_ratio": round(
+                    float(getattr(track, "roi_support_ratio", 1.0)), 4
+                ),
+                "dark_foreground_rescued": bool(
+                    getattr(track, "dark_foreground_rescued", False)
+                ),
+                "mog_shadow_marker_ratio": round(
+                    float(getattr(track, "mog_shadow_marker_ratio", 0.0)), 4
                 ),
             })
         return records

@@ -333,6 +333,16 @@ class PredictionV3Builder:
                     "fragment_visible_count": int(
                         track.get("fragment_visible_count", 0)
                     ),
+                    "roi_clipped": bool(track.get("roi_clipped", False)),
+                    "roi_support_ratio": float(
+                        track.get("roi_support_ratio", 1.0)
+                    ),
+                    "dark_foreground_rescued": bool(
+                        track.get("dark_foreground_rescued", False)
+                    ),
+                    "mog_shadow_marker_ratio": float(
+                        track.get("mog_shadow_marker_ratio", 0.0)
+                    ),
                     "first_observation_frame": int(
                         track.get("first_observation_frame", frame_idx)
                     ),

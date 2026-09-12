@@ -132,3 +132,52 @@ def test_runtime_snapshot_keeps_observed_vehicle_with_integer_registry_keys():
         "last_seen_frame": None,
         "last_seen_time": None,
     }]
+
+
+def test_runtime_snapshot_preserves_recent_measured_path_for_late_gate_id():
+    path = [
+        {
+            "frame_index": 10,
+            "timestamp_s": 1.0,
+            "camera_id": "cam2",
+            "local_track_id": 7,
+            "position": {"x": 5.0, "y": 12.0},
+        },
+        {
+            "frame_index": 11,
+            "timestamp_s": 1.1,
+            "camera_id": "cam2",
+            "local_track_id": 7,
+            "position": {"x": 5.0, "y": 8.0},
+        },
+    ]
+    value = build_runtime_snapshot(
+        runtime_id="late-gid",
+        timestamp="",
+        published_at="",
+        frame_index=11,
+        registry={
+            "world_unit": "cm",
+            "map_vehicles": {
+                "1": {"position": {"x": 5, "y": 8}, "camera_ids": ["cam2"]}
+            },
+            "identity_lifecycle": {
+                "1": {
+                    "global_id": 1,
+                    "state": "active",
+                    "last_camera": "cam2",
+                    "last_seen_time": 1.1,
+                    "recent_observed_path": path,
+                }
+            },
+        },
+        parking_by_camera={},
+        camera_sizes={"cam2": (1280, 720)},
+        camera_timestamps_ns={"cam2": 1_000_000_000},
+        calibration={},
+        camera_skew_ms=0.0,
+        source_mode="live",
+        applied_monotonic_ns=1_000_000_000,
+    )
+
+    assert value["vehicles"][0]["recent_observed_path"] == path

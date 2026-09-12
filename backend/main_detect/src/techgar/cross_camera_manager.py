@@ -1084,7 +1084,10 @@ class CrossCameraManager:
         """
         canonical_state = self._identities.get(canonical_id)
         duplicate_state = self._identities.get(duplicate_id)
-        if {canonical_id, duplicate_id} & self._provisional_identity_holds:
+        if (
+            {canonical_id, duplicate_id} & self._provisional_identity_holds
+            and not verified_transfer
+        ):
             return "identity_waiting_for_parking_vision"
 
         # A slot reservation is authoritative even when the motion identity
@@ -6565,6 +6568,25 @@ class CrossCameraManager:
                         identity.camera_appearance_samples.items()
                     )
                 },
+                # The short measured path includes provisional samples that
+                # were promoted when this GID was first allocated.  Consumers
+                # such as the physical-gate controller can therefore recover
+                # a crossing that happened a few frames before the label G#
+                # became visible.  These are real measurements, never Kalman
+                # or rendered motion-trail points.
+                "recent_observed_path": [
+                    {
+                        "frame_index": int(sample.frame_idx),
+                        "timestamp_s": float(sample.timestamp_s),
+                        "camera_id": str(sample.camera_id),
+                        "local_track_id": int(sample.local_track_id),
+                        "position": {
+                            "x": round(float(sample.world[0]), 2),
+                            "y": round(float(sample.world[1]), 2),
+                        },
+                    }
+                    for sample in self.trajectory.global_samples(global_id)[-12:]
+                ],
             }
             for global_id, identity in sorted(self._identities.items())
         }
