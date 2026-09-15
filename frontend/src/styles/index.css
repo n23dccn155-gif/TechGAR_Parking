@@ -432,6 +432,7 @@ main {
 
 .parking-spot--empty rect { fill: var(--green); }
 .parking-spot--occupied rect { fill: var(--red); }
+.parking-spot--reserved rect { fill: var(--amber); }
 .parking-spot--transitioning rect { fill: var(--amber); }
 .parking-spot--unknown rect { fill: var(--gray); }
 
@@ -604,6 +605,8 @@ main {
 .status-dot--empty { background: var(--green); }
 .legend-swatch--occupied,
 .status-dot--occupied { background: var(--red); }
+.legend-swatch--reserved,
+.status-dot--reserved { background: var(--amber); }
 .legend-swatch--transitioning,
 .status-dot--transitioning { background: var(--amber); }
 .legend-swatch--unknown,
@@ -894,6 +897,16 @@ main {
 }
 
 .navigation-status--paused .navigation-icon { background: var(--amber); }
+.auto-reroute-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  background: #fff8e8;
+  color: #704400;
+  font-size: 14px;
+  font-weight: 650;
+}
 .navigation-status small,
 .navigation-status strong { display: block; }
 .navigation-status small { color: var(--muted); font-size: 12px; }

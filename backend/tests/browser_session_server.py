@@ -21,6 +21,8 @@ def main():
     sm.SESSIONS_FILE = args.store
     sm.create_session(global_vehicle_id=42, runtime_id='browser-test', session_id='browser-session')
     sm.claim_session('browser-session')
+    sm.create_session(global_vehicle_id=99, runtime_id='browser-test', session_id='other-session')
+    sm.claim_session('other-session')
     config = dict(coordinate_space='world', entry_gate=dict(p1=dict(x=0,y=10),p2=dict(x=10,y=10),direction='positive'),
                   exit_gate=dict(p1=dict(x=0,y=0),p2=dict(x=10,y=0),direction='positive'))
     coordinator = gate.GateSessionCoordinator(config)
@@ -55,14 +57,15 @@ def main():
             with lock:
                 slot = next(s for s in data['parking_slots'] if s['slot_id'] == value['slot_id'])
                 state = value['state']
+                vehicle_id = int(value.get('vehicle_id', 42))
                 slot.update(occupied=state != 'released', status='empty' if state == 'released' else 'occupied',
-                            vehicle_id=42 if state == 'parked' else None,
+                            vehicle_id=vehicle_id if state == 'parked' else None,
                             tracking_state='parked' if state == 'parked' else 'moving')
                 if state != 'red_unknown':
                     eid = value['episode_id']
                     data['parking_episodes'] = [e for e in data['parking_episodes'] if e['parking_episode_id'] != eid]
                     frame = data['frame_index'] + 1
-                    data['parking_episodes'].append(dict(parking_episode_id=eid,global_id=42,slot_id=value['slot_id'],
+                    data['parking_episodes'].append(dict(parking_episode_id=eid,global_id=vehicle_id,slot_id=value['slot_id'],
                         state=state,evidence_frame_idx=frame,applied_frame_idx=frame,
                         evidence_timestamp_s=float(frame),applied_timestamp_s=float(frame),reason='browser_fixture'))
                 publish()

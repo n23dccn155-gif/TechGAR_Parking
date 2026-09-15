@@ -40,7 +40,7 @@ Do not create or scaffold:
 - REST or WebSocket servers
 - databases
 - authentication
-- booking/reservation/payment
+- booking/payment
 - license-plate recognition
 - raw camera video
 - ROI calibration/admin pages
@@ -64,6 +64,7 @@ Do not create or scaffold:
 - Status colors:
   - `empty`: green
   - `occupied`: red
+  - `reserved`: amber/yellow navigation-reservation overlay
   - `transitioning`: amber/yellow
   - `unknown`: gray
 - Recommendation or selection never changes the status fill; use a blue outline, glow, and map pin.
@@ -103,17 +104,19 @@ Show a bottom sheet with:
 ### Navigation mode
 - Draw route only after user confirmation.
 - Manual browse selection can also start navigation.
-- If selected spot becomes amber, red, or gray, pause the route and show a warning; do not silently redirect.
+- If the camera confirms another vehicle in the selected spot, automatically commit the first available A*-ranked alternative through the session API and redraw the route.
+- If no alternative can be committed, or the target becomes `transitioning`/`unknown`, pause the route and show a warning.
 
 ## Parking-status eligibility
 Only `empty` spots are selectable and recommendable.
 
 Never recommend or navigate to:
+- `reserved`
 - `transitioning`
 - `occupied`
 - `unknown`
 
-Amber/yellow is exclusively the transitional camera state. It must never represent a recommendation.
+Amber/yellow represents either a labeled navigation reservation or the transitional camera state. It must never represent a recommendation.
 
 ## Two-camera ownership
 Ownership is explicit and disjoint.
@@ -178,10 +181,10 @@ export interface ParkingDataSource {
 - E→A order and F strip are correct.
 - Every A–E zone has two opposing rows and a center lane.
 - Two camera mocks update independently.
-- Amber spots are never recommendable/selectable.
+- Reserved and transitioning amber spots are never recommendable/selectable.
 - User can skip recommendation and browse only.
 - User explicitly confirms before route rendering.
 - Recommendation supports only Shopping, Dịch vụ, Giải trí.
-- Selected spot changing status pauses route and asks user what to do.
+- A selected spot confirmed occupied by another vehicle automatically moves to the first available A*-ranked alternative; failure pauses the route and asks the user what to do.
 - Desktop and mobile screenshots exist.
 - Lint, typecheck, unit tests, Playwright, and build pass.

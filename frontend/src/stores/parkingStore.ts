@@ -47,7 +47,7 @@ export function deriveParkingCounts(spots: readonly ParkingSpotState[]): Parking
       total: counts.total + 1,
       [spot.status]: counts[spot.status] + 1,
     }),
-    { total: 0, empty: 0, occupied: 0, transitioning: 0, unknown: 0 },
+    { total: 0, empty: 0, occupied: 0, reserved: 0, transitioning: 0, unknown: 0 },
   );
 }
 

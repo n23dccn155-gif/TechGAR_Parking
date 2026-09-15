@@ -1,7 +1,7 @@
 export const MAIN_ZONE_ORDER = ["F", "E", "D", "C", "B", "A"] as const;
 export const ALL_ZONE_IDS = ["A", "B", "C", "D", "E", "F"] as const;
 export const CAMERA_IDS = ["cam-left", "cam-right"] as const;
-export const PARKING_STATUSES = ["empty", "occupied", "transitioning", "unknown"] as const;
+export const PARKING_STATUSES = ["empty", "occupied", "reserved", "transitioning", "unknown"] as const;
 
 export const SPOTS_PER_ZONE = 10;
 
@@ -76,6 +76,7 @@ export interface ParkingCounts {
   total: number;
   empty: number;
   occupied: number;
+  reserved: number;
   transitioning: number;
   unknown: number;
 }
@@ -113,6 +114,7 @@ export const DESTINATION_LABELS: Record<DestinationNeed, string> = {
 export const STATUS_LABELS: Record<ParkingStatus, string> = {
   empty: "Trống",
   occupied: "Đã có xe",
+  reserved: "Đã được xe khác chọn",
   transitioning: "Đang chuyển tiếp",
   unknown: "Không xác định",
 };
@@ -156,6 +158,9 @@ export function classifySpotOccupancy(
 }
 
 export function getInvalidSpotWarningText(spotId: SpotId, status: Exclude<ParkingStatus, "empty">): string {
+  if (status === "reserved") {
+    return `Ô ${spotId} đã được xe khác chọn và đang được giữ chỗ.`;
+  }
   if (status === "transitioning") {
     return `Ô ${spotId} đang có phương tiện di chuyển vào hoặc ra.`;
   }

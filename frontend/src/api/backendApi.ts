@@ -53,6 +53,20 @@ export function getWaitingSessions(signal?: AbortSignal): Promise<VehicleSession
 
 export interface ActionOptions { expected_revision?: number; action_id?: string }
 
+export interface NavigationReservation {
+  spotId: string;
+  reservedAt: string | null;
+  revision: number;
+}
+
+export function getNavigationReservations(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<NavigationReservation[]> {
+  const query = new URLSearchParams({ sessionId });
+  return getJson<NavigationReservation[]>(`/api/sessions/reservations?${query}`, signal);
+}
+
 export function claimSession(sessionId: string, options: ActionOptions = {}): Promise<VehicleSession> {
   return postJson<VehicleSession>("/api/session/claim", { sessionId, ...options });
 }

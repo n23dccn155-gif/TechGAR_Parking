@@ -89,7 +89,7 @@ describe("canonical parking store", () => {
     expect(after.total).toBe(60);
     expect(after.empty).toBe(before.empty - 1);
     expect(after.occupied).toBe(before.occupied + 1);
-    expect(after.total).toBe(after.empty + after.occupied + after.transitioning + after.unknown);
+    expect(after.total).toBe(after.empty + after.occupied + after.reserved + after.transitioning + after.unknown);
   });
 
   it("preserves spot states while a camera is offline", () => {

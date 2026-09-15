@@ -1,6 +1,7 @@
 """Exercise the production HTTP handler against an isolated real session store."""
 import json
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -23,9 +24,9 @@ def api(monkeypatch, tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
 
-    def request(action, **values):
+    def request(action, *, session_id=None, **values):
         req = Request(f"http://127.0.0.1:{server.server_port}/api/session/{action}",
-                      data=json.dumps(dict(sessionId=sid, **values)).encode(),
+                      data=json.dumps(dict(sessionId=session_id or sid, **values)).encode(),
                       headers={"Content-Type": "application/json"}, method="POST")
         try:
             with urlopen(req, timeout=2) as result:
@@ -33,14 +34,14 @@ def api(monkeypatch, tmp_path):
         except HTTPError as error:
             return error.code, json.load(error)
 
-    yield sid, request, gate.GateSessionCoordinator(GATES)
+    yield sid, request, gate.GateSessionCoordinator(GATES), server.server_port
     server.shutdown()
     server.server_close()
     thread.join(timeout=2)
 
 
 def test_retry_action_after_slot_turns_red_is_idempotent(api):
-    sid, request, coordinator = api
+    sid, request, coordinator, _port = api
     data = snapshot(1)
     data["parking_slots"] = [dict(slot_id="D06", occupied=False, status="empty")]
     coordinator.process_snapshot(data)
@@ -59,7 +60,7 @@ def test_retry_action_after_slot_turns_red_is_idempotent(api):
 
 
 def test_exit_before_parking_and_relocate_preserve_one_identity(api):
-    sid, request, coordinator = api
+    sid, request, coordinator, _port = api
     assert request("exit", action_id="exit-before-park")[0] == 200
     assert sm.get_session(sid)["state"] == "EXIT_NAVIGATION"
     assert request("select", spotId=None, action_id="cancel-exit")[0] == 200
@@ -80,7 +81,7 @@ def test_exit_before_parking_and_relocate_preserve_one_identity(api):
 
 
 def test_unknown_and_another_runtime_are_not_empty_slots(api):
-    sid, request, coordinator = api
+    sid, request, coordinator, _port = api
     assert request("select", spotId="D06")[0] == 409  # no matching runtime yet
     coordinator.process_snapshot(snapshot(1))
     assert request("select", spotId="D06")[0] == 503
@@ -90,3 +91,44 @@ def test_unknown_and_another_runtime_are_not_empty_slots(api):
     coordinator.process_snapshot(data)
     assert request("select", spotId="D06")[0] == 409
     assert sm.get_session(sid)["state"] == "SELECTING_SPOT"
+
+
+def test_navigation_reservation_is_atomic_and_visible_to_other_sessions(api):
+    sid, request, coordinator, port = api
+    other_sid = sm.create_session(
+        global_vehicle_id=99,
+        runtime_id="run-1",
+        session_id="other-session",
+    )
+    sm.claim_session(other_sid)
+    data = snapshot(1)
+    data["parking_slots"] = [
+        dict(slot_id="A01", occupied=False, status="empty"),
+        dict(slot_id="A02", occupied=False, status="empty"),
+    ]
+    coordinator.process_snapshot(data)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            lambda current_sid: request(
+                "select", session_id=current_sid, spotId="A01"
+            ),
+            [sid, other_sid],
+        ))
+
+    assert sorted(status for status, _payload in results) == [200, 409]
+    winner_index = next(index for index, (status, _payload) in enumerate(results) if status == 200)
+    winner_sid = [sid, other_sid][winner_index]
+    loser_sid = [sid, other_sid][1 - winner_index]
+    rejected = results[1 - winner_index][1]
+    assert rejected["code"] == "SPOT_RESERVED"
+
+    with urlopen(
+        f"http://127.0.0.1:{port}/api/sessions/reservations?sessionId={loser_sid}",
+        timeout=2,
+    ) as response:
+        reservations = json.load(response)
+    assert [item["spotId"] for item in reservations] == ["A01"]
+
+    assert request("select", session_id=winner_sid, spotId="A02")[0] == 200
+    assert request("select", session_id=loser_sid, spotId="A01")[0] == 200

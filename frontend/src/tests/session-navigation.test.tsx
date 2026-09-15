@@ -16,6 +16,7 @@ const runtimeMocks = vi.hoisted(() => ({
 
 const backendMocks = vi.hoisted(() => ({
   claimSession: vi.fn(),
+  getNavigationReservations: vi.fn(),
   getSession: vi.fn(),
   selectSpot: vi.fn(),
   startExit: vi.fn(),
@@ -123,8 +124,31 @@ describe("session-aware navigation", () => {
     useDriverFlowStore.getState().reset();
     currentSession = session();
     backendMocks.claimSession.mockImplementation(async () => currentSession);
+    backendMocks.getNavigationReservations.mockResolvedValue([]);
     backendMocks.getSession.mockImplementation(async () => currentSession);
+    backendMocks.selectSpot.mockImplementation(async (_sessionId: string, spotId: string) => {
+      currentSession = session({
+        targetSpotId: spotId,
+        revision: currentSession.revision + 1,
+        updatedAt: "2026-08-23T10:00:01+07:00",
+      });
+      return currentSession;
+    });
     backendMocks.startExit.mockImplementation(async () => currentSession);
+  });
+
+  it("shows another session's reservation as a yellow non-selectable spot", async () => {
+    const user = userEvent.setup();
+    backendMocks.getNavigationReservations.mockResolvedValue([
+      { spotId: "A02", reservedAt: "2026-08-23T10:00:00+07:00", revision: 3 },
+    ]);
+    runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({ targetVehicleId: null }));
+    render(<App sessionId="session-42" />);
+
+    const reservedSpot = await screen.findByTestId("spot-A02");
+    await waitFor(() => expect(reservedSpot).toHaveAttribute("data-status", "reserved"));
+    await user.click(reservedSpot);
+    expect(backendMocks.selectSpot).not.toHaveBeenCalled();
   });
 
   it("does not warn when the session vehicle occupies its selected target", async () => {
@@ -153,7 +177,7 @@ describe("session-aware navigation", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("shows other-vehicle warning only after target is confirmed occupied by another vehicle", async () => {
+  it("automatically reroutes only after the target is confirmed occupied by another vehicle", async () => {
     runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({
       targetVehicleId: null,
       targetOccupied: true,
@@ -167,12 +191,13 @@ describe("session-aware navigation", () => {
       targetVehicleId: 99,
       targetOccupied: true,
     }));
-    expect(await screen.findByRole("alertdialog")).toBeVisible();
-    expect(useDriverFlowStore.getState().warning?.status).toBe("occupied");
+    expect(await screen.findByTestId("auto-reroute-notice")).toHaveTextContent("A01");
+    expect(screen.getByTestId("auto-reroute-notice")).toHaveTextContent("A02");
+    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("waits for the session API before switching to an alternative", async () => {
-    const user = userEvent.setup();
+  it("waits for the session API before completing the automatic reroute", async () => {
     runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({ targetVehicleId: 99 }));
     let acceptSelection: (() => void) | undefined;
     backendMocks.selectSpot.mockImplementation((_sessionId: string, spotId: string) => new Promise<VehicleSession>((resolve) => {
@@ -187,20 +212,15 @@ describe("session-aware navigation", () => {
     }));
     render(<App sessionId="session-42" />);
 
-    expect(await screen.findByRole("alertdialog")).toBeVisible();
-    await user.click(screen.getByTestId("switch-alternative"));
-
-    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) }));
-    expect(screen.getByRole("alertdialog")).toBeVisible();
+    await waitFor(() => expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) })));
     expect(screen.queryByTestId("active-route")).not.toBeInTheDocument();
 
     await act(async () => acceptSelection?.());
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(await screen.findByTestId("auto-reroute-notice")).toBeVisible();
     expect(await screen.findByTestId("active-route")).toBeInTheDocument();
   });
 
-  it("keeps navigation paused when the backend rejects a stale alternative", async () => {
-    const user = userEvent.setup();
+  it("keeps navigation paused when the backend rejects the automatic alternative", async () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     runtimeMocks.getRuntimeSnapshot.mockImplementation(async () => runtimeSnapshot({ targetVehicleId: 99 }));
     backendMocks.selectSpot.mockRejectedValue(
@@ -208,11 +228,8 @@ describe("session-aware navigation", () => {
     );
     render(<App sessionId="session-42" />);
 
+    await waitFor(() => expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) })));
     expect(await screen.findByRole("alertdialog")).toBeVisible();
-    await user.click(screen.getByTestId("switch-alternative"));
-
-    expect(backendMocks.selectSpot).toHaveBeenCalledWith("session-42", "A02", expect.objectContaining({ expected_revision: 3, action_id: expect.any(String) }));
-    expect(screen.getByRole("alertdialog")).toBeVisible();
     expect(screen.queryByTestId("active-route")).not.toBeInTheDocument();
     consoleWarn.mockRestore();
   });

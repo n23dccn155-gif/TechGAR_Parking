@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.error import HTTPError, URLError
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -38,6 +38,7 @@ from session_manager import (  # noqa: E402
     delete_session_by_global_id,
     find_session_by_global_id,
     get_session,
+    list_navigation_reservations,
     list_waiting_sessions,
     load_sessions,
     remap_global_vehicle_id,
@@ -71,6 +72,19 @@ class SelectionUnavailable(SessionError):
 def _validate_selection(session: dict, spot_id: str) -> None:
     if session.get("runtimeId") and session["runtimeId"] != _latest_runtime_id():
         raise SelectionUnavailable("Session belongs to another runtime", "RUNTIME_MISMATCH", 409)
+    reservation = next((
+        item for item in list_navigation_reservations(
+            runtime_id=session.get("runtimeId"),
+            exclude_session_id=str(session.get("sessionId") or ""),
+        )
+        if item["spotId"] == str(spot_id)
+    ), None)
+    if reservation is not None:
+        raise SelectionUnavailable(
+            f"Parking spot is reserved by another navigation session: {spot_id}",
+            "SPOT_RESERVED",
+            409,
+        )
     availability = _latest_spot_availability(spot_id)
     if availability is None:
         raise SelectionUnavailable("Runtime parking data is unavailable or stale", "RUNTIME_UNAVAILABLE", 503)
@@ -759,7 +773,23 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/api/sessions/reservations":
+            viewer_session_id = parse_qs(parsed.query).get("sessionId", [None])[0]
+            reservations = list_navigation_reservations(
+                runtime_id=_latest_runtime_id(),
+                exclude_session_id=viewer_session_id,
+            )
+            self._json([
+                {
+                    "spotId": item["spotId"],
+                    "reservedAt": item["reservedAt"],
+                    "revision": item["revision"],
+                }
+                for item in reservations
+            ])
+            return
         if path == "/api/sessions/waiting":
             self._json(
                 list_waiting_sessions(runtime_id=_latest_runtime_id())
@@ -835,7 +865,11 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args) -> None:
         message = format % args
-        if "/api/session/" not in message and "/api/sessions/waiting" not in message:
+        if (
+            "/api/session/" not in message
+            and "/api/sessions/waiting" not in message
+            and "/api/sessions/reservations" not in message
+        ):
             super().log_message(format, *args)
 
 

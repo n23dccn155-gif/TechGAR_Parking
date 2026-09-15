@@ -33,32 +33,58 @@ export function findRoute(graph: LaneGraph, startNodeId: string, endNodeId: stri
   if (!nodeById.has(startNodeId) || !nodeById.has(endNodeId)) return null;
 
   const adjacency = buildAdjacency(graph);
-  const unvisited = new Set(graph.nodes.map((node) => node.id));
-  const distances = new Map<string, number>(graph.nodes.map((node) => [node.id, Number.POSITIVE_INFINITY]));
-  const previous = new Map<string, { nodeId: string; edgeId: string }>();
-  distances.set(startNodeId, 0);
+  const targetNode = nodeById.get(endNodeId)!;
+  const nodeOrder = new Map(graph.nodes.map((node, index) => [node.id, index]));
+  const costPerMapUnit = graph.edges.reduce((minimum, edge) => {
+    const from = nodeById.get(edge.from);
+    const to = nodeById.get(edge.to);
+    if (!from || !to) return minimum;
+    const directDistance = Math.hypot(to.x - from.x, to.y - from.y);
+    if (directDistance <= 0) return minimum;
+    return Math.min(minimum, edge.distance / directDistance);
+  }, Number.POSITIVE_INFINITY);
+  const heuristicScale = Number.isFinite(costPerMapUnit) ? costPerMapUnit : 0;
+  const heuristic = (nodeId: string): number => {
+    const node = nodeById.get(nodeId)!;
+    return Math.hypot(targetNode.x - node.x, targetNode.y - node.y) * heuristicScale;
+  };
 
-  while (unvisited.size > 0) {
+  const open = new Set<string>([startNodeId]);
+  const distances = new Map<string, number>([[startNodeId, 0]]);
+  const estimates = new Map<string, number>([[startNodeId, heuristic(startNodeId)]]);
+  const previous = new Map<string, { nodeId: string; edgeId: string }>();
+
+  while (open.size > 0) {
     let current: string | undefined;
+    let currentEstimate = Number.POSITIVE_INFINITY;
     let currentDistance = Number.POSITIVE_INFINITY;
-    unvisited.forEach((nodeId) => {
+    open.forEach((nodeId) => {
+      const candidateEstimate = estimates.get(nodeId) ?? Number.POSITIVE_INFINITY;
       const candidateDistance = distances.get(nodeId) ?? Number.POSITIVE_INFINITY;
-      if (candidateDistance < currentDistance) {
+      const earlierNode = (nodeOrder.get(nodeId) ?? Number.POSITIVE_INFINITY)
+        < (nodeOrder.get(current ?? "") ?? Number.POSITIVE_INFINITY);
+      if (
+        candidateEstimate < currentEstimate
+        || (candidateEstimate === currentEstimate && candidateDistance < currentDistance)
+        || (candidateEstimate === currentEstimate && candidateDistance === currentDistance && earlierNode)
+      ) {
         current = nodeId;
+        currentEstimate = candidateEstimate;
         currentDistance = candidateDistance;
       }
     });
 
     if (!current || !Number.isFinite(currentDistance)) break;
-    unvisited.delete(current);
+    open.delete(current);
     if (current === endNodeId) break;
 
     (adjacency.get(current) ?? []).forEach((step) => {
-      if (!unvisited.has(step.to)) return;
       const candidate = currentDistance + step.distance;
       if (candidate < (distances.get(step.to) ?? Number.POSITIVE_INFINITY)) {
         distances.set(step.to, candidate);
+        estimates.set(step.to, candidate + heuristic(step.to));
         previous.set(step.to, { nodeId: step.from, edgeId: step.edgeId });
+        open.add(step.to);
       }
     });
   }

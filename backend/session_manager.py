@@ -34,6 +34,7 @@ QR_DISPLAY_SECONDS = 10.0
 
 _STORE_LOCK = threading.RLock()
 _LIVE_OBSERVATIONS: dict[tuple[str, str], tuple[tuple, dict]] = {}
+_NAVIGATION_RESERVATION_STATES = {"NAVIGATING_TO_SPOT", "RELOCATING"}
 
 
 def _observation_key(session: dict) -> tuple[str, str]:
@@ -218,6 +219,41 @@ def list_waiting_sessions(
         )
     ]
     return sorted(waiting, key=lambda session: str(session.get("createdAt") or ""))
+
+
+def list_navigation_reservations(
+    *,
+    runtime_id: Optional[str] = None,
+    exclude_session_id: Optional[str] = None,
+) -> list[dict]:
+    """Return active navigation targets that reserve a parking spot.
+
+    This function is also called while ``select_spot`` holds ``_STORE_LOCK``.
+    The re-entrant lock keeps the availability check and target update atomic
+    for concurrent requests handled by the session API process.
+    """
+    excluded = str(exclude_session_id) if exclude_session_id else None
+    reservations = []
+    for session in load_sessions().values():
+        spot_id = session.get("targetSpotId")
+        if (
+            not spot_id
+            or session.get("state") not in _NAVIGATION_RESERVATION_STATES
+            or (excluded is not None and session.get("sessionId") == excluded)
+            or not _matches_runtime(session, runtime_id)
+        ):
+            continue
+        reservations.append({
+            "sessionId": str(session["sessionId"]),
+            "spotId": str(spot_id),
+            "globalVehicleId": session.get("globalVehicleId"),
+            "reservedAt": session.get("spotSelectedAt"),
+            "revision": int(session.get("revision") or 0),
+        })
+    return sorted(
+        reservations,
+        key=lambda item: (str(item.get("spotId") or ""), str(item.get("reservedAt") or "")),
+    )
 
 
 def create_session(

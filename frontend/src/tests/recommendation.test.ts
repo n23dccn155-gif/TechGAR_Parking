@@ -20,6 +20,20 @@ describe("recommendation engine", () => {
     expect(ids).not.toContain("A11");
   });
 
+  it("never recommends a spot reserved by another navigation session", () => {
+    const firstEmpty = spots.find((spot) => spot.status === "empty");
+    expect(firstEmpty).toBeDefined();
+    if (!firstEmpty) return;
+    const withReservation = spots.map((spot) => (
+      spot.id === firstEmpty.id ? { ...spot, status: "reserved" as const } : spot
+    ));
+    const result = recommendParkingSpots(withReservation, "services", {
+      calculatedAt: "2026-07-25T08:00:00.000Z",
+    });
+    const ids = result ? [result.best.spotId, ...result.alternatives.map((spot) => spot.spotId)] : [];
+    expect(ids).not.toContain(firstEmpty.id);
+  });
+
   it("returns deterministic best plus two alternatives for each supported need", () => {
     const needs = ["shopping", "services", "entertainment"] as const;
     const bestIds = needs.map((need) => {

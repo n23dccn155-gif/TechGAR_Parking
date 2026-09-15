@@ -11,6 +11,7 @@ export function SummaryCards({ counts, cameras }: SummaryCardsProps) {
   const items = [
     { label: "Còn trống", value: counts.empty, icon: CircleParking, tone: "green" },
     { label: "Đã có xe", value: counts.occupied, icon: CarFront, tone: "red" },
+    { label: "Đã được chọn", value: counts.reserved, icon: CircleParking, tone: "amber" },
     { label: "Đang chuyển tiếp", value: counts.transitioning, icon: RefreshCw, tone: "amber" },
     { label: "Không xác định", value: counts.unknown, icon: CircleHelp, tone: "gray" },
   ] as const;

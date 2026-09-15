@@ -26,11 +26,11 @@ import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
 import type { ActiveVehicle, FrameSize, RuntimeSnapshot } from "../domain/runtime";
 import { canonicalRuntimeId, liveRuntimeError } from "../domain/runtime";
 import { buildSessionCompletionKey } from "../domain/session";
-import { BackendApiError } from "../api/backendApi";
+import { BackendApiError, getNavigationReservations, type NavigationReservation } from "../api/backendApi";
 import { useVehicleSession } from "../hooks/useVehicleSession";
 import { resolveSessionParking } from "../domain/sessionParking";
 
-const NON_EMPTY_STATUSES: ReadonlySet<ParkingStatus> = new Set(["transitioning", "occupied", "unknown"]);
+const NON_EMPTY_STATUSES: ReadonlySet<ParkingStatus> = new Set(["reserved", "transitioning", "occupied", "unknown"]);
 const PARKING_DWELL_MS = 2000;
 
 interface AppProps {
@@ -54,18 +54,21 @@ export function App({ sessionId }: AppProps = {}) {
   const [runtimeState, setRuntimeState]     = useState<"connecting" | "live" | "error">("connecting");
   const [runtimeError, setRuntimeError]     = useState<string | null>(null);
   const [runtimeSnapshot, setRuntimeSnapshot] = useState<RuntimeSnapshot | null>(null);
+  const [navigationReservations, setNavigationReservations] = useState<NavigationReservation[]>([]);
+  const [autoRerouteNotice, setAutoRerouteNotice] = useState<string | null>(null);
 
   const sessionTrackIdRef = useRef<number | null>(null);
   const activeVehiclesRef = useRef<ActiveVehicle[]>([]);
   const runtimeCursorRef = useRef<{ runtimeId: string; frameIndex: number } | null>(null);
   const runtimeProgressAtRef = useRef(0);
   const episodeRefreshKeyRef = useRef<string | null>(null);
+  const autoRerouteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeVehiclesRef.current = activeVehicles;
   }, [activeVehicles]);
 
-  const spotsById = useParkingStore((state) => state.spots);
+  const runtimeSpotsById = useParkingStore((state) => state.spots);
   const cameras = useParkingStore((state) => state.cameras);
   const lastEventTime = useParkingStore((state) => state.lastEventTime);
   const applySnapshot = useParkingStore((state) => state.applySnapshot);
@@ -92,9 +95,22 @@ export function App({ sessionId }: AppProps = {}) {
   const clearWarning = useDriverFlowStore((state) => state.clearWarning);
   const cancelNavigation = useDriverFlowStore((state) => state.cancelNavigation);
 
-  const spots = useMemo(
-    () => Object.values(spotsById).filter((spot): spot is ParkingSpotState => spot !== undefined),
-    [spotsById],
+  const reservedSpotIds = useMemo(
+    () => new Set(navigationReservations.map((reservation) => reservation.spotId)),
+    [navigationReservations],
+  );
+  const spots = useMemo(() => (
+    Object.values(runtimeSpotsById)
+      .filter((spot): spot is ParkingSpotState => spot !== undefined)
+      .map((spot) => (
+        spot.status === "empty" && reservedSpotIds.has(spot.id)
+          ? { ...spot, status: "reserved" as const, decisionSource: "navigation_reservation" }
+          : spot
+      ))
+  ), [reservedSpotIds, runtimeSpotsById]);
+  const spotsById = useMemo(
+    () => Object.fromEntries(spots.map((spot) => [spot.id, spot])) as Partial<Record<SpotId, ParkingSpotState>>,
+    [spots],
   );
   const counts = useMemo(() => deriveParkingCounts(spots), [spots]);
   const inspectedSpot = inspectedSpotId ? spotsById[inspectedSpotId] : undefined;
@@ -148,6 +164,44 @@ export function App({ sessionId }: AppProps = {}) {
   useEffect(() => {
     if (sessionId) setTrackingSource("opencv");
   }, [sessionId, setTrackingSource]);
+
+  useEffect(() => {
+    autoRerouteKeyRef.current = null;
+    setAutoRerouteNotice(null);
+    setNavigationReservations([]);
+    if (!sessionId) return;
+
+    let active = true;
+    let pending = false;
+    let controller: AbortController | null = null;
+    const refreshReservations = async () => {
+      if (pending) return;
+      pending = true;
+      controller = new AbortController();
+      try {
+        const reservations = await getNavigationReservations(sessionId, controller.signal);
+        if (active) setNavigationReservations(reservations);
+      } catch {
+        // Keep the last known overlay. Selection remains protected by the
+        // backend even when this read-only refresh is temporarily unavailable.
+      } finally {
+        pending = false;
+      }
+    };
+    void refreshReservations();
+    const timer = setInterval(() => void refreshReservations(), 500);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      controller?.abort();
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!autoRerouteNotice) return;
+    const timer = setTimeout(() => setAutoRerouteNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [autoRerouteNotice]);
 
   useEffect(() => {
     sessionTrackIdRef.current = targetVehicleId;
@@ -369,12 +423,12 @@ export function App({ sessionId }: AppProps = {}) {
   useEffect(() => {
     if (sessionId) {
       if (sessionParkingDecision?.kind !== "target_occupied_by_other") {
+        autoRerouteKeyRef.current = null;
         if (warning) clearWarning();
         return;
       }
       const targetSpot = spotsById[sessionParkingDecision.spotId as SpotId];
       if (!targetSpot) return;
-      if (warning?.spotId === targetSpot.id && warning.status === "occupied") return;
       const need: DestinationNeed = activeNeed ?? "services";
       const currentVehicle = targetVehicleId === null
         ? undefined
@@ -387,12 +441,40 @@ export function App({ sessionId }: AppProps = {}) {
         .filter((candidate): candidate is RankedSpot => Boolean(candidate) && candidate?.spotId !== targetSpot.id)
         .map((candidate) => candidate.spotId)
         .slice(0, 3);
-      showInvalidSpotWarning({
-        spotId: targetSpot.id,
-        status: "occupied",
-        alternativeSpotId: alternativeSpotIds[0],
-        alternativeSpotIds,
-      });
+      const rerouteKey = `${sessionId}:${sessionInfo?.revision ?? 0}:${targetSpot.id}:${sessionParkingDecision.otherVehicleId}`;
+      if (autoRerouteKeyRef.current === rerouteKey) return;
+      autoRerouteKeyRef.current = rerouteKey;
+
+      const autoReroute = async () => {
+        for (const alternativeSpotId of alternativeSpotIds) {
+          try {
+            const accepted = await selectSessionSpot(alternativeSpotId);
+            if (!accepted) continue;
+            confirmSpot(alternativeSpotId);
+            clearWarning();
+            const message = `Ô ${targetSpot.id} đã bị xe khác chiếm. Hệ thống đã tự động chuyển tuyến sang ${alternativeSpotId} bằng A*.`;
+            setAutoRerouteNotice(message);
+            voiceManager.speak(message, 6000, true);
+            return;
+          } catch (error) {
+            if (
+              error instanceof BackendApiError
+              && ["SPOT_RESERVED", "SPOT_NOT_AVAILABLE"].includes(error.code ?? "")
+            ) {
+              continue;
+            }
+            console.warn("Không thể tự động đổi ô đỗ", error);
+            break;
+          }
+        }
+        showInvalidSpotWarning({
+          spotId: targetSpot.id,
+          status: "occupied",
+          alternativeSpotId: alternativeSpotIds[0],
+          alternativeSpotIds,
+        });
+      };
+      void autoReroute();
       return;
     }
     const activeTargetId = sessionId ? sessionTargetSpot : (mode === "navigation" ? confirmedSpotId : null);
@@ -513,7 +595,7 @@ export function App({ sessionId }: AppProps = {}) {
       alternativeSpotId,
       alternativeSpotIds,
     });
-  }, [sessionId, sessionParkingDecision, sessionTargetSpot, confirmedSpotId, mode, warning, spotsById, sessionParkedSpot, runtimeParkedSpot, sessionState, activeNeed, spots, lastEventTime, targetVehicleId, activeVehicles, showInvalidSpotWarning, clearWarning]);
+  }, [sessionId, sessionInfo?.revision, sessionParkingDecision, sessionTargetSpot, confirmedSpotId, mode, warning, spotsById, sessionParkedSpot, runtimeParkedSpot, sessionState, activeNeed, spots, lastEventTime, targetVehicleId, activeVehicles, showInvalidSpotWarning, clearWarning, selectSessionSpot, confirmSpot]);
 
   const [isRouteDismissed, setIsRouteDismissed] = useState<boolean>(false);
   // isExitGuideActive: true = đang bật "Chỉ lối ra", false = ẩn đường lối ra khi PARKED
@@ -707,7 +789,7 @@ export function App({ sessionId }: AppProps = {}) {
 
   // ── Xử lý khi bấm vào ô đỗ ──
   const handleConfirmSpot = useCallback(async (spotId: SpotId): Promise<boolean> => {
-    const currentSpot = useParkingStore.getState().spots[spotId];
+    const currentSpot = spotsById[spotId];
     if (currentSpot?.status !== "empty") return false;
     if (sessionId && (runtimeError || sessionBusyAction)) return false;
 
@@ -717,7 +799,10 @@ export function App({ sessionId }: AppProps = {}) {
         if (!accepted) return false;
       } catch (error) {
         console.warn("Không thể cập nhật ô đỗ cho phiên xe", error);
-        if (error instanceof BackendApiError && error.code === "SPOT_NOT_AVAILABLE") {
+        if (
+          error instanceof BackendApiError
+          && ["SPOT_RESERVED", "SPOT_NOT_AVAILABLE"].includes(error.code ?? "")
+        ) {
           const need: DestinationNeed = activeNeed ?? "services";
           const alternatives = recommendParkingSpots(spots, need, {
             calculatedAt: lastEventTime ?? new Date().toISOString(),
@@ -728,7 +813,7 @@ export function App({ sessionId }: AppProps = {}) {
             .slice(0, 3);
           showInvalidSpotWarning({
             spotId,
-            status: "occupied",
+            status: error.code === "SPOT_RESERVED" ? "reserved" : "occupied",
             alternativeSpotId: alternativeSpotIds[0],
             alternativeSpotIds,
           });
@@ -739,7 +824,7 @@ export function App({ sessionId }: AppProps = {}) {
     setIsRouteDismissed(false);
     confirmSpot(spotId);
     return true;
-  }, [confirmSpot, sessionId, selectSessionSpot, activeNeed, spots, lastEventTime, showInvalidSpotWarning, runtimeError, sessionBusyAction]);
+  }, [confirmSpot, sessionId, selectSessionSpot, activeNeed, spots, spotsById, lastEventTime, showInvalidSpotWarning, runtimeError, sessionBusyAction]);
 
   const handleSpotClick = (spotId: SpotId): void => {
     const clickedSpot = spotsById[spotId];
@@ -1062,6 +1147,12 @@ export function App({ sessionId }: AppProps = {}) {
           </div>
         )}
 
+        {sessionId && autoRerouteNotice && (
+          <div className="auto-reroute-notice" role="status" aria-live="polite" data-testid="auto-reroute-notice">
+            {autoRerouteNotice}
+          </div>
+        )}
+
         {/* ── Bảng Cảnh báo đi sai đường (Off-Route Warning) ── */}
         {sessionId && isOffRoute && (
           <div style={{
@@ -1114,7 +1205,7 @@ export function App({ sessionId }: AppProps = {}) {
               confirmedSpotId={confirmedSpotId ?? (sessionTargetSpot as SpotId | undefined)}
               activeNeed={activeNeed}
               route={route}
-              routePaused={Boolean(warning || runtimeError || sessionParkingDecision?.kind === "runtime_unavailable" || sessionParkingDecision?.kind === "identity_invariant_error")}
+              routePaused={Boolean(warning || runtimeError || sessionParkingDecision?.kind === "target_occupied_by_other" || sessionParkingDecision?.kind === "runtime_unavailable" || sessionParkingDecision?.kind === "identity_invariant_error")}
               activeVehicles={displayedVehicles}
               frameSize={frameSize}
               onSpotClick={handleSpotClick}

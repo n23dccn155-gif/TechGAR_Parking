@@ -1,6 +1,6 @@
 import { STATUS_LABELS, type ParkingStatus } from "../domain/parking";
 
-const STATUSES: ParkingStatus[] = ["empty", "occupied", "transitioning", "unknown"];
+const STATUSES: ParkingStatus[] = ["empty", "occupied", "reserved", "transitioning", "unknown"];
 
 export function ParkingLegend() {
   return (
