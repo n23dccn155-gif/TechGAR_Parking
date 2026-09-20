@@ -1,0 +1,118 @@
+{
+  "roles": {
+    "body": {
+      "family": "Segoe UI",
+      "size": 24.0,
+      "weight": "normal",
+      "cjk_chars_per_100px": 3.9,
+      "latin_chars_per_100px": 8.9,
+      "caps_chars_per_100px": 7.5,
+      "digits_chars_per_100px": 7.3,
+      "citation_chars_per_100px": 8.5,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "title": {
+      "family": "Segoe UI",
+      "size": 40.0,
+      "weight": "bold",
+      "cjk_chars_per_100px": 2.4,
+      "latin_chars_per_100px": 5.0,
+      "caps_chars_per_100px": 4.2,
+      "digits_chars_per_100px": 4.1,
+      "citation_chars_per_100px": 4.8,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "subtitle": {
+      "family": "Segoe UI",
+      "size": 28.0,
+      "weight": "normal",
+      "cjk_chars_per_100px": 3.4,
+      "latin_chars_per_100px": 7.6,
+      "caps_chars_per_100px": 6.4,
+      "digits_chars_per_100px": 6.2,
+      "citation_chars_per_100px": 7.3,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "annotation": {
+      "family": "Segoe UI",
+      "size": 17.0,
+      "weight": "normal",
+      "cjk_chars_per_100px": 5.5,
+      "latin_chars_per_100px": 12.5,
+      "caps_chars_per_100px": 10.5,
+      "digits_chars_per_100px": 10.3,
+      "citation_chars_per_100px": 11.9,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "code": {
+      "family": "Consolas",
+      "size": 16.0,
+      "weight": "normal",
+      "cjk_chars_per_100px": 5.9,
+      "latin_chars_per_100px": 10.6,
+      "caps_chars_per_100px": 10.1,
+      "digits_chars_per_100px": 10.7,
+      "citation_chars_per_100px": 10.6,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "cover_title": {
+      "family": "Segoe UI",
+      "size": 56.0,
+      "weight": "bold",
+      "cjk_chars_per_100px": 1.7,
+      "latin_chars_per_100px": 3.6,
+      "caps_chars_per_100px": 3.0,
+      "digits_chars_per_100px": 2.9,
+      "citation_chars_per_100px": 3.4,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "footnote": {
+      "family": "Segoe UI",
+      "size": 14.0,
+      "weight": "normal",
+      "cjk_chars_per_100px": 6.7,
+      "latin_chars_per_100px": 15.2,
+      "caps_chars_per_100px": 12.9,
+      "digits_chars_per_100px": 12.5,
+      "citation_chars_per_100px": 14.5,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "hero": {
+      "family": "Segoe UI",
+      "size": 64.0,
+      "weight": "bold",
+      "cjk_chars_per_100px": 1.5,
+      "latin_chars_per_100px": 3.1,
+      "caps_chars_per_100px": 2.6,
+      "digits_chars_per_100px": 2.6,
+      "citation_chars_per_100px": 3.0,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    },
+    "kicker": {
+      "family": "Segoe UI",
+      "size": 16.0,
+      "weight": "bold",
+      "cjk_chars_per_100px": 5.9,
+      "latin_chars_per_100px": 12.5,
+      "caps_chars_per_100px": 10.5,
+      "digits_chars_per_100px": 10.3,
+      "citation_chars_per_100px": 11.9,
+      "script_clusters_per_100px": {},
+      "longest_planned_line": null
+    }
+  },
+  "script_samples": {},
+  "source": "--role",
+  "generated_at": "2026-09-19T15:41:41Z",
+  "notes": [
+    "rates for cover_title, hero, kicker, title are measured at bold weight"
+  ]
+}

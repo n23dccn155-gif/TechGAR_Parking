@@ -94,6 +94,16 @@ class GlobalIdentityState:
     last_seen_time: Optional[float]
     retention_anchor_frame: Optional[int] = None
     retention_anchor_time: Optional[float] = None
+    # Whether the released reservation was short enough to count as a real
+    # observation of the vehicle's presence.  A car released seconds after
+    # parking is still warm; one released after being unobserved beyond the
+    # whole retention window cannot fake same-camera recency.
+    retention_anchor_observed: bool = False
+    # Whether the last fragment starved while clipped by the camera's strict
+    # ROI boundary.  A car that vanished INTO a blind/dead zone did not fail
+    # to be observed -- it left the observable area -- so the same-camera
+    # 'different car' prior is weaker there (bt f1070 gid1 -> gid4).
+    vanished_near_roi_edge: bool = False
     dormant_since_frame: Optional[int] = None
     dormant_since_time: Optional[float] = None
     exited_at_frame: Optional[int] = None
@@ -319,6 +329,10 @@ class CrossCameraManager:
         self._cross_camera_duplicate_evidence: Dict[
             Tuple[int, int], Tuple[int, int]
         ] = {}
+        self._dormant_duplicate_evidence: Dict[
+            Tuple[int, int], Tuple[int, int]
+        ] = {}
+        self._cross_camera_conflict_evidence: Dict[tuple, Tuple[int, int]] = {}
         self._events: List[dict] = []
         self._parked_reservations: Dict[int, dict] = {}
         # Qualified slot-arrival claims are temporary holds, not parked
@@ -349,6 +363,15 @@ class CrossCameraManager:
         # that outlives every plausible departure cannot starve a genuinely
         # new vehicle of a Global ID.
         self._departure_deferred_since: Dict[Tuple[str, int], int] = {}
+        # First frame each unbound fragment entered handoff probation
+        # (``handoff_candidate_deferred`` / ``handoff_assignment_ambiguous``
+        # / ``handoff_rejected_recent_identity_ambiguity``).  The per-frame
+        # return set alone lost the fragment whenever the handoff entry
+        # expired or the LAPJV pairing changed before its evidence
+        # accumulated, letting the same fragment mint a duplicate Global ID
+        # once it had enough observations.  The claim stays quarantined
+        # until it resolves or ``max(handoff_ttl, 60)`` frames elapse.
+        self._handoff_deferred_since: Dict[Tuple[str, int], int] = {}
         # Robust per-camera size gallery. ``camera_bbox_sizes`` used to be
         # overwritten by the latest motion blob, so one lamp/edge fragment
         # could become the learned "vehicle size" and later validate more
@@ -659,6 +682,18 @@ class CrossCameraManager:
         ) else "dormant"
         identity.dormant_since_frame = frame_idx
         identity.dormant_since_time = timestamp_s
+        # A fragment that starved while clipped by the strict ROI boundary
+        # vanished into a blind/dead zone rather than failing detection in
+        # the open -- remember it so the same-camera stale window can give
+        # that weaker 'different car' prior a bounded extension.
+        # Rejected-detection starvation marks the same dead-zone vanish: the
+        # last accepted detection's roi_clipped/roi_support_ratio never saw
+        # the ROI edge, so the tracker flags it separately.
+        identity.vanished_near_roi_edge = bool(
+            getattr(track, "roi_clipped", False)
+            or float(getattr(track, "roi_support_ratio", 1.0) or 1.0) < 0.7
+            or bool(getattr(track, "roi_edge_starved", False))
+        )
 
     def _mark_identity_exited(
         self,
@@ -994,6 +1029,31 @@ class CrossCameraManager:
                 latest_timestamp_s = self._latest_camera_timestamp_s()
                 if latest_timestamp_s is not None:
                     identity.retention_anchor_time = float(latest_timestamp_s)
+                # A reservation is observation evidence only while the
+                # unobserved span it covers stays inside the retention
+                # window itself.  A car released seconds after parking is
+                # still warm for same-camera recovery; one released after
+                # being unobserved beyond full retention cannot borrow
+                # recency from the release (departure_retention test).
+                if (
+                    latest_timestamp_s is not None
+                    and identity.last_seen_time is not None
+                ):
+                    unobserved_span = max(
+                        0.0,
+                        float(latest_timestamp_s)
+                        - float(identity.last_seen_time),
+                    )
+                    identity.retention_anchor_observed = (
+                        unobserved_span <= self.identity_retention_seconds
+                    )
+                else:
+                    unobserved_span_frames = max(
+                        0, int(frame_idx) - int(identity.last_seen_frame)
+                    )
+                    identity.retention_anchor_observed = (
+                        unobserved_span_frames <= self.identity_retention_frames
+                    )
         for global_id in previously_parked - set(selected):
             self.trajectory.set_parked(global_id, False)
         self._parked_reservations = selected
@@ -1521,7 +1581,40 @@ class CrossCameraManager:
                     self.trajectory.append_global(
                         self._canonical_id(raw_global_id), sample
                     )
-        self.trajectory.remove_missing_provisionals(live_provisional_keys)
+        timestamps = [
+            float(value)
+            for value in (camera_timestamps_s or {}).values()
+            if value is not None and np.isfinite(float(value))
+        ]
+        now_s = (
+            max(timestamps)
+            if timestamps
+            else float(frame_idx)
+            / max(
+                1.0,
+                max(
+                    (self.effective_camera_fps(cam) for cam in all_tracks),
+                    default=25.0,
+                ),
+            )
+        )
+        forgotten = self.trajectory.remove_missing_provisionals(
+            live_provisional_keys, now_s=now_s
+        )
+        for key in forgotten:
+            # A dropped trail erases ReID evidence for that fragment; emit
+            # it so the time-bounded retention is never a silent veto.
+            try:
+                camera_id, local_track_id = key
+            except (TypeError, ValueError):
+                camera_id, local_track_id = str(key), None
+            self._event(
+                "provisional_trajectory_forgotten",
+                frame_idx,
+                None,
+                camera=camera_id,
+                local_track_id=local_track_id,
+            )
 
     def identity_appearance_evidence(
         self,
@@ -1866,6 +1959,254 @@ class CrossCameraManager:
             return {
                 "reserved_global_id": int(global_id),
                 "slot_id": str(reservation.get("slot_id")),
+            }
+        return None
+
+    def _fragment_starts_outside_reservation(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        global_id: int,
+    ) -> bool:
+        """Return True only when the fragment provably began elsewhere.
+
+        A reservation has no slot polygon, so the dormant corridor doubles
+        as the boundary.  With fewer than ``min_observations`` trail samples
+        or no usable origin there is nothing to disprove membership -- the
+        normal distance/appearance gates remain the real filter, which is
+        how a re-detected parked car can still be recovered in place.
+        """
+        reservation = self._parked_reservations.get(int(global_id))
+        if reservation is None:
+            return False
+        samples = self.trajectory.provisional_samples(
+            (str(cam_id), int(local_track_id))
+        )
+        if len(samples) < self.trajectory.min_observations:
+            return False
+        origin = self.trajectory.parked_origin(int(global_id))
+        if origin is None:
+            reservation_camera = reservation.get("camera_id")
+            raw_center = reservation.get("center")
+            if reservation_camera is None or raw_center is None:
+                return False
+            try:
+                origin = self._world(
+                    str(reservation_camera),
+                    (float(raw_center[0]), float(raw_center[1])),
+                )
+            except (
+                cv2.error,
+                KeyError,
+                np.linalg.LinAlgError,
+                TypeError,
+                ValueError,
+            ):
+                return False
+        earliest_distance = float(
+            np.linalg.norm(np.subtract(samples[0].world, origin))
+        )
+        return earliest_distance > self.dormant_match_distance
+
+    def _reserved_identity_may_compete(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        global_id: int,
+    ) -> bool:
+        """Whether a parked/reserved identity may score this fragment.
+
+        The reservation claims the vehicle is still at its slot origin:
+
+        * same camera as the reservation (or camera unknown): compete
+          unless the provisional trail provably began outside the origin
+          corridor -- this is how a departing car *and* a re-detected
+          parked car are both recovered;
+        * a different camera: a parked vehicle can only reach that view by
+          departing through its own camera first, so require positive
+          origin membership -- a mature trail that starts inside the slot.
+        """
+        reservation = self._parked_reservations.get(int(global_id))
+        if reservation is None:
+            return False
+        reservation_camera = reservation.get("camera_id")
+        same_reservation_camera = (
+            not reservation_camera or str(reservation_camera) == str(cam_id)
+        )
+        if not same_reservation_camera:
+            return self._fragment_starts_inside_reservation(
+                cam_id, local_track_id, global_id
+            )
+        return not self._fragment_starts_outside_reservation(
+            cam_id, local_track_id, global_id
+        )
+
+    def _fragment_starts_inside_reservation(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        global_id: int,
+    ) -> bool:
+        """Positive proof the provisional trail began inside the slot."""
+        reservation = self._parked_reservations.get(int(global_id))
+        if reservation is None:
+            return False
+        samples = self.trajectory.provisional_samples(
+            (str(cam_id), int(local_track_id))
+        )
+        if len(samples) < self.trajectory.min_observations:
+            return False
+        origin = self.trajectory.parked_origin(int(global_id))
+        if origin is None:
+            reservation_camera = reservation.get("camera_id")
+            raw_center = reservation.get("center")
+            if reservation_camera is None or raw_center is None:
+                return False
+            try:
+                origin = self._world(
+                    str(reservation_camera),
+                    (float(raw_center[0]), float(raw_center[1])),
+                )
+            except (
+                cv2.error,
+                KeyError,
+                np.linalg.LinAlgError,
+                TypeError,
+                ValueError,
+            ):
+                return False
+        earliest_distance = float(
+            np.linalg.norm(np.subtract(samples[0].world, origin))
+        )
+        return earliest_distance <= self.dormant_match_distance
+
+    def _dormant_near_miss_candidate(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        track,
+        frame_idx: int,
+        timestamp_s: Optional[float],
+    ) -> Optional[dict]:
+        """Plausible dormant/reserved owner the ReID passes cannot test yet.
+
+        Position and appearance are the only cheap gates available at
+        allocation time.  A fragment still short of ReID evidence (thin
+        tracklet, fewer than ``min_observations`` trail samples, immature
+        history) must wait rather than mint a duplicate Global ID beside a
+        matching dormant identity.  A *mature* fragment that failed the
+        full gates for real reasons is never suppressed by this check.
+        """
+        fragment_immature = (
+            len(appearance_samples(track)) < 2
+            or len(
+                self.trajectory.provisional_samples(
+                    (str(cam_id), int(local_track_id))
+                )
+            )
+            < self.trajectory.min_observations
+            or not self._dormant_reid_ready(track, frame_idx)
+        )
+        if not fragment_immature:
+            return None
+        try:
+            world = self._track_world(cam_id, track)
+        except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+            return None
+        for identity in self._identities.values():
+            global_id = self._canonical_id(identity.global_id)
+            # A confirmed-occupied "parked" reservation can never accept a
+            # binding while it holds, so deferring a fragment for it only
+            # starves a real vehicle; dormant-dormant reconciliation owns
+            # that cleanup if the reservation was wrong.  recovery_pending
+            # still defers: a departure may be in progress and the identity
+            # can legitimately claim the fragment through origin proof.
+            if identity.state not in {
+                "dormant",
+                "handoff",
+                "recovery_pending",
+            }:
+                continue
+            if (
+                global_id in self._occluded_global_ids
+                or global_id in self._provisional_identity_holds
+            ):
+                continue
+            if identity.last_camera != cam_id and not self._are_adjacent(
+                identity.last_camera, cam_id
+            ):
+                continue
+            if not self._identity_is_recent(
+                identity, frame_idx, timestamp_s, target_camera=cam_id
+            ):
+                continue
+            # Mirror the ReID pass exactly: same-camera revival cannot
+            # explain a gap by extrapolating, so only the cross-camera
+            # corridor treats last->predicted as an uncertainty band.
+            same_camera = identity.last_camera == cam_id
+            predicted = (
+                identity.last_world
+                if same_camera
+                else self._predicted_identity_world(
+                    identity, frame_idx, timestamp_s
+                )
+            )
+            predicted_distance = float(
+                np.linalg.norm(np.subtract(world, predicted))
+            )
+            last_position_distance = float(
+                np.linalg.norm(np.subtract(world, identity.last_world))
+            )
+            distance = (
+                predicted_distance
+                if same_camera
+                else min(predicted_distance, last_position_distance)
+            )
+            elapsed, uses_seconds = self._identity_elapsed(
+                identity, frame_idx, timestamp_s
+            )
+            velocity = (
+                identity.velocity_world_per_second
+                if uses_seconds
+                and np.hypot(*identity.velocity_world_per_second) > 1e-6
+                else identity.velocity_world
+            )
+            distance_limit = self._dormant_candidate_distance_limit(
+                identity,
+                cam_id,
+                same_camera=same_camera,
+                elapsed=elapsed,
+                uses_seconds=uses_seconds,
+                velocity=velocity,
+                recent_reid_window=self._reid_window(
+                    cam_id, uses_seconds=uses_seconds
+                ),
+                has_target_camera_history=bool(
+                    identity.camera_appearance_samples.get(cam_id, ())
+                ),
+            )
+            if distance > distance_limit:
+                continue
+            gallery = identity.camera_appearance_samples.get(
+                cam_id
+            ) or identity.appearance_samples
+            appearance_match = compare_tracklets(track, gallery)
+            if (
+                appearance_match.support < 1
+                or appearance_match.distance > 0.30
+            ):
+                continue
+            size = self._size_distance(
+                (track.w, track.h),
+                identity.camera_bbox_sizes.get(cam_id, identity.bbox_size),
+            )
+            if size > 0.92:
+                continue
+            return {
+                "global_id": int(global_id),
+                "state": identity.state,
+                "distance": distance,
+                "appearance": float(appearance_match.distance),
             }
         return None
 
@@ -2978,6 +3319,156 @@ class CrossCameraManager:
                     reason="one_gid_multiple_non_echo_tracks",
                 )
 
+    def _resolve_cross_camera_global_conflicts(
+        self,
+        all_tracks: Dict[str, dict],
+        frame_idx: int,
+    ) -> None:
+        """Detach stale members when one GID owns divergent live tracks.
+
+        ``_bind`` adds members without evicting conflicting ones and the
+        same-camera resolver only groups *within* a camera.  A stale
+        cross-camera binding therefore keeps its Global ID on a different
+        physical car after the true owner was recovered elsewhere
+        (hiep7 f1791-1794: gid1 on cam1#50 AND cam2#50, anchors 60-67 cm
+        apart -- proven two cars).
+
+        Both members must carry a fresh detection (``invisible_count == 0``)
+        so a coasting stale member never triggers this, anchors must diverge
+        beyond ``2 * cross_camera_duplicate_distance`` so legitimate
+        same-car overlap co-observations (~1-3 cm) can never fire, and the
+        divergence must persist for two consecutive frames before the
+        weaker member is detached.  A separation beyond
+        ``3 * cross_camera_duplicate_distance`` is physically impossible
+        for one vehicle, so extreme pairs skip the consecutive-evidence
+        requirement entirely and detach on the first frame.  The loser
+        stays ID-less for the rest of the frame and can be recovered as a
+        different vehicle.
+        """
+        members_by_gid: Dict[
+            int, List[Tuple[str, int, object, Tuple[float, float]]]
+        ] = {}
+        for cam_id, tracks in all_tracks.items():
+            for local_id, track in tracks.items():
+                if not self._is_confirmed(track):
+                    continue
+                if not self._has_fresh_detection(track):
+                    continue
+                global_id = self._local_to_global.get((cam_id, local_id))
+                if global_id is None:
+                    continue
+                global_id = self._canonical_id(global_id)
+                try:
+                    world = self._track_world(cam_id, track)
+                except (
+                    cv2.error,
+                    KeyError,
+                    np.linalg.LinAlgError,
+                    ValueError,
+                ):
+                    continue
+                members_by_gid.setdefault(global_id, []).append(
+                    (str(cam_id), int(local_id), track, world)
+                )
+
+        divergence_bound = self.cross_camera_duplicate_distance * 2.0
+        extreme_bound = self.cross_camera_duplicate_distance * 3.0
+        for global_id, members in members_by_gid.items():
+            cameras = {member[0] for member in members}
+            if len(cameras) < 2:
+                continue
+            identity = self._identities.get(global_id)
+            divergent_pairs = []
+            for index, left in enumerate(members):
+                for right in members[index + 1 :]:
+                    if left[0] == right[0]:
+                        continue
+                    distance = float(
+                        np.linalg.norm(
+                            np.subtract(left[3], right[3])
+                        )
+                    )
+                    if distance <= divergence_bound:
+                        continue
+                    divergent_pairs.append((left, right, distance))
+            for left, right, distance in divergent_pairs:
+                extreme = distance > extreme_bound
+                if not extreme:
+                    evidence_key = (
+                        global_id,
+                        (left[0], left[1]),
+                        (right[0], right[1]),
+                    )
+                    count = self._advance_consecutive_evidence(
+                        self._cross_camera_conflict_evidence,
+                        evidence_key,
+                        frame_idx,
+                    )
+                    if count < 2:
+                        continue
+
+                def member_rank(member: Tuple[str, int, object, tuple]) -> tuple:
+                    member_cam, member_local, member_track, _w = member
+                    gallery = ()
+                    if identity is not None:
+                        gallery = (
+                            identity.camera_appearance_samples.get(
+                                member_cam, ()
+                            )
+                            or identity.appearance_samples
+                        )
+                    appearance_match = compare_tracklets(
+                        member_track, gallery
+                    )
+                    appearance_distance = (
+                        float(appearance_match.distance)
+                        if appearance_match.support > 0
+                        else 1.0
+                    )
+                    binding_frame = self._local_binding_frames.get(
+                        (member_cam, member_local), -1
+                    )
+                    visible_count = int(
+                        getattr(member_track, "total_visible_count", 0)
+                    )
+                    return (
+                        appearance_distance,
+                        -int(binding_frame),
+                        -visible_count,
+                        member_cam,
+                        member_local,
+                    )
+
+                kept = min((left, right), key=member_rank)
+                loser = right if kept is left else left
+                loser_key = (loser[0], loser[1])
+                if self._local_to_global.pop(loser_key, None) is None:
+                    continue
+                self._gid_members.get(global_id, set()).discard(loser_key)
+                self._local_binding_frames.pop(loser_key, None)
+                self._event(
+                    "cross_camera_global_conflict_detached",
+                    frame_idx,
+                    global_id,
+                    camera=loser[0],
+                    detached_local_id=loser[1],
+                    kept_camera=kept[0],
+                    kept_local_id=kept[1],
+                    world_distance=round(distance, 3),
+                    divergence_bound=round(divergence_bound, 3),
+                    instant=extreme,
+                    reason=(
+                        "one_gid_divergent_live_members_extreme"
+                        if extreme
+                        else "one_gid_divergent_live_members"
+                    ),
+                )
+        self._cross_camera_conflict_evidence = {
+            key: value
+            for key, value in self._cross_camera_conflict_evidence.items()
+            if frame_idx - value[1] <= 1
+        }
+
     def _bound_handoff_merge_allowed(
         self,
         entry: HandoffEntry,
@@ -3121,12 +3612,16 @@ class CrossCameraManager:
                 )
             )
         ]
+        # Probation claims are sticky: a fragment deferred once must remain
+        # quarantined until the claim resolves or expires, even when no live
+        # handoff entry scores it this frame.
+        sticky_deferred = self._live_handoff_deferrals(frame_idx)
         if not entries or not candidates:
-            return set()
+            return sticky_deferred
         invalid_cost = 10.0
         costs = np.full((len(entries), len(candidates)), invalid_cost, dtype=np.float64)
         details_by_pair = {}
-        deferred_keys: set[Tuple[str, int]] = set()
+        deferred_keys: set[Tuple[str, int]] = set(sticky_deferred)
         for row, entry in enumerate(entries):
             for col, (cam_id, local_id, track) in enumerate(candidates):
                 if entry.target_cam != cam_id:
@@ -3194,6 +3689,9 @@ class CrossCameraManager:
                     ):
                         if (cam_id, local_id) not in self._local_to_global:
                             deferred_keys.add((cam_id, local_id))
+                            self._handoff_deferred_since.setdefault(
+                                (cam_id, local_id), int(frame_idx)
+                            )
                         self._event(
                             "handoff_rejected_recent_identity_ambiguity",
                             frame_idx,
@@ -3223,6 +3721,9 @@ class CrossCameraManager:
             ):
                 if (cam_id, local_id) not in self._local_to_global:
                     deferred_keys.add((cam_id, local_id))
+                    self._handoff_deferred_since.setdefault(
+                        (cam_id, local_id), int(frame_idx)
+                    )
                 self._event(
                     "handoff_assignment_ambiguous",
                     frame_idx,
@@ -3272,6 +3773,9 @@ class CrossCameraManager:
             if not bind_eligible or evidence_count < required_evidence:
                 if (cam_id, local_id) not in self._local_to_global:
                     deferred_keys.add((cam_id, local_id))
+                    self._handoff_deferred_since.setdefault(
+                        (cam_id, local_id), int(frame_idx)
+                    )
                 self._event(
                     "handoff_candidate_deferred",
                     frame_idx,
@@ -3353,6 +3857,8 @@ class CrossCameraManager:
                 all_tracks,
             )
             self._bind(cam_id, local_id, source_global_id)
+            self._handoff_deferred_since.pop((cam_id, local_id), None)
+            deferred_keys.discard((cam_id, local_id))
             event_type = (
                 "handoff_matched_target_gallery"
                 if match_details.get("appearance_reference") == "target_camera"
@@ -4104,6 +4610,102 @@ class CrossCameraManager:
             for key, first_deferred in self._departure_deferred_since.items()
             if key in present_keys
         }
+        self._handoff_deferred_since = {
+            key: first_deferred
+            for key, first_deferred in self._handoff_deferred_since.items()
+            if key in present_keys
+        }
+
+    def _live_handoff_deferrals(self, frame_idx: int) -> set[Tuple[str, int]]:
+        """Return still-quarantined handoff-probation fragments.
+
+        A fragment already deferred once must stay out of every downstream
+        assignment path until its probation resolves or the bounded window
+        expires -- even if the handoff entry itself vanished meanwhile.
+        """
+        bound = max(int(self.handoff_ttl), 60)
+        sticky: set[Tuple[str, int]] = set()
+        for key, started in list(self._handoff_deferred_since.items()):
+            cam_id, local_id = key
+            if key in self._local_to_global:
+                self._handoff_deferred_since.pop(key, None)
+                continue
+            if int(frame_idx) - int(started) > bound:
+                self._handoff_deferred_since.pop(key, None)
+                self._event(
+                    "handoff_deferral_expired",
+                    frame_idx,
+                    None,
+                    camera=cam_id,
+                    local_track_id=int(local_id),
+                    deferred_since_frame=int(started),
+                    deferred_frames=int(frame_idx) - int(started),
+                )
+                continue
+            sticky.add(key)
+        return sticky
+
+    def _identity_retention_elapsed(
+        self,
+        identity: GlobalIdentityState,
+        elapsed: float,
+        uses_seconds: bool,
+        frame_idx: int,
+        timestamp_s: Optional[float],
+    ) -> float:
+        """Re-base the lost-signal clock on the anchors that restart it.
+
+        ``retention_anchor_*`` is written when a parking reservation is
+        released and ``dormant_since_*`` marks when the identity last became
+        unobserved.  Both express "the moment the vehicle could legitimately
+        move again".  Time spent parked under a reservation (with tracks
+        deliberately suspended) must not count as lost-signal time, so the
+        effective age is the smallest of every available re-clock.
+        """
+        anchored = float(elapsed)
+        if uses_seconds and timestamp_s is not None:
+            if identity.retention_anchor_time is not None:
+                anchored = min(
+                    anchored,
+                    max(
+                        0.0,
+                        float(timestamp_s)
+                        - float(identity.retention_anchor_time),
+                    ),
+                )
+            if identity.dormant_since_time is not None:
+                anchored = min(
+                    anchored,
+                    max(
+                        0.0,
+                        float(timestamp_s)
+                        - float(identity.dormant_since_time),
+                    ),
+                )
+        elif not uses_seconds:
+            if identity.retention_anchor_frame is not None:
+                anchored = min(
+                    anchored,
+                    float(
+                        max(
+                            0,
+                            int(frame_idx)
+                            - int(identity.retention_anchor_frame),
+                        )
+                    ),
+                )
+            if identity.dormant_since_frame is not None:
+                anchored = min(
+                    anchored,
+                    float(
+                        max(
+                            0,
+                            int(frame_idx)
+                            - int(identity.dormant_since_frame),
+                        )
+                    ),
+                )
+        return anchored
 
     def _identity_is_recent(
         self,
@@ -4115,13 +4717,25 @@ class CrossCameraManager:
         # Retention is not permission to associate. Occlusion blocks matching
         # at its call sites, not this lifetime check used by cleanup().
         elapsed, uses_seconds = self._identity_elapsed(identity, frame_idx, timestamp_s)
-        # Only cleanup may use the departure retention clock. Matching still
-        # measures age from a real observation, including its moving-ID limit.
-        if target_camera is None:
-            if uses_seconds and identity.retention_anchor_time is not None:
-                elapsed = min(elapsed, max(0.0, timestamp_s - identity.retention_anchor_time))
-            elif not uses_seconds and identity.retention_anchor_frame is not None:
-                elapsed = min(elapsed, float(max(0, frame_idx - identity.retention_anchor_frame)))
+        # Retention may re-anchor at departure, but staleness must still be
+        # measured against the last *real* observation: a dropped
+        # reservation extends how long the identity is kept, it does not
+        # fake a recent sighting for the same-camera moving window.
+        observed_elapsed = elapsed
+        # Parked/reserved intervals are deliberately unobserved, so matching
+        # uses the same re-anchored clock as cleanup: a car that sat under a
+        # slot reservation for minutes is still young *after departure* and
+        # must not hit the short same-camera moving limit (live15 gid13).
+        elapsed = self._identity_retention_elapsed(
+            identity, elapsed, uses_seconds, frame_idx, timestamp_s
+        )
+        if self._canonical_id(identity.global_id) in self._parked_reservations:
+            # A live slot reservation is authoritative proof of where the
+            # vehicle is, so the deliberately unobserved parked interval is
+            # not lost-signal time.  Retention anchors only exist *after* the
+            # reservation drops, so without this exemption a car parked
+            # longer than the retention window could never be recovered.
+            return True
         limit = self.identity_retention_seconds if uses_seconds else self.identity_retention_frames
         if self._identity_is_established(identity):
             # A mature identity that has been observed in both calibrated
@@ -4129,7 +4743,12 @@ class CrossCameraManager:
             # it across longer blind regions; explicit exit zones still retire
             # it immediately. Short/noisy identities retain the normal TTL.
             limit *= 4.0
-        if self._same_camera_recovery_is_stale(identity, target_camera, elapsed, uses_seconds):
+        stale_elapsed = (
+            elapsed if identity.retention_anchor_observed else observed_elapsed
+        )
+        if self._same_camera_recovery_is_stale(
+            identity, target_camera, stale_elapsed, uses_seconds
+        ):
             return False
         return elapsed <= limit
 
@@ -4159,6 +4778,12 @@ class CrossCameraManager:
             if uses_seconds
             else self.identity_retention_frames * self._moving_retention_ratio
         )
+        if identity.vanished_near_roi_edge:
+            # The 'different car' prior is weakest where a car vanished into
+            # a blind/dead zone at the ROI boundary.  Grant a bounded 2x
+            # extension for same-camera revival only; every downstream gate
+            # (position, appearance, size) still applies unchanged.
+            moving_limit *= 2.0
         return elapsed > moving_limit
 
     def _reachable_distance_limit(
@@ -4179,6 +4804,84 @@ class CrossCameraManager:
         return float(
             self.reid_reachable_margin
             + self.reid_reachable_speed_scale * speed * max(0.0, float(elapsed))
+        )
+
+    def _dormant_candidate_distance_limit(
+        self,
+        identity: GlobalIdentityState,
+        cam_id: str,
+        *,
+        same_camera: bool,
+        elapsed: float,
+        uses_seconds: bool,
+        velocity: Tuple[float, float],
+        recent_reid_window: float,
+        has_target_camera_history: bool,
+    ) -> float:
+        """The positional gate a dormant candidate must satisfy.
+
+        Shared between the ReID pass and the allocation-time near-miss
+        check so a fragment outside this radius is treated as a different
+        car in *both* places instead of only failing to bind and then also
+        being blocked from receiving its own fresh Global ID.
+        """
+        established = self._identity_is_established(identity)
+        if same_camera:
+            # A same-camera revival has no blind region to explain the
+            # gap, so the radius starts at the calibrated slot-derived
+            # distance and grows only by the ground this identity had
+            # the *measured speed* to cover. A parked or slow car keeps
+            # the tight radius -- which is what stops an old Global ID
+            # from landing on a different car parked a few slots away --
+            # while a car that was crossing the lot when it was lost can
+            # be picked up further along its own path.
+            #
+            # Established identities earn a wider envelope: a car observed
+            # over both cameras for a long time can legitimately cover
+            # 30-90 cm between fragments (vd_16 ghost storm), so the
+            # reachable horizon extends to ~5 s and the hard cap to 3x.
+            # A stationary identity still collapses to the tight radius:
+            # velocity ~= 0 makes the reachable term vanish either way.
+            elapsed_cap = (
+                (5.0 if uses_seconds else 20.0)
+                if established
+                else (2.0 if uses_seconds else 8.0)
+            )
+            hard_cap = self.dormant_match_distance * (
+                3.0 if established else 2.0
+            )
+            return min(
+                hard_cap,
+                max(
+                    self.dormant_match_distance,
+                    self._reachable_distance_limit(
+                        velocity,
+                        min(elapsed, elapsed_cap),
+                        uses_seconds,
+                    ),
+                ),
+            )
+        long_cross_camera_gap = elapsed > 2.0 * recent_reid_window
+        if long_cross_camera_gap:
+            return (
+                self.dormant_match_distance * 1.60
+                if has_target_camera_history
+                and established
+                else self.dormant_match_distance
+            )
+        return min(
+            self.dormant_match_distance * (3.0 if established else 2.0),
+            max(
+                (
+                    self.dormant_match_distance * 1.60
+                    if has_target_camera_history
+                    else self.dormant_match_distance
+                ),
+                self.dormant_match_distance
+                + np.hypot(*velocity)
+                * min(elapsed, 5.0 if established else 2.0)
+                * 0.25,
+            ),
         )
 
     def _identity_is_established(
@@ -4323,7 +5026,8 @@ class CrossCameraManager:
         identities = [
             identity
             for identity in self._identities.values()
-            if identity.state in {"dormant", "handoff"}
+            if identity.state
+            in {"dormant", "handoff", "parked", "recovery_pending"}
             and self._canonical_id(identity.global_id) not in self._occluded_global_ids
             and self._canonical_id(identity.global_id)
             not in self._provisional_identity_holds
@@ -4341,9 +5045,57 @@ class CrossCameraManager:
                 same_camera = identity.last_camera == cam_id
                 if not same_camera and not self._are_adjacent(identity.last_camera, cam_id):
                     continue
+                identity_global_id = self._canonical_id(identity.global_id)
+                if identity_global_id in self._parked_reservations and not (
+                    self._reserved_identity_may_compete(
+                        cam_id, local_id, identity_global_id
+                    )
+                ):
+                    # The live reservation claims the vehicle is still at
+                    # its slot origin.  A fragment that provably began far
+                    # from it -- or that cannot prove it belongs to a
+                    # different camera's slot at all -- must be another car.
+                    self._record_dormant_rejection(
+                        identity,
+                        frame_idx,
+                        cam_id,
+                        local_id,
+                        "parked_reservation_origin_miss",
+                    )
+                    continue
                 if not self._identity_is_recent(
                     identity, frame_idx, timestamp_s, target_camera=cam_id
                 ):
+                    # Silent vetoes made ghost GIDs impossible to diagnose.
+                    # Distinguish the short same-camera moving window from a
+                    # genuinely expired retention window for the registry.
+                    reason_elapsed, reason_uses_seconds = self._identity_elapsed(
+                        identity, frame_idx, timestamp_s
+                    )
+                    reason_elapsed = self._identity_retention_elapsed(
+                        identity,
+                        reason_elapsed,
+                        reason_uses_seconds,
+                        frame_idx,
+                        timestamp_s,
+                    )
+                    self._record_dormant_rejection(
+                        identity,
+                        frame_idx,
+                        cam_id,
+                        local_id,
+                        (
+                            "same_camera_stale"
+                            if self._same_camera_recovery_is_stale(
+                                identity,
+                                cam_id,
+                                reason_elapsed,
+                                reason_uses_seconds,
+                            )
+                            else "identity_retention_expired"
+                        ),
+                        elapsed=round(float(reason_elapsed), 3),
+                    )
                     continue
                 # After a vehicle parks, its next local track starts close to
                 # the last stationary position. Extrapolating the velocity
@@ -4387,50 +5139,16 @@ class CrossCameraManager:
                     if uses_seconds and np.hypot(*identity.velocity_world_per_second) > 1e-6
                     else identity.velocity_world
                 )
-                if same_camera:
-                    # A same-camera revival has no blind region to explain the
-                    # gap, so the radius starts at the calibrated slot-derived
-                    # distance and grows only by the ground this identity had
-                    # the *measured speed* to cover. A parked or slow car keeps
-                    # the tight radius -- which is what stops an old Global ID
-                    # from landing on a different car parked a few slots away --
-                    # while a car that was crossing the lot when it was lost can
-                    # be picked up further along its own path.
-                    distance_limit = min(
-                        self.dormant_match_distance * 2.0,
-                        max(
-                            self.dormant_match_distance,
-                            self._reachable_distance_limit(
-                                velocity,
-                                min(elapsed, 2.0 if uses_seconds else 8.0),
-                                uses_seconds,
-                            ),
-                        ),
-                    )
-                elif long_cross_camera_gap:
-                    distance_limit = (
-                        self.dormant_match_distance * 1.60
-                        if has_target_camera_history
-                        and self._identity_is_established(identity)
-                        else self.dormant_match_distance
-                    )
-                else:
-                    distance_limit = min(
-                        self.dormant_match_distance * 2.0,
-                        max(
-                            (
-                                self.dormant_match_distance * 1.60
-                                if identity.camera_appearance_samples.get(
-                                    cam_id, ()
-                                )
-                                else self.dormant_match_distance
-                            ),
-                            self.dormant_match_distance
-                            + np.hypot(*velocity)
-                            * min(elapsed, 2.0)
-                            * 0.25,
-                        ),
-                    )
+                distance_limit = self._dormant_candidate_distance_limit(
+                    identity,
+                    cam_id,
+                    same_camera=same_camera,
+                    elapsed=elapsed,
+                    uses_seconds=uses_seconds,
+                    velocity=velocity,
+                    recent_reid_window=recent_reid_window,
+                    has_target_camera_history=has_target_camera_history,
+                )
                 # A motion-mask fragment can restart just beyond the
                 # calibrated radius. Allow only a small same-camera margin
                 # when appearance, size, maturity and a short gap agree.
@@ -4689,6 +5407,29 @@ class CrossCameraManager:
                     continue
                 if not self._dormant_reid_ready(track, frame_idx):
                     deferred_keys.add((cam_id, local_id))
+                    immature_key = (
+                        int(identity.global_id),
+                        str(cam_id),
+                        int(local_id),
+                        "fragment_immature",
+                    )
+                    if int(frame_idx) - self._dormant_rejection_last.get(
+                        immature_key, -999999
+                    ) >= 8:
+                        self._dormant_rejection_last[immature_key] = int(
+                            frame_idx
+                        )
+                        self._event(
+                            "dormant_reid_deferred_fragment_immature",
+                            frame_idx,
+                            identity.global_id,
+                            source_camera=identity.last_camera,
+                            target_camera=cam_id,
+                            target_local_id=int(local_id),
+                            selected_distance=round(distance, 3),
+                            appearance_distance=round(float(appearance), 3),
+                            elapsed=round(float(elapsed), 3),
+                        )
                     continue
                 turnaround_proof = False
                 trajectory_evidence = None
@@ -4921,6 +5662,93 @@ class CrossCameraManager:
             identity = identities[row]
             cam_id, local_id, recovered_track = candidates[col]
             previous_camera = identity.last_camera
+            # Pre-bind divergence guard (live15 f3733): a dormant recovery
+            # bound cam2#437 to gid18 at 12.5cm while gid18 still owned the
+            # fresh confirmed member cam1#303 anchored 20.2cm away -- one
+            # Global ID displayed on two different cars for a frame until
+            # ``_resolve_cross_camera_global_conflicts`` detached it.  A live
+            # member in another camera anchored beyond
+            # ``cross_camera_duplicate_distance`` already proves the identity
+            # sits on a different vehicle, so defer the bind instead of
+            # healing it afterwards.  The strict bound is safe here because
+            # deferral is cheap and retried on the next frame, unlike a
+            # post-bind detach.  Stale/coasting members cannot prove
+            # divergence and same-camera members belong to
+            # ``_resolve_same_camera_global_conflicts``.
+            identity_global_id = self._canonical_id(identity.global_id)
+            divergence_bound = float(self.cross_camera_duplicate_distance)
+            try:
+                candidate_world = self._track_world(cam_id, recovered_track)
+            except (
+                cv2.error,
+                KeyError,
+                np.linalg.LinAlgError,
+                ValueError,
+            ):
+                candidate_world = None
+            divergent_member = None
+            if candidate_world is not None:
+                for (
+                    member_key,
+                    member_global_id,
+                ) in self._local_to_global.items():
+                    member_cam, member_local = member_key
+                    if member_cam == cam_id:
+                        continue
+                    if (
+                        self._canonical_id(member_global_id)
+                        != identity_global_id
+                    ):
+                        continue
+                    member_track = all_tracks.get(member_cam, {}).get(
+                        member_local
+                    )
+                    if member_track is None:
+                        continue
+                    if not self._is_confirmed(member_track):
+                        continue
+                    if not self._has_fresh_detection(member_track):
+                        continue
+                    try:
+                        member_world = self._track_world(
+                            member_cam, member_track
+                        )
+                    except (
+                        cv2.error,
+                        KeyError,
+                        np.linalg.LinAlgError,
+                        ValueError,
+                    ):
+                        continue
+                    member_distance = float(
+                        np.linalg.norm(
+                            np.subtract(candidate_world, member_world)
+                        )
+                    )
+                    if member_distance > divergence_bound:
+                        divergent_member = (
+                            member_cam,
+                            member_local,
+                            member_distance,
+                        )
+                        break
+            if divergent_member is not None:
+                member_cam, member_local, member_distance = divergent_member
+                deferred_keys.add((cam_id, local_id))
+                self._event(
+                    "dormant_reid_deferred_live_divergence",
+                    frame_idx,
+                    identity.global_id,
+                    source_camera=identity.last_camera,
+                    target_camera=cam_id,
+                    target_local_id=int(local_id),
+                    owner_camera=member_cam,
+                    owner_local_id=int(member_local),
+                    world_distance=round(float(member_distance), 3),
+                    divergence_bound=round(divergence_bound, 3),
+                    reason="live_member_anchor_divergence",
+                )
+                continue
             self._bind(cam_id, local_id, identity.global_id)
             identity.state = "active"
             identity.dormant_since_frame = None
@@ -5042,12 +5870,15 @@ class CrossCameraManager:
             )
             >= 3
         ]
+        # Parked/recovery-pending identities stay in the candidate pool:
+        # their live slot reservation is itself strong trajectory evidence.
+        # The per-pair gate below still requires the fragment's provisional
+        # trail to start inside that reservation's origin, so a parked GID
+        # can never be consumed by an unrelated fragment elsewhere.
         identities = [
             identity
             for identity in self._identities.values()
-            if identity.state not in {"parked", "exited", "expired"}
-            and self._canonical_id(identity.global_id)
-            not in self._parked_reservations
+            if identity.state not in {"exited", "expired"}
             and self._canonical_id(identity.global_id)
             not in self._provisional_identity_holds
             and self._canonical_id(identity.global_id) not in self._occluded_global_ids
@@ -5089,12 +5920,13 @@ class CrossCameraManager:
         details: Dict[Tuple[int, int], dict] = {}
         for row, identity in enumerate(identities):
             global_id = self._canonical_id(identity.global_id)
+            identity_reserved = global_id in self._parked_reservations
             source_samples = [
                 sample
                 for sample in self.trajectory.global_samples(global_id)
                 if sample.camera_id == identity.last_camera
             ]
-            if len(source_samples) < 3:
+            if not identity_reserved and len(source_samples) < 3:
                 for cam_id, local_id, _track in candidates:
                     reject(
                         cam_id,
@@ -5109,6 +5941,25 @@ class CrossCameraManager:
                     identity.last_camera, cam_id
                 ):
                     reject(cam_id, local_id, global_id, "camera_topology")
+                    continue
+                if identity_reserved and not self._reserved_identity_may_compete(
+                    cam_id, local_id, global_id
+                ):
+                    # The reservation claims the vehicle is still at its
+                    # slot origin; a fragment that cannot prove origin
+                    # membership (proven miss, or a different camera without
+                    # a mature inside-slot trail) must be another car.
+                    reject(
+                        cam_id,
+                        local_id,
+                        global_id,
+                        "parked_reservation_origin_miss",
+                        slot_id=(
+                            self._parked_reservations.get(global_id, {}).get(
+                                "slot_id"
+                            )
+                        ),
+                    )
                     continue
                 if self._has_confirmed_camera_member(
                     global_id,
@@ -5164,21 +6015,75 @@ class CrossCameraManager:
                         size_distance=round(float(size), 4),
                     )
                     continue
-                trajectory_evidence = self.trajectory.match(
-                    global_id,
-                    (str(cam_id), int(local_id)),
-                    prediction_radius=self.dormant_match_distance,
-                    recent_window_s=self._reid_window(
-                        cam_id, uses_seconds=True
-                    ),
-                    appearance_score=max(
-                        0.0, 1.0 - float(appearance_match.distance)
-                    ),
-                    size_score=max(0.0, 1.0 - float(size)),
-                    topology_score=1.0,
-                    min_direction_cosine=-0.35,
-                    source_camera=identity.last_camera,
-                )
+                turnaround_proof = False
+                if identity_reserved:
+                    # The pre-parking inbound velocity points *into* the
+                    # slot, so ordinary trajectory matching would veto the
+                    # legitimate departure direction.  The frozen slot origin
+                    # is the reference instead; the reservation gate above
+                    # already proved the trail starts inside it.
+                    trajectory_evidence = self.trajectory.match_departure(
+                        global_id,
+                        (str(cam_id), int(local_id)),
+                        prediction_radius=self.dormant_match_distance,
+                        recent_window_s=self._reid_window(
+                            cam_id, uses_seconds=True
+                        ),
+                        appearance_score=max(
+                            0.0, 1.0 - float(appearance_match.distance)
+                        ),
+                        size_score=max(0.0, 1.0 - float(size)),
+                        topology_score=1.0,
+                    )
+                else:
+                    # A durable identity with a matching destination-camera
+                    # gallery may legitimately have turned around between
+                    # observations; relax only the direction veto under the
+                    # same strict proof the dormant pass requires.
+                    proof_world = self._track_world(cam_id, track)
+                    predicted = self._predicted_identity_world(
+                        identity, frame_idx, None
+                    )
+                    proof_distance = min(
+                        float(
+                            np.linalg.norm(
+                                np.subtract(proof_world, predicted)
+                            )
+                        ),
+                        float(
+                            np.linalg.norm(
+                                np.subtract(
+                                    proof_world, identity.last_world
+                                )
+                            )
+                        ),
+                    )
+                    turnaround_proof = self._has_durable_turnaround_proof(
+                        identity,
+                        cam_id,
+                        track,
+                        appearance_match,
+                        size,
+                        proof_distance,
+                        self.dormant_match_distance,
+                    )
+                    trajectory_evidence = self.trajectory.match(
+                        global_id,
+                        (str(cam_id), int(local_id)),
+                        prediction_radius=self.dormant_match_distance,
+                        recent_window_s=self._reid_window(
+                            cam_id, uses_seconds=True
+                        ),
+                        appearance_score=max(
+                            0.0, 1.0 - float(appearance_match.distance)
+                        ),
+                        size_score=max(0.0, 1.0 - float(size)),
+                        topology_score=1.0,
+                        min_direction_cosine=(
+                            -1.01 if turnaround_proof else -0.35
+                        ),
+                        source_camera=identity.last_camera,
+                    )
                 if trajectory_evidence is None:
                     reject(
                         cam_id, local_id, global_id, "trajectory_missing"
@@ -5297,6 +6202,8 @@ class CrossCameraManager:
                     "components": dict(
                         trajectory_evidence.components or {}
                     ),
+                    "turnaround_proof": bool(turnaround_proof),
+                    "departure_match": bool(identity_reserved),
                 }
 
         if not details:
@@ -5372,6 +6279,21 @@ class CrossCameraManager:
                 ],
                 score_components=details[(row, column)]["components"],
             )
+            if details[(row, column)].get("turnaround_proof"):
+                self._event(
+                    "world_trajectory_turnaround_matched",
+                    frame_idx,
+                    global_id,
+                    source_camera=identity.last_camera,
+                    target_camera=cam_id,
+                    target_local_id=int(local_id),
+                    appearance_distance=round(
+                        details[(row, column)]["appearance_distance"], 3
+                    ),
+                    world_distance=round(
+                        details[(row, column)]["world_distance"], 3
+                    ),
+                )
         for key in live_candidate_keys - deferred:
             if key not in self._local_to_global:
                 self._world_trajectory_deferred_since.pop(key, None)
@@ -5426,6 +6348,51 @@ class CrossCameraManager:
                 (left_cam, left_local_id) in self._local_to_global
                 or (right_cam, right_local_id) in self._local_to_global
             ):
+                continue
+            # A pair driving out of a live parking reservation must not be
+            # minted a fresh GID by simultaneous grouping either (live15
+            # gid16 while D01 was still held).  Mirror the allocation loop's
+            # _leaves_reserved_slot guard, including its bounded deferral.
+            leaving = []
+            for leave_cam, leave_local_id, leave_track in (
+                (left_cam, left_local_id, _left_track),
+                (right_cam, right_local_id, _right_track),
+            ):
+                leave_key = (str(leave_cam), int(leave_local_id))
+                leave_since = self._departure_deferred_since.get(leave_key)
+                if (
+                    leave_since is not None
+                    and int(frame_idx) - int(leave_since)
+                    > max(self.handoff_ttl, 60)
+                ):
+                    self._departure_deferred_since.pop(leave_key, None)
+                    self._event(
+                        "departure_deferral_expired",
+                        frame_idx,
+                        None,
+                        camera=leave_cam,
+                        local_track_id=int(leave_local_id),
+                        deferred_since_frame=int(leave_since),
+                        deferred_frames=int(frame_idx) - int(leave_since),
+                    )
+                    continue
+                hit = self._leaves_reserved_slot(
+                    leave_cam, leave_local_id, leave_track, frame_idx
+                )
+                if hit is not None:
+                    leaving.append((leave_cam, leave_local_id, hit))
+            if leaving:
+                for leave_cam, leave_local_id, hit in leaving:
+                    self._departure_deferred_since.setdefault(
+                        (str(leave_cam), int(leave_local_id)), int(frame_idx)
+                    )
+                    self._record_new_identity_deferred(
+                        leave_cam,
+                        leave_local_id,
+                        frame_idx,
+                        "leaving_reserved_slot",
+                        **hit,
+                    )
                 continue
             global_id = self._allocate_global_id()
             self._global_created_frames.setdefault(global_id, int(frame_idx))
@@ -5980,6 +6947,147 @@ class CrossCameraManager:
             if frame_idx - value[1] <= 1
         }
 
+    def _reconcile_dormant_duplicates(self, frame_idx: int) -> None:
+        """Fold two dormant records for one vehicle back into one Global ID.
+
+        An allocation race can mint a duplicate Global ID beside a dormant
+        owner; when both fragments die, two dormant identities remain on
+        nearly the same world anchor.  The ghost then competes in every
+        later ReID pass and can steal another vehicle's fragment.  Merge
+        only when the pair is mutually unique, tightly co-located,
+        appearance-backed and stable across consecutive frames -- two real
+        vehicles resting near each other must never be folded together.
+        """
+        candidates: Dict[int, GlobalIdentityState] = {}
+        for global_id, identity in self._identities.items():
+            canonical_id = self._canonical_id(global_id)
+            if canonical_id != global_id:
+                continue
+            if identity.state != "dormant":
+                continue
+            if (
+                canonical_id in self._parked_reservations
+                or canonical_id in self._provisional_identity_holds
+                or canonical_id in self._occluded_global_ids
+            ):
+                continue
+            if identity.last_world is None:
+                continue
+            candidates[canonical_id] = identity
+
+        keys = sorted(candidates)
+        neighbours: Dict[int, set] = {key: set() for key in keys}
+        pair_evidence: Dict[frozenset, Tuple[float, float]] = {}
+        appearance_limit = min(self.dormant_appearance_threshold, 0.30)
+        for index, left_id in enumerate(keys):
+            left = candidates[left_id]
+            for right_id in keys[index + 1:]:
+                right = candidates[right_id]
+                distance = float(
+                    np.linalg.norm(
+                        np.subtract(left.last_world, right.last_world)
+                    )
+                )
+                if distance > self.cross_camera_duplicate_distance:
+                    continue
+                shared_cameras = sorted(
+                    set(left.camera_appearance_samples)
+                    & set(right.camera_appearance_samples)
+                )
+                if shared_cameras:
+                    # Compare the same viewpoint: cross-view galleries of
+                    # one vehicle naturally diverge, so matching cam-to-cam
+                    # is the honest evidence that these are the same car.
+                    appearance_match = compare_tracklets(
+                        left.camera_appearance_samples[shared_cameras[0]],
+                        right.camera_appearance_samples[shared_cameras[0]],
+                    )
+                else:
+                    appearance_match = compare_tracklets(
+                        left.appearance_samples, right.appearance_samples
+                    )
+                if (
+                    appearance_match.support < 1
+                    or appearance_match.distance > appearance_limit
+                ):
+                    continue
+                neighbours[left_id].add(right_id)
+                neighbours[right_id].add(left_id)
+                pair_evidence[frozenset((left_id, right_id))] = (
+                    distance,
+                    float(appearance_match.distance),
+                )
+
+        visited_pairs = set()
+        for left_id, linked in neighbours.items():
+            if len(linked) != 1:
+                if len(linked) > 1:
+                    self._event(
+                        "dormant_duplicate_merge_rejected",
+                        frame_idx,
+                        left_id,
+                        competing_global_ids=sorted(int(v) for v in linked),
+                        reason="ambiguous_dormant_cluster",
+                    )
+                continue
+            right_id = next(iter(linked))
+            if neighbours.get(right_id) != {left_id}:
+                continue
+            pair_key = frozenset((left_id, right_id))
+            if pair_key in visited_pairs:
+                continue
+            visited_pairs.add(pair_key)
+            distance, appearance_distance = pair_evidence[pair_key]
+            evidence_key = tuple(sorted((left_id, right_id)))
+            evidence_count = self._advance_consecutive_evidence(
+                self._dormant_duplicate_evidence,
+                evidence_key,
+                frame_idx,
+            )
+            if evidence_count < 2:
+                self._event(
+                    "dormant_duplicate_merge_deferred",
+                    frame_idx,
+                    min(evidence_key),
+                    possible_duplicate_global_id=max(evidence_key),
+                    evidence_frames=evidence_count,
+                    world_distance=round(distance, 3),
+                    appearance_distance=round(appearance_distance, 3),
+                )
+                continue
+            kept_id, retired_id = min(evidence_key), max(evidence_key)
+            merge_result = self._merge_global_ids(
+                kept_id,
+                retired_id,
+                frame_idx,
+                "dormant_duplicate_reconciled",
+            )
+            if merge_result.accepted:
+                self._dormant_duplicate_evidence.pop(evidence_key, None)
+                self._event(
+                    "dormant_duplicate_merged",
+                    frame_idx,
+                    kept_id,
+                    superseded_global_id=retired_id,
+                    world_distance=round(distance, 3),
+                    appearance_distance=round(appearance_distance, 3),
+                )
+            else:
+                self._event(
+                    "dormant_duplicate_merge_rejected",
+                    frame_idx,
+                    kept_id,
+                    competing_global_ids=[retired_id],
+                    reason=merge_result.rejection_reason or "merge_blocked",
+                    world_distance=round(distance, 3),
+                    appearance_distance=round(appearance_distance, 3),
+                )
+        self._dormant_duplicate_evidence = {
+            key: value
+            for key, value in self._dormant_duplicate_evidence.items()
+            if frame_idx - value[1] <= 1
+        }
+
     def _refresh_identity_states(
         self,
         all_tracks: Dict[str, dict],
@@ -6300,6 +7408,130 @@ class CrossCameraManager:
                     )
                     continue
                 self._departure_deferred_since.pop(depart_key, None)
+                # A dormant/reserved identity that is positionally and
+                # visually plausible must not watch the allocator mint a
+                # duplicate while the fragment is still too immature for
+                # the ReID passes to evaluate it (vd_16 ghost IDs).
+                near_miss = self._dormant_near_miss_candidate(
+                    cam_id,
+                    local_track_id,
+                    track,
+                    frame_idx,
+                    (camera_timestamps_s or {}).get(cam_id),
+                )
+                if near_miss is not None:
+                    near_key = (
+                        str(cam_id),
+                        int(local_track_id),
+                        "dormant_near_miss",
+                    )
+                    if int(frame_idx) - self._new_identity_defer_last.get(
+                        near_key, -999999
+                    ) >= 8:
+                        self._new_identity_defer_last[near_key] = int(
+                            frame_idx
+                        )
+                        self._event(
+                            "new_global_id_deferred_dormant_near_miss",
+                            frame_idx,
+                            near_miss["global_id"],
+                            camera=cam_id,
+                            local_track_id=int(local_track_id),
+                            candidate_state=near_miss["state"],
+                            position_distance=round(
+                                near_miss["distance"], 3
+                            ),
+                            appearance_distance=round(
+                                near_miss["appearance"], 3
+                            ),
+                        )
+                    continue
+                # Same-camera near-duplicate dedup: a fragment sitting on
+                # top of a *bound* sibling with compatible appearance is
+                # one car's split fragment -- two physical cars cannot be
+                # a few cm apart in the same view (toi1: one car -> gid1 +
+                # gid2 in a single pass, where the pair escaped the
+                # motion-echo gates).  Defer it; the existing echo paths
+                # bind it to the sibling GID when their evidence matures.
+                # Pairs proven to be independent vehicles are never
+                # starved by this check.
+                same_frame_twin = None
+                for other_local_id, other_track in tracks.items():
+                    if int(other_local_id) == int(local_track_id):
+                        continue
+                    if (
+                        tuple(
+                            sorted((int(local_track_id), int(other_local_id)))
+                        )
+                        in self._independent_local_pairs.get(cam_id, set())
+                    ):
+                        continue
+                    other_global_id = self._local_to_global.get(
+                        (cam_id, other_local_id)
+                    )
+                    if other_global_id is None:
+                        continue
+                    other_global_id = self._canonical_id(other_global_id)
+                    if (
+                        other_global_id in self._occluded_global_ids
+                        or other_global_id
+                        in self._provisional_identity_holds
+                    ):
+                        continue
+                    if not self._has_fresh_detection(other_track):
+                        continue
+                    try:
+                        candidate_world = self._track_world(cam_id, track)
+                        other_world = self._track_world(
+                            cam_id, other_track
+                        )
+                    except (
+                        cv2.error,
+                        KeyError,
+                        np.linalg.LinAlgError,
+                        ValueError,
+                    ):
+                        continue
+                    twin_distance = float(
+                        np.linalg.norm(
+                            np.subtract(candidate_world, other_world)
+                        )
+                    )
+                    if twin_distance > self.cross_camera_duplicate_distance:
+                        continue
+                    if (
+                        self._appearance_distance(track, other_track)
+                        > min(self.appearance_threshold, 0.35)
+                    ):
+                        continue
+                    same_frame_twin = (
+                        other_local_id,
+                        other_global_id,
+                        twin_distance,
+                    )
+                    break
+                if same_frame_twin is not None:
+                    twin_key = (
+                        str(cam_id),
+                        int(local_track_id),
+                        "same_frame_duplicate",
+                    )
+                    if int(frame_idx) - self._new_identity_defer_last.get(
+                        twin_key, -999999
+                    ) >= 8:
+                        self._new_identity_defer_last[twin_key] = int(
+                            frame_idx
+                        )
+                        self._event(
+                            "new_global_id_deferred_same_frame_duplicate",
+                            frame_idx,
+                            same_frame_twin[1],
+                            camera=cam_id,
+                            local_track_id=int(local_track_id),
+                            sibling_local_id=int(same_frame_twin[0]),
+                            world_distance=round(same_frame_twin[2], 3),
+                        )
+                    continue
                 allocated_global_id = self._allocate_global_id()
                 self._global_created_frames.setdefault(
                     allocated_global_id, int(frame_idx)
@@ -6345,7 +7577,9 @@ class CrossCameraManager:
         # conservative dormant Re-ID; confirmed IDs stay separate unless the
         # explicit same-camera echo or calibrated cross-camera proof succeeds.
         self._merge_unique_cross_camera_duplicates(all_tracks, frame_idx)
+        self._reconcile_dormant_duplicates(frame_idx)
         self._resolve_same_camera_global_conflicts(all_tracks, frame_idx)
+        self._resolve_cross_camera_global_conflicts(all_tracks, frame_idx)
         self._refresh_identity_states(
             all_tracks, frame_idx, camera_timestamps_s
         )
@@ -6372,6 +7606,7 @@ class CrossCameraManager:
         frame_idx: int,
         timestamp_s: Optional[float] = None,
         appearance_tracklet=None,
+        roi_edge_starved: bool = False,
     ) -> None:
         """Remove a local mapping while retaining its cross-camera identity."""
         key = (cam_id, local_track_id)
@@ -6421,6 +7656,12 @@ class CrossCameraManager:
                 )
                 identity.camera_appearance_samples[cam_id] = camera_gallery
                 identity.camera_bbox_sizes[cam_id] = (bbox_w, bbox_h)
+            # A track starved by ROI-rejected detections vanished into a
+            # dead zone; refresh the flag on expiry for both the create and
+            # update branches above (droidcam_shared_bt gid1 -> gid4).
+            identity.vanished_near_roi_edge = bool(
+                identity.vanished_near_roi_edge or roi_edge_starved
+            )
             if self._in_exit_zone(cam_id, (cx, cy)):
                 self._mark_identity_exited(
                     global_id, cam_id, local_track_id, frame_idx, timestamp_s

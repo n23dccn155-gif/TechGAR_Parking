@@ -1,0 +1,469 @@
+{
+  "schema": "ppt-master.svg-quality-report.v1",
+  "stage": "early",
+  "target": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh",
+  "source_fingerprint": {
+    "algorithm": "sha256",
+    "digest": "3b36fe77f3b04d74a221ed7ae0ebea3ac44b5cfd16a7e118072c9173c68e6236",
+    "file_count": 5,
+    "files": [
+      {
+        "file": "01_bai_toan_thuc_te.svg",
+        "sha256": "656ba93c27419bc78db2b0db3fbb07e264766a05a7364ce541cf67bd529f4e24"
+      },
+      {
+        "file": "02_mot_camera_chua_du.svg",
+        "sha256": "a1f5566ca86debad620e0d908743880de095f35b4bb9aaa62392d3f685e48318"
+      },
+      {
+        "file": "03_pipeline_tong_the.svg",
+        "sha256": "c3301b846681c91944d4c37bfd4a3a2fa306f885dd77f17e655a7708b563b2e5"
+      },
+      {
+        "file": "04_hai_camera_song_song.svg",
+        "sha256": "2260516cd089ddd984e3cc6e75223d432e16d6c55df233dd3a628cef0cfc427b"
+      },
+      {
+        "file": "05_homography_mat_san.svg",
+        "sha256": "7fc856ac2b19bc7a07eebdd1778f662783cbd5c45106659d480048e86fa01fb2"
+      }
+    ]
+  },
+  "summary": {
+    "total": 5,
+    "passed": 0,
+    "warnings": 5,
+    "errors": 0
+  },
+  "issue_types": {},
+  "categories": {
+    "blocking": {
+      "count": 0,
+      "issues": []
+    },
+    "introduced": {
+      "count": 6,
+      "issues": [
+        {
+          "file": "01_bai_toan_thuc_te.svg",
+          "message": "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+        },
+        {
+          "file": "02_mot_camera_chua_du.svg",
+          "message": "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+        },
+        {
+          "file": "03_pipeline_tong_the.svg",
+          "message": "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[94]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+        },
+        {
+          "file": "04_hai_camera_song_song.svg",
+          "message": "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (10 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): parallel-note:font-size None -> '15'; text[40]:font-size '15' -> None; text[41]:font-size '15' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+        },
+        {
+          "file": "05_homography_mat_san.svg",
+          "message": "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[55]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+        },
+        {
+          "file": "05_homography_mat_san.svg",
+          "message": "<text> (x=470, y=164; text='BIẾN ĐỔI — GROUND-PL…') exceeds <g id=\"transform-panel\"> data-pptx-bounds on the horizontal axis: content (470.0, 151.2)-(828.2, 169.2), container (470.0, 142.0)-(816.0, 570.0), overflow horizontal 3.5%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈11.9 px per mixed char at 15px incl. headroom; ≈28 chars fit in 346 px"
+        }
+      ]
+    },
+    "inherited": {
+      "count": 0,
+      "issues": []
+    },
+    "source-import": {
+      "count": 0,
+      "summary": {
+        "warning_count": 0,
+        "by_code": {}
+      }
+    }
+  },
+  "drift": {
+    "colors": {},
+    "fonts": {},
+    "sizes": {}
+  },
+  "carrier_receipt": {
+    "scope": "informational-not-a-quota",
+    "pages": 5,
+    "totals": {
+      "text_elements": 127,
+      "image_placements": 9,
+      "icons": 13,
+      "svg_geometry_elements": 46,
+      "preset_shapes": 8,
+      "page_frame_elements": 5,
+      "marker_uses": 0,
+      "inline_emphasis_runs": 6,
+      "gradient_uses": 0,
+      "filter_uses": 0,
+      "text_effects": 0
+    },
+    "pages_with": {
+      "images": 5,
+      "icons": 3,
+      "presets": 1,
+      "charts": 0,
+      "tables": 0,
+      "formulas": 1,
+      "inline_emphasis_runs": 2,
+      "gradient_uses": 0,
+      "filter_uses": 0,
+      "text_effects": 0
+    },
+    "relationship_pages": null,
+    "geometry_elements": {
+      "circle": 1,
+      "ellipse": 0,
+      "line": 7,
+      "path": 2,
+      "polygon": 0,
+      "polyline": 0,
+      "rect": 36
+    },
+    "preset_names": {
+      "chevron": 8
+    },
+    "native_objects": {
+      "chart": 0,
+      "formula_block": 1,
+      "formula_inline": 0,
+      "other": 0,
+      "table": 0
+    },
+    "image_page_max_frame_share_range": [
+      0.1039,
+      0.405
+    ]
+  },
+  "project_issues": {
+    "template": [],
+    "animation": [],
+    "illustration": [],
+    "communication_trace": [],
+    "pptx_structure": []
+  },
+  "files": [
+    {
+      "file": "01_bai_toan_thuc_te.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\01_bai_toan_thuc_te.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [
+        "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+      ],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 18,
+          "images": {
+            "placements": 2,
+            "files": [
+              "poster_s01.jpg",
+              "slide1_overview_annotated.jpg"
+            ],
+            "max_frame_share": 0.3164
+          },
+          "icons": 5,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 5,
+              "circle": 1,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 2
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 18,
+        "tspan_elements": 5
+      },
+      "passed": true,
+      "source_sha256": "656ba93c27419bc78db2b0db3fbb07e264766a05a7364ce541cf67bd529f4e24"
+    },
+    {
+      "file": "02_mot_camera_chua_du.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\02_mot_camera_chua_du.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [
+        "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+      ],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 13,
+          "images": {
+            "placements": 2,
+            "files": [
+              "slide2_cam1_blind.jpg",
+              "slide2_cam2_sees.jpg"
+            ],
+            "max_frame_share": 0.1914
+          },
+          "icons": 4,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 13,
+        "tspan_elements": 1
+      },
+      "passed": true,
+      "source_sha256": "a1f5566ca86debad620e0d908743880de095f35b4bb9aaa62392d3f685e48318"
+    },
+    {
+      "file": "03_pipeline_tong_the.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\03_pipeline_tong_the.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [
+        "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[94]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+      ],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 50,
+          "images": {
+            "placements": 1,
+            "files": [
+              "roi_active_map.png"
+            ],
+            "max_frame_share": 0.1205
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 7,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 6,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 8,
+            "preset_names": {
+              "chevron": 8
+            },
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 50,
+        "tspan_elements": 2
+      },
+      "passed": true,
+      "source_sha256": "c3301b846681c91944d4c37bfd4a3a2fa306f885dd77f17e655a7708b563b2e5"
+    },
+    {
+      "file": "04_hai_camera_song_song.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\04_hai_camera_song_song.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [
+        "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (10 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): parallel-note:font-size None -> '15'; text[40]:font-size '15' -> None; text[41]:font-size '15' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)"
+      ],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 21,
+          "images": {
+            "placements": 1,
+            "files": [
+              "frame_0283_handoff_opened_split_debug.jpg"
+            ],
+            "max_frame_share": 0.405
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 3,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 1,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 21,
+        "tspan_elements": 6
+      },
+      "passed": true,
+      "source_sha256": "2260516cd089ddd984e3cc6e75223d432e16d6c55df233dd3a628cef0cfc427b"
+    },
+    {
+      "file": "05_homography_mat_san.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\05_homography_mat_san.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [
+        "Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[55]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)",
+        "<text> (x=470, y=164; text='BIẾN ĐỔI — GROUND-PL…') exceeds <g id=\"transform-panel\"> data-pptx-bounds on the horizontal axis: content (470.0, 151.2)-(828.2, 169.2), container (470.0, 142.0)-(816.0, 570.0), overflow horizontal 3.5%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈11.9 px per mixed char at 15px incl. headroom; ≈28 chars fit in 346 px"
+      ],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 25,
+          "images": {
+            "placements": 3,
+            "files": [
+              "calib_cam1_marked.png",
+              "calib_cam2_marked.png",
+              "shared_map_full_view.png"
+            ],
+            "max_frame_share": 0.1039
+          },
+          "icons": 4,
+          "effects": {
+            "inline_emphasis_runs": 3,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 1,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 25,
+        "tspan_elements": 6
+      },
+      "passed": true,
+      "source_sha256": "7fc856ac2b19bc7a07eebdd1778f662783cbd5c45106659d480048e86fa01fb2"
+    }
+  ]
+}

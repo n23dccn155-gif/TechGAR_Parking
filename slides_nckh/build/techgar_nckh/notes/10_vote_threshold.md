@@ -1,0 +1,1 @@
+Hệ thống không quyết định trạng thái ô dựa trên một phiên bản ảnh duy nhất. Mỗi trong 25 biến thể Gamma–CLAHE cho một vote. Ô được xác nhận trống khi đạt đa số — ít nhất 12 trên 25 biến thể vote trống; ngược lại là occupied, kèm làm mượt theo 5 frame để tránh nhấp nháy.

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 108">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">THỰC NGHIỆM — ĐỐI CHỨNG — FAILURE</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Kết quả thực nghiệm trên dữ liệu tầng hầm</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="132" font-size="16" fill="#4E5D78" text-anchor="end">mô hình bãi đỗ thu nhỏ — mô phỏng bối cảnh tầng hầm</text>
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">12 / 13</text>
+  </g>
+
+  <g id="stats-row" data-pptx-bounds="64 142 1152 154">
+    <g id="tile-dataset">
+      <rect x="64" y="142" width="272" height="154" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <text x="88" y="172" font-size="13" font-weight="bold" fill="#4E5D78">DATASET — CPU PHỔ THÔNG</text>
+      <text x="88" y="232" font-size="54" font-weight="bold" fill="#004FFF">3.827</text>
+      <text x="88" y="266" font-size="15" fill="#4E5D78">frames · 153,08 s · 25 FPS</text>
+      <text x="88" y="288" font-size="12" fill="#4E5D78">[doc-claimed: session 2808_3]</text>
+    </g>
+    <g id="tile-latency">
+      <rect x="352" y="142" width="272" height="154" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <text x="376" y="172" font-size="13" font-weight="bold" fill="#4E5D78">END-TO-END LATENCY</text>
+      <text x="376" y="232" font-size="54" font-weight="bold" fill="#004FFF">169<tspan font-size="26"> ms</tspan></text>
+      <text x="376" y="266" font-size="15" fill="#4E5D78">pipeline → E2E web</text>
+      <text x="376" y="288" font-size="12" fill="#4E5D78">[doc-claimed: session 2808_3]</text>
+    </g>
+    <g id="tile-seam">
+      <rect x="640" y="142" width="272" height="154" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <text x="664" y="172" font-size="13" font-weight="bold" fill="#4E5D78">SEAM ERROR — p50</text>
+      <text x="664" y="232" font-size="54" font-weight="bold" fill="#004FFF">1,13<tspan font-size="26"> cm</tspan></text>
+      <text x="664" y="266" font-size="15" fill="#4E5D78">945 cặp · p95 = 4,39 cm</text>
+      <text x="664" y="288" font-size="12" fill="#4E5D78">[doc-claimed: seam 2808_3]</text>
+    </g>
+    <g id="tile-gid">
+      <rect x="928" y="142" width="288" height="154" fill="#00227A" />
+      <text x="952" y="172" font-size="13" font-weight="bold" fill="#9AE7FC">MAIN GID PERSISTENCE</text>
+      <text x="952" y="232" font-size="54" font-weight="bold" fill="#00E5FF">88,4%</text>
+      <text x="952" y="266" font-size="15" fill="#FFFFFF">3.383/3.827 thời lượng video</text>
+      <text x="952" y="288" font-size="12" fill="#9AE7FC">[doc-claimed: session 2808_3]</text>
+    </g>
+  </g>
+
+  <g id="event-panel" data-pptx-bounds="64 312 560 180">
+    <rect x="64" y="312" width="560" height="168" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+    <text x="88" y="342" font-size="13" font-weight="bold" fill="#4E5D78">EVENT WINDOW — VÙNG RỦI RO CAO</text>
+    <text x="88" y="402" font-size="56" font-weight="bold" fill="#004FFF">19/20</text>
+    <text x="250" y="378" font-size="17" font-weight="bold" fill="#0F1928">session thành công</text>
+    <text x="250" y="404" font-size="16" fill="#4E5D78">[doc-claimed: session 2808_3]</text>
+    <text x="88" y="438" font-size="16" fill="#0F1928">A = overlap ±2 s · B = vùng cửa ô ±3 s</text>
+    <text x="88" y="462" font-size="16" fill="#4E5D78">không tính trung bình toàn video —<tspan x="88" dy="20">cảnh tĩnh chiếm đa số thời lượng</tspan></text>
+  </g>
+
+  <g id="failure-panel" data-pptx-bounds="656 312 560 168">
+    <rect x="656" y="312" width="560" height="168" fill="#FFFFFF" stroke="#B91C1C" stroke-width="1.5" />
+    <image href="../images/slide12_failure_gid4_f1182.jpg" x="672" y="328" width="238" height="134" preserveAspectRatio="xMidYMid slice" />
+    <rect x="672" y="328" width="238" height="134" fill="none" stroke="#B9CFE8" stroke-width="1" />
+    <text x="926" y="342" font-size="13" font-weight="bold" fill="#B91C1C">FAILURE — DOCUMENTED</text>
+    <text x="926" y="368" font-size="16" fill="#0F1928">hiep2: G#2 đỗ D01, rời ô<tspan x="926" dy="20">bị cấp G#4 @f1181</tspan></text>
+    <text x="926" y="416" font-size="16" fill="#4E5D78">Departure Re-ID chưa<tspan x="926" dy="20">khôi phục đúng — giới hạn</tspan><tspan x="926" dy="20">đã ghi nhận</tspan></text>
+    <use data-icon="tabler-outline/movie" x="926" y="458" width="16" height="16" fill="#B91C1C" stroke-width="2" />
+    <text x="948" y="472" font-size="12" fill="#B91C1C">clip_s12_failure_depart.mp4</text>
+    <text x="672" y="475" font-size="12" fill="#4E5D78">nhãn G#4 trên xe rời D01 @f1182</text>
+  </g>
+
+  <g id="context-strip" data-pptx-bounds="64 496 1152 184">
+    <rect x="64" y="496" width="560" height="160" fill="#00227A" fill-opacity="0.05" />
+    <text x="88" y="526" font-size="13" font-weight="bold" fill="#4E5D78">ĐỘ LỆCH ĐỒNG BỘ 2 CAMERA</text>
+    <text x="88" y="570" font-size="30" font-weight="bold" fill="#00227A">18 / 47 / 110<tspan font-size="16"> ms</tspan></text>
+    <text x="88" y="600" font-size="16" fill="#4E5D78">skew p50 / p95 / max — ngưỡng cấu hình 120 ms</text>
+    <text x="88" y="626" font-size="12" fill="#4E5D78">[doc-claimed: session 2808_3] · [design-param]</text>
+    <image href="../images/slide12_glare_context_f0005.jpg" x="656" y="496" width="240" height="160" preserveAspectRatio="xMidYMid slice" />
+    <rect x="656" y="496" width="240" height="160" fill="none" stroke="#B9CFE8" stroke-width="1" />
+    <text x="656" y="674" font-size="12" fill="#4E5D78">toi1 @f005 — lóa đèn: minh họa điều kiện</text>
+    <g id="caveat-box">
+      <text x="916" y="522" font-size="13" font-weight="bold" fill="#4E5D78">GIỚI HẠN PHÁT BIỂU</text>
+      <text x="916" y="550" font-size="16" fill="#0F1928">19/20 session thành công —<tspan x="916" dy="20">không suy rộng</tspan><tspan x="916" dy="20">'95% mọi điều kiện'</tspan></text>
+      <text x="916" y="622" font-size="16" fill="#4E5D78">Chưa đưa Precision/Recall —<tspan x="916" dy="20">chưa có GT đầy đủ</tspan></text>
+    </g>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Toàn bộ số liệu [doc-claimed: session 2808_3] — session không nằm trên ổ · footage scale-model testbed</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

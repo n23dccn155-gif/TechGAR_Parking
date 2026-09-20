@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 124">
+    <text x="64" y="52" font-size="15" font-weight="bold" fill="#004FFF">HAI CAMERA — QUAN SÁT SONG SONG</text>
+    <text x="64" y="92" font-size="40" font-weight="bold" fill="#0F1928">Hai camera quan sát cùng một không gian<tspan x="64" dy="46">tại cùng thời điểm</tspan></text>
+    <rect x="64" y="152" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="152" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="52" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">04 / 13</text>
+  </g>
+
+  <g id="dual-view-image" data-pptx-bounds="64 170 1152 354">
+    <image href="../images/frame_0283_handoff_opened_split_debug.jpg" x="64" y="170" width="1152" height="324" preserveAspectRatio="xMidYMid meet" />
+    <rect x="64" y="170" width="1152" height="324" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <rect x="64" y="170" width="92" height="28" fill="#004FFF" />
+    <text x="110" y="190" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">CAM 1</text>
+    <rect x="1124" y="170" width="92" height="28" fill="#0036B3" />
+    <text x="1170" y="190" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">CAM 2</text>
+    <line x1="640" y1="170" x2="640" y2="494" stroke="#00E5FF" stroke-width="2" stroke-dasharray="8,4" />
+    <rect x="500" y="466" width="280" height="26" fill="#00227A" />
+    <text x="640" y="484" font-size="14" font-weight="bold" fill="#9AE7FC" text-anchor="middle">cùng thời điểm t — Frame 284</text>
+    <text x="64" y="514" font-size="13" fill="#4E5D78">Split debug thật — xe vừa vào vùng overlap, cả hai camera cùng quan sát · mô hình bãi đỗ thu nhỏ</text>
+  </g>
+
+  <g id="skew-stats" data-pptx-bounds="64 530 760 130">
+    <text x="64" y="550" font-size="15" font-weight="bold" fill="#4E5D78">ĐỘ LỆCH THỜI GIAN GIỮA 2 CAMERA (SKEW)</text>
+    <g id="skew-tile-1">
+      <text x="64" y="606" font-size="48" font-weight="bold" fill="#004FFF">18<tspan font-size="24"> ms</tspan></text>
+      <text x="64" y="638" font-size="15" fill="#4E5D78">p50</text>
+    </g>
+    <g id="skew-tile-2">
+      <text x="250" y="606" font-size="48" font-weight="bold" fill="#004FFF">47<tspan font-size="24"> ms</tspan></text>
+      <text x="250" y="638" font-size="15" fill="#4E5D78">p95</text>
+    </g>
+    <g id="skew-tile-3">
+      <text x="436" y="606" font-size="48" font-weight="bold" fill="#004FFF">110<tspan font-size="24"> ms</tspan></text>
+      <text x="436" y="638" font-size="15" fill="#4E5D78">max</text>
+    </g>
+    <g id="skew-tile-4">
+      <rect x="640" y="560" width="184" height="82" fill="#00227A" />
+      <text x="732" y="602" font-size="34" font-weight="bold" fill="#00E5FF" text-anchor="middle">120 ms</text>
+      <text x="732" y="628" font-size="13" fill="#9AE7FC" text-anchor="middle">ngưỡng cấu hình</text>
+    </g>
+  </g>
+
+  <g id="parallel-note" data-pptx-bounds="856 530 360 130" font-size="16">
+    <text x="856" y="556" font-weight="bold" fill="#004FFF">QUAN SÁT SONG SONG</text>
+    <text x="856" y="582" fill="#0F1928">Không phải "chạy tiếp sức" tuần tự —<tspan x="856" dy="22">vùng overlap cho phép kiểm chứng</tspan><tspan x="856" dy="22">chéo cùng một xe.</tspan></text>
+    <text x="856" y="652" font-weight="bold" fill="#00227A">Cơ sở hợp nhất 2 Local ID → 1 GID.</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Skew 18/47/110 ms — [doc-claimed: session 2808_3] · ngưỡng 120 ms [design-param]: --max-camera-skew-ms (two-camera-runbook.md:90, VERIFIED-CODE)</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

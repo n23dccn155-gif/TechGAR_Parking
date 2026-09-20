@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 124">
+    <text x="64" y="52" font-size="15" font-weight="bold" fill="#004FFF">MAJORITY VOTE — TRẠNG THÁI Ô ĐỖ</text>
+    <text x="64" y="92" font-size="40" font-weight="bold" fill="#0F1928">Từ 25 biến thể xử lý<tspan x="64" dy="46">đến một quyết định ổn định</tspan></text>
+    <rect x="64" y="152" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="152" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="52" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">10 / 13</text>
+  </g>
+
+  <g id="vote-grids" data-pptx-bounds="64 170 546 420">
+    <text x="64" y="192" font-size="15" font-weight="bold" fill="#4E5D78">BIỂU QUYẾT 25 BIẾN THỂ γ×CLAHE — MINH HỌA</text>
+    <g id="grid-free">
+      <rect x="64" y="202" width="40" height="40" fill="#004FFF" /><rect x="108" y="202" width="40" height="40" fill="#004FFF" /><rect x="152" y="202" width="40" height="40" fill="#004FFF" /><rect x="196" y="202" width="40" height="40" fill="#004FFF" /><rect x="240" y="202" width="40" height="40" fill="#004FFF" />
+      <rect x="64" y="246" width="40" height="40" fill="#004FFF" /><rect x="108" y="246" width="40" height="40" fill="#004FFF" /><rect x="152" y="246" width="40" height="40" fill="#004FFF" /><rect x="196" y="246" width="40" height="40" fill="#004FFF" /><rect x="240" y="246" width="40" height="40" fill="#004FFF" />
+      <rect x="64" y="290" width="40" height="40" fill="#004FFF" /><rect x="108" y="290" width="40" height="40" fill="#004FFF" /><rect x="152" y="290" width="40" height="40" fill="#004FFF" /><rect x="196" y="290" width="40" height="40" fill="#004FFF" /><rect x="240" y="290" width="40" height="40" fill="#004FFF" />
+      <rect x="64" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="108" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="152" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="196" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="240" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+      <rect x="64" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="108" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="152" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="196" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="240" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+    </g>
+    <text x="64" y="446" font-size="17" font-weight="bold" fill="#004FFF">15/25 vote trống → FREE</text>
+    <g id="grid-occupied">
+      <rect x="330" y="202" width="40" height="40" fill="#004FFF" /><rect x="374" y="202" width="40" height="40" fill="#004FFF" /><rect x="418" y="202" width="40" height="40" fill="#004FFF" /><rect x="462" y="202" width="40" height="40" fill="#004FFF" /><rect x="506" y="202" width="40" height="40" fill="#004FFF" />
+      <rect x="330" y="246" width="40" height="40" fill="#004FFF" /><rect x="374" y="246" width="40" height="40" fill="#004FFF" /><rect x="418" y="246" width="40" height="40" fill="#004FFF" /><rect x="462" y="246" width="40" height="40" fill="#004FFF" /><rect x="506" y="246" width="40" height="40" fill="#004FFF" />
+      <rect x="330" y="290" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="374" y="290" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="418" y="290" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="462" y="290" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="506" y="290" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+      <rect x="330" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="374" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="418" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="462" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="506" y="334" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+      <rect x="330" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="374" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="418" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="462" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" /><rect x="506" y="378" width="40" height="40" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+    </g>
+    <text x="330" y="446" font-size="17" font-weight="bold" fill="#00227A">10/25 vote trống → OCCUPIED</text>
+    <rect x="64" y="470" width="14" height="14" fill="#004FFF" />
+    <text x="86" y="482" font-size="14" fill="#4E5D78">vote trống</text>
+    <rect x="186" y="470" width="14" height="14" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="2" />
+    <text x="208" y="482" font-size="14" fill="#4E5D78">vote occupied</text>
+    <g id="vote-formula" data-pptx-replace-with="formula" data-pptx-x="64" data-pptx-y="510" data-pptx-width="546" data-pptx-height="64" data-pptx-bounds="64 510 546 64">
+      <metadata type="application/json"><![CDATA[
+        {"latex":"FREE\\;\\Leftrightarrow\\;\\sum V_{empty}\\geq 12/25","display":"block","font_size":26,"color":"#00227A","align":"center"}
+      ]]></metadata>
+      <rect x="64" y="510" width="546" height="64" fill="#FFFFFF" stroke="#004FFF" stroke-width="2" />
+      <text x="337" y="550" text-anchor="middle" font-size="22" font-weight="bold" fill="#00227A">FREE ⇔ ΣV_empty ≥ 12/25</text>
+    </g>
+  </g>
+
+  <g id="vote-params" data-pptx-bounds="640 170 576 430">
+    <image href="../images/slide10_slot_closeup.jpg" x="640" y="202" width="150" height="190" preserveAspectRatio="xMidYMid slice" />
+    <rect x="640" y="202" width="150" height="190" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="640" y="414" font-size="13" fill="#4E5D78">Crop ô D02 — đỏ = occupied<tspan x="640" dy="20">(mô hình bãi đỗ thu nhỏ)</tspan></text>
+    <text x="830" y="200" font-size="14" font-weight="bold" fill="#4E5D78">NGƯỠNG — [design-param]</text>
+    <text x="830" y="252" font-size="46" font-weight="bold" fill="#004FFF">≥ 12/25</text>
+    <text x="830" y="282" font-size="16" fill="#0F1928">vote trống ⇒ FREE · ngược lại OCCUPIED</text>
+    <text x="830" y="316" font-size="14" fill="#4E5D78">required_votes = 25//2 = 12<tspan x="830" dy="24">parking_detector.py:533 — VERIFIED-CODE</tspan></text>
+    <text x="830" y="368" font-size="14" fill="#0F1928">Chọn theo nguyên tắc majority vote —<tspan x="830" dy="20">đang dùng trong cấu hình thử nghiệm,</tspan><tspan x="830" dy="20">chưa chạy threshold sweep.</tspan></text>
+    <line x1="830" y1="432" x2="1216" y2="432" stroke="#B9CFE8" stroke-width="1" />
+    <text x="830" y="458" font-size="14" font-weight="bold" fill="#4E5D78">TEMPORAL SMOOTHING — [design-param]</text>
+    <text x="830" y="510" font-size="46" font-weight="bold" fill="#004FFF">5<tspan font-size="24"> frame</tspan></text>
+    <text x="830" y="540" font-size="16" fill="#0F1928">chống nhấp nháy trạng thái ô</text>
+    <text x="830" y="568" font-size="14" fill="#4E5D78">nhiễu lóa kích hoạt vài biến thể<tspan x="830" dy="20">nhưng không đủ đa số</tspan></text>
+  </g>
+
+  <g id="key-line" data-pptx-bounds="64 610 1152 56">
+    <rect x="64" y="610" width="1152" height="56" fill="#00227A" />
+    <text x="96" y="645" font-size="18" font-weight="bold" fill="#FFFFFF">Không quyết định trên một phiên bản ảnh duy nhất — mỗi biến thể cho một vote</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Ví dụ 15/25 → FREE · 10/25 → OCCUPIED [design-param] · smoothing_frames=5 (:105) · lưới minh họa</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

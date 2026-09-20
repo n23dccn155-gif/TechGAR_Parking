@@ -1,0 +1,521 @@
+{
+ "generated_by": "recover_session_calibration.py",
+ "template": "D:\\TechGar2\\backend\\main_detect\\config\\two_camera.shared_cm_01.json",
+ "thresholds": {
+  "ransac_cm": 0.5,
+  "min_pairs": 30,
+  "min_inlier_ratio": 0.5,
+  "max_p95_cm": 4.0,
+  "donor_accept_p50_cm": 4.0
+ },
+ "sessions": {
+  "droidcam_shared_bt": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 446,
+     "own_fit": {
+      "n": 446,
+      "inliers": 446,
+      "inlier_ratio": 1.0,
+      "p50": 0.0261,
+      "p95": 0.0333
+     },
+     "refit": {
+      "n": 446,
+      "inliers": 446,
+      "inlier_ratio": 1.0,
+      "p50": 0.0261,
+      "p95": 0.0333
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 793,
+     "own_fit": {
+      "n": 793,
+      "inliers": 793,
+      "inlier_ratio": 1.0,
+      "p50": 0.0211,
+      "p95": 0.0279
+     },
+     "refit": {
+      "n": 793,
+      "inliers": 793,
+      "inlier_ratio": 1.0,
+      "p50": 0.0211,
+      "p95": 0.0279
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "b3a203bebdab16d733026e39d8c3da3bbe2e229542a2f2fe6d3945c828a6e2d9",
+     "bytes": 18745
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_hiep2": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 679,
+     "own_fit": {
+      "n": 679,
+      "inliers": 679,
+      "inlier_ratio": 1.0,
+      "p50": 0.0258,
+      "p95": 0.0332
+     },
+     "refit": {
+      "n": 679,
+      "inliers": 679,
+      "inlier_ratio": 1.0,
+      "p50": 0.0258,
+      "p95": 0.0332
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 1318,
+     "own_fit": {
+      "n": 1318,
+      "inliers": 1318,
+      "inlier_ratio": 1.0,
+      "p50": 0.0228,
+      "p95": 0.0309
+     },
+     "refit": {
+      "n": 1318,
+      "inliers": 1318,
+      "inlier_ratio": 1.0,
+      "p50": 0.0228,
+      "p95": 0.0309
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "83ead169454857e99cac48e81dd786eec62c0152de0defa4cef85a0ae4069ba7",
+     "bytes": 18683
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_hiep7": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 1682,
+     "own_fit": {
+      "n": 1682,
+      "inliers": 1682,
+      "inlier_ratio": 1.0,
+      "p50": 0.0236,
+      "p95": 0.0331
+     },
+     "refit": {
+      "n": 1682,
+      "inliers": 1682,
+      "inlier_ratio": 1.0,
+      "p50": 0.0236,
+      "p95": 0.0331
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 1312,
+     "own_fit": {
+      "n": 1312,
+      "inliers": 1312,
+      "inlier_ratio": 1.0,
+      "p50": 0.0231,
+      "p95": 0.0301
+     },
+     "refit": {
+      "n": 1312,
+      "inliers": 1312,
+      "inlier_ratio": 1.0,
+      "p50": 0.0231,
+      "p95": 0.0301
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "0940a8a8fb891ac3f9fc73acc856f66423a2f142c1e5ee4a2eaa5dc3904f39ee",
+     "bytes": 18628
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_hiep8": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 264,
+     "own_fit": {
+      "n": 264,
+      "inliers": 264,
+      "inlier_ratio": 1.0,
+      "p50": 0.0248,
+      "p95": 0.0323
+     },
+     "refit": {
+      "n": 264,
+      "inliers": 264,
+      "inlier_ratio": 1.0,
+      "p50": 0.0248,
+      "p95": 0.0323
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 434,
+     "own_fit": {
+      "n": 434,
+      "inliers": 434,
+      "inlier_ratio": 1.0,
+      "p50": 0.0237,
+      "p95": 0.0303
+     },
+     "refit": {
+      "n": 434,
+      "inliers": 434,
+      "inlier_ratio": 1.0,
+      "p50": 0.0237,
+      "p95": 0.0303
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "6fb43011996367fd3061d78146a9c2e966c7273dea85ef873a4c6f640bf4ac7d",
+     "bytes": 18645
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_live15": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 607,
+     "own_fit": {
+      "n": 607,
+      "inliers": 607,
+      "inlier_ratio": 1.0,
+      "p50": 0.0237,
+      "p95": 0.0303
+     },
+     "refit": {
+      "n": 607,
+      "inliers": 607,
+      "inlier_ratio": 1.0,
+      "p50": 0.0237,
+      "p95": 0.0303
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 762,
+     "own_fit": {
+      "n": 762,
+      "inliers": 762,
+      "inlier_ratio": 1.0,
+      "p50": 0.0238,
+      "p95": 0.0312
+     },
+     "refit": {
+      "n": 762,
+      "inliers": 762,
+      "inlier_ratio": 1.0,
+      "p50": 0.0238,
+      "p95": 0.0312
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "fe05bece1b2d6432d25516f66f49d9f99bd3be3fd7e121d4679f515f99f6ead6",
+     "bytes": 18677
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_toi1": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 0,
+     "own_fit": null,
+     "refit": null,
+     "decision": "borrow",
+     "donor": "droidcam_shared_bt:cam1",
+     "donor_p50": null,
+     "confidence": "borrowed-unverifiable"
+    },
+    "cam2": {
+     "n_pairs": 54,
+     "own_fit": {
+      "n": 54,
+      "inliers": 54,
+      "inlier_ratio": 1.0,
+      "p50": 0.0141,
+      "p95": 0.0306
+     },
+     "refit": {
+      "n": 54,
+      "inliers": 54,
+      "inlier_ratio": 1.0,
+      "p50": 0.0141,
+      "p95": 0.0306
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "borrowed-unverifiable",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "0f5adf3000d4e49c936d82ffe9059107fc34acba67ab8464f288b9c40452bb2b",
+     "bytes": 18711
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_vd_16": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 48,
+     "own_fit": {
+      "n": 48,
+      "inliers": 48,
+      "inlier_ratio": 1.0,
+      "p50": 0.0185,
+      "p95": 0.033
+     },
+     "refit": {
+      "n": 48,
+      "inliers": 48,
+      "inlier_ratio": 1.0,
+      "p50": 0.0185,
+      "p95": 0.033
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 188,
+     "own_fit": {
+      "n": 188,
+      "inliers": 188,
+      "inlier_ratio": 1.0,
+      "p50": 0.0192,
+      "p95": 0.0261
+     },
+     "refit": {
+      "n": 188,
+      "inliers": 188,
+      "inlier_ratio": 1.0,
+      "p50": 0.0192,
+      "p95": 0.0261
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "69b657e022b6a564c993f2b1f8e7c8adc06a1ce6f558cd8b8173ff33473c7dca",
+     "bytes": 18756
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_shared_vd_18": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 0,
+     "own_fit": null,
+     "refit": null,
+     "decision": "borrow",
+     "donor": "droidcam_shared_hiep8:cam1",
+     "donor_p50": null,
+     "confidence": "borrowed-unverifiable"
+    },
+    "cam2": {
+     "n_pairs": 16,
+     "own_fit": {
+      "n": 16,
+      "inliers": 16,
+      "inlier_ratio": 1.0,
+      "p50": 0.0158,
+      "p95": 0.0422
+     },
+     "refit": {
+      "n": 16,
+      "inliers": 16,
+      "inlier_ratio": 1.0,
+      "p50": 0.0158,
+      "p95": 0.0422
+     },
+     "donor_scores": {
+      "droidcam_shared_toi1": {
+       "n": 16,
+       "inliers": 0,
+       "inlier_ratio": 0.0,
+       "p50": 18.5274,
+       "p95": 27.9164
+      },
+      "droidcam_shared_bt": {
+       "n": 16,
+       "inliers": 0,
+       "inlier_ratio": 0.0,
+       "p50": 18.9672,
+       "p95": 27.1923
+      },
+      "droidcam_shared_vd_16": {
+       "n": 16,
+       "inliers": 0,
+       "inlier_ratio": 0.0,
+       "p50": 18.9916,
+       "p95": 27.004
+      },
+      "droidcam_live14": {
+       "n": 16,
+       "inliers": 0,
+       "inlier_ratio": 0.0,
+       "p50": 21.8806,
+       "p95": 31.0809
+      },
+      "droidcam_shared_live15": {
+       "n": 16,
+       "inliers": 0,
+       "inlier_ratio": 0.0,
+       "p50": 22.63,
+       "p95": 31.7806
+      }
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": 18.5274,
+     "confidence": "fit-weak"
+    }
+   },
+   "confidence": "borrowed-unverifiable",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "0bfa3a7d890a1e532f4f69c0a4f5c8536094288ae62c52e050996d4256bd36ad",
+     "bytes": 18759
+    }
+   },
+   "load_calibration": "ok"
+  },
+  "droidcam_live14": {
+   "cameras": {
+    "cam1": {
+     "n_pairs": 506,
+     "own_fit": {
+      "n": 506,
+      "inliers": 506,
+      "inlier_ratio": 1.0,
+      "p50": 0.0254,
+      "p95": 0.0349
+     },
+     "refit": {
+      "n": 506,
+      "inliers": 506,
+      "inlier_ratio": 1.0,
+      "p50": 0.0254,
+      "p95": 0.0333
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    },
+    "cam2": {
+     "n_pairs": 685,
+     "own_fit": {
+      "n": 685,
+      "inliers": 685,
+      "inlier_ratio": 1.0,
+      "p50": 0.0234,
+      "p95": 0.0306
+     },
+     "refit": {
+      "n": 685,
+      "inliers": 685,
+      "inlier_ratio": 1.0,
+      "p50": 0.0234,
+      "p95": 0.0306
+     },
+     "decision": "own",
+     "donor": null,
+     "donor_p50": null,
+     "confidence": "fit"
+    }
+   },
+   "confidence": "fit",
+   "warnings": [],
+   "files": {
+    "calibration.json": {
+     "sha256": "03a07d332a70cf6e5122794f2ffb20f162a2771bffe570b65abc539a495ddc19",
+     "bytes": 18689
+    }
+   },
+   "load_calibration": "ok"
+  }
+ }
+}

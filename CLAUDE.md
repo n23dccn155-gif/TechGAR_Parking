@@ -89,3 +89,11 @@ When verifying features:
 3. **Voice Guidance**: Triggers Web Speech API Vietnamese spoken instructions.
 4. **Off-Route Alert**: Triggers audio & red flash when vehicle strays off route.
 5. **Parked State Transition**: Changes slot to Red (`Occupied`) & session status to `PARKED`.
+
+---
+
+## 🖥 Environment Notes
+* `python` → Python 3.11 (all backend deps: cv2, ultralytics, ...). Keep backend commands on `python`.
+* `python3` → Python 3.13 (added for slide-generation skills; backend deps are NOT installed here).
+* Slide/PPTX skills installed globally at `%APPDATA%\devin\skills\`: **ppt-master** (native .pptx generation, can learn a .pptx template) and **presentation-skill** (deck-as-code `outline.json` → .pptx with QA gates, lab/scientific presets). Invoke via `/ppt-master`, `/presentation-skill`, or ask the agent to build slides.
+* Machine has NO Microsoft PowerPoint / LibreOffice — `.pptx` files must be viewed on another machine or via an online viewer unless an office suite is installed.

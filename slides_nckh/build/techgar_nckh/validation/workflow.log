@@ -1,0 +1,485 @@
+
+=== 2026-09-19T15:38:53.570Z NOTE id=2f01c96965e0 ===
+Project initialized: profile=quick; path=D:\TechGar2\slides_nckh\build\techgar_nckh_20260919
+
+=== 2026-09-19T15:41:40.963Z PYTHON run=53dde8ec5ce4 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\text_measure.py", "calibrate", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--role", "cover_title:Segoe UI:56:bold", "--role", "title:Segoe UI:40:bold", "--role", "subtitle:Segoe UI:28", "--role", "body:Segoe UI:24", "--role", "annotation:Segoe UI:17", "--role", "footnote:Segoe UI:14", "--role", "hero:Segoe UI:64:bold", "--role", "kicker:Segoe UI:16:bold", "--role", "code:Consolas:16", "--sample", "Định vị phương tiện và quản lý ô đỗ trong tầng hầm"]
+=== 2026-09-19T15:41:41.478Z END run=53dde8ec5ce4 elapsed_ms=514 output_lines=17 retained=0 omitted=17 ===
+
+=== 2026-09-19T15:42:27.095Z PYTHON run=c4ca2bddb2be ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\icon_sync.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "tabler-outline/video", "tabler-outline/device-cctv", "tabler-outline/camera", "tabler-outline/map", "tabler-outline/car", "tabler-outline/arrows-left-right", "tabler-outline/refresh", "tabler-outline/alert-triangle", "tabler-outline/chart-dots", "tabler-outline/bulb", "tabler-outline/target", "tabler-outline/grid-3x3", "tabler-outline/id", "tabler-outline/clock", "tabler-outline/adjustments-horizontal", "tabler-outline/square-check", "tabler-outline/road", "tabler-outline/satellite-off", "tabler-outline/eye-off", "tabler-outline/math-function", "tabler-outline/lock", "tabler-outline/device-mobile", "tabler-outline/route", "tabler-outline/crosshair", "tabler-outline/parking"]
+stderr:
+  [OK] 25 icon(s) in D:\TechGar2\slides_nckh\build\techgar_nckh\icons:
+       + tabler-outline/video
+       + tabler-outline/device-cctv
+       + tabler-outline/camera
+       + tabler-outline/map
+       + tabler-outline/car
+       + tabler-outline/arrows-left-right
+       + tabler-outline/refresh
+       + tabler-outline/alert-triangle
+stderr-tail:
+       + tabler-outline/device-mobile
+       + tabler-outline/route
+       + tabler-outline/crosshair
+       + tabler-outline/parking
+=== 2026-09-19T15:42:32.269Z END run=c4ca2bddb2be elapsed_ms=5174 output_lines=26 retained=13 omitted=13 ===
+
+=== 2026-09-19T15:55:22.067Z PYTHON run=7d2f5c675ba6 ===
+cwd: D:\TechGar2\slides_nckh\build\techgar_nckh
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\preset_shape_svg.py", "render-batch", "--input", "-"]
+=== 2026-09-19T15:55:22.147Z END run=7d2f5c675ba6 elapsed_ms=80 output_lines=24 retained=0 omitted=24 ===
+
+=== 2026-09-19T16:03:47.384Z PYTHON run=dc7c3db56895 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "early", "--json"]
+stdout:
+  [ERROR] 01_bai_toan_thuc_te.svg - Failed
+     viewBox: 0 0 1280 720
+     [ERROR] <g id="video-block"> data-pptx-bounds overlaps <g id="cover-pagenum"> data-pptx-bounds by 656.0px x 8.0px; keep ordinary direct-root module zones disjoint beyond the 1px tolerance
+     [ERROR] <text> (x=100, y=465; text='GNSS không ổn định h…') exceeds <g id="challenge-list"> data-pptx-bounds on the horizontal axis: content (100.0, 450.6)-(593.7, 470.9), container (64.0, 444.0)-(520.0, 656.0), overflow horizontal 16.2%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈11.2 px per mixed char at 17px incl. headroom; ≈40 chars fit in 456 px
+     [ERROR] <text> (x=100, y=625; text='Không thể yêu cầu mọ…') exceeds <g id="challenge-list"> data-pptx-bounds on the horizontal axis: content (100.0, 610.5)-(551.5, 631.0), container (64.0, 444.0)-(520.0, 656.0), overflow horizontal 6.9%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈11.6 px per mixed char at 17px incl. headroom; ≈39 chars fit in 456 px
+     [WARN] Noncanonical compact authoring: Root SVG cannot declare shared paint values: fill; put color and line defaults on meaningful groups (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (15 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): text[5]:fill '#0F1928' -> None; text[6]:fill '#0F1928' -> None; text[7]:fill '#0F1928' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Font stack exports non-PPT-safe typeface(s) to PPTX (latin=Inter): Inter, Segoe UI
+     [WARN] Detected 3 paragraph-like line run(s) split across sibling <text> elements (<g id="cover-headline"> x=64.0, y=118.0..230.0, 3 lines; <g id="research-question-panel"> x=88.0, y=382.0..404.0, 2 lines; <g id="video-block"> x=936.0, y=586.0..626.0, 3 lines). If each run is one prose paragraph, combine it into one <text>: keep its first line as direct text and use direct <tspan> children with the parent x and positive relative dy values for later lines. An all-<tspan> form may start with dy="0". Keep semantically independent text frames separate.
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Root SVG cannot declare shared paint values: fill; put color and line defaults on meaningful groups (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (12 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): text[5]:fill '#0F1928' -> None; text[16]:fill '#0F1928' -> None; text[18]:fill '#0F1928' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Font stack exports non-PPT-safe typeface(s) to PPTX (latin=Inter): Inter, Segoe UI
+  [ERROR] 04_hai_camera_song_song.svg - Failed
+     viewBox: 0 0 1280 720
+     [ERROR] <text> (x=64, y=96; text='Hai camera quan sát …') exceeds <g id="chrome-header"> data-pptx-bounds on the horizontal axis: content (64.0, 62.0)-(1334.3, 110.0), container (64.0, 32.0)-(1216.0, 128.0), overflow horizontal 10.3%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈27.0 px per mixed char at 40px incl. headroom; ≈42 chars fit in 1152 px
+     [WARN] Noncanonical compact authoring: Root SVG cannot declare shared paint values: fill; put color and line defaults on meaningful groups (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (16 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): text[5]:fill '#0F1928' -> None; parallel-note:font-size None -> '15'; text[39]:font-size '15' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Font stack exports non-PPT-safe typeface(s) to PPTX (latin=Inter): Inter, Segoe UI
+     [WARN] <text> (x=64, y=478; text='Split debug thật — x…') exceeds <g id="dual-view-image"> data-pptx-bounds on the vertical axis: content (64.0, 466.9)-(707.9, 482.6), container (64.0, 142.0)-(1216.0, 478.0), overflow horizontal 0.0%, vertical 1.4% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+  [ERROR] 05_homography_mat_san.svg - Failed
+     viewBox: 0 0 1280 720
+     [ERROR] <text> (x=500, y=378; text='Một hệ tọa độ thống …') exceeds <g id="transform-panel"> data-pptx-bounds on the horizontal axis: content (500.0, 364.4)-(836.4, 383.6), container (470.0, 142.0)-(800.0, 550.0), overflow horizontal 11.0%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈10.9 px per mixed char at 16px incl. headroom; ≈30 chars fit in 330 px
+     [ERROR] Project-local icon not found: tabler-outline/map-pin (expected under D:\TechGar2\slides_nckh\build\techgar_nckh\icons)
+     [WARN] Noncanonical compact authoring: Root SVG cannot declare shared paint values: fill; put color and line defaults on meaningful groups (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (11 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): text[5]:fill '#0F1928' -> None; text[25]:fill '#0F1928' -> None; text[27]:fill '#0F1928' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Font stack exports non-PPT-safe typeface(s) to PPTX (latin=Inter): Inter, Segoe UI
+     [WARN] <text> (x=64, y=652; text='Cam 2 — cùng hệ điểm…') exceeds <g id="before-images"> data-pptx-bounds on the vertical axis: content (64.0, 640.1)-(287.3, 656.9), container (64.0, 142.0)-(440.0, 638.0), overflow horizontal 0.0%, vertical 3.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+  [SUMMARY] Check Summary
+  Total files: 5
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 2 (40%)
+    [ERROR] With errors: 3 (60%)
+  Provenance categories:
+    blocking: 6          hard findings; gate also requires exit 0
+    introduced: 22       advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 5 | text: 139 | images: 9 | icons: 14
+    Geometry: SVG elements 46 | native presets 8 | page-frame elements 5 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_early_report.json
+=== 2026-09-19T16:03:49.594Z END run=dc7c3db56895 elapsed_ms=2210 output_lines=68 retained=42 omitted=26 ===
+
+=== 2026-09-19T16:08:18.502Z PYTHON run=26a15cd03a1d ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\icon_sync.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "tabler-outline/map-pin", "tabler-outline/player-play", "tabler-outline/arrow-right", "tabler-outline/circle-check", "tabler-outline/x", "tabler-outline/info-circle", "tabler-outline/flask", "tabler-outline/arrow-merge", "tabler-outline/clipboard-check", "tabler-outline/movie"]
+stderr:
+  [OK] 10 icon(s) in D:\TechGar2\slides_nckh\build\techgar_nckh\icons:
+       + tabler-outline/map-pin
+       + tabler-outline/player-play
+       + tabler-outline/arrow-right
+       + tabler-outline/circle-check
+       + tabler-outline/x
+       + tabler-outline/info-circle
+       + tabler-outline/flask
+       + tabler-outline/arrow-merge
+stderr-tail:
+       + tabler-outline/clipboard-check
+       + tabler-outline/movie
+=== 2026-09-19T16:08:18.543Z END run=26a15cd03a1d elapsed_ms=41 output_lines=11 retained=11 omitted=0 ===
+
+=== 2026-09-19T16:11:56.882Z PYTHON run=0369e564ea41 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "early", "--json"]
+stdout:
+  [ERROR] 01_bai_toan_thuc_te.svg - Failed
+     viewBox: 0 0 1280 720
+     [ERROR] <text> (x=88, y=352; text='XE NÀO? — Ở ĐÂU? — Đ…') exceeds <g id="research-question-panel"> data-pptx-bounds on the horizontal axis: content (88.0, 333.3)-(552.9, 359.7), container (64.0, 288.0)-(520.0, 426.0), overflow horizontal 7.2%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈20.2 px per mixed char at 22px incl. headroom; ≈22 chars fit in 456 px
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     viewBox: 0 0 1280 720
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 03_pipeline_tong_the.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[94]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 04_hai_camera_song_song.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (10 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): parallel-note:font-size None -> '15'; text[40]:font-size '15' -> None; text[41]:font-size '15' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [SUMMARY] Check Summary
+  Total files: 5
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 4 (80%)
+    [ERROR] With errors: 1 (20%)
+  Provenance categories:
+    blocking: 1          hard findings; gate also requires exit 0
+    introduced: 6        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 5 | text: 127 | images: 9 | icons: 13
+    Geometry: SVG elements 46 | native presets 8 | page-frame elements 5 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_early_report.json
+=== 2026-09-19T16:11:59.280Z END run=0369e564ea41 elapsed_ms=2398 output_lines=47 retained=25 omitted=22 ===
+
+=== 2026-09-19T16:12:21.462Z PYTHON run=8843f4f215e8 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "early", "--json"]
+stdout:
+  [WARN] 01_bai_toan_thuc_te.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [SUMMARY] Check Summary
+  Total files: 5
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 5 (100%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 6        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 5 | text: 127 | images: 9 | icons: 13
+    Geometry: SVG elements 46 | native presets 8 | page-frame elements 5 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_early_report.json
+=== 2026-09-19T16:12:23.369Z END run=8843f4f215e8 elapsed_ms=1906 output_lines=44 retained=18 omitted=26 ===
+
+=== 2026-09-19T16:21:51.435Z PYTHON run=830e04412ebd ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [WARN] 01_bai_toan_thuc_te.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [ERROR] 11_lifecycle_parked_reid.svg - Failed
+     viewBox: 0 0 1280 720
+     [ERROR] <text> (x=200, y=230; text='MOVING') exceeds <g id="lifecycle-timeline"> data-pptx-bounds on the vertical axis: content (164.9, 217.2)-(235.1, 235.2), container (64.0, 170.0)-(1216.0, 230.0), overflow horizontal 0.0%, vertical 8.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+     [ERROR] <text> (x=488, y=230; text='PARKED') exceeds <g id="lifecycle-timeline"> data-pptx-bounds on the vertical axis: content (455.5, 217.2)-(520.5, 235.2), container (64.0, 170.0)-(1216.0, 230.0), overflow horizontal 0.0%, vertical 8.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+     [ERROR] <text> (x=776, y=230; text='MOVING (RỜI Ô)') exceeds <g id="lifecycle-timeline"> data-pptx-bounds on the vertical axis: content (709.3, 217.2)-(842.7, 235.2), container (64.0, 170.0)-(1216.0, 230.0), overflow horizontal 0.0%, vertical 8.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+     [ERROR] <text> (x=1064, y=230; text='RE-ID → GID CŨ') exceeds <g id="lifecycle-timeline"> data-pptx-bounds on the vertical axis: content (1004.1, 217.2)-(1123.9, 235.2), container (64.0, 170.0)-(1216.0, 230.0), overflow horizontal 0.0%, vertical 8.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[65]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+     [WARN] Detected 2 paragraph-like line run(s) split across sibling <text> elements (<g id="stage-parked"> x=360.0, y=452.0..478.0, 2 lines; <g id="stage-departure"> x=656.0, y=452.0..478.0, 2 lines). If each run is one prose paragraph, combine it into one <text>: keep its first line as direct text and use direct <tspan> children with the parent x and positive relative dy values for later lines. An all-<tspan> form may start with dy="0". Keep semantically independent text frames separate.
+  [WARN] 12_ket_qua_thuc_nghiem.svg - Passed (with warnings)
+     viewBox: 0 0 1280 720
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 12 (92%)
+    [ERROR] With errors: 1 (7%)
+  Provenance categories:
+    blocking: 4          hard findings; gate also requires exit 0
+    introduced: 21       advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 365 | images: 27 | icons: 28
+    Geometry: SVG elements 194 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T16:21:55.009Z END run=830e04412ebd elapsed_ms=3573 output_lines=81 retained=28 omitted=53 ===
+
+=== 2026-09-19T16:22:35.864Z PYTHON run=b04fba57d4c4 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [WARN] 01_bai_toan_thuc_te.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 13 (100%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 18       advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 358 | images: 27 | icons: 28
+    Geometry: SVG elements 194 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T16:22:38.090Z END run=b04fba57d4c4 elapsed_ms=2226 output_lines=72 retained=18 omitted=54 ===
+
+=== 2026-09-19T16:22:51.757Z PYTHON run=dcbabff7d1ac ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [WARN] 01_bai_toan_thuc_te.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): cover-pagenum:fill None -> '#4E5D78'; cover-pagenum:font-size None -> '14'; text[49]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [WARN] 02_mot_camera_chua_du.svg - Passed (with warnings)
+     [WARN] Noncanonical compact authoring: Authoring SVG contains noncanonical or redundant inherited style declarations (6 change(s)); examples (group:attr None -> value hoists the shared value onto that group; child:attr value -> None drops the copy the child now inherits): chrome-footer:fill None -> '#4E5D78'; chrome-footer:font-size None -> '13'; text[35]:fill '#4E5D78' -> None (advisory; normalize with `python3 scripts/compact_svg_styles.py <svg_output> --inplace`, re-stamp pages that carry Chart/Table fallbacks, and rerun the final gate, or leave the explicit form)
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 0 (0%)
+    [WARN] With warnings: 13 (100%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 16       advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 356 | images: 27 | icons: 28
+    Geometry: SVG elements 194 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T16:22:53.828Z END run=dcbabff7d1ac elapsed_ms=2070 output_lines=70 retained=18 omitted=52 ===
+
+=== 2026-09-19T16:22:59.703Z PYTHON run=afaccac503fb ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\compact_svg_styles.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output", "--inplace"]
+=== 2026-09-19T16:22:59.965Z END run=afaccac503fb elapsed_ms=262 output_lines=1 retained=0 omitted=1 ===
+
+=== 2026-09-19T16:23:05.611Z PYTHON run=7f9141169e3a ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [WARN] 05_homography_mat_san.svg - Passed (with warnings)
+     [WARN] <text> (x=470, y=164; text='BIẾN ĐỔI — GROUND-PL…') exceeds <g id="transform-panel"> data-pptx-bounds on the horizontal axis: content (470.0, 151.2)-(828.2, 169.2), container (470.0, 142.0)-(816.0, 570.0), overflow horizontal 3.5%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈11.9 px per mixed char at 15px incl. headroom; ≈28 chars fit in 346 px
+  [WARN] 08_topology_cost_matrix.svg - Passed (with warnings)
+     [WARN] <text> (x=936, y=243; text='C = 0.55·D_ground + …') exceeds <g id="panel-cost"> data-pptx-bounds on the horizontal axis: content (634.6, 227.7)-(1237.4, 249.3), container (656.0, 142.0)-(1216.0, 658.0), overflow horizontal 3.8%, vertical 0.0% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text; ≈10.8 px per mixed char at 18px incl. headroom; ≈52 chars fit in 560 px
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 10 (76%)
+    [WARN] With warnings: 3 (23%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 3        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 356 | images: 27 | icons: 28
+    Geometry: SVG elements 194 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T16:23:07.718Z END run=7f9141169e3a elapsed_ms=2106 output_lines=57 retained=19 omitted=38 ===
+
+=== 2026-09-19T16:23:48.903Z PYTHON run=94a6854935d3 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_quality_checker.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 13 (100%)
+    [WARN] With warnings: 0 (0%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 0        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 356 | images: 27 | icons: 28
+    Geometry: SVG elements 194 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T16:23:51.109Z END run=94a6854935d3 elapsed_ms=2205 output_lines=48 retained=15 omitted=33 ===
+
+=== 2026-09-19T16:25:35.452Z PYTHON run=c7b87d091a61 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\total_md_split.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh"]
+stdout:
+  [OK] SVG files and notes have one-to-one correspondence
+  [Done] Successfully generated 13/13 file(s)
+  [Done] Notes splitting complete
+=== 2026-09-19T16:25:35.661Z END run=c7b87d091a61 elapsed_ms=208 output_lines=22 retained=3 omitted=19 ===
+
+=== 2026-09-19T16:26:10.385Z PYTHON run=c44aa9663c67 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:\\Users\\anfif\\AppData\\Roaming\\devin\\skills\\ppt-master\\scripts\\svg_to_pptx.py", "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh", "--quick-generate", "--format", "ppt169", "--primary-language", "vi-VN", "--with-notes", "--native-charts-and-tables", "-o", "D:\\TechGar2\\docs\\TechGAR_NCKH_13slides.pptx"]
+stderr:
+  Warning: --native-charts-and-tables replaces shape-based SVG fallbacks with PowerPoint Chart/Table objects. The native objects may normalize styling or omit SVG details that are not represented by marker metadata; use the default shape-based export when exact fallback artwork is required.
+stdout:
+  [Done] Saved: D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [POSTFLIGHT] status=passed quality_gate=passed slides=13 warning_categories=0
+    [PPTX] D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [REPORT] D:\TechGar2\slides_nckh\build\techgar_nckh\validation\TechGAR_NCKH_13slides.report.json
+=== 2026-09-19T16:26:20.011Z END run=c44aa9663c67 elapsed_ms=9625 output_lines=70 retained=5 omitted=65 ===
+
+=== 2026-09-19T17:48:53.204Z PYTHON run=fbd12f6c5ef2 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/compact_svg_styles.py", "D:/TechGar2/slides_nckh/build/techgar_nckh/svg_output", "--inplace"]
+=== 2026-09-19T17:48:53.234Z END run=fbd12f6c5ef2 elapsed_ms=29 output_lines=1 retained=0 omitted=1 ===
+
+=== 2026-09-19T17:48:58.252Z PYTHON run=90bf26216acf ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh/svg_output", "--stage", "final"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [WARN] 12_ket_qua_thuc_nghiem.svg - Passed (with warnings)
+     [WARN] <text> (x=1216, y=136; text='mô hình bãi đỗ thu n…') exceeds <g id="chrome-header"> data-pptx-bounds on the vertical axis: content (789.0, 122.4)-(1216.0, 141.6), container (64.0, 32.0)-(1216.0, 140.0), overflow horizontal 0.0%, vertical 1.5% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 12 (92%)
+    [WARN] With warnings: 2 (15%)
+    [ERROR] With errors: 1 (7%)
+  Provenance categories:
+    blocking: 1          hard findings; gate also requires exit 0
+    introduced: 2        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+    [WARNING] spec_lock.md declares no pptx_structure.mode; the project is treated as mode: flat, matching the exporter default. Declare mode: flat explicitly, or mode: structured for a deck/layout template.
+    [ERROR] Master export requires spec_lock.md typography title and body rows
+    1. XML well-formedness: write typography as raw Unicode (—, ©, →, NBSP); escape XML reserved chars as &amp; &lt; &gt; &quot; &apos; — never use HTML named entities like &nbsp; &mdash; &copy;
+    2. viewBox issues: root viewBox is the canvas authority (see references/canvas-formats.md)
+    3. Paint recommendation: generated SVG prefers uppercase #RRGGBB plus channel-specific opacity; compatible alternatives remain non-blocking
+    4. foreignObject: Use <text> + <tspan> for manual line breaks
+=== 2026-09-19T17:49:02.176Z END run=90bf26216acf elapsed_ms=3924 output_lines=60 retained=22 omitted=38 ===
+
+=== 2026-09-19T17:52:34.307Z PYTHON run=d2a2a2d2f32b ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh/svg_output", "--stage", "final", "--quick-generate"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 13 (100%)
+    [WARN] With warnings: 0 (0%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 0        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+=== 2026-09-19T17:52:38.424Z END run=d2a2a2d2f32b elapsed_ms=4117 output_lines=47 retained=14 omitted=33 ===
+
+=== 2026-09-19T17:55:50.729Z PYTHON run=e3d8296aa6ab ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_to_pptx.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--with-notes", "-o", "D:/TechGar2/docs/TechGAR_NCKH_13slides.pptx"]
+stderr:
+  Error: --quick-generate requires a passing final SVG quality report for the current svg_output/; found stale.
+  Run: python3 skills/ppt-master/scripts/svg_quality_checker.py "D:\TechGar2\slides_nckh\build\techgar_nckh" --quick-generate --canonical-authoring --stage final --json
+=== 2026-09-19T17:55:51.859Z END run=e3d8296aa6ab elapsed_ms=1130 output_lines=3 retained=2 omitted=1 ===
+
+=== 2026-09-19T17:56:00.459Z PYTHON run=1142bf6ac167 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 13 (100%)
+    [WARN] With warnings: 0 (0%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 0        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T17:56:02.920Z END run=1142bf6ac167 elapsed_ms=2461 output_lines=48 retained=15 omitted=33 ===
+
+=== 2026-09-19T17:56:08.127Z PYTHON run=b58672eede77 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_to_pptx.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--with-notes", "-o", "D:/TechGar2/docs/TechGAR_NCKH_13slides.pptx"]
+stdout:
+  [Done] Saved: D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [POSTFLIGHT] status=passed quality_gate=passed slides=13 warning_categories=0
+    [PPTX] D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [REPORT] D:\TechGar2\slides_nckh\build\techgar_nckh\validation\TechGAR_NCKH_13slides.report.json
+=== 2026-09-19T17:56:13.042Z END run=b58672eede77 elapsed_ms=4914 output_lines=70 retained=4 omitted=66 ===
+
+=== 2026-09-19T18:02:00.526Z PYTHON run=372f99a88346 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 13 (100%)
+    [WARN] With warnings: 0 (0%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 0        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T18:02:07.645Z END run=372f99a88346 elapsed_ms=7118 output_lines=48 retained=15 omitted=33 ===
+
+=== 2026-09-19T18:02:49.140Z PYTHON run=6d0babc08935 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_to_pptx.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--with-notes", "-o", "D:/TechGar2/docs/TechGAR_NCKH_13slides.pptx"]
+stdout:
+  [Done] Saved: D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [POSTFLIGHT] status=passed quality_gate=passed slides=13 warning_categories=0
+    [PPTX] D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [REPORT] D:\TechGar2\slides_nckh\build\techgar_nckh\validation\TechGAR_NCKH_13slides.report.json
+=== 2026-09-19T18:03:48.355Z END run=6d0babc08935 elapsed_ms=59214 output_lines=70 retained=4 omitted=66 ===
+
+=== 2026-09-19T18:13:13.668Z PYTHON run=a96827d73041 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [WARN] 11_lifecycle_parked_reid.svg - Passed (with warnings)
+     [WARN] <text> (x=656, y=552; text='Departure + trajecto…') exceeds <g id="stage-departure"> data-pptx-bounds on the vertical axis: content (656.0, 541.0)-(868.0, 574.5), container (656.0, 246.0)-(928.0, 572.0), overflow horizontal 0.0%, vertical 0.8% (error above 5%); expand the root module bounds into available non-overlapping space; otherwise reflow the text
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 12 (92%)
+    [WARN] With warnings: 1 (7%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 1        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T18:13:17.385Z END run=a96827d73041 elapsed_ms=3717 output_lines=55 retained=17 omitted=38 ===
+
+=== 2026-09-19T18:15:56.990Z PYTHON run=837e2706f719 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_quality_checker.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--canonical-authoring", "--stage", "final", "--json"]
+stdout:
+  [OK] 01_bai_toan_thuc_te.svg - Passed
+  [SUMMARY] Check Summary
+  Total files: 13
+    [OK] Fully passed: 13 (100%)
+    [WARN] With warnings: 0 (0%)
+    [ERROR] With errors: 0 (0%)
+  Provenance categories:
+    blocking: 0          hard findings; gate also requires exit 0
+    introduced: 0        advisory; new or changed
+    inherited: 0         informational; prototype-identical
+    source-import: 0     informational; source-conversion loss
+  [CARRIERS] Actual-use receipt (informational; not a quota)
+    Pages: 13 | text: 361 | images: 27 | icons: 28
+    Geometry: SVG elements 208 | native presets 8 | page-frame elements 13 | marker uses 0
+  [REPORT] JSON quality report exported: D:\TechGar2\slides_nckh\build\techgar_nckh\validation\svg_quality_report.json
+=== 2026-09-19T18:15:59.852Z END run=837e2706f719 elapsed_ms=2861 output_lines=48 retained=15 omitted=33 ===
+
+=== 2026-09-19T18:21:09.854Z PYTHON run=914c107c1721 ===
+cwd: D:\TechGar2
+argv: ["C:\\Users\\anfif\\AppData\\Local\\Programs\\Python\\Python313\\python3.exe", "C:/Users/anfif/AppData/Roaming/devin/skills/ppt-master/scripts/svg_to_pptx.py", "D:/TechGar2/slides_nckh/build/techgar_nckh", "--quick-generate", "--with-notes", "-o", "D:/TechGar2/docs/TechGAR_NCKH_13slides.pptx"]
+stdout:
+  [Done] Saved: D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [POSTFLIGHT] status=passed quality_gate=passed slides=13 warning_categories=0
+    [PPTX] D:\TechGar2\docs\TechGAR_NCKH_13slides.pptx
+    [REPORT] D:\TechGar2\slides_nckh\build\techgar_nckh\validation\TechGAR_NCKH_13slides.report.json
+=== 2026-09-19T18:21:15.618Z END run=914c107c1721 elapsed_ms=5763 output_lines=70 retained=4 omitted=66 ===

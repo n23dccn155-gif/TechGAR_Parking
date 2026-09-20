@@ -214,10 +214,15 @@ class MotionVehicleTracker:
         self._newly_lost_tracks: List[Tuple[int, TrackedVehicle]] = []
         self._last_shadow_rejections: List[dict] = []
         self._last_detection_rejections: List[dict] = []
+        # Pixel anchor points of this frame's ROI-rejected detections, so a
+        # coasting track starved by rejections near its prediction can mark
+        # the vanish as an ROI-edge dead zone.
+        self._roi_rejected_points: List[Tuple[int, int]] = []
         self._suspended_tracks: Dict[int, TrackedVehicle] = {}
         self._ambiguous_detection_ids: set[int] = set()
         self._viable_pairs: set[Tuple[int, int]] = set()
         self._pair_metrics: Dict[Tuple[int, int], dict] = {}
+        self._suppressed_roi_edge_twin_ids: set[int] = set()
         self._last_association_events: List[dict] = []
         self._background_image: Optional[np.ndarray] = None
         self._background_frame: Optional[int] = None
@@ -845,6 +850,8 @@ class MotionVehicleTracker:
             roi_support_pixels = None
             roi_support_ratio = 1.0
             roi_clipped = False
+            roi_context_rescued = False
+            roi_anchor_tolerated = False
             if self.roi_mask is not None:
                 x0, y0, width0, height0 = box
                 contour_selection = np.zeros((height0, width0), dtype=np.uint8)
@@ -871,13 +878,47 @@ class MotionVehicleTracker:
                     min(self.motion_min_pixels, int(round(0.08 * component_pixels))),
                 )
                 if roi_support_pixels < required_support:
-                    self._last_detection_rejections.append({
-                        "type": "insufficient_strict_roi_support",
-                        "box": tuple(int(value) for value in box),
-                        "roi_support_pixels": int(roi_support_pixels),
-                        "roi_support_ratio": round(roi_support_ratio, 4),
-                    })
-                    continue
+                    # A vehicle clipped by the ROI boundary keeps part of its
+                    # foreground only inside the bounded context band, so the
+                    # strict floor starves exactly the objects the band was
+                    # built to complete.  Re-measure support over strict ROI +
+                    # band, but only for a clipped blob that genuinely touches
+                    # the strict ROI and whose ground anchor stays inside the
+                    # wider ROI.  A blob living entirely in the band is still
+                    # outside the monitored area and keeps dying here.
+                    context_support = 0
+                    anchor_in_context = False
+                    if self._roi_context_mask is not None:
+                        context_selection = cv2.bitwise_and(
+                            contour_selection,
+                            self._roi_context_mask[
+                                y0:y0 + height0, x0:x0 + width0
+                            ],
+                        )
+                        context_support = cv2.countNonZero(context_selection)
+                        anchor_x, anchor_y = self._bottom_center(box)
+                        anchor_in_context = (
+                            0 <= anchor_x < self._roi_context_mask.shape[1]
+                            and 0 <= anchor_y < self._roi_context_mask.shape[0]
+                            and self._roi_context_mask[anchor_y, anchor_x] != 0
+                        )
+                    if not (
+                        roi_clipped
+                        and roi_support_pixels > 0
+                        and anchor_in_context
+                        and context_support >= required_support
+                    ):
+                        self._last_detection_rejections.append({
+                            "type": "insufficient_strict_roi_support",
+                            "box": tuple(int(value) for value in box),
+                            "roi_support_pixels": int(roi_support_pixels),
+                            "roi_support_ratio": round(roi_support_ratio, 4),
+                        })
+                        self._roi_rejected_points.append(
+                            self._bottom_center(box)
+                        )
+                        continue
+                    roi_context_rescued = True
             group = (self.occlusion_guard.covering_group(box, self._tracks, self._predictions)
                      if self.enable_occlusion_guard else None)
             if group is not None:
@@ -893,7 +934,9 @@ class MotionVehicleTracker:
                         'ambiguous_merged': True, 'occlusion_members': group.members,
                         'observation_kind': 'merged', 'priority': False,
                         'roi_clipped': bool(roi_clipped),
-                        'roi_support_ratio': float(roi_support_ratio)})
+                        'roi_support_ratio': float(roi_support_ratio),
+                        'roi_context_rescued': bool(roi_context_rescued),
+                        'roi_anchor_tolerated': bool(roi_anchor_tolerated)})
                 else:
                     x0, y0, _, _ = box
                     for tid, child, selection in regions:
@@ -905,7 +948,9 @@ class MotionVehicleTracker:
                             'observation_kind': 'watershed_provisional',
                             'occlusion_members': group.members, 'ambiguous_merged': False,
                             'roi_clipped': bool(roi_clipped),
-                            'roi_support_ratio': float(roi_support_ratio)})
+                            'roi_support_ratio': float(roi_support_ratio),
+                            'roi_context_rescued': bool(roi_context_rescued),
+                            'roi_anchor_tolerated': bool(roi_anchor_tolerated)})
                 continue
             if area > image_area * 0.22:
                 continue
@@ -934,21 +979,33 @@ class MotionVehicleTracker:
             # admitted only after strict-ROI support was measured above.
             if self.roi_mask is not None:
                 px, py = point
+                anchor_rejected = False
                 if (
                     px < 0
                     or py < 0
                     or py >= self.roi_mask.shape[0]
                     or px >= self.roi_mask.shape[1]
-                    or (
-                        self.roi_mask[py, px] == 0
-                        and not roi_clipped
-                    )
                 ):
+                    anchor_rejected = True
+                elif self.roi_mask[py, px] == 0 and not roi_clipped:
+                    # A boundary-clipped blob can keep >=98% of its measured
+                    # pixels inside the strict ROI (not ``roi_clipped``) while
+                    # its ground anchor slips a few px past the edge — the
+                    # case that starved ROI-edge fragments of detections.
+                    # Tolerate the miss only inside the bounded context band;
+                    # anything further stays a real out-of-ROI rejection.
+                    context = self._roi_context_mask
+                    if context is not None and context[py, px] != 0:
+                        roi_anchor_tolerated = True
+                    else:
+                        anchor_rejected = True
+                if anchor_rejected:
                     self._last_detection_rejections.append({
                         "type": "anchor_outside_roi",
                         "box": (int(x), int(y), int(w), int(h)),
                         "anchor": (int(px), int(py)),
                     })
+                    self._roi_rejected_points.append((int(px), int(py)))
                     cv2.drawContours(mask, [contour], -1, 0, thickness=cv2.FILLED)
                     continue
             is_priority = self._box_is_priority(priority_mask, box, point)
@@ -1020,6 +1077,8 @@ class MotionVehicleTracker:
                 "roi_clipped": bool(roi_clipped),
                 "roi_support_pixels": int(roi_support_pixels or 0),
                 "roi_support_ratio": float(roi_support_ratio),
+                "roi_context_rescued": bool(roi_context_rescued),
+                "roi_anchor_tolerated": bool(roi_anchor_tolerated),
                 "dark_foreground_rescued": dark_foreground_rescued,
                 "mog_shadow_marker_ratio": shadow_marker_ratio,
                 "spatial_appearance": spatial_histograms(frame, box, mask) if self.enable_spatial_appearance else None,
@@ -1423,6 +1482,118 @@ class MotionVehicleTracker:
                     "reason": "competing_single_detection",
                 })
 
+    # Two live tracks may sit on one ROI-clipped vehicle: a starved fragment
+    # rebounds as a second local ID whose bbox is nearly identical to the
+    # first.  At ~0.9 IoU on the same clipped edge they are one physical car.
+    _ROI_EDGE_TWIN_IOU = 0.90
+    _ROI_EDGE_TWIN_CENTER_PX = 12.0
+
+    @staticmethod
+    def _roi_edge_twin_strength(track: TrackedVehicle) -> Tuple:
+        """Keep the stronger twin: confirmed, then older, then most-seen."""
+        return (
+            1 if track.status == TrackStatus.CONFIRMED else 0,
+            -int(getattr(track, "first_observation_frame", track.entered_frame)),
+            int(getattr(track, "total_visible_count", 0)),
+            -int(track.track_id),
+        )
+
+    def _suppress_roi_edge_twins(self) -> set:
+        """Mark near-duplicate lineages rooted at one ROI-clipped object.
+
+        Suppressed tracks stay in ``self._tracks`` and age normally, but they
+        are barred from claiming detections or feeding merged/competition
+        heuristics as if they were a second physical car, so they can never
+        spawn a competing Global ID.  Any pair already managed by
+        OcclusionGuard is left alone.
+        """
+        suppressed: set[int] = set()
+        tracks = list(self._tracks.values())
+        grouped: set[int] = set()
+        if self.enable_occlusion_guard:
+            for group in self.occlusion_guard.groups.values():
+                grouped.update(group.members)
+        twins: List[Tuple[int, int]] = []
+        if self.roi_mask is not None and len(tracks) >= 2:
+            for index, left in enumerate(tracks):
+                if left.track_id in grouped:
+                    continue
+                for right in tracks[index + 1:]:
+                    if right.track_id in grouped:
+                        continue
+                    if not (
+                        getattr(left, "roi_clipped", False)
+                        and getattr(right, "roi_clipped", False)
+                    ):
+                        continue
+                    if not (
+                        left.status == TrackStatus.TENTATIVE
+                        or right.status == TrackStatus.TENTATIVE
+                        or int(left.consecutive_invisible_count) > 0
+                        or int(right.consecutive_invisible_count) > 0
+                    ):
+                        continue
+                    if (
+                        self._iou(left.bbox, right.bbox)
+                        < self._ROI_EDGE_TWIN_IOU
+                    ):
+                        continue
+                    left_center = np.asarray(
+                        [left.x + left.w / 2.0, left.y + left.h / 2.0]
+                    )
+                    right_center = np.asarray(
+                        [right.x + right.w / 2.0, right.y + right.h / 2.0]
+                    )
+                    center_gap = float(
+                        np.linalg.norm(left_center - right_center)
+                    )
+                    extent = max(
+                        1.0,
+                        min(
+                            np.hypot(left.w, left.h),
+                            np.hypot(right.w, right.h),
+                        ),
+                    )
+                    if center_gap > max(
+                        self._ROI_EDGE_TWIN_CENTER_PX, 0.15 * extent
+                    ):
+                        continue
+                    twins.append((left.track_id, right.track_id))
+        # A chain of pairwise twins is still one physical object, so suppress
+        # whole connected components rather than one side of each pair.
+        parent = {track.track_id: track.track_id for track in tracks}
+
+        def find(track_id: int) -> int:
+            while parent[track_id] != track_id:
+                parent[track_id] = parent[parent[track_id]]
+                track_id = parent[track_id]
+            return track_id
+
+        for left_id, right_id in twins:
+            left_root, right_root = find(left_id), find(right_id)
+            if left_root != right_root:
+                parent[max(left_root, right_root)] = min(left_root, right_root)
+        components: Dict[int, List[TrackedVehicle]] = {}
+        for track in tracks:
+            components.setdefault(find(track.track_id), []).append(track)
+        for members in components.values():
+            if len(members) < 2:
+                continue
+            members.sort(key=self._roi_edge_twin_strength, reverse=True)
+            keeper = members[0]
+            for twin in members[1:]:
+                suppressed.add(twin.track_id)
+                self._last_association_events.append({
+                    "type": "roi_edge_twin_suppressed",
+                    "kept_local_track_id": int(keeper.track_id),
+                    "suppressed_local_track_id": int(twin.track_id),
+                    "iou": round(self._iou(keeper.bbox, twin.bbox), 4),
+                    "reason": "near_identical_clipped_bboxes",
+                })
+        for track in tracks:
+            track.roi_edge_twin_suppressed = track.track_id in suppressed
+        return suppressed
+
     def _assign(self, detections: List[dict]) -> Tuple[List[Tuple[int, int, Tuple[int, int]]], List[int], List[int]]:
         track_ids = list(self._tracks)
         predictions = dict(self._predict_tracks())
@@ -1435,6 +1606,7 @@ class MotionVehicleTracker:
         self._ambiguous_detection_ids = set()
         self._viable_pairs = set()
         self._pair_metrics = {}
+        self._suppressed_roi_edge_twin_ids = self._suppress_roi_edge_twins()
         if self.enable_occlusion_guard:
             self.occlusion_guard.annotate(detections, self._tracks, predictions)
         if not track_ids or not detections:
@@ -1444,6 +1616,11 @@ class MotionVehicleTracker:
         reacquire_eligible_track_ids: set[int] = set()
         split_margin_track_ids: set[int] = set()
         for row, track_id in enumerate(track_ids):
+            if track_id in self._suppressed_roi_edge_twin_ids:
+                # Suppressed ROI-edge twins stay in the track list and age
+                # normally, but they must not claim a detection or count as a
+                # second physical car anywhere downstream of this row.
+                continue
             track = self._tracks[track_id]
             predicted_point = predictions[track_id]
             predicted_box = self._predicted_box(track, predicted_point)
@@ -1679,6 +1856,7 @@ class MotionVehicleTracker:
             if len(compatible) == 1:
                 stale_track_inside = any(
                     track_id not in reacquire_eligible_track_ids
+                    and track_id not in self._suppressed_roi_edge_twin_ids
                     and x - 12 <= predictions[track_id][0] <= x + width + 12
                     and y - 12 <= predictions[track_id][1] <= y + height + 12
                     for track_id in track_ids
@@ -1881,6 +2059,7 @@ class MotionVehicleTracker:
         track.priority_observation_count = 1 if track.priority_track else 0
         track.roi_clipped = bool(detection.get("roi_clipped", False))
         track.roi_support_ratio = float(detection.get("roi_support_ratio", 1.0))
+        track.roi_edge_twin_suppressed = False
         track.dark_foreground_rescued = bool(
             detection.get("dark_foreground_rescued", False)
         )
@@ -1957,6 +2136,7 @@ class MotionVehicleTracker:
         track.ground_point = self._ground_point(point)
         track.roi_clipped = bool(detection.get("roi_clipped", False))
         track.roi_support_ratio = float(detection.get("roi_support_ratio", 1.0))
+        track.roi_edge_starved = False
         track.dark_foreground_rescued = bool(
             detection.get("dark_foreground_rescued", False)
         )
@@ -2044,6 +2224,7 @@ class MotionVehicleTracker:
         )
         self._last_association_events = []
         self._newly_lost_tracks = []
+        self._roi_rejected_points = []
         predictions = self._predict_tracks()
         if self.enable_occlusion_guard:
             self.occlusion_guard.prepare(self._tracks, predictions,
@@ -2089,9 +2270,35 @@ class MotionVehicleTracker:
                 and (track_id, detection_id) in self._viable_pairs
                 for detection_id in self._ambiguous_detection_ids
             )
-            track.association_state = "frozen_ambiguous" if frozen else "coasting"
-            track.observation_kind = 'occluded_prediction' if frozen else 'prediction'
+            if track_id in self._suppressed_roi_edge_twin_ids:
+                # A duplicate lineage parked on an ROI-clipped vehicle: kept
+                # for audit/TTL, but invisible to identity allocation.
+                track.association_state = "suppressed_roi_edge_twin"
+                track.observation_kind = 'prediction'
+            else:
+                track.association_state = "frozen_ambiguous" if frozen else "coasting"
+                track.observation_kind = 'occluded_prediction' if frozen else 'prediction'
             track.assignment_cost = {}
+            if (
+                track.consecutive_invisible_count > 0
+                and track_id not in self._suppressed_roi_edge_twin_ids
+                and self._roi_rejected_points
+            ):
+                # Rejected detections never reach association, so a car
+                # drifting into an ROI-edge dead zone starves its own track.
+                # Mark the vanish so the GID manager can weaken the
+                # same-camera 'different car' prior there.  Sticky until a
+                # real match clears it in _apply_detection.
+                predicted_point = predictions.get(track_id)
+                if predicted_point is None:
+                    predicted_point = (track.cx, track.cy)
+                for rejected_point in self._roi_rejected_points:
+                    if np.hypot(
+                        rejected_point[0] - predicted_point[0],
+                        rejected_point[1] - predicted_point[1],
+                    ) <= self.max_distance:
+                        track.roi_edge_starved = True
+                        break
             if track.status == TrackStatus.CONFIRMED:
                 track.status = TrackStatus.LOST
                 self._newly_lost_tracks.append((track_id, track))
@@ -2263,6 +2470,9 @@ class MotionVehicleTracker:
                 "roi_clipped": bool(getattr(track, "roi_clipped", False)),
                 "roi_support_ratio": round(
                     float(getattr(track, "roi_support_ratio", 1.0)), 4
+                ),
+                "roi_edge_twin_suppressed": bool(
+                    getattr(track, "roi_edge_twin_suppressed", False)
                 ),
                 "dark_foreground_rescued": bool(
                     getattr(track, "dark_foreground_rescued", False)

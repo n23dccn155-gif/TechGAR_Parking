@@ -1,0 +1,19 @@
+[
+ {"file":"slide1_overview_annotated.jpg","slide":1,"description_vi":"Ảnh mô hình bãi đỗ annotate: chai nước = cột/điểm mù, tripod = vùng mù, khung cyan = vùng ô đỗ","source":"SA frame_0100_baseline_raw_cam1.jpg","frame_or_range":"f100 session_cam1_live","verified":true},
+ {"file":"slide2_cam1_blind.jpg","slide":2,"description_vi":"Cam1: xe tại rìa FOV + cột tạo vùng mù","source":"session_cam1_live.mp4","frame_or_range":"f300","verified":true},
+ {"file":"slide2_cam2_sees.jpg","slide":2,"description_vi":"Cam2 cùng thời điểm: xe rõ, nhãn G#1 moving","source":"session_cam2_live.mp4","frame_or_range":"f300","verified":true},
+ {"file":"slide6_moving.jpg","slide":6,"description_vi":"Xe moving + bbox/nhãn debug","source":"SA frame_0278_gid_created_debug_cam2.jpg","frame_or_range":"f278","verified":true},
+ {"file":"slide6_occluded.jpg","slide":6,"description_vi":"Xe bị che/tại rìa FOV gần cột","source":"session_cam1_live.mp4","frame_or_range":"f300","verified":true},
+ {"file":"slide6_stopped.jpg","slide":6,"description_vi":"Xe đỗ tĩnh tại ô (parked confirmed)","source":"SA frame_0543_parked_confirmed_debug_cam2.jpg","frame_or_range":"f543","verified":true},
+ {"file":"clip_s01_overview.mp4","slide":1,"description_vi":"Clip 8s cảnh bãi tĩnh → xe vào","source":"session_cam1_live.mp4","frame_or_range":"50-250","verified":true},
+ {"file":"slide8_car_crop.png","slide":8,"description_vi":"Crop xe sạch minh họa thuộc tính cost","source":"OUT hiep2 raw_cam2.mp4","frame_or_range":"~f1182","verified":true},
+ {"file":"slide9_dark_cam1_f0200.jpg","slide":9,"description_vi":"Điều kiện TỐI (median gray ~45)","source":"OUT toi1 raw_cam1.mp4","frame_or_range":"f200","verified":true},
+ {"file":"slide9_normal_cam1_f1200.jpg","slide":9,"description_vi":"Điều kiện BÌNH THƯỜNG","source":"OUT hiep2 raw_cam1.mp4","frame_or_range":"f1200","verified":true},
+ {"file":"slide9_glare_cam1_f0005.jpg","slide":9,"description_vi":"Điều kiện LÓA ĐÈN (đèn pin lọt frame)","source":"OUT toi1 raw_cam1.mp4","frame_or_range":"f5","verified":true},
+ {"file":"slide10_slot_closeup.jpg","slide":10,"description_vi":"Crop ô D02 đỏ occupied","source":"SA frame_0543_parked_confirmed_debug_cam1.jpg","frame_or_range":"f543","verified":true},
+ {"file":"slide12_failure_gid4_f1182.jpg","slide":12,"description_vi":"FAILURE documented: nhãn G#4 trên xe đen rời D01 (trước là G#2)","source":"OUT hiep2 debug_cam2.mp4","frame_or_range":"f1182","verified":true},
+ {"file":"slide12_failure_split60cm_f1792.jpg","slide":12,"description_vi":"Split-identity thật: gid1 bound 2 cam cách 60-67cm","source":"OUT hiep7 debug_cam1+2.mp4","frame_or_range":"f1792","verified":true},
+ {"file":"slide12_glare_context_f0005.jpg","slide":12,"description_vi":"Minh họa điều kiện lóa đèn (KHÔNG phải session fail)","source":"OUT toi1 raw_cam1.mp4","frame_or_range":"f5","verified":true},
+ {"file":"clip_s11_park_cycle.mp4","slide":11,"description_vi":"Clip ~10.4s arrival→parked→departure","source":"session_cam2_live.mp4","frame_or_range":"500-760","verified":true},
+ {"file":"clip_s12_failure_depart.mp4","slide":12,"description_vi":"Clip ~3.6s xe đen rời D01 → G#4 minted","source":"OUT hiep2 debug_cam2.mp4","frame_or_range":"1140-1230","verified":true}
+]

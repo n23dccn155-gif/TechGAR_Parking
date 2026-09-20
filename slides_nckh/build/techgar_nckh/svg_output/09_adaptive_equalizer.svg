@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">ADAPTIVE EQUALIZER — ĐIỀU KIỆN ÁNH SÁNG</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Tại sao một bộ tham số cố định không đủ?</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">09 / 13</text>
+  </g>
+
+  <g id="cond-dark" data-pptx-bounds="64 142 368 272">
+    <image href="../images/slide9_dark_cam1_f0200.jpg" x="64" y="142" width="368" height="207" preserveAspectRatio="xMidYMid slice" />
+    <rect x="64" y="142" width="368" height="207" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <rect x="64" y="142" width="72" height="28" fill="#0F1928" />
+    <text x="100" y="162" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">TỐI</text>
+    <text x="64" y="374" font-size="16" fill="#0F1928">→ nâng vùng tối, hồi chi tiết</text>
+    <text x="64" y="402" font-size="13" fill="#4E5D78">toi1 · cam1 @f200 — rig mat thu nhỏ</text>
+  </g>
+
+  <g id="cond-normal" data-pptx-bounds="456 142 368 272">
+    <image href="../images/slide9_normal_cam1_f1200.jpg" x="456" y="142" width="368" height="207" preserveAspectRatio="xMidYMid slice" />
+    <rect x="456" y="142" width="368" height="207" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <rect x="456" y="142" width="110" height="28" fill="#004FFF" />
+    <text x="511" y="162" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">THƯỜNG</text>
+    <text x="456" y="374" font-size="16" fill="#0F1928">→ giữ tương phản gốc</text>
+    <text x="456" y="402" font-size="13" fill="#4E5D78">hiep2 · cam1 @f1200 — scale-model</text>
+  </g>
+
+  <g id="cond-glare" data-pptx-bounds="848 142 368 272">
+    <image href="../images/slide9_glare_cam1_f0005.jpg" x="848" y="142" width="368" height="207" preserveAspectRatio="xMidYMid slice" />
+    <rect x="848" y="142" width="368" height="207" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <rect x="848" y="142" width="110" height="28" fill="#00227A" />
+    <text x="903" y="162" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">LÓA ĐÈN</text>
+    <text x="848" y="374" font-size="16" fill="#0F1928">→ hạn chế vùng sáng bão hòa</text>
+    <text x="848" y="402" font-size="13" fill="#4E5D78">toi1 · cam1 @f005 — đèn lóa + sàn phản xạ</text>
+  </g>
+
+  <g id="ensemble-panel" data-pptx-bounds="64 432 1152 228">
+    <rect x="64" y="432" width="500" height="228" fill="#00227A" />
+    <text x="96" y="468" font-size="14" font-weight="bold" fill="#9AE7FC">ENSEMBLE QUANH CẤU HÌNH NỀN</text>
+    <text x="96" y="556" font-size="80" font-weight="bold" fill="#00E5FF">25</text>
+    <text x="240" y="520" font-size="18" font-weight="bold" fill="#FFFFFF">biến thể γ×CLAHE</text>
+    <text x="240" y="550" font-size="15" fill="#9AE7FC">= 5 mức Δγ × 5 mức ΔCLAHE</text>
+    <text x="96" y="608" font-size="15" fill="#FFFFFF">Kết hợp quyết định —<tspan x="96" dy="24">không một bộ tham số duy nhất</tspan></text>
+    <line x1="596" y1="452" x2="596" y2="640" stroke="#B9CFE8" stroke-width="1" />
+    <text x="628" y="464" font-size="14" font-weight="bold" fill="#4E5D78">CẤU HÌNH NỀN — [design-param] · VERIFIED-CODE</text>
+    <text x="628" y="502" font-size="16" fill="#4E5D78">γ nền</text>
+    <text x="800" y="502" font-size="18" font-weight="bold" fill="#004FFF">≈ 2.5 – 2.8</text>
+    <text x="628" y="542" font-size="16" fill="#4E5D78">CLAHE</text>
+    <text x="800" y="542" font-size="18" font-weight="bold" fill="#004FFF">≈ 2.0</text>
+    <text x="628" y="582" font-size="16" fill="#4E5D78">Biên điều chỉnh</text>
+    <text x="800" y="582" font-size="18" font-weight="bold" fill="#004FFF">Δγ ±0.2 · ΔCLAHE ±0.5</text>
+    <text x="628" y="622" font-size="16" fill="#4E5D78">Lưới CLAHE</text>
+    <text x="800" y="622" font-size="18" font-weight="bold" fill="#004FFF">8 × 8</text>
+    <text x="628" y="650" font-size="13" fill="#4E5D78">parking_detector.py:100-104 · :454-456 — tuning trên indoor validation set</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Ảnh toi1 = rig mat nhỏ hơn — chỉ minh họa điều kiện ánh sáng · scale-model testbed · không chứng minh tracking</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

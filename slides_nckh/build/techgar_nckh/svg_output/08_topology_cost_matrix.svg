@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">CROSS-CAMERA MATCHING — ĐIỀU KIỆN GHÉP</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Khi nào hai track được xem là cùng một xe?</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">08 / 13</text>
+  </g>
+
+  <g id="panel-topology" data-pptx-bounds="64 142 560 516">
+    <rect x="64" y="142" width="560" height="44" fill="#0036B3" />
+    <text x="88" y="170" font-size="17" font-weight="bold" fill="#FFFFFF">BƯỚC 1 — TOPOLOGY GATE</text>
+    <image href="../images/lane_graph_spots.png" x="64" y="198" width="560" height="300" preserveAspectRatio="xMidYMid meet" />
+    <rect x="64" y="198" width="560" height="300" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <use data-icon="tabler-outline/route" x="72" y="516" width="20" height="20" fill="#004FFF" stroke-width="2" />
+    <text x="102" y="532" font-size="16" fill="#0F1928">Xe vào đúng hành lang topology</text>
+    <use data-icon="tabler-outline/crosshair" x="72" y="548" width="20" height="20" fill="#004FFF" stroke-width="2" />
+    <text x="102" y="564" font-size="16" fill="#0F1928">Có candidate hợp lệ ở camera còn lại</text>
+    <use data-icon="tabler-outline/alert-triangle" x="72" y="580" width="20" height="20" fill="#00227A" stroke-width="2" />
+    <text x="102" y="596" font-size="16" font-weight="bold" fill="#00227A">→ Mới tính cost — không quét toàn bãi</text>
+    <text x="64" y="646" font-size="13" fill="#4E5D78">Lane graph + spot nodes — cấu hình shared_map_01 (scale-model)</text>
+  </g>
+
+  <g id="panel-cost" data-pptx-bounds="656 142 560 516">
+    <rect x="656" y="142" width="560" height="44" fill="#004FFF" />
+    <text x="680" y="170" font-size="17" font-weight="bold" fill="#FFFFFF">BƯỚC 2 — COST MATRIX + THUỘC TÍNH</text>
+    <g id="cost-formula" data-pptx-replace-with="formula" data-pptx-x="656" data-pptx-y="202" data-pptx-width="560" data-pptx-height="66" data-pptx-bounds="656 202 560 66">
+      <metadata type="application/json"><![CDATA[
+        {"latex":"C=0.55\\,D_{ground}+0.30\\,D_{color}+0.10\\,D_{scale}+0.05\\,D_{heading}","display":"block","font_size":22,"color":"#00227A","align":"center"}
+      ]]></metadata>
+      <rect x="656" y="202" width="560" height="66" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <text x="936" y="243" text-anchor="middle" font-size="15" font-weight="bold" fill="#00227A">C = 0.55·D_ground + 0.30·D_color + 0.10·D_scale + 0.05·D_heading</text>
+    </g>
+    <g id="attr-chips" data-pptx-bounds="656 282 560 64">
+      <rect x="656" y="282" width="130" height="64" fill="#004FFF" />
+      <text x="721" y="306" font-size="12" font-weight="bold" fill="#9AE7FC" text-anchor="middle">VỊ TRÍ</text>
+      <text x="721" y="332" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle">0.55</text>
+      <rect x="798" y="282" width="130" height="64" fill="#0036B3" />
+      <text x="863" y="306" font-size="12" font-weight="bold" fill="#9AE7FC" text-anchor="middle">MÀU</text>
+      <text x="863" y="332" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle">0.30</text>
+      <rect x="940" y="282" width="130" height="64" fill="#00227A" />
+      <text x="1005" y="306" font-size="12" font-weight="bold" fill="#9AE7FC" text-anchor="middle">KÍCH THƯỚC</text>
+      <text x="1005" y="332" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle">0.10</text>
+      <rect x="1082" y="282" width="130" height="64" fill="#4E5D78" />
+      <text x="1147" y="306" font-size="12" font-weight="bold" fill="#9AE7FC" text-anchor="middle">HƯỚNG</text>
+      <text x="1147" y="332" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle">0.05</text>
+    </g>
+    <g id="car-attr" data-pptx-bounds="656 362 200 190">
+      <image href="../images/slide8_car_crop.png" x="656" y="362" width="190" height="120" preserveAspectRatio="xMidYMid meet" />
+      <rect x="656" y="362" width="190" height="120" fill="none" stroke="#B9CFE8" stroke-width="2" />
+      <text x="656" y="500" font-size="13" fill="#4E5D78">Crop xe — trích thuộc tính</text>
+      <text x="656" y="520" font-size="13" fill="#4E5D78">vị trí · màu · kích thước · hướng</text>
+      <text x="656" y="546" font-size="13" fill="#4E5D78">scale-model testbed</text>
+    </g>
+    <g id="angle-gate" data-pptx-bounds="880 362 336 194">
+      <g id="cos-formula" data-pptx-replace-with="formula" data-pptx-x="880" data-pptx-y="362" data-pptx-width="336" data-pptx-height="56" data-pptx-bounds="880 362 336 56">
+        <metadata type="application/json"><![CDATA[
+          {"latex":"\\cos\\theta=\\frac{v_{1}\\cdot v_{2}}{|v_{1}|\\,|v_{2}|}","display":"block","font_size":24,"color":"#00227A","align":"center"}
+        ]]></metadata>
+        <rect x="880" y="362" width="336" height="56" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+        <text x="1048" y="397" text-anchor="middle" font-size="20" font-weight="bold" fill="#00227A">cos θ = (v₁·v₂)/(|v₁||v₂|)</text>
+      </g>
+      <rect x="880" y="430" width="336" height="50" fill="#00227A" />
+      <text x="1048" y="462" font-size="19" font-weight="bold" fill="#00E5FF" text-anchor="middle">cos θ &lt; 0.25 ⇒ REJECT</text>
+      <text x="880" y="496" font-size="14" fill="#4E5D78">Góc θ giữa 2 vector hướng di chuyển</text>
+      <g id="angle-cases">
+        <g id="case-accept">
+          <line x1="892" y1="512" x2="946" y2="512" stroke="#004FFF" stroke-width="2.5" />
+          <polygon points="946,506 946,518 960,512" fill="#004FFF" />
+          <line x1="892" y1="530" x2="946" y2="530" stroke="#004FFF" stroke-width="2.5" />
+          <polygon points="946,524 946,536 960,530" fill="#004FFF" />
+          <text x="966" y="521" font-size="11" fill="#004FFF">cos≈1</text>
+          <text x="926" y="552" font-size="12" fill="#004FFF" text-anchor="middle">cùng hướng</text>
+        </g>
+        <g id="case-skew">
+          <line x1="1006" y1="528" x2="1058" y2="528" stroke="#4E5D78" stroke-width="2.5" />
+          <polygon points="1058,522 1058,534 1072,528" fill="#4E5D78" />
+          <line x1="1006" y1="522" x2="1054" y2="508" stroke="#4E5D78" stroke-width="2.5" />
+          <polygon points="1062,506 1055,513 1053,503" fill="#4E5D78" />
+          <text x="1040" y="552" font-size="12" fill="#4E5D78" text-anchor="middle">lệch vừa</text>
+        </g>
+        <g id="case-reject">
+          <line x1="1108" y1="512" x2="1156" y2="512" stroke="#B91C1C" stroke-width="2.5" />
+          <polygon points="1156,506 1156,518 1170,512" fill="#B91C1C" />
+          <line x1="1198" y1="530" x2="1150" y2="530" stroke="#B91C1C" stroke-width="2.5" />
+          <polygon points="1150,524 1150,536 1136,530" fill="#B91C1C" />
+          <text x="1150" y="552" font-size="11" font-weight="bold" fill="#B91C1C" text-anchor="middle">ngược hướng ⇒ REJECT</text>
+        </g>
+      </g>
+    </g>
+    <rect x="656" y="570" width="560" height="70" fill="#00227A" fill-opacity="0.06" />
+    <text x="672" y="596" font-size="14" font-weight="bold" fill="#00227A">Nguồn tham số</text>
+    <text x="672" y="620" font-size="14" fill="#4E5D78">0.55/0.30/0.10/0.05 và cos θ &lt; 0.25 là tuning thực nghiệm<tspan x="672" dy="19">(heuristic) — VERIFIED-CODE cross_camera_manager.py</tspan></text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Topology Gate lọc ứng viên trước — Cost Matrix chỉ chạy trên candidate hợp lệ · [design-param]</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

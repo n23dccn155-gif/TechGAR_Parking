@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="cover" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="cover-headline" data-pptx-bounds="64 40 456 236">
+    <text x="64" y="60" font-size="16" font-weight="bold" fill="#004FFF">NGHIÊN CỨU KHOA HỌC · TechGAR</text>
+    <text x="64" y="118" font-size="44" font-weight="bold" fill="#0F1928">Định vị phương tiện<tspan x="64" dy="56">và quản lý ô đỗ</tspan><tspan x="64" dy="56">trong tầng hầm</tspan></text>
+    <rect x="64" y="252" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="252" width="20" height="4" fill="#00E5FF" />
+  </g>
+
+  <g id="research-question-panel" data-pptx-bounds="64 288 480 138">
+    <rect x="64" y="288" width="480" height="138" fill="#00227A" />
+    <text x="88" y="316" font-size="14" font-weight="bold" fill="#9AE7FC">CÂU HỎI NGHIÊN CỨU</text>
+    <text x="88" y="352" font-size="20" font-weight="bold" fill="#FFFFFF">XE NÀO? — Ở ĐÂU? — ĐANG Ở Ô NÀO?</text>
+    <text x="88" y="382" font-size="16" fill="#9AE7FC">xác định đồng thời danh tính, vị trí mặt sàn<tspan x="88" dy="22">và ô đỗ mà không gắn thiết bị lên từng xe</tspan></text>
+  </g>
+
+  <g id="challenge-list" data-pptx-bounds="64 444 456 212">
+    <g id="challenge-1">
+      <use data-icon="tabler-outline/satellite-off" x="64" y="448" width="22" height="22" fill="#004FFF" stroke-width="2" />
+      <text x="100" y="465" font-size="17" fill="#0F1928">GNSS yếu hoặc vắng mặt trong tầng hầm.</text>
+    </g>
+    <g id="challenge-2">
+      <use data-icon="tabler-outline/eye-off" x="64" y="488" width="22" height="22" fill="#004FFF" stroke-width="2" />
+      <text x="100" y="505" font-size="17" fill="#0F1928">Cột bê tông tạo điểm mù và che khuất.</text>
+    </g>
+    <g id="challenge-3">
+      <use data-icon="tabler-outline/car" x="64" y="528" width="22" height="22" fill="#004FFF" stroke-width="2" />
+      <text x="100" y="545" font-size="17" fill="#0F1928">Xe chồng lấn trong góc nhìn camera.</text>
+    </g>
+    <g id="challenge-4">
+      <use data-icon="tabler-outline/crosshair" x="64" y="568" width="22" height="22" fill="#004FFF" stroke-width="2" />
+      <text x="100" y="585" font-size="17" fill="#0F1928">Camera góc chéo → tọa độ pixel ≠ tọa độ thực.</text>
+    </g>
+    <g id="challenge-5">
+      <use data-icon="tabler-outline/alert-triangle" x="64" y="608" width="22" height="22" fill="#004FFF" stroke-width="2" />
+      <text x="100" y="625" font-size="17" fill="#0F1928">Không gắn beacon / UWB / LiDAR lên mọi xe.</text>
+    </g>
+  </g>
+
+  <g id="hero-image" data-pptx-bounds="560 24 720 436">
+    <image href="../images/slide1_overview_annotated.jpg" x="560" y="24" width="720" height="405" preserveAspectRatio="xMidYMid slice" />
+    <path d="M560 24 h28 M560 24 v28 M1252 24 h28 M1280 24 v28 M560 401 v28 M560 429 h28 M1252 429 v-28 M1280 429 h-28" stroke="#004FFF" stroke-width="3" fill="none" />
+    <text x="560" y="452" font-size="14" fill="#4E5D78">Mô hình bãi đỗ thu nhỏ — annotate cột / điểm mù / FOV / overlap · session_cam1 f100</text>
+  </g>
+
+  <g id="video-block" data-pptx-bounds="560 478 680 194">
+    <image href="../images/poster_s01.jpg" x="560" y="478" width="360" height="203" preserveAspectRatio="xMidYMid slice" />
+    <rect x="560" y="478" width="360" height="203" fill="#00227A" fill-opacity="0.18" />
+    <circle cx="740" cy="580" r="26" fill="#00227A" fill-opacity="0.85" />
+    <path d="M732 566 l24 14 l-24 14 z" fill="#00E5FF" />
+    <text x="936" y="500" font-size="14" font-weight="bold" fill="#004FFF">VIDEO — clip_s01_overview.mp4</text>
+    <text x="936" y="526" font-size="16" fill="#0F1928">Cảnh bãi tĩnh → xe vào</text>
+    <text x="936" y="548" font-size="16" fill="#4E5D78">~8 s · 25 FPS</text>
+    <text x="936" y="586" font-size="14" fill="#4E5D78">Footage thu trên mô hình bãi đỗ<tspan x="936" dy="20">thu nhỏ (scale-model testbed),</tspan><tspan x="936" dy="20">2 điện thoại DroidCam làm camera.</tspan></text>
+    <text x="936" y="662" font-size="14" fill="#4E5D78">Nguồn: session_cam1_live f50–250</text>
+  </g>
+
+  <g id="cover-pagenum" data-pptx-bounds="64 676 1152 24" fill="#4E5D78" font-size="14">
+    <text x="64" y="694">TechGAR — Định vị &amp; quản lý ô đỗ bằng multi-camera</text>
+    <text x="1216" y="694" font-weight="bold" text-anchor="end">01 / 13</text>
+  </g>
+</svg>

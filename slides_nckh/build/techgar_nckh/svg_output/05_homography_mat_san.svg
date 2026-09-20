@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">GROUND MAPPING — HOMOGRAPHY</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Từ ảnh camera góc chéo đến tọa độ thực trên mặt sàn</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">05 / 13</text>
+  </g>
+
+  <g id="before-images" data-pptx-bounds="64 142 376 522">
+    <text x="64" y="164" font-size="15" font-weight="bold" fill="#4E5D78">TRƯỚC — ẢNH XIÊN + ĐIỂM NEO</text>
+    <image href="../images/calib_cam1_marked.png" x="64" y="178" width="376" height="211" preserveAspectRatio="xMidYMid meet" />
+    <rect x="64" y="178" width="376" height="211" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="64" y="406" font-size="14" fill="#4E5D78">Cam 1 — điểm neo A–D trên mặt sàn</text>
+    <image href="../images/calib_cam2_marked.png" x="64" y="424" width="376" height="211" preserveAspectRatio="xMidYMid meet" />
+    <rect x="64" y="424" width="376" height="211" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="64" y="652" font-size="14" fill="#4E5D78">Cam 2 — cùng hệ điểm trên Z = 0</text>
+  </g>
+
+  <g id="transform-panel" data-pptx-bounds="470 142 346 428">
+    <text x="470" y="164" font-size="15" font-weight="bold" fill="#004FFF">BIẾN ĐỔI — HOMOGRAPHY</text>
+    <g id="homography-formula" data-pptx-replace-with="formula" data-pptx-x="470" data-pptx-y="186" data-pptx-width="330" data-pptx-height="70" data-pptx-bounds="470 186 330 70">
+      <metadata type="application/json"><![CDATA[
+        {"latex":"s\\left[X,Y,1\\right]^{T}=H\\left[u,v,1\\right]^{T}","display":"block","font_size":30,"color":"#00227A","align":"center"}
+      ]]></metadata>
+      <rect x="470" y="186" width="330" height="70" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <text x="635" y="230" text-anchor="middle" font-size="26" font-weight="bold" fill="#00227A">s[X,Y,1]ᵀ = H[u,v,1]ᵀ</text>
+    </g>
+    <g id="mapping-points">
+      <use data-icon="tabler-outline/map-pin" x="470" y="290" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="500" y="306" font-size="16" fill="#0F1928">Neo vào điểm sàn Z = 0</text>
+      <use data-icon="tabler-outline/car" x="470" y="326" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="500" y="342" font-size="16" fill="#0F1928">Xe 3D — không ghép mái xe</text>
+      <use data-icon="tabler-outline/map" x="470" y="362" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="500" y="378" font-size="16" fill="#0F1928">Một hệ tọa độ thống nhất<tspan x="500" dy="20">cho mọi camera</tspan></text>
+      <use data-icon="tabler-outline/target" x="470" y="418" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="500" y="434" font-size="16" fill="#0F1928">Điểm chạm sàn về cùng hệ</text>
+    </g>
+    <rect x="470" y="462" width="330" height="100" fill="#00227A" fill-opacity="0.06" />
+    <text x="486" y="490" font-size="14" font-weight="bold" fill="#00227A">Giới hạn phát biểu</text>
+    <text x="486" y="514" font-size="14" fill="#4E5D78">Ánh xạ nhất quán các điểm trên mặt<tspan x="486" dy="20">phẳng tham chiếu — hạn chế ảnh hưởng</tspan><tspan x="486" dy="20">parallax đối với định vị mặt sàn.</tspan></text>
+  </g>
+
+  <g id="after-image" data-pptx-bounds="830 142 386 330">
+    <text x="830" y="164" font-size="15" font-weight="bold" fill="#4E5D78">SAU — SHARED MAP (WORLD FRAME)</text>
+    <image href="../images/roi_full_view.png" x="830" y="178" width="386" height="248" preserveAspectRatio="xMidYMid meet" />
+    <rect x="830" y="178" width="386" height="248" fill="none" stroke="#004FFF" stroke-width="2" />
+    <text x="830" y="446" font-size="14" fill="#4E5D78">Blend 50/50 hai camera trong shared world map —<tspan x="830" dy="20">vạch sàn trùng nhau = H1/H2 chuẩn</tspan></text>
+  </g>
+
+  <g id="seam-stats" data-pptx-bounds="830 490 386 160">
+    <text x="830" y="512" font-size="15" font-weight="bold" fill="#4E5D78">SEAM BENCHMARK — CAM 1 ↔ CAM 2</text>
+    <text x="830" y="568" font-size="48" font-weight="bold" fill="#004FFF">1,13<tspan font-size="24"> cm</tspan></text>
+    <text x="830" y="600" font-size="15" fill="#4E5D78">p50 — sai số seam</text>
+    <text x="1030" y="560" font-size="30" font-weight="bold" fill="#00227A">945<tspan font-size="16"> cặp</tspan></text>
+    <text x="1030" y="584" font-size="14" fill="#4E5D78">điểm kiểm tra</text>
+    <text x="1030" y="616" font-size="30" font-weight="bold" fill="#00227A">4,39<tspan font-size="16"> cm</tspan></text>
+    <text x="1030" y="640" font-size="14" fill="#4E5D78">p95</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Seam benchmark cam1↔cam2 — [doc-claimed: session 2808_3] · ảnh calib + shared_map_01 trên mô hình bãi đỗ thu nhỏ</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

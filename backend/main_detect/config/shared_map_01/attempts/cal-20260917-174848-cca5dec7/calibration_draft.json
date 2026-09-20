@@ -1,0 +1,2064 @@
+{
+  "schema_version": 5,
+  "calibration_id": "cal-20260917-174848-cca5dec7",
+  "calibration_status": "draft_failed",
+  "calibration_algorithm": "rectangle_line_v1",
+  "world": {
+    "unit": "cm",
+    "coordinate_system": "measured_parking_ground_plane",
+    "bounds": {
+      "min_x_cm": -51.375,
+      "min_y_cm": -36.502,
+      "max_x_cm": 66.049,
+      "max_y_cm": 100.322
+    },
+    "full_view_bounds": {
+      "min_x_cm": -54.131,
+      "min_y_cm": -50.895,
+      "max_x_cm": 66.318,
+      "max_y_cm": 122.641
+    }
+  },
+  "camera_transforms": {
+    "cam1": [
+      [
+        0.0007441197788706426,
+        -0.15416109028354824,
+        33.56956124420099
+      ],
+      [
+        -0.11730930238882982,
+        0.030678219904070582,
+        110.67334317193956
+      ],
+      [
+        1.6251435195913e-05,
+        0.0009544839228260856,
+        1.0
+      ]
+    ],
+    "cam2": [
+      [
+        0.003571620325744163,
+        0.1614152208096394,
+        -16.80458114015516
+      ],
+      [
+        0.111427465490967,
+        0.025513303298786625,
+        -38.92714120363292
+      ],
+      [
+        5.645591097387021e-05,
+        0.000997877567778966,
+        1.0
+      ]
+    ]
+  },
+  "camera_coverage_world": {
+    "cam1": [
+      [
+        -43.2768,
+        73.751
+      ],
+      [
+        -42.311,
+        -10.8673
+      ],
+      [
+        6.4557,
+        -23.2512
+      ],
+      [
+        8.0539,
+        90.8858
+      ]
+    ],
+    "cam2": [
+      [
+        57.7365,
+        -9.5276
+      ],
+      [
+        57.9509,
+        67.3725
+      ],
+      [
+        3.2869,
+        80.5295
+      ],
+      [
+        1.5962,
+        -27.066
+      ]
+    ]
+  },
+  "camera_full_view_world": {
+    "cam1": [
+      [
+        33.5696,
+        110.6733
+      ],
+      [
+        33.8184,
+        -38.5637
+      ],
+      [
+        -44.7088,
+        -10.1388
+      ],
+      [
+        -45.8243,
+        78.7126
+      ]
+    ],
+    "cam2": [
+      [
+        -16.8046,
+        -38.9271
+      ],
+      [
+        -11.4124,
+        96.6125
+      ],
+      [
+        58.0109,
+        68.1309
+      ],
+      [
+        57.7901,
+        -11.9845
+      ]
+    ]
+  },
+  "parking_slots_world": {
+    "cam1": [
+      {
+        "id": "F01",
+        "polygon": [
+          [
+            -28.9206,
+            8.8605
+          ],
+          [
+            -28.7808,
+            3.5064
+          ],
+          [
+            -37.9069,
+            3.6535
+          ],
+          [
+            -38.2617,
+            9.0439
+          ]
+        ]
+      },
+      {
+        "id": "F02",
+        "polygon": [
+          [
+            -29.2309,
+            14.3954
+          ],
+          [
+            -28.9206,
+            8.8605
+          ],
+          [
+            -38.3348,
+            9.0576
+          ],
+          [
+            -38.4664,
+            14.1037
+          ]
+        ]
+      },
+      {
+        "id": "F03",
+        "polygon": [
+          [
+            -29.283,
+            19.4226
+          ],
+          [
+            -29.2309,
+            14.3954
+          ],
+          [
+            -38.3959,
+            14.3121
+          ],
+          [
+            -38.5276,
+            19.3625
+          ]
+        ]
+      },
+      {
+        "id": "F04",
+        "polygon": [
+          [
+            -29.3401,
+            24.929
+          ],
+          [
+            -29.2854,
+            19.6584
+          ],
+          [
+            -38.4563,
+            19.5012
+          ],
+          [
+            -38.5177,
+            24.771
+          ]
+        ]
+      },
+      {
+        "id": "F05",
+        "polygon": [
+          [
+            -29.394,
+            30.1285
+          ],
+          [
+            -29.3434,
+            25.2439
+          ],
+          [
+            -38.3731,
+            24.9089
+          ],
+          [
+            -38.5782,
+            29.9751
+          ]
+        ]
+      },
+      {
+        "id": "F06",
+        "polygon": [
+          [
+            -29.1935,
+            35.2625
+          ],
+          [
+            -29.312,
+            30.3639
+          ],
+          [
+            -38.5051,
+            29.9738
+          ],
+          [
+            -38.2707,
+            35.0484
+          ]
+        ]
+      },
+      {
+        "id": "F07",
+        "polygon": [
+          [
+            -28.9894,
+            40.1855
+          ],
+          [
+            -29.1943,
+            35.3416
+          ],
+          [
+            -38.2733,
+            35.2694
+          ],
+          [
+            -38.5481,
+            39.9737
+          ]
+        ]
+      },
+      {
+        "id": "F08",
+        "polygon": [
+          [
+            -28.9623,
+            45.8332
+          ],
+          [
+            -28.9919,
+            40.4236
+          ],
+          [
+            -38.4782,
+            40.2731
+          ],
+          [
+            -38.3904,
+            45.3771
+          ]
+        ]
+      },
+      {
+        "id": "F09",
+        "polygon": [
+          [
+            -28.6728,
+            50.9755
+          ],
+          [
+            -28.9631,
+            45.9128
+          ],
+          [
+            -38.3185,
+            45.5329
+          ],
+          [
+            -38.0823,
+            50.6819
+          ]
+        ]
+      },
+      {
+        "id": "F10",
+        "polygon": [
+          [
+            -28.7277,
+            56.3295
+          ],
+          [
+            -28.7593,
+            51.0431
+          ],
+          [
+            -38.158,
+            50.8191
+          ],
+          [
+            -37.8497,
+            56.31
+          ]
+        ]
+      },
+      {
+        "id": "E01",
+        "polygon": [
+          [
+            -8.9927,
+            9.0608
+          ],
+          [
+            -8.955,
+            4.0926
+          ],
+          [
+            -17.603,
+            4.1524
+          ],
+          [
+            -17.7467,
+            9.1943
+          ]
+        ]
+      },
+      {
+        "id": "E02",
+        "polygon": [
+          [
+            -9.0338,
+            14.4884
+          ],
+          [
+            -8.994,
+            9.2415
+          ],
+          [
+            -17.6486,
+            9.3489
+          ],
+          [
+            -17.8926,
+            14.4919
+          ]
+        ]
+      },
+      {
+        "id": "E03",
+        "polygon": [
+          [
+            -9.075,
+            19.9242
+          ],
+          [
+            -9.0338,
+            14.4884
+          ],
+          [
+            -17.9935,
+            14.6745
+          ],
+          [
+            -17.9399,
+            19.8667
+          ]
+        ]
+      },
+      {
+        "id": "E04",
+        "polygon": [
+          [
+            -9.2256,
+            25.0102
+          ],
+          [
+            -9.1864,
+            19.8426
+          ],
+          [
+            -17.8404,
+            19.8582
+          ],
+          [
+            -18.0853,
+            25.0834
+          ]
+        ]
+      },
+      {
+        "id": "E05",
+        "polygon": [
+          [
+            -9.1528,
+            30.1838
+          ],
+          [
+            -9.3376,
+            25.0155
+          ],
+          [
+            -17.9866,
+            25.164
+          ],
+          [
+            -17.9314,
+            30.2109
+          ]
+        ]
+      },
+      {
+        "id": "E06",
+        "polygon": [
+          [
+            -9.1928,
+            35.4611
+          ],
+          [
+            -9.3769,
+            30.1867
+          ],
+          [
+            -17.9322,
+            30.2966
+          ],
+          [
+            -18.0755,
+            35.2675
+          ]
+        ]
+      },
+      {
+        "id": "E07",
+        "polygon": [
+          [
+            -9.4565,
+            40.6424
+          ],
+          [
+            -9.1942,
+            35.6432
+          ],
+          [
+            -18.2759,
+            35.4344
+          ],
+          [
+            -18.3213,
+            40.5757
+          ]
+        ]
+      },
+      {
+        "id": "E08",
+        "polygon": [
+          [
+            -9.3839,
+            45.846
+          ],
+          [
+            -9.5698,
+            40.8181
+          ],
+          [
+            -18.3221,
+            40.6614
+          ],
+          [
+            -18.2681,
+            45.8196
+          ]
+        ]
+      },
+      {
+        "id": "E09",
+        "polygon": [
+          [
+            -9.5356,
+            51.0369
+          ],
+          [
+            -9.4974,
+            46.0183
+          ],
+          [
+            -18.0696,
+            45.9247
+          ],
+          [
+            -18.214,
+            50.9923
+          ]
+        ]
+      },
+      {
+        "id": "E10",
+        "polygon": [
+          [
+            -9.6859,
+            56.0449
+          ],
+          [
+            -9.4241,
+            51.1423
+          ],
+          [
+            -18.2132,
+            50.9062
+          ],
+          [
+            -18.1589,
+            56.0933
+          ]
+        ]
+      },
+      {
+        "id": "D01",
+        "polygon": [
+          [
+            0.2675,
+            9.1922
+          ],
+          [
+            0.0478,
+            4.1562
+          ],
+          [
+            -8.73,
+            3.9609
+          ],
+          [
+            -8.769,
+            9.1173
+          ]
+        ]
+      },
+      {
+        "id": "D02",
+        "polygon": [
+          [
+            0.2342,
+            14.471
+          ],
+          [
+            0.2662,
+            9.384
+          ],
+          [
+            -8.7696,
+            9.2079
+          ],
+          [
+            -8.9223,
+            14.566
+          ]
+        ]
+      },
+      {
+        "id": "D03",
+        "polygon": [
+          [
+            0.4543,
+            19.6419
+          ],
+          [
+            0.2342,
+            14.471
+          ],
+          [
+            -9.1458,
+            14.5014
+          ],
+          [
+            -9.075,
+            19.9242
+          ]
+        ]
+      },
+      {
+        "id": "D04",
+        "polygon": [
+          [
+            0.4199,
+            25.1372
+          ],
+          [
+            0.4531,
+            19.8345
+          ],
+          [
+            -8.9635,
+            20.0059
+          ],
+          [
+            -8.8895,
+            25.0854
+          ]
+        ]
+      },
+      {
+        "id": "D05",
+        "polygon": [
+          [
+            0.0085,
+            30.2589
+          ],
+          [
+            0.4193,
+            25.2337
+          ],
+          [
+            -9.1156,
+            25.2773
+          ],
+          [
+            -8.928,
+            30.1809
+          ]
+        ]
+      },
+      {
+        "id": "D06",
+        "polygon": [
+          [
+            -0.1523,
+            35.7546
+          ],
+          [
+            0.133,
+            30.5468
+          ],
+          [
+            -8.93,
+            30.4541
+          ],
+          [
+            -9.1935,
+            35.5522
+          ]
+        ]
+      },
+      {
+        "id": "D07",
+        "polygon": [
+          [
+            -0.0579,
+            40.781
+          ],
+          [
+            -0.1529,
+            35.8511
+          ],
+          [
+            -9.1942,
+            35.6432
+          ],
+          [
+            -9.0085,
+            40.8501
+          ]
+        ]
+      },
+      {
+        "id": "D08",
+        "polygon": [
+          [
+            0.0343,
+            46.2097
+          ],
+          [
+            0.0685,
+            40.7877
+          ],
+          [
+            -9.1211,
+            40.8437
+          ],
+          [
+            -9.1598,
+            45.9577
+          ]
+        ]
+      },
+      {
+        "id": "D09",
+        "polygon": [
+          [
+            0.0026,
+            51.2517
+          ],
+          [
+            0.161,
+            46.2208
+          ],
+          [
+            -9.1605,
+            46.0491
+          ],
+          [
+            -9.1985,
+            51.0789
+          ]
+        ]
+      },
+      {
+        "id": "D10",
+        "polygon": [
+          [
+            -0.0311,
+            56.5922
+          ],
+          [
+            0.0026,
+            51.2517
+          ],
+          [
+            -9.3117,
+            51.1563
+          ],
+          [
+            -9.5759,
+            56.3369
+          ]
+        ]
+      }
+    ],
+    "cam2": [
+      {
+        "id": "A01",
+        "polygon": [
+          [
+            39.7325,
+            4.4661
+          ],
+          [
+            39.629,
+            9.5492
+          ],
+          [
+            48.4166,
+            9.8678
+          ],
+          [
+            48.1635,
+            4.6648
+          ]
+        ]
+      },
+      {
+        "id": "A02",
+        "polygon": [
+          [
+            39.629,
+            9.5492
+          ],
+          [
+            39.6079,
+            14.6271
+          ],
+          [
+            48.3126,
+            14.8526
+          ],
+          [
+            48.4176,
+            10.007
+          ]
+        ]
+      },
+      {
+        "id": "A03",
+        "polygon": [
+          [
+            39.6919,
+            14.7836
+          ],
+          [
+            39.4226,
+            19.6776
+          ],
+          [
+            47.9957,
+            19.8137
+          ],
+          [
+            48.2421,
+            14.9153
+          ]
+        ]
+      },
+      {
+        "id": "A04",
+        "polygon": [
+          [
+            39.4235,
+            19.752
+          ],
+          [
+            39.2392,
+            24.8707
+          ],
+          [
+            47.8211,
+            24.7816
+          ],
+          [
+            48.0679,
+            19.9556
+          ]
+        ]
+      },
+      {
+        "id": "A05",
+        "polygon": [
+          [
+            39.2392,
+            24.8707
+          ],
+          [
+            39.3012,
+            29.9005
+          ],
+          [
+            47.8603,
+            29.7349
+          ],
+          [
+            47.8222,
+            24.9195
+          ]
+        ]
+      },
+      {
+        "id": "A06",
+        "polygon": [
+          [
+            39.303,
+            30.048
+          ],
+          [
+            39.3611,
+            34.7576
+          ],
+          [
+            47.9691,
+            34.521
+          ],
+          [
+            47.8609,
+            29.8035
+          ]
+        ]
+      },
+      {
+        "id": "A07",
+        "polygon": [
+          [
+            39.28,
+            34.8372
+          ],
+          [
+            39.667,
+            39.7082
+          ],
+          [
+            48.2899,
+            39.4554
+          ],
+          [
+            48.111,
+            34.578
+          ]
+        ]
+      },
+      {
+        "id": "A08",
+        "polygon": [
+          [
+            39.7482,
+            39.6988
+          ],
+          [
+            39.8866,
+            44.4092
+          ],
+          [
+            48.1852,
+            44.0727
+          ],
+          [
+            48.2888,
+            39.32
+          ]
+        ]
+      },
+      {
+        "id": "A09",
+        "polygon": [
+          [
+            39.8866,
+            44.4092
+          ],
+          [
+            39.5407,
+            49.3289
+          ],
+          [
+            48.3614,
+            48.6895
+          ],
+          [
+            48.1863,
+            44.2076
+          ]
+        ]
+      },
+      {
+        "id": "A10",
+        "polygon": [
+          [
+            39.6227,
+            49.3854
+          ],
+          [
+            39.5985,
+            54.0175
+          ],
+          [
+            48.1199,
+            53.6429
+          ],
+          [
+            48.3619,
+            48.7566
+          ]
+        ]
+      },
+      {
+        "id": "B01",
+        "polygon": [
+          [
+            19.1712,
+            3.6286
+          ],
+          [
+            19.1748,
+            8.7879
+          ],
+          [
+            28.5964,
+            9.2444
+          ],
+          [
+            28.6021,
+            4.0158
+          ]
+        ]
+      },
+      {
+        "id": "B02",
+        "polygon": [
+          [
+            19.2909,
+            8.976
+          ],
+          [
+            19.4099,
+            14.2944
+          ],
+          [
+            28.5908,
+            14.4529
+          ],
+          [
+            28.6943,
+            9.2564
+          ]
+        ]
+      },
+      {
+        "id": "B03",
+        "polygon": [
+          [
+            19.5215,
+            14.3032
+          ],
+          [
+            19.6394,
+            19.5887
+          ],
+          [
+            28.2934,
+            19.7095
+          ],
+          [
+            28.5908,
+            14.4529
+          ]
+        ]
+      },
+      {
+        "id": "B04",
+        "polygon": [
+          [
+            19.7504,
+            19.5934
+          ],
+          [
+            19.7549,
+            24.7598
+          ],
+          [
+            28.6798,
+            24.9717
+          ],
+          [
+            28.4876,
+            19.6371
+          ]
+        ]
+      },
+      {
+        "id": "B05",
+        "polygon": [
+          [
+            19.7568,
+            24.8458
+          ],
+          [
+            19.8697,
+            29.9037
+          ],
+          [
+            28.5713,
+            29.7984
+          ],
+          [
+            28.6798,
+            24.9717
+          ]
+        ]
+      },
+      {
+        "id": "B06",
+        "polygon": [
+          [
+            19.8716,
+            29.9892
+          ],
+          [
+            20.0938,
+            35.0131
+          ],
+          [
+            28.9527,
+            34.9011
+          ],
+          [
+            28.6684,
+            29.7953
+          ]
+        ]
+      },
+      {
+        "id": "B07",
+        "polygon": [
+          [
+            20.2054,
+            35.0907
+          ],
+          [
+            20.3145,
+            40.0034
+          ],
+          [
+            29.3277,
+            39.7968
+          ],
+          [
+            29.1467,
+            34.9671
+          ]
+        ]
+      },
+      {
+        "id": "B08",
+        "polygon": [
+          [
+            20.4274,
+            40.1611
+          ],
+          [
+            20.4231,
+            44.8912
+          ],
+          [
+            29.0293,
+            44.6643
+          ],
+          [
+            29.3277,
+            39.7968
+          ]
+        ]
+      },
+      {
+        "id": "B09",
+        "polygon": [
+          [
+            20.4268,
+            45.0593
+          ],
+          [
+            20.5329,
+            49.838
+          ],
+          [
+            29.2102,
+            49.4494
+          ],
+          [
+            28.9347,
+            44.7571
+          ]
+        ]
+      },
+      {
+        "id": "B10",
+        "polygon": [
+          [
+            20.6432,
+            49.9029
+          ],
+          [
+            20.4293,
+            54.9709
+          ],
+          [
+            29.2988,
+            54.4586
+          ],
+          [
+            29.4024,
+            49.4933
+          ]
+        ]
+      },
+      {
+        "id": "C01",
+        "polygon": [
+          [
+            9.7281,
+            3.2961
+          ],
+          [
+            9.9975,
+            8.5437
+          ],
+          [
+            19.1787,
+            8.9629
+          ],
+          [
+            19.2835,
+            3.6459
+          ]
+        ]
+      },
+      {
+        "id": "C02",
+        "polygon": [
+          [
+            9.8728,
+            8.6227
+          ],
+          [
+            9.8923,
+            14.0036
+          ],
+          [
+            19.1882,
+            14.3637
+          ],
+          [
+            19.0664,
+            8.9498
+          ]
+        ]
+      },
+      {
+        "id": "C03",
+        "polygon": [
+          [
+            9.7677,
+            14.0867
+          ],
+          [
+            10.1674,
+            19.4665
+          ],
+          [
+            19.4169,
+            19.5794
+          ],
+          [
+            19.3001,
+            14.3725
+          ]
+        ]
+      },
+      {
+        "id": "C04",
+        "polygon": [
+          [
+            10.4222,
+            19.5686
+          ],
+          [
+            10.6866,
+            24.7083
+          ],
+          [
+            19.646,
+            24.8452
+          ],
+          [
+            19.5321,
+            19.757
+          ]
+        ]
+      },
+      {
+        "id": "C05",
+        "polygon": [
+          [
+            10.3123,
+            24.7978
+          ],
+          [
+            10.6994,
+            29.8195
+          ],
+          [
+            19.8697,
+            29.9037
+          ],
+          [
+            19.8693,
+            24.9322
+          ]
+        ]
+      },
+      {
+        "id": "C06",
+        "polygon": [
+          [
+            10.5792,
+            30.0052
+          ],
+          [
+            10.7196,
+            35.1843
+          ],
+          [
+            20.0938,
+            35.0131
+          ],
+          [
+            19.7612,
+            29.9926
+          ]
+        ]
+      },
+      {
+        "id": "C07",
+        "polygon": [
+          [
+            10.7171,
+            35.0937
+          ],
+          [
+            10.8543,
+            40.1556
+          ],
+          [
+            20.2071,
+            40.0991
+          ],
+          [
+            20.0957,
+            35.0981
+          ]
+        ]
+      },
+      {
+        "id": "C08",
+        "polygon": [
+          [
+            10.7348,
+            40.348
+          ],
+          [
+            11.1147,
+            45.175
+          ],
+          [
+            20.4231,
+            44.8912
+          ],
+          [
+            19.9879,
+            40.1216
+          ]
+        ]
+      },
+      {
+        "id": "C09",
+        "polygon": [
+          [
+            10.9933,
+            45.2808
+          ],
+          [
+            10.6359,
+            50.4605
+          ],
+          [
+            20.3174,
+            49.9591
+          ],
+          [
+            20.205,
+            44.921
+          ]
+        ]
+      },
+      {
+        "id": "C10",
+        "polygon": [
+          [
+            10.6432,
+            50.7289
+          ],
+          [
+            10.8964,
+            55.4346
+          ],
+          [
+            20.0994,
+            54.8718
+          ],
+          [
+            20.3193,
+            50.0428
+          ]
+        ]
+      }
+    ]
+  },
+  "edge_adjacency": [
+    {
+      "source_camera": "cam1",
+      "exit_edge": "right",
+      "target_camera": "cam2"
+    },
+    {
+      "source_camera": "cam2",
+      "exit_edge": "left",
+      "target_camera": "cam1"
+    }
+  ],
+  "overlap_world_polygon": [
+    [
+      7.8934,
+      79.4208
+    ],
+    [
+      3.2869,
+      80.5295
+    ],
+    [
+      1.6752,
+      -22.0372
+    ],
+    [
+      6.4557,
+      -23.2512
+    ]
+  ],
+  "full_view_overlap_world_polygon": [
+    [
+      9.037,
+      -29.5935
+    ],
+    [
+      33.7885,
+      -20.6536
+    ],
+    [
+      33.6238,
+      78.136
+    ],
+    [
+      -6.4334,
+      94.5698
+    ],
+    [
+      -11.576,
+      92.4995
+    ],
+    [
+      -16.0717,
+      -20.5047
+    ]
+  ],
+  "tracking_defaults": {
+    "shared_map_anchor": "bbox_center"
+  },
+  "matching_defaults": {
+    "unit": "cm",
+    "handoff_match_distance": 15.0,
+    "handoff_prediction_radius": 25.0,
+    "dormant_match_distance": 35.0,
+    "cross_camera_duplicate_distance": 9.0
+  },
+  "calibration_quality": {
+    "status": "draft_failed",
+    "cameras": {
+      "cam1": {
+        "point_count": 4,
+        "inlier_count": 4,
+        "rms_error_cm": 0.29664256616034174,
+        "max_error_cm": 0.45124985386886124,
+        "points": [
+          {
+            "label": "A",
+            "pixel": [
+              1001.0,
+              226.0
+            ],
+            "world_cm": [
+              0.0,
+              0.0
+            ],
+            "projected_world_cm": [
+              -0.427,
+              0.146
+            ],
+            "error_cm": 0.451,
+            "inlier": true
+          },
+          {
+            "label": "B",
+            "pixel": [
+              965.0,
+              80.0
+            ],
+            "world_cm": [
+              20.0,
+              0.0
+            ],
+            "projected_world_cm": [
+              20.104,
+              -0.069
+            ],
+            "error_cm": 0.125,
+            "inlier": true
+          },
+          {
+            "label": "C",
+            "pixel": [
+              686.0,
+              82.0
+            ],
+            "world_cm": [
+              20.0,
+              30.0
+            ],
+            "projected_world_cm": [
+              19.679,
+              30.03
+            ],
+            "error_cm": 0.322,
+            "inlier": true
+          },
+          {
+            "label": "D",
+            "pixel": [
+              690.0,
+              222.0
+            ],
+            "world_cm": [
+              0.0,
+              30.0
+            ],
+            "projected_world_cm": [
+              -0.115,
+              29.875
+            ],
+            "error_cm": 0.17,
+            "inlier": true
+          }
+        ],
+        "active_roi_to_calibration_area_ratio": 14.242
+      },
+      "cam2": {
+        "point_count": 4,
+        "inlier_count": 4,
+        "rms_error_cm": 0.30337487306064587,
+        "max_error_cm": 0.4680849680314579,
+        "points": [
+          {
+            "label": "A",
+            "pixel": [
+              325.0,
+              100.0
+            ],
+            "world_cm": [
+              0.0,
+              0.0
+            ],
+            "projected_world_cm": [
+              0.445,
+              -0.145
+            ],
+            "error_cm": 0.468,
+            "inlier": true
+          },
+          {
+            "label": "B",
+            "pixel": [
+              292.0,
+              254.0
+            ],
+            "world_cm": [
+              20.0,
+              0.0
+            ],
+            "projected_world_cm": [
+              19.873,
+              0.071
+            ],
+            "error_cm": 0.145,
+            "inlier": true
+          },
+          {
+            "label": "C",
+            "pixel": [
+              638.0,
+              252.0
+            ],
+            "world_cm": [
+              20.0,
+              30.0
+            ],
+            "projected_world_cm": [
+              20.312,
+              29.975
+            ],
+            "error_cm": 0.312,
+            "inlier": true
+          },
+          {
+            "label": "D",
+            "pixel": [
+              633.0,
+              91.0
+            ],
+            "world_cm": [
+              0.0,
+              30.0
+            ],
+            "projected_world_cm": [
+              0.129,
+              30.117
+            ],
+            "error_cm": 0.174,
+            "inlier": true
+          }
+        ],
+        "active_roi_to_calibration_area_ratio": 13.919
+      }
+    },
+    "distributed_relative_fit": {
+      "method": "all_eight_pairs_least_squares",
+      "point_count": 8,
+      "inlier_count": 8,
+      "inlier_ratio": 1.0,
+      "ransac_threshold_px_at_1280": 3.0,
+      "rms_symmetric_pixel_error": 5.129,
+      "max_symmetric_pixel_error": 10.479,
+      "points": [
+        {
+          "label": "A",
+          "inlier": true,
+          "symmetric_pixel_error": 7.27
+        },
+        {
+          "label": "B",
+          "inlier": true,
+          "symmetric_pixel_error": 2.347
+        },
+        {
+          "label": "C",
+          "inlier": true,
+          "symmetric_pixel_error": 4.877
+        },
+        {
+          "label": "D",
+          "inlier": true,
+          "symmetric_pixel_error": 3.118
+        },
+        {
+          "label": "V1",
+          "inlier": true,
+          "symmetric_pixel_error": 1.371
+        },
+        {
+          "label": "V2",
+          "inlier": true,
+          "symmetric_pixel_error": 0.565
+        },
+        {
+          "label": "V3",
+          "inlier": true,
+          "symmetric_pixel_error": 2.568
+        },
+        {
+          "label": "V4",
+          "inlier": true,
+          "symmetric_pixel_error": 10.479
+        }
+      ],
+      "cam2_to_cam1": [
+        [
+          -1.2126604650379158,
+          1.5829981602598748,
+          1500.6399005787546
+        ],
+        [
+          -0.01374501292402881,
+          -0.948431760275623,
+          375.7609278097612
+        ],
+        [
+          0.0001109079500793598,
+          0.0022596467716383744,
+          1.0
+        ]
+      ],
+      "point_roles": {
+        "A": "metric_anchor",
+        "B": "metric_anchor",
+        "C": "metric_anchor",
+        "D": "metric_anchor",
+        "V1": "line_correction",
+        "V2": "line_correction",
+        "V3": "line_correction",
+        "V4": "line_correction"
+      }
+    },
+    "shared_point_checks": [
+      {
+        "label": "A",
+        "cross_camera_error_cm": 0.919
+      },
+      {
+        "label": "B",
+        "cross_camera_error_cm": 0.27
+      },
+      {
+        "label": "C",
+        "cross_camera_error_cm": 0.635
+      },
+      {
+        "label": "D",
+        "cross_camera_error_cm": 0.344
+      }
+    ],
+    "independent_cross_camera_validation": null,
+    "rectangle_line_fit": {
+      "point_count": 8,
+      "mean_error_cm": 0.514,
+      "p95_error_cm": 1.23,
+      "max_error_cm": 1.398,
+      "p95_symmetric_pixel_error": 9.356,
+      "max_symmetric_pixel_error": 10.479,
+      "zones": {
+        "left": {
+          "point_count": 2,
+          "max_error_cm": 0.175,
+          "max_pixel_error": 1.371,
+          "near_far_spread_ratio": {
+            "cam1": 0.013699,
+            "cam2": 0.02454
+          }
+        },
+        "center": {
+          "point_count": 3,
+          "max_error_cm": 0.635,
+          "max_pixel_error": 4.877,
+          "near_far_spread_ratio": {
+            "cam1": 0.958904,
+            "cam2": 0.98773
+          }
+        },
+        "right": {
+          "point_count": 3,
+          "max_error_cm": 1.398,
+          "max_pixel_error": 10.479,
+          "near_far_spread_ratio": {
+            "cam1": 1.0,
+            "cam2": 0.944785
+          }
+        }
+      },
+      "points": [
+        {
+          "label": "A",
+          "zone": "right",
+          "cam1_pixel": [
+            1001.0,
+            226.0
+          ],
+          "cam2_pixel": [
+            325.0,
+            100.0
+          ],
+          "cam1_world_cm": [
+            -0.427,
+            0.146
+          ],
+          "cam2_world_cm": [
+            0.445,
+            -0.145
+          ],
+          "cross_camera_error_cm": 0.919,
+          "symmetric_pixel_error": 7.27,
+          "before_symmetric_pixel_error": 0.0,
+          "before_cross_camera_error_cm": 0.0
+        },
+        {
+          "label": "B",
+          "zone": "right",
+          "cam1_pixel": [
+            965.0,
+            80.0
+          ],
+          "cam2_pixel": [
+            292.0,
+            254.0
+          ],
+          "cam1_world_cm": [
+            20.104,
+            -0.069
+          ],
+          "cam2_world_cm": [
+            19.873,
+            0.071
+          ],
+          "cross_camera_error_cm": 0.27,
+          "symmetric_pixel_error": 2.347,
+          "before_symmetric_pixel_error": 0.0,
+          "before_cross_camera_error_cm": 0.0
+        },
+        {
+          "label": "C",
+          "zone": "center",
+          "cam1_pixel": [
+            686.0,
+            82.0
+          ],
+          "cam2_pixel": [
+            638.0,
+            252.0
+          ],
+          "cam1_world_cm": [
+            19.679,
+            30.03
+          ],
+          "cam2_world_cm": [
+            20.312,
+            29.975
+          ],
+          "cross_camera_error_cm": 0.635,
+          "symmetric_pixel_error": 4.877,
+          "before_symmetric_pixel_error": 0.0,
+          "before_cross_camera_error_cm": 0.0
+        },
+        {
+          "label": "D",
+          "zone": "center",
+          "cam1_pixel": [
+            690.0,
+            222.0
+          ],
+          "cam2_pixel": [
+            633.0,
+            91.0
+          ],
+          "cam1_world_cm": [
+            -0.115,
+            29.875
+          ],
+          "cam2_world_cm": [
+            0.129,
+            30.117
+          ],
+          "cross_camera_error_cm": 0.344,
+          "symmetric_pixel_error": 3.118,
+          "before_symmetric_pixel_error": 0.0,
+          "before_cross_camera_error_cm": 0.0
+        },
+        {
+          "label": "V1",
+          "zone": "left",
+          "cam1_pixel": [
+            388.0,
+            185.0
+          ],
+          "cam2_pixel": [
+            951.0,
+            117.0
+          ],
+          "cam1_world_cm": [
+            4.513,
+            59.881
+          ],
+          "cam2_world_cm": [
+            4.68,
+            59.828
+          ],
+          "cross_camera_error_cm": 0.175,
+          "symmetric_pixel_error": 1.371,
+          "before_symmetric_pixel_error": 53.259,
+          "before_cross_camera_error_cm": 5.047
+        },
+        {
+          "label": "V2",
+          "zone": "left",
+          "cam1_pixel": [
+            512.0,
+            183.0
+          ],
+          "cam2_pixel": [
+            820.0,
+            121.0
+          ],
+          "cam1_world_cm": [
+            4.851,
+            47.528
+          ],
+          "cam2_world_cm": [
+            4.846,
+            47.582
+          ],
+          "cross_camera_error_cm": 0.055,
+          "symmetric_pixel_error": 0.565,
+          "before_symmetric_pixel_error": 25.321,
+          "before_cross_camera_error_cm": 2.419
+        },
+        {
+          "label": "V3",
+          "zone": "center",
+          "cam1_pixel": [
+            667.0,
+            180.0
+          ],
+          "cam2_pixel": [
+            654.0,
+            126.0
+          ],
+          "cam1_world_cm": [
+            5.341,
+            32.089
+          ],
+          "cam2_world_cm": [
+            5.048,
+            31.962
+          ],
+          "cross_camera_error_cm": 0.319,
+          "symmetric_pixel_error": 2.568,
+          "before_symmetric_pixel_error": 7.36,
+          "before_cross_camera_error_cm": 0.859
+        },
+        {
+          "label": "V4",
+          "zone": "right",
+          "cam1_pixel": [
+            827.0,
+            178.0
+          ],
+          "cam2_pixel": [
+            489.0,
+            124.0
+          ],
+          "cam1_world_cm": [
+            5.699,
+            16.157
+          ],
+          "cam2_world_cm": [
+            4.306,
+            16.263
+          ],
+          "cross_camera_error_cm": 1.398,
+          "symmetric_pixel_error": 10.479,
+          "before_symmetric_pixel_error": 16.0,
+          "before_cross_camera_error_cm": 2.051
+        }
+      ],
+      "evidence_kind": "training_fit_not_independent_validation",
+      "line_geometry": {
+        "cam1": {
+          "span_px_at_1280": 439.0557813162693,
+          "max_line_deviation_px_at_1280": 0.3851368670199439,
+          "ordered": true,
+          "angle_degrees_image_only": -0.932385280409125,
+          "minimum_span_px_at_1280": 236.25
+        },
+        "cam2": {
+          "span_px_at_1280": 462.0526659877336,
+          "max_line_deviation_px_at_1280": 2.7776524820292177,
+          "ordered": true,
+          "angle_degrees_image_only": 179.06029974125738,
+          "minimum_span_px_at_1280": 259.5
+        }
+      },
+      "before_p95_symmetric_pixel_error": 43.48,
+      "independent_validation": false,
+      "geometry_failures": [],
+      "status": "model_inadequate",
+      "max_error_cm_limit": 2.0,
+      "rejection_reasons": [
+        "eight_pair_pixel_residual_exceeded"
+      ]
+    },
+    "overlap_area_cm2": 483.415,
+    "active_roi_overlap_area_cm2": 483.415,
+    "full_view_overlap_area_cm2": 5357.431,
+    "fitted_ground_overlap_area_cm2": 876.089
+  },
+  "source": {
+    "workspace": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7",
+    "capture_manifest": {
+      "schema_version": 2,
+      "calibration_id": "cal-20260917-174848-cca5dec7",
+      "captured_at": "2026-09-17T17:48:48.206147+07:00",
+      "cameras": {
+        "cam1": {
+          "source": "http://192.168.100.53:4747/video/force/1280x720",
+          "image": "capture_cam1.png",
+          "width": 1280,
+          "height": 720,
+          "capture_position_frame": 15,
+          "capture_position_ms": 560.0,
+          "source_fps": 25.0
+        },
+        "cam2": {
+          "source": "http://192.168.100.198:4747/video/force/1280x720",
+          "image": "capture_cam2.png",
+          "width": 1280,
+          "height": 720,
+          "capture_position_frame": 15,
+          "capture_position_ms": 560.0,
+          "source_fps": 25.0
+        }
+      }
+    },
+    "measurements": "calibration_points.csv",
+    "paired_ground_points": "paired_ground_points.json",
+    "independent_validation": null,
+    "hashes": {
+      "measurements_sha256": "b43eba22454e5f27cda1cd2ee0a52b914271f26daa7dfc9074453a52b1e3cc1c",
+      "paired_ground_points_sha256": "3cb4ace80e0122428c973e100708f48d6b232bba546d89fdba45c90fc08a0aa4",
+      "capture_cam1_sha256": "414c8fea3d6d0efa2bbccab85a0e4aa9c141553a26e147d073343e7ad35b728c",
+      "capture_cam2_sha256": "d46ef22224c8c2093d60241f594ef509e2fe5e72c8f1fc006800306f80ccaec2"
+    },
+    "coverage_masks": {
+      "cam1": "D:\\TechGar2\\backend\\main_detect\\config\\roi_mask_cam1.json",
+      "cam2": "D:\\TechGar2\\backend\\main_detect\\config\\roi_mask_cam2.json"
+    },
+    "parking_slots": {
+      "cam1": "D:\\TechGar2\\backend\\main_detect\\config\\parking_slots_cam1.json",
+      "cam2": "D:\\TechGar2\\backend\\main_detect\\config\\parking_slots_cam2.json"
+    },
+    "preview": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7\\shared_map_preview.png",
+    "previews": {
+      "full_view": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7\\shared_map_full_view.png",
+      "active_roi": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7\\shared_map_active_roi.png",
+      "checkerboard": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7\\shared_map_checkerboard.png",
+      "legacy_active_map": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260917-174848-cca5dec7\\shared_map_preview.png"
+    }
+  },
+  "fitted_ground_overlap_world_polygon": [
+    [
+      0.4422,
+      0.137
+    ],
+    [
+      13.4866,
+      0.0
+    ],
+    [
+      19.8731,
+      0.0709
+    ],
+    [
+      19.9899,
+      8.034
+    ],
+    [
+      19.6792,
+      30.0296
+    ],
+    [
+      4.6476,
+      59.6167
+    ],
+    [
+      0.1287,
+      30.117
+    ]
+  ]
+}

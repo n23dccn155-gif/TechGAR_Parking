@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">LOCAL TRACKING — TRONG TỪNG CAMERA</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Duy trì Local ID trong từng camera</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">06 / 13</text>
+  </g>
+
+  <g id="state-moving" data-pptx-bounds="64 142 364 372">
+    <rect x="64" y="142" width="364" height="44" fill="#004FFF" />
+    <use data-icon="tabler-outline/car" x="80" y="153" width="22" height="22" fill="#FFFFFF" stroke-width="2" />
+    <text x="112" y="170" font-size="17" font-weight="bold" fill="#FFFFFF">XE DI CHUYỂN</text>
+    <image href="../images/slide6_moving.jpg" x="64" y="198" width="364" height="205" preserveAspectRatio="xMidYMid slice" />
+    <rect x="64" y="198" width="364" height="205" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="64" y="432" font-size="16" font-weight="bold" fill="#004FFF">MOG2 + Dual FrameDiff</text>
+    <text x="64" y="458" font-size="15" fill="#4E5D78">median brightness compensation —<tspan x="64" dy="20">mask + bbox + trajectory trên frame thật</tspan></text>
+    <text x="64" y="508" font-size="13" fill="#4E5D78">Mô hình bãi đỗ thu nhỏ — frame debug thật</text>
+  </g>
+
+  <g id="arrow-1" data-pptx-bounds="434 268 18 22">
+    <use data-icon="tabler-outline/arrow-right" x="434" y="268" width="18" height="22" fill="#4E5D78" stroke-width="2.5" />
+  </g>
+
+  <g id="state-occluded" data-pptx-bounds="458 142 364 372">
+    <rect x="458" y="142" width="364" height="44" fill="#0036B3" />
+    <use data-icon="tabler-outline/eye-off" x="474" y="153" width="22" height="22" fill="#FFFFFF" stroke-width="2" />
+    <text x="506" y="170" font-size="17" font-weight="bold" fill="#FFFFFF">XE BỊ CHE KHUẤT</text>
+    <image href="../images/slide6_occluded.jpg" x="458" y="198" width="364" height="205" preserveAspectRatio="xMidYMid slice" />
+    <rect x="458" y="198" width="364" height="205" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="458" y="432" font-size="16" font-weight="bold" fill="#004FFF">Kalman Prediction</text>
+    <text x="458" y="458" font-size="15" fill="#4E5D78">+ LAPJV association — dự báo quỹ đạo<tspan x="458" dy="20">khi detector tạm mất đối tượng</tspan></text>
+    <text x="458" y="508" font-size="13" fill="#4E5D78">Xe khuất sau chai nước đóng vai cột</text>
+  </g>
+
+  <g id="arrow-2" data-pptx-bounds="828 268 18 22">
+    <use data-icon="tabler-outline/arrow-right" x="828" y="268" width="18" height="22" fill="#4E5D78" stroke-width="2.5" />
+  </g>
+
+  <g id="state-stopped" data-pptx-bounds="852 142 364 372">
+    <rect x="852" y="142" width="364" height="44" fill="#00227A" />
+    <use data-icon="tabler-outline/refresh" x="868" y="153" width="22" height="22" fill="#FFFFFF" stroke-width="2" />
+    <text x="900" y="170" font-size="17" font-weight="bold" fill="#FFFFFF">XE DỪNG LÂU → REACQUIRE</text>
+    <image href="../images/slide6_stopped.jpg" x="852" y="198" width="364" height="205" preserveAspectRatio="xMidYMid slice" />
+    <rect x="852" y="198" width="364" height="205" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="852" y="432" font-size="16" font-weight="bold" fill="#004FFF">SSD Template Reacquire</text>
+    <text x="852" y="458" font-size="15" fill="#4E5D78">nối lại Local ID khi detector mất<tspan x="852" dy="20">đối tượng đứng yên quá lâu</tspan></text>
+    <text x="852" y="508" font-size="13" fill="#4E5D78">Xe đỗ tĩnh tại ô — giữ nguyên Local ID</text>
+  </g>
+
+  <g id="tracking-stats" data-pptx-bounds="64 532 1152 128">
+    <rect x="64" y="532" width="1152" height="128" fill="#00227A" />
+    <text x="96" y="564" font-size="14" font-weight="bold" fill="#9AE7FC">SSD REACQUIRE TRÊN SESSION 2808_3</text>
+    <text x="96" y="622" font-size="52" font-weight="bold" fill="#00E5FF">1.714</text>
+    <text x="268" y="600" font-size="16" fill="#FFFFFF">lần khôi phục Local ID</text>
+    <text x="268" y="626" font-size="14" fill="#9AE7FC">[doc-claimed: session 2808_3]</text>
+    <line x1="520" y1="552" x2="520" y2="640" stroke="#9AE7FC" stroke-width="1" stroke-opacity="0.4" />
+    <text x="556" y="622" font-size="52" font-weight="bold" fill="#00E5FF">25</text>
+    <text x="636" y="600" font-size="16" fill="#FFFFFF">trường hợp bị từ chối</text>
+    <text x="636" y="626" font-size="14" fill="#9AE7FC">reacquire không nhầm xe khác</text>
+    <line x1="880" y1="552" x2="880" y2="640" stroke="#9AE7FC" stroke-width="1" stroke-opacity="0.4" />
+    <text x="916" y="582" font-size="16" font-weight="bold" fill="#FFFFFF">Mỗi tình huống vật lý<tspan x="916" dy="26">có một cơ chế giữ ID riêng</tspan></text>
+    <text x="916" y="634" font-size="14" fill="#9AE7FC">— trước khi bàn Cross-Camera</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Ba trạng thái tracker trên frame debug thật · scale-model testbed · số liệu [doc-claimed: session 2808_3]</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

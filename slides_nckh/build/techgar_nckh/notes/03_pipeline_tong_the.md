@@ -1,0 +1,1 @@
+Toàn bộ hệ thống không được xây từ một thuật toán duy nhất. Mỗi tầng xử lý một lỗi vật lý khác nhau: từ ánh sáng, che khuất, góc nhìn xiên, đến việc một xe xuất hiện dưới hai Local ID ở hai camera khác nhau.

@@ -1,0 +1,1 @@
+Trong từng camera, mục tiêu đầu tiên là giữ được Local ID ổn định. Khi xe di chuyển, nhóm kết hợp MOG2 và FrameDiff. Khi xe bị che, Kalman hỗ trợ dự báo quỹ đạo. Khi xe dừng lâu và detector tạm mất đối tượng, SSD Template Reacquire được dùng để nối lại Local ID.

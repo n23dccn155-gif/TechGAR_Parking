@@ -2703,6 +2703,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         getattr(track, "appearance", None), frame_index,
                         timestamp_s=camera_timestamps_s.get(camera_id),
                         appearance_tracklet=getattr(track, "appearance_tracklet", None),
+                        roi_edge_starved=bool(getattr(track, "roi_edge_starved", False)),
                     )
 
             observable = {camera_id: tracker.observable_tracks for camera_id, tracker in trackers.items()}

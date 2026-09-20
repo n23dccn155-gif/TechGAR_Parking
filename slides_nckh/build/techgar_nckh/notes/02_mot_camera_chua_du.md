@@ -1,0 +1,1 @@
+Nếu chỉ dùng một camera, hệ thống sẽ gặp điểm mù, che khuất và mất dấu khi xe rời vùng quan sát. Vì vậy nhóm chuyển sang nhiều camera liên kết. Trong demo hiện tại, nhóm dùng 2 camera để kiểm chứng kiến trúc trên mô hình bãi đỗ.

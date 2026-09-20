@@ -167,11 +167,43 @@ class WorldTrajectoryMemory:
     def parked_origin(self, global_id: int) -> Optional[Point]:
         return self._parked_origins.get(int(global_id))
 
-    def remove_missing_provisionals(self, live_keys: Iterable[Hashable]) -> None:
+    def remove_missing_provisionals(
+        self,
+        live_keys: Iterable[Hashable],
+        now_s: Optional[float] = None,
+    ) -> List[Hashable]:
+        """Drop dead fragments but keep trails through brief detector gaps.
+
+        A coasting/starving local track disappears from ``live_keys`` for a
+        frame or two even though the physical vehicle is still there.
+        Erasing its provisional trail immediately meant it could never
+        accumulate the ``min_observations`` samples ReID needs after the
+        gap.  Missing keys therefore survive while their newest sample is
+        still inside the rolling ``history_seconds`` window -- the same
+        bound every trail already keeps.
+
+        Returns the keys actually dropped so the caller can emit telemetry:
+        a purged trail silently erases ReID evidence and must not be a
+        silent veto.
+        """
         live = set(live_keys)
-        self._provisional = {
-            key: samples for key, samples in self._provisional.items() if key in live
-        }
+        if now_s is None:
+            cutoff = None
+        else:
+            cutoff = float(now_s) - self.history_seconds
+        forgotten: List[Hashable] = []
+        retained: Dict[Hashable, List[TrajectorySample]] = {}
+        for key, samples in self._provisional.items():
+            if key in live or (
+                cutoff is not None
+                and samples
+                and samples[-1].timestamp_s >= cutoff
+            ):
+                retained[key] = samples
+            else:
+                forgotten.append(key)
+        self._provisional = retained
+        return forgotten
 
     @staticmethod
     def _camera_tail(

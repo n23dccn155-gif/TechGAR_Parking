@@ -1,0 +1,322 @@
+[
+  {
+    "slide_number": 1,
+    "title": "Định vị phương tiện và quản lý ô đỗ trong tầng hầm",
+    "research_question": "XE NÀO? — Ở ĐÂU? — ĐANG Ở Ô NÀO? — xác định đồng thời danh tính, vị trí mặt sàn và ô đỗ mà không gắn thiết bị lên từng xe.",
+    "layout_family": "Hero Problem",
+    "bullets": [
+      "GNSS không ổn định hoặc không khả dụng trong tầng hầm.",
+      "Cột bê tông tạo điểm mù và che khuất.",
+      "Xe chồng lấn trong góc nhìn camera.",
+      "Camera góc chéo → tọa độ pixel ≠ tọa độ thực.",
+      "Không thể yêu cầu mọi xe gắn beacon / UWB / LiDAR."
+    ],
+    "key_numbers": [],
+    "assets": [
+      "D:\\TechGar2\\slides_nckh\\assets\\slide1_overview_annotated.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0100_baseline_raw_cam1.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\capture_cam1.png",
+      "D:\\TechGar2\\slides_nckh\\assets\\clip_s01_overview.mp4"
+    ],
+    "speaker_notes": "Nhóm bắt đầu từ một vấn đề rất thực tế: trong tầng hầm, định vị bằng GNSS không còn đáng tin cậy, trong khi camera lại gặp điểm mù, che khuất và góc nhìn xiên. Vì vậy câu hỏi nghiên cứu của nhóm là làm thế nào xác định đồng thời xe nào, đang ở đâu, và đang thuộc ô đỗ nào mà không cần gắn thêm thiết bị lên từng phương tiện. Dữ liệu kiểm chứng của nhóm được thu trên một mô hình bãi đỗ thu nhỏ mô phỏng đúng bối cảnh này.",
+    "scientific_caveats": "Không dùng 'GPS = 0 dBm', không nói GPS 'mất hoàn toàn' — chỉ nói 'GNSS không ổn định hoặc không khả dụng trong môi trường tầng hầm'. Ảnh minh họa là scale-model testbed, caption trung thực; bài toán động lực là tầng hầm thật."
+  },
+  {
+    "slide_number": 2,
+    "title": "Tại sao một camera chưa đủ?",
+    "research_question": "Một camera cố định gặp giới hạn gì, và vì sao phải chuyển sang nhiều camera liên kết?",
+    "layout_family": "Comparison 50/50",
+    "bullets": [
+      "1 camera: điểm mù sau cột; che khuất động; biến dạng phối cảnh.",
+      "1 camera: mất dấu → tạo Local ID mới; không phủ toàn bãi.",
+      "Multi-camera: bổ sung vùng quan sát, nhiều góc nhìn đồng thời.",
+      "Multi-camera: vùng overlap để kiểm chứng cùng một xe.",
+      "Multi-camera: duy trì danh tính toàn bãi, mở rộng theo topology.",
+      "Dòng chốt: quyết định thiết kế — hệ nhiều camera cố định; demo nghiên cứu dùng 2 camera."
+    ],
+    "key_numbers": [],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0336_handoff_matched_split_debug.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0336_handoff_matched_raw_cam1.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0336_handoff_matched_raw_cam2.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide2_cam1_blind.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide2_cam2_sees.jpg"
+    ],
+    "speaker_notes": "Nếu chỉ dùng một camera, hệ thống sẽ gặp điểm mù, che khuất và mất dấu khi xe rời vùng quan sát. Vì vậy nhóm chuyển sang nhiều camera liên kết. Trong demo hiện tại, nhóm dùng 2 camera để kiểm chứng kiến trúc trên mô hình bãi đỗ.",
+    "scientific_caveats": "Chưa có baseline định lượng kiểu '1 camera = X%, 2 camera = Y%' — không tự thêm số nếu chưa chạy thí nghiệm riêng. Ảnh là scale-model testbed."
+  },
+  {
+    "slide_number": 3,
+    "title": "Từ video camera đến quyết định ô đỗ",
+    "research_question": "Hệ thống biến video hai camera thành quyết định ô đỗ qua những tầng xử lý nào?",
+    "layout_family": "Full-width Pipeline",
+    "bullets": [
+      "Pipeline: VIDEO → PHÁT HIỆN XE → LOCAL TRACKING → TỌA ĐỘ MẶT SÀN → CROSS-CAMERA MATCHING → CANONICAL GLOBAL ID → NHẬN DIỆN Ô ĐỖ → VEHICLE ↔ SLOT.",
+      "Detection ↔ ánh sáng/bóng → MOG2 + FrameDiff.",
+      "Local Tracking ↔ che khuất/xe dừng → Kalman + SSD Reacquire.",
+      "Ground Mapping ↔ camera góc chéo → Homography.",
+      "Cross-Camera ↔ 2 Local ID cho 1 xe → Canonical GID; Matching ↔ ghép nhầm → Topology + Cost Matrix.",
+      "Slot State ↔ ánh sáng biến thiên → Adaptive Equalizer; Vehicle-Slot ↔ xe đi ngang/căn chỉnh → Arrival + Departure logic."
+    ],
+    "key_numbers": [],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\lane_graph_spots.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\roi_active_map.png"
+    ],
+    "speaker_notes": "Toàn bộ hệ thống không được xây từ một thuật toán duy nhất. Mỗi tầng xử lý một lỗi vật lý khác nhau: từ ánh sáng, che khuất, góc nhìn xiên, đến việc một xe xuất hiện dưới hai Local ID ở hai camera khác nhau.",
+    "scientific_caveats": "Nhấn mạnh 'mỗi tầng = một lỗi vật lý riêng', tránh liệt kê công nghệ không mạch."
+  },
+  {
+    "slide_number": 4,
+    "title": "Hai camera quan sát cùng một không gian tại cùng thời điểm",
+    "research_question": "Hai camera có thể cùng quan sát một xe trong vùng overlap như thế nào?",
+    "layout_family": "Comparison 50/50",
+    "bullets": [
+      "Cam 1 + Cam 2 cùng thấy xe tại ~cùng thời điểm t.",
+      "Vùng overlap cho phép kiểm chứng chéo cùng một xe.",
+      "Cross-camera là quan sát song song, không phải 'chạy tiếp sức' tuần tự.",
+      "Đây là cơ sở hợp nhất 2 Local ID → 1 Global ID duy nhất."
+    ],
+    "key_numbers": [
+      {"value": "Skew p50 = 18 ms", "tag": "doc-claimed: session 2808_3"},
+      {"value": "Skew p95 = 47 ms", "tag": "doc-claimed: session 2808_3"},
+      {"value": "Skew max = 110 ms", "tag": "doc-claimed: session 2808_3"},
+      {"value": "Ngưỡng cấu hình 120 ms", "tag": "design-param"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0283_handoff_opened_split_debug.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\clip_s04_dualview.mp4"
+    ],
+    "speaker_notes": "Hai camera trong hệ thống chạy song song. Khi xe đi qua overlap, cả hai camera có thể cùng thấy chiếc xe ở gần cùng một thời điểm. Đây là cơ sở để hợp nhất hai Local ID thành một Global ID duy nhất.",
+    "scientific_caveats": "Trình bày overlap song song, KHÔNG phải sơ đồ Cam1 → mất → Cam2. Skew 18/47/110 ms là [doc-claimed: session 2808_3]; ngưỡng 120 ms là cấu hình thật (VERIFIED-CODE --max-camera-skew-ms 120, two-camera-runbook.md:90)."
+  },
+  {
+    "slide_number": 5,
+    "title": "Từ ảnh camera góc chéo đến tọa độ thực trên mặt sàn",
+    "research_question": "Làm sao đưa vị trí pixel từ camera xiên về một hệ tọa độ mặt sàn thống nhất?",
+    "layout_family": "Large Visual + Formula/Data Panel",
+    "bullets": [
+      "Xe là vật thể 3D — không cố ghép mái xe.",
+      "Neo vào các điểm trên mặt sàn Z = 0.",
+      "Mục tiêu: đưa điểm tiếp xúc mặt sàn về cùng hệ tọa độ.",
+      "Ảnh xiên → Ground-plane Homography → Shared map nhìn từ trên.",
+      "Công thức: s[X,Y,1]ᵀ = H[u,v,1]ᵀ"
+    ],
+    "key_numbers": [
+      {"value": "945 cặp điểm kiểm tra", "tag": "doc-claimed: seam benchmark, session 2808_3"},
+      {"value": "p50 = 1,13 cm", "tag": "doc-claimed: seam benchmark, session 2808_3"},
+      {"value": "p95 = 4,39 cm", "tag": "doc-claimed: seam benchmark, session 2808_3"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\calib_cam1_marked.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\calib_cam2_marked.png",
+      "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\shared_map_full_view.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\roi_full_view.png"
+    ],
+    "speaker_notes": "Do camera được gắn chéo, vị trí pixel của xe không thể xem là khoảng cách thực. Nhóm dùng ground-plane homography và chỉ neo vào mặt sàn Z = 0. Mục tiêu không phải ghép toàn bộ hình khối 3D của xe, mà là tạo một hệ tọa độ mặt sàn thống nhất cho các camera.",
+    "scientific_caveats": "KHÔNG nói 'Homography triệt tiêu hoàn toàn parallax 3D' — nói 'ánh xạ nhất quán các điểm trên mặt phẳng tham chiếu, hạn chế ảnh hưởng parallax'. Tránh calib_checkerboard/calib_shared_roi (watermark DRAFT). 945 cặp là seam benchmark cam1↔cam2 (session 2808_3); file validation trên ổ chỉ có 3 cặp V1–V3."
+  },
+  {
+    "slide_number": 6,
+    "title": "Duy trì Local ID trong từng camera",
+    "research_question": "Trước Cross-Camera, mỗi camera giữ một Local ID đủ ổn định bằng cách nào?",
+    "layout_family": "Full-width Pipeline",
+    "bullets": [
+      "Xe di chuyển: MOG2 + Dual FrameDiff + median brightness compensation.",
+      "Xe bị che: Kalman Prediction + LAPJV association.",
+      "Xe dừng lâu: SSD Template Reacquire để nối lại Local ID.",
+      "Mỗi tình huống vật lý có một cơ chế giữ ID riêng."
+    ],
+    "key_numbers": [
+      {"value": "SSD Reacquire = 1.714 lần khôi phục", "tag": "doc-claimed: session 2808_3"},
+      {"value": "25 trường hợp bị từ chối", "tag": "doc-claimed: session 2808_3"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\slides_nckh\\assets\\slide6_moving.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide6_occluded.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide6_stopped.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0278_gid_created_debug_cam2.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\demo_tracking_cam1.mp4",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\demo_tracking_cam2.mp4"
+    ],
+    "speaker_notes": "Trong từng camera, mục tiêu đầu tiên là giữ được Local ID ổn định. Khi xe di chuyển, nhóm kết hợp MOG2 và FrameDiff. Khi xe bị che, Kalman hỗ trợ dự báo quỹ đạo. Khi xe dừng lâu và detector tạm mất đối tượng, SSD Template Reacquire được dùng để nối lại Local ID.",
+    "scientific_caveats": "1.714 / 25 là [doc-claimed: session 2808_3] — session không nằm trên ổ. Ưu tiên frame thật + binary mask + bounding box + trajectory; ảnh scale-model."
+  },
+  {
+    "slide_number": 7,
+    "title": "Một xe — hai quan sát — một Canonical Global ID",
+    "research_question": "Một xe xuất hiện ở 2 camera được quy về một Canonical Global ID như thế nào?",
+    "layout_family": "Large Visual + Formula/Data Panel",
+    "bullets": [
+      "Camera 1 gán L1#7; Camera 2 gán L2#12 (namespace độc lập).",
+      "Shared map: hai track cùng một vị trí vật lý.",
+      "Khi cùng trong overlap + khớp vị trí/topology/đặc trưng → hợp nhất G#1.",
+      "Dòng chốt: Canonical GID duy trì xuyên Moving ↔ Parked ↔ Moving."
+    ],
+    "key_numbers": [
+      {"value": "Clip overlap ≈ 4,72 s (118 frame @25 FPS) — độ dài clip, không phải metric", "tag": "verify"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\demo_overlap_split.mp4",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\roi_active_map.png",
+      "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\shared_map_preview.png"
+    ],
+    "speaker_notes": "Một xe có thể có hai Local ID khác nhau vì hai camera sử dụng namespace độc lập. Khi hai track cùng xuất hiện trong overlap và cùng phù hợp về vị trí, topology và đặc trưng, hệ thống quy chúng về một Canonical Global ID duy nhất.",
+    "scientific_caveats": "Video là output pipeline thật nhưng trên scale-model; clip là lựa chọn minh họa. Checklist: slide 7 phải có video thật (demo_overlap_split.mp4)."
+  },
+  {
+    "slide_number": 8,
+    "title": "Khi nào hai track được xem là cùng một xe?",
+    "research_question": "Khi nào Cost Matrix được áp dụng, và dựa vào đâu để kết luận hai track là cùng một xe?",
+    "layout_family": "Comparison 50/50",
+    "bullets": [
+      "Bước 1 — Topology Gate: xe vào đúng hành lang topology + có candidate ở camera còn lại → mới tính cost.",
+      "Bước 2 — Cost Matrix: C = 0.55·D_ground + 0.30·D_color + 0.10·D_scale + 0.05·D_heading.",
+      "Thuộc tính xe: Vị trí 55 · Màu 30 · Kích thước 10 · Hướng 5.",
+      "Hard gate hướng: cos θ < 0.25 ⇒ reject (loại chuyển động lệch hướng lớn).",
+      "Cost Matrix KHÔNG chạy trên toàn bộ xe trong bãi."
+    ],
+    "key_numbers": [
+      {"value": "Cost weights 0.55 / 0.30 / 0.10 / 0.05", "tag": "design-param"},
+      {"value": "Ngưỡng góc cos θ < 0.25", "tag": "design-param"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\lane_graph.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\lane_graph_spots.png",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide8_car_crop.png"
+    ],
+    "speaker_notes": "Cost Matrix không chạy trên toàn bộ xe trong bãi. Topology Gate lọc ứng viên trước. Chỉ khi xe đi vào đúng hành lang và có candidate hợp lệ ở camera còn lại, hệ thống mới tính chi phí dựa trên vị trí, màu, kích thước và hướng.",
+    "scientific_caveats": "Phải ghi rõ 0.55/0.30/0.10/0.05 là tuning thực nghiệm / heuristic — không để hội đồng hiểu 'tự nhiên đúng'. Slide 8 phải có hình minh họa thuộc tính xe, không chỉ text."
+  },
+  {
+    "slide_number": 9,
+    "title": "Tại sao một bộ tham số cố định không đủ?",
+    "research_question": "Vì sao một threshold cố định không đủ, và tại sao chọn nhiều cấu hình Gamma + CLAHE?",
+    "layout_family": "Large Visual + Formula/Data Panel",
+    "bullets": [
+      "Điều kiện thực tế: vùng tối · ánh sáng thường · lóa đèn pha · bóng cột · sàn ẩm/phản xạ.",
+      "Một threshold cố định tốt ở điều kiện này nhưng thất bại ở điều kiện khác.",
+      "Ensemble 25 biến thể γ×CLAHE quanh cấu hình nền (γ≈2.5–2.8, CLAHE≈2.0; delta ±0.2 / ±0.5; grid 8×8) rồi kết hợp quyết định.",
+      "Bảng điều kiện→hiệu ứng: Tối→nâng vùng tối · Thường→giữ tương phản · Lóa→hạn chế vùng sáng bão hòa."
+    ],
+    "key_numbers": [
+      {"value": "25 biến thể = 5 mức Δγ × 5 mức ΔCLAHE", "tag": "design-param"},
+      {"value": "Cấu hình nền γ≈2.5–2.8, CLAHE≈2.0; delta ±0.2 / ±0.5; grid 8×8", "tag": "design-param"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\slides_nckh\\assets\\slide9_dark_cam1_f0200.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide9_normal_cam1_f1200.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide9_glare_cam1_f0005.jpg"
+    ],
+    "speaker_notes": "Môi trường tầng hầm có độ sáng biến thiên lớn. Một threshold cố định sẽ hoạt động tốt ở điều kiện này nhưng thất bại ở điều kiện khác. Vì vậy nhóm dùng một ensemble 25 biến thể Gamma–CLAHE xoay quanh một cấu hình nền — gamma khoảng 2.5 đến 2.8, CLAHE khoảng 2.0, với biên điều chỉnh cộng trừ 0.2 và 0.5 trên lưới 8 nhân 8 — rồi kết hợp quyết định thay vì phụ thuộc vào một bộ tham số duy nhất.",
+    "scientific_caveats": "Nguồn tham số: tuning thực nghiệm trên indoor validation set (VERIFIED-CODE parking_detector.py). Đã sửa sự thật code: 25 biến thể = 5 Δγ × 5 ΔCLAHE (delta_gamma=[-0.2..0.2], delta_clahe=[-0.5..0.5]) quanh base γ≈2.8 (deploy 2.5), CLAHE≈2.0; grid 8×8 (parking_detector.py:100-104, :454-456). Bảng gamma 0,65/1,4 trong brief KHÔNG có trong code → chỉ trình bày điều kiện→hiệu ứng, không ghi số γ cụ thể. Ảnh toi1 là rig mat nhỏ hơn — chỉ minh họa điều kiện ánh sáng, không chứng minh tracking."
+  },
+  {
+    "slide_number": 10,
+    "title": "Từ 25 biến thể xử lý đến một quyết định ổn định",
+    "research_question": "Vì sao cần biểu quyết nhiều biến thể, và tại sao đang dùng ngưỡng ≥12/25?",
+    "layout_family": "Results Dashboard",
+    "bullets": [
+      "Mỗi biến thể γ×CLAHE cho 1 vote; không dựa trên 1 ảnh duy nhất.",
+      "Ô FREE khi ≥12/25 biến thể vote 'trống'; ngược lại OCCUPIED.",
+      "Temporal smoothing 5 frame chống nhấp nháy trạng thái.",
+      "Ví dụ: 15/25 vote trống → FREE · 10/25 vote trống → OCCUPIED.",
+      "Nhiễu lóa có thể kích hoạt vài biến thể nhưng không đủ đa số.",
+      "Công thức: Free ⇔ ΣV_empty ≥ 12/25"
+    ],
+    "key_numbers": [
+      {"value": "Ngưỡng ≥12/25 vote trống ⇒ FREE", "tag": "design-param"},
+      {"value": "Ví dụ 15/25 → FREE · 10/25 → OCCUPIED", "tag": "design-param"},
+      {"value": "Temporal smoothing 5 frame", "tag": "design-param"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\slides_nckh\\assets\\slide10_slot_closeup.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0543_parked_confirmed_debug_cam1.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\roi_active_map.png"
+    ],
+    "speaker_notes": "Hệ thống không quyết định trạng thái ô dựa trên một phiên bản ảnh duy nhất. Mỗi trong 25 biến thể Gamma–CLAHE cho một vote. Ô được xác nhận trống khi đạt đa số — ít nhất 12 trên 25 biến thể vote trống; ngược lại là occupied, kèm làm mượt theo 5 frame để tránh nhấp nháy.",
+    "scientific_caveats": "Ngưỡng 12/25 là majority vote trên 25 biến thể (VERIFIED-CODE required_votes = 25//2 = 12, parking_detector.py:533). Nếu chưa chạy threshold sweep → KHÔNG nói 12/25 là tối ưu; chỉ nói 'được chọn theo nguyên tắc majority vote, đang dùng trong cấu hình thử nghiệm'. Bảng sweep ngưỡng vote là thí nghiệm nên bổ sung, chưa có số liệu → không điền. Voting-grid asset vẽ mới minh họa 25 votes (lưới 5×5)."
+  },
+  {
+    "slide_number": 11,
+    "title": "Từ xe đi ngang đến trạng thái đỗ — và khôi phục ID khi rời ô",
+    "research_question": "Xe vào/rời ô và khôi phục Canonical GID sau khi rời ô hoạt động ra sao?",
+    "layout_family": "Full-width Pipeline",
+    "bullets": [
+      "Xe đi ngang qua ô ≠ đã đỗ; xe rời ô ≠ phương tiện mới.",
+      "Arrival: polygon overlap Vehicle Footprint ↔ Slot; yêu cầu ≥ 3 mẫu liên tiếp; vision confirm ≥ 2 lần trong ~1.5 s → G#1 → P056 → PARKED.",
+      "Departure: departure_pending + Departure Token = 5 s (gia hạn tiệm cận khi departure còn tiến triển, ≤ 15 s).",
+      "Chỉ nhích ra căn chỉnh → tái hấp thu ID cũ; rời thật → giải phóng ô.",
+      "Departure Re-ID: khi xe chạy lại, nối track mới về Canonical GID cũ — không tạo G#2."
+    ],
+    "key_numbers": [
+      {"value": "Arrival ≥ 3 mẫu liên tiếp", "tag": "design-param"},
+      {"value": "Vision confirm ≥ 2 lần / ~1.5 s", "tag": "design-param"},
+      {"value": "Departure Token = 5 s (gia hạn ≤ 15 s)", "tag": "design-param"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0278_gid_created_split_debug.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0543_parked_confirmed_debug_cam1.jpg",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\frame_0705_departure_token_debug_cam2.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\clip_s11_park_cycle.mp4"
+    ],
+    "speaker_notes": "Xe được xác nhận đỗ khi có ít nhất 3 mẫu liên tiếp và 2 lần xác nhận vision trong cửa sổ khoảng 1,5 giây — đủ để phân biệt xe đỗ thật với xe chỉ đi ngang. Khi xe rời ô, Departure Token 5 giây giữ lại danh tính, và có thể gia hạn tiệm cận tới 15 giây nếu quá trình rời còn tiến triển. Khi xe đỗ, Local Track có thể trở nên dormant; lúc xe chạy lại, hệ thống khôi phục Canonical GID cũ dựa trên trạng thái ô, vị trí mặt sàn và quỹ đạo rời ô. Cơ chế này đã được triển khai và kiểm thử đơn vị, và hiện đang được kiểm chứng trên replay. Mục tiêu là chiếc xe trước và sau khi đỗ vẫn là cùng một G#1.",
+    "scientific_caveats": "Departure Re-ID: đã triển khai + unit-tested, đang kiểm chứng trên replay — KHÔNG claim hoàn tất, cũng không hạ xuống 'chỉ thiết kế'. Failure documented: hiep2 G#2→G#4 @f1181 (slide 12). Checklist: phải có lifecycle Moving → Parked → Moving."
+  },
+  {
+    "slide_number": 12,
+    "title": "Kết quả thực nghiệm trên dữ liệu tầng hầm",
+    "research_question": "Hệ thống thực tế hoạt động đến đâu trên dữ liệu thử nghiệm?",
+    "layout_family": "Results Dashboard",
+    "bullets": [
+      "Dataset: 3.827 frames / 153,08 s / 25 FPS [doc-claimed: session 2808_3] trên CPU phổ thông; mô hình bãi đỗ thu nhỏ.",
+      "Latency: End-to-End 169 ms [doc-claimed: session 2808_3].",
+      "Geometry: 945 cặp điểm · p50 = 1,13 cm · p95 = 4,39 cm [doc-claimed: seam benchmark, session 2808_3].",
+      "Độ bền ID: Main GID duy trì 3.383/3.827 ≈ 88,4% thời lượng video [doc-claimed: session 2808_3].",
+      "Event Window: A = overlap ±2 s; B = vùng cửa ô ±3 s → 19/20 session thành công [doc-claimed: session 2808_3].",
+      "Failure: session hiep2 — xe G#2 đỗ D01, rời ô bị cấp G#4 @f1181 (Departure Re-ID fail, documented); ảnh lóa đèn toi1 f005 chỉ minh họa điều kiện (frame ref đã đổi f0190→f0005 theo asset thực tế)."
+    ],
+    "key_numbers": [
+      {"value": "1,13 cm p50", "tag": "doc-claimed: session 2808_3"},
+      {"value": "25 FPS", "tag": "doc-claimed: session 2808_3"},
+      {"value": "169 ms E2E", "tag": "doc-claimed: session 2808_3"},
+      {"value": "19/20 session", "tag": "doc-claimed: session 2808_3"},
+      {"value": "3.827 f / 153,08 s", "tag": "doc-claimed: session 2808_3"},
+      {"value": "Main GID 88,4% (3.383/3.827)", "tag": "doc-claimed: session 2808_3"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\slides_nckh\\assets\\slide12_failure_gid4_f1182.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide12_glare_context_f0005.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide12_failure_split60cm_f1792.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\slide12_failure_ghostpair_f2181.jpg",
+      "D:\\TechGar2\\slides_nckh\\assets\\clip_s12_failure_depart.mp4"
+    ],
+    "speaker_notes": "Nhóm không chỉ tính trung bình trên toàn bộ video vì phần lớn thời gian bãi xe là cảnh tĩnh. Thay vào đó, nhóm tập trung vào các Event Window có rủi ro cao nhất: vùng chuyển camera và vùng cửa ô đỗ. Trong 20 session thử nghiệm, 19 session hoàn thành thành công. Session còn lại thất bại ở cơ chế khôi phục ID sau khi rời ô — một giới hạn nhóm ghi nhận và cần kiểm chứng thêm.",
+    "scientific_caveats": "Phát biểu đúng 'Trong 20 session thử nghiệm, 19 session thành công' — KHÔNG suy rộng '95% mọi điều kiện'. KHÔNG đưa Precision/Recall (chưa có ground truth rõ). 3383/3827: doc NoiDung:561 đúng = 88,4% thời lượng (98,2% thời gian xe di chuyển); doc Scientific_Spec:309 ghi nhầm 48,4% → dùng 88,4% (DISCREPANCY-RESOLVED). Topology-FPS: bỏ claim định lượng (không có số ablation trên ổ). Failure case chính = hiep2 G#2→G#4 @f1181 (documented, đúng cơ chế slide 11); narrative 'lóa đèn <1m' không truy được session → chỉ minh họa. Toàn bộ số slide này là [doc-claimed: session 2808_3] — session không nằm trên ổ; footage là scale-model."
+  },
+  {
+    "slide_number": 13,
+    "title": "Đóng góp nghiên cứu và hướng phát triển",
+    "research_question": "Nhóm đóng góp gì, còn giới hạn gì, và bước tiếp theo là gì?",
+    "layout_family": "Comparison 50/50",
+    "bullets": [
+      "Card 1 — Ground-plane Homography: shared coordinate system · p50 = 1,13 cm [doc-claimed: session 2808_3].",
+      "Card 2 — Canonical Global ID: Local IDs → Global ID · Topology + Cost Matrix · handoff/overlap.",
+      "Card 3 — Adaptive Slot Management: Adaptive Equalizer · Majority Vote · Arrival/Departure · Vehicle ↔ Slot binding.",
+      "Hạn chế: dataset scale-model/trong nhà; chưa kiểm chứng outdoor; tham số cần recalibration khi đổi miền dữ liệu; baseline 1-cam vs 2-cam chưa đủ; chưa có ground truth đầy đủ cho MOTA/P/R; Departure Re-ID cần kiểm chứng riêng.",
+      "Hướng phát triển: N-camera · nhiều tầng/khu vực · dataset lớn hơn, nhiều loại xe · kiểm thử nhiều điều kiện sáng · tự động tuning · ground-truth annotation cho metric chuẩn · evaluation 1-cam vs multi-cam · outdoor adaptation.",
+      "Dòng kết: Một xe thật → Một Canonical Global ID → Một tọa độ mặt sàn → Một trạng thái ô đỗ."
+    ],
+    "key_numbers": [
+      {"value": "p50 = 1,13 cm (Card 1)", "tag": "doc-claimed: session 2808_3"}
+    ],
+    "assets": [
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\web_dashboard_desktop.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\web_navigation_c06.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\web_mobile_nav.png",
+      "D:\\TechGar2\\backend\\main_detect\\docs\\slides_tracking\\slides_assets\\roi_full_view.png"
+    ],
+    "speaker_notes": "Tóm lại, nghiên cứu tập trung vào ba đóng góp: đưa nhiều camera về một hệ tọa độ mặt sàn chung, duy trì một danh tính duy nhất cho phương tiện khi di chuyển giữa các camera, và liên kết danh tính đó với trạng thái ô đỗ. Kết quả hiện tại là bước kiểm chứng trên mô hình bãi đỗ thu nhỏ trong nhà, và hướng tiếp theo là mở rộng N-camera, dataset lớn hơn và đánh giá bằng ground truth đầy đủ.",
+    "scientific_caveats": "Phải có limitation, không chỉ thành tựu. Departure Re-ID nêu rõ là cần kiểm chứng riêng nếu chưa có thử nghiệm. Dataset là scale-model testbed trong nhà — không claim tổng quát ngoài trời."
+  }
+]

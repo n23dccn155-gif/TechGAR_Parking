@@ -1,0 +1,955 @@
+{
+  "schema": "ppt-master.svg-quality-report.v1",
+  "stage": "final",
+  "target": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh",
+  "source_fingerprint": {
+    "algorithm": "sha256",
+    "digest": "f0d8117f08506981b1eacfe4838847fde400793866a8db52059b40d321445920",
+    "file_count": 13,
+    "files": [
+      {
+        "file": "01_bai_toan_thuc_te.svg",
+        "sha256": "3eb78584a4bd3ff0a95de0cc943e7649154cb6dba2b0810a8315fb4dd5c2cd0f"
+      },
+      {
+        "file": "02_mot_camera_chua_du.svg",
+        "sha256": "c6a4d7bb6352f4018686633ed75c6c6829094a38a51fdb6b9b472bfaf6778632"
+      },
+      {
+        "file": "03_pipeline_tong_the.svg",
+        "sha256": "a5730be2d00c4e4c518c649d725086ca8bb1f2004fbbc845cefd101cfb1b8d9e"
+      },
+      {
+        "file": "04_hai_camera_song_song.svg",
+        "sha256": "4c770c376ef0c270bf23c2907f48a85578d99ef5ec3bff04d846cdded8a23f03"
+      },
+      {
+        "file": "05_homography_mat_san.svg",
+        "sha256": "a8af60d5844a5d60fcf9ef267b4e99aa84128163f265acc5de12ec2648a57b65"
+      },
+      {
+        "file": "06_local_tracking.svg",
+        "sha256": "df488132175721460089b739cb38cc0129c05fd8b740d98909d210c8a663bfaa"
+      },
+      {
+        "file": "07_cross_camera_gid.svg",
+        "sha256": "fa4fee106af8f1b2c5def187cf58b45628f7efab9092a8885a851bd34b91799c"
+      },
+      {
+        "file": "08_topology_cost_matrix.svg",
+        "sha256": "028d482a31417b2a8004743f8bc13f7e40aa4028bf9c3121d41b5c8c95088b21"
+      },
+      {
+        "file": "09_adaptive_equalizer.svg",
+        "sha256": "32f98c6ae0668733ce1a1b56d8834a8d664ae2d6a54686c54170ccecd6231ebd"
+      },
+      {
+        "file": "10_vote_threshold.svg",
+        "sha256": "57521d6375f00f66613a80161053efb55af2c363daaf5f6964f259a443038f7d"
+      },
+      {
+        "file": "11_lifecycle_parked_reid.svg",
+        "sha256": "7d9be109cf916a7af92b27bd4e34d7b8b131e864c5d05f214b4a82be13ebea0d"
+      },
+      {
+        "file": "12_ket_qua_thuc_nghiem.svg",
+        "sha256": "c1878d0c13fd0fb8b1f65a231600d857b838bf4323d0cc166c438df1c1720aff"
+      },
+      {
+        "file": "13_dong_gop_huong_phat_trien.svg",
+        "sha256": "0206709f4de216528b6dac5c852faefc3cfd14364215bc205b80a6ebf42d6106"
+      }
+    ]
+  },
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "warnings": 0,
+    "errors": 0
+  },
+  "issue_types": {},
+  "categories": {
+    "blocking": {
+      "count": 0,
+      "issues": []
+    },
+    "introduced": {
+      "count": 0,
+      "issues": []
+    },
+    "inherited": {
+      "count": 0,
+      "issues": []
+    },
+    "source-import": {
+      "count": 0,
+      "summary": {
+        "warning_count": 0,
+        "by_code": {}
+      }
+    }
+  },
+  "drift": {
+    "colors": {},
+    "fonts": {},
+    "sizes": {}
+  },
+  "carrier_receipt": {
+    "scope": "informational-not-a-quota",
+    "pages": 13,
+    "totals": {
+      "text_elements": 361,
+      "image_placements": 27,
+      "icons": 28,
+      "svg_geometry_elements": 208,
+      "preset_shapes": 8,
+      "page_frame_elements": 13,
+      "marker_uses": 0,
+      "inline_emphasis_runs": 10,
+      "gradient_uses": 0,
+      "filter_uses": 0,
+      "text_effects": 0
+    },
+    "pages_with": {
+      "images": 13,
+      "icons": 9,
+      "presets": 1,
+      "charts": 0,
+      "tables": 0,
+      "formulas": 3,
+      "inline_emphasis_runs": 4,
+      "gradient_uses": 0,
+      "filter_uses": 0,
+      "text_effects": 0
+    },
+    "relationship_pages": null,
+    "geometry_elements": {
+      "circle": 7,
+      "ellipse": 0,
+      "line": 20,
+      "path": 4,
+      "polygon": 6,
+      "polyline": 0,
+      "rect": 171
+    },
+    "preset_names": {
+      "chevron": 8
+    },
+    "native_objects": {
+      "chart": 0,
+      "formula_block": 4,
+      "formula_inline": 0,
+      "other": 0,
+      "table": 0
+    },
+    "image_page_max_frame_share_range": [
+      0.0309,
+      0.405
+    ]
+  },
+  "project_issues": {
+    "template": [],
+    "animation": [],
+    "illustration": [],
+    "communication_trace": [],
+    "pptx_structure": []
+  },
+  "files": [
+    {
+      "file": "01_bai_toan_thuc_te.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\01_bai_toan_thuc_te.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 18,
+          "images": {
+            "placements": 2,
+            "files": [
+              "poster_s01.jpg",
+              "slide1_overview_annotated.jpg"
+            ],
+            "max_frame_share": 0.3164
+          },
+          "icons": 5,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 5,
+              "circle": 1,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 2
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 18,
+        "tspan_elements": 5
+      },
+      "passed": true,
+      "source_sha256": "3eb78584a4bd3ff0a95de0cc943e7649154cb6dba2b0810a8315fb4dd5c2cd0f"
+    },
+    {
+      "file": "02_mot_camera_chua_du.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\02_mot_camera_chua_du.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 13,
+          "images": {
+            "placements": 2,
+            "files": [
+              "slide2_cam1_blind.jpg",
+              "slide2_cam2_sees.jpg"
+            ],
+            "max_frame_share": 0.1914
+          },
+          "icons": 4,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 13,
+        "tspan_elements": 1
+      },
+      "passed": true,
+      "source_sha256": "c6a4d7bb6352f4018686633ed75c6c6829094a38a51fdb6b9b472bfaf6778632"
+    },
+    {
+      "file": "03_pipeline_tong_the.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\03_pipeline_tong_the.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 53,
+          "images": {
+            "placements": 1,
+            "files": [
+              "roi_active_map.png"
+            ],
+            "max_frame_share": 0.1205
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 7,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 8,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 8,
+            "preset_names": {
+              "chevron": 8
+            },
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 53,
+        "tspan_elements": 3
+      },
+      "passed": true,
+      "source_sha256": "a5730be2d00c4e4c518c649d725086ca8bb1f2004fbbc845cefd101cfb1b8d9e"
+    },
+    {
+      "file": "04_hai_camera_song_song.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\04_hai_camera_song_song.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 21,
+          "images": {
+            "placements": 1,
+            "files": [
+              "frame_0283_handoff_opened_split_debug.jpg"
+            ],
+            "max_frame_share": 0.405
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 3,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 1,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 21,
+        "tspan_elements": 6
+      },
+      "passed": true,
+      "source_sha256": "4c770c376ef0c270bf23c2907f48a85578d99ef5ec3bff04d846cdded8a23f03"
+    },
+    {
+      "file": "05_homography_mat_san.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\05_homography_mat_san.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 25,
+          "images": {
+            "placements": 3,
+            "files": [
+              "calib_cam1_marked.png",
+              "calib_cam2_marked.png",
+              "roi_full_view.png"
+            ],
+            "max_frame_share": 0.1039
+          },
+          "icons": 4,
+          "effects": {
+            "inline_emphasis_runs": 3,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 1,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 25,
+        "tspan_elements": 7
+      },
+      "passed": true,
+      "source_sha256": "a8af60d5844a5d60fcf9ef267b4e99aa84128163f265acc5de12ec2648a57b65"
+    },
+    {
+      "file": "06_local_tracking.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\06_local_tracking.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 26,
+          "images": {
+            "placements": 3,
+            "files": [
+              "slide6_moving.jpg",
+              "slide6_occluded.jpg",
+              "slide6_stopped.jpg"
+            ],
+            "max_frame_share": 0.081
+          },
+          "icons": 5,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 10,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 2,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 26,
+        "tspan_elements": 4
+      },
+      "passed": true,
+      "source_sha256": "df488132175721460089b739cb38cc0129c05fd8b740d98909d210c8a663bfaa"
+    },
+    {
+      "file": "07_cross_camera_gid.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\07_cross_camera_gid.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 19,
+          "images": {
+            "placements": 2,
+            "files": [
+              "poster_s07.jpg",
+              "shared_map_preview.png"
+            ],
+            "max_frame_share": 0.1765
+          },
+          "icons": 3,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 9,
+              "circle": 1,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 1
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 19,
+        "tspan_elements": 4
+      },
+      "passed": true,
+      "source_sha256": "fa4fee106af8f1b2c5def187cf58b45628f7efab9092a8885a851bd34b91799c"
+    },
+    {
+      "file": "08_topology_cost_matrix.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\08_topology_cost_matrix.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 32,
+          "images": {
+            "placements": 2,
+            "files": [
+              "lane_graph_spots.png",
+              "slide8_car_crop.png"
+            ],
+            "max_frame_share": 0.1823
+          },
+          "icons": 3,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 15,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 6,
+              "polyline": 0,
+              "polygon": 6,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 2,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 32,
+        "tspan_elements": 1
+      },
+      "passed": true,
+      "source_sha256": "028d482a31417b2a8004743f8bc13f7e40aa4028bf9c3121d41b5c8c95088b21"
+    },
+    {
+      "file": "09_adaptive_equalizer.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\09_adaptive_equalizer.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 29,
+          "images": {
+            "placements": 3,
+            "files": [
+              "slide9_dark_cam1_f0200.jpg",
+              "slide9_glare_cam1_f0005.jpg",
+              "slide9_normal_cam1_f1200.jpg"
+            ],
+            "max_frame_share": 0.0827
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 10,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 1,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 29,
+        "tspan_elements": 1
+      },
+      "passed": true,
+      "source_sha256": "32f98c6ae0668733ce1a1b56d8834a8d664ae2d6a54686c54170ccecd6231ebd"
+    },
+    {
+      "file": "10_vote_threshold.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\10_vote_threshold.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 22,
+          "images": {
+            "placements": 1,
+            "files": [
+              "slide10_slot_closeup.jpg"
+            ],
+            "max_frame_share": 0.0309
+          },
+          "icons": 0,
+          "effects": {
+            "inline_emphasis_runs": 1,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 58,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 1,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 1,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 22,
+        "tspan_elements": 7
+      },
+      "passed": true,
+      "source_sha256": "57521d6375f00f66613a80161053efb55af2c363daaf5f6964f259a443038f7d"
+    },
+    {
+      "file": "11_lifecycle_parked_reid.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\11_lifecycle_parked_reid.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 28,
+          "images": {
+            "placements": 4,
+            "files": [
+              "frame_0278_gid_created_split_debug.jpg",
+              "frame_0543_parked_confirmed_debug_cam1.jpg",
+              "frame_0705_departure_token_debug_cam2.jpg",
+              "poster_s11.jpg"
+            ],
+            "max_frame_share": 0.0452
+          },
+          "icons": 1,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 8,
+              "circle": 5,
+              "ellipse": 0,
+              "line": 1,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 1
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 28,
+        "tspan_elements": 12
+      },
+      "passed": true,
+      "source_sha256": "7d9be109cf916a7af92b27bd4e34d7b8b131e864c5d05f214b4a82be13ebea0d"
+    },
+    {
+      "file": "12_ket_qua_thuc_nghiem.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\12_ket_qua_thuc_nghiem.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 41,
+          "images": {
+            "placements": 2,
+            "files": [
+              "slide12_failure_gid4_f1182.jpg",
+              "slide12_glare_context_f0005.jpg"
+            ],
+            "max_frame_share": 0.0417
+          },
+          "icons": 1,
+          "effects": {
+            "inline_emphasis_runs": 3,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 12,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 41,
+        "tspan_elements": 10
+      },
+      "passed": true,
+      "source_sha256": "c1878d0c13fd0fb8b1f65a231600d857b838bf4323d0cc166c438df1c1720aff"
+    },
+    {
+      "file": "13_dong_gop_huong_phat_trien.svg",
+      "path": "D:\\TechGar2\\slides_nckh\\build\\techgar_nckh\\svg_output\\13_dong_gop_huong_phat_trien.svg",
+      "exists": true,
+      "errors": [],
+      "warnings": [],
+      "info": {
+        "viewbox": "0 0 1280 720",
+        "carrier_receipt": {
+          "text_elements": 34,
+          "images": {
+            "placements": 1,
+            "files": [
+              "web_dashboard_desktop.png"
+            ],
+            "max_frame_share": 0.0518
+          },
+          "icons": 2,
+          "effects": {
+            "inline_emphasis_runs": 0,
+            "gradient_uses": 0,
+            "filter_uses": 0,
+            "text_effects": 0
+          },
+          "geometry": {
+            "svg_elements": {
+              "rect": 13,
+              "circle": 0,
+              "ellipse": 0,
+              "line": 0,
+              "polyline": 0,
+              "polygon": 0,
+              "path": 0
+            },
+            "preset_shapes": 0,
+            "preset_names": {},
+            "page_frame_elements": 1,
+            "marker_uses": {
+              "start": 0,
+              "mid": 0,
+              "end": 0
+            }
+          },
+          "native_objects": {
+            "chart": 0,
+            "table": 0,
+            "formula_block": 0,
+            "formula_inline": 0,
+            "other": 0
+          }
+        },
+        "fonts": [
+          "Segoe UI, Arial"
+        ],
+        "text_elements": 34,
+        "tspan_elements": 1
+      },
+      "passed": true,
+      "source_sha256": "0206709f4de216528b6dac5c852faefc3cfd14364215bc205b80a6ebf42d6106"
+    }
+  ]
+}
