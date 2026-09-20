@@ -9,23 +9,42 @@ khỏi bản này.
 
 ```text
 main_detect/
-├── main.py                      # Demo tổng hợp: 4 camera ảo + Global ID + parking
-├── single_camera.py             # Video/webcam đơn + xuất tọa độ JSON
+├── two_camera.py                # Hai camera thật + Global ID + parking
+├── runtime_server.py            # Entrypoint cho frontend (REST + MJPEG :8001)
+├── run_two_camera_session.py    # Helper chạy/ghi lại session hai camera
+├── calibrate_map.py             # Hiệu chỉnh shared map không cần nhập X/Y
+├── mask_roi.py                  # Vẽ analysis mask cho hai camera
 ├── src/techgar/
 │   ├── motion_tracker.py        # Motion, Kalman, HSV Re-ID, LAPJV
-│   ├── vehicle_tracker.py       # Kiểu track + backend YOLO tùy chọn
+│   ├── vehicle_tracker.py       # Kiểu track dùng chung (TrackedVehicle, TrackStatus)
 │   ├── cross_camera_manager.py  # Một Global ID xuyên camera
 │   ├── parking_detector.py      # Ensemble nhận diện ô trống/có xe
 │   ├── slot_vehicle_binder.py   # Hợp nhất vision với ID + trạng thái dừng
-│   └── direction_detector.py    # Sự kiện hướng qua các vạch
+│   ├── latest_frame_capture.py  # Thread đọc stream, giữ frame mới nhất
+│   ├── live_roi_editor.py       # Chỉnh ROI trực tiếp lúc đang chạy
+│   ├── occlusion_guard.py       # Chặn bind sai khi xe tạm bị che
+│   ├── prediction_writer.py     # Ghi predictions.jsonl schema v3
+│   ├── runtime_contract.py      # Payload runtime cho web frontend
+│   ├── tracklet_descriptor.py   # Tracklet ngoại hình cho Re-ID
+│   └── trajectory_memory.py     # Bộ nhớ quỹ đạo shared-map cho ReID
 ├── tools/
-│   ├── ParkingSpacePicker_ve_js.py  # Công cụ duy nhất vẽ polygon ô đỗ
-│   └── draw_direction_lines.py      # Vẽ vạch xác định hướng, khác ROI ô đỗ
+│   ├── ParkingSpacePicker_ve_js.py      # Công cụ vẽ polygon ô đỗ
+│   ├── calibrate_two_cameras.py         # Hiệu chỉnh homography từ 4 góc overlap
+│   ├── calibrate_shared_map.py          # Hiệu chỉnh shared map đơn vị cm
+│   ├── draw_gate_zones.py               # Vẽ vạch cổng vào/ra
+│   ├── rectangle_line_calibration.py    # Fit phẳng 8 cặp điểm đo
+│   └── assemble_session_configs.py      # Đóng gói config theo session
 ├── config/
 │   ├── parking_slots.json       # 69 ô đỗ cho video 1100x720
-│   ├── roi_lines.json           # 4 vạch junction
-│   └── botsort_parking_reid.yaml
+│   ├── parking_slots_cam1.json / parking_slots_cam2.json
+│   ├── roi_mask_cam1.json / roi_mask_cam2.json
+│   ├── gate_zones.json          # Vạch cổng vào/ra
+│   ├── two_camera.detector.json # Profile threshold detector
+│   ├── two_camera.*.json        # Calibration hai camera
+│   ├── sessions/<session>/      # Bộ config theo từng session cũ
+│   └── shared_map_01/           # Capture hiệu chỉnh shared map
 ├── data/carPark.mp4             # Video duy nhất trong bản nộp
+├── experiment_test/             # Session output + công cụ replay/audit
 └── tests/                       # Regression test Global ID và parking fusion
 ```
 
@@ -41,61 +60,24 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Backend mặc định là OpenCV motion nên không cần tải model. Nếu có model YOLO đã
-fine-tune cho góc nhìn top-down, cài thêm:
+Backend mặc định là OpenCV motion nên không cần tải model.
+
+## Chạy hai camera
+
+`two_camera.py` là pipeline chính: hai luồng camera (DroidCam hoặc file replay),
+local tracking trên từng camera, `CrossCameraManager` giữ một Global ID khi xe
+chuyển camera, nhận diện trạng thái ô đỗ và ghi session. Chi tiết tham số,
+calibration và replay nằm trong `docs/two-camera-runbook.md`; bộ lệnh theo
+session nằm trong `docs/lenh-chay-theo-session.md`.
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-yolo.txt
-```
-
-## Chạy demo chính
-
-```powershell
-.\.venv\Scripts\python.exe main.py --playback-fps 30
-```
-
-Chương trình chia `carPark.mp4` thành bốn camera ảo, tracking xe trên từng vùng,
-giữ một Global ID khi xe chuyển camera, nhận diện trạng thái 69 ô đỗ và ghi:
-
-```text
-runtime_output/global_vehicle_registry.json
-runtime_output/parking_status_cam1..4.json
-runtime_output/vehicle_positions_cam1..4.json
-```
-
-Xem crop và ROI mà không chạy thuật toán:
-
-```powershell
-.\.venv\Scripts\python.exe main.py --preview --playback-fps 30
-```
-
-Chạy headless để kiểm tra nhanh:
-
-```powershell
-.\.venv\Scripts\python.exe main.py --no-display --max-frames 120
-```
-
-## Chạy một camera hoặc điện thoại dạng webcam
-
-Video mặc định:
-
-```powershell
-.\.venv\Scripts\python.exe single_camera.py --playback-fps 30
-```
-
-Webcam/virtual webcam:
-
-```powershell
-.\.venv\Scripts\python.exe single_camera.py --camera 0 --verbose
-```
-
-Backend YOLO tùy chọn:
-
-```powershell
-.\.venv\Scripts\python.exe single_camera.py `
-  --backend yolo `
-  --model models\parking_topdown.pt `
-  --camera 0
+.\.venv\Scripts\python.exe two_camera.py `
+  --cam1-url "http://<IP_CAM1>:4747/video/force/1280x720" `
+  --cam2-url "http://<IP_CAM2>:4747/video/force/1280x720" `
+  --slots-cam1 config\parking_slots_cam1.json `
+  --slots-cam2 config\parking_slots_cam2.json `
+  --calibration config\two_camera.shared_cm_01.json `
+  --session-dir experiment_test\output\two_camera_01
 ```
 
 ## Hiệu chỉnh ROI
@@ -107,14 +89,11 @@ lưu lại đúng file JSON này:
 .\.venv\Scripts\python.exe tools\ParkingSpacePicker_ve_js.py
 ```
 
-Vẽ vạch junction dùng cho xác định hướng:
+Vẽ analysis mask vùng nhìn thấy của từng camera:
 
 ```powershell
-.\.venv\Scripts\python.exe tools\draw_direction_lines.py
+.\.venv\Scripts\python.exe mask_roi.py --help
 ```
-
-Hai công cụ trên không trùng chức năng: một công cụ tạo polygon ô đỗ, công cụ
-còn lại tạo các đoạn thẳng phát hiện xe đi qua ngã rẽ.
 
 ## Logic trạng thái ô đỗ
 
@@ -144,9 +123,9 @@ MJPEG tại cổng `8001`.
 Với bộ video/config trong lệnh thử nghiệm, chạy từ thư mục `backend\main_detect`:
 
 ```powershell
-..\.venv\Scripts\python.exe .\runtime_server.py `
-  --cam1-video "D:\NCKH\TechGAR\main_detect\experiment_test\output\droidcam_shared_m_04\raw_cam1.mp4" `
-  --cam2-video "D:\NCKH\TechGAR\main_detect\experiment_test\output\droidcam_shared_m_04\raw_cam2.mp4" `
+.\.venv\Scripts\python.exe .\runtime_server.py `
+  --cam1-video "experiment_test\output\droidcam_shared_m_04\raw_cam1.mp4" `
+  --cam2-video "experiment_test\output\droidcam_shared_m_04\raw_cam2.mp4" `
   --slots-cam1 "config\parking_slots_cam1.json" `
   --slots-cam2 "config\parking_slots_cam2.json" `
   --calibration "config\two_camera.shared_m_01.json" `

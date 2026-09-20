@@ -13,7 +13,6 @@ import os
 import secrets
 import tempfile
 import threading
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -27,9 +26,6 @@ SESSIONS_FILE = Path(
         ROOT_DIR / "backend" / "data" / "navigation_sessions.json",
     )
 )
-POSITIONS_FILE = ROOT_DIR / "backend" / "detect_car_update" / "vehicle_positions.json"
-STATUS_FILE = ROOT_DIR / "frontend" / "public" / "parking_status.json"
-WATCH_INTERVAL = 2.0
 QR_DISPLAY_SECONDS = 10.0
 
 _STORE_LOCK = threading.RLock()
@@ -580,24 +576,6 @@ def list_sessions() -> None:
         )
 
 
-def watch_loop() -> None:
-    """Legacy single-camera watcher retained for the sample workflow."""
-    print(f"[WATCH] Reading {POSITIONS_FILE}")
-    while True:
-        vehicles = load_json(POSITIONS_FILE).get("active_vehicles", {})
-        parking = load_json(STATUS_FILE).get("slots", {})
-        for session in load_sessions().values():
-            if session.get("state") == "NAVIGATING_TO_SPOT":
-                target = session.get("targetSpotId")
-                if target and parking.get(target, {}).get("status") == "occupied":
-                    set_parked(str(session["sessionId"]), str(target))
-            active_track_id = session.get("activeTrackId")
-            if active_track_id is not None and str(active_track_id) in vehicles:
-                position = vehicles[str(active_track_id)].get("position", {})
-                update_track_position(str(session["sessionId"]), active_track_id, position)
-        time.sleep(WATCH_INTERVAL)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="TechGAR vehicle-session manager")
     actions = parser.add_mutually_exclusive_group(required=True)
@@ -608,7 +586,6 @@ def parse_args() -> argparse.Namespace:
     actions.add_argument("--set-parked", metavar="SESSION_ID")
     actions.add_argument("--set-exit", metavar="SESSION_ID")
     actions.add_argument("--close", metavar="SESSION_ID")
-    actions.add_argument("--watch", action="store_true")
     parser.add_argument("--global-id", type=int)
     parser.add_argument("--track", type=int)
     parser.add_argument("--spot")
@@ -633,8 +610,6 @@ def main() -> None:
         set_exit_navigation(args.set_exit, args.track)
     elif args.close:
         close_session(args.close)
-    elif args.watch:
-        watch_loop()
 
 
 if __name__ == "__main__":

@@ -331,21 +331,8 @@ class SlotVehicleBinder:
         self._last_timestamp_s = 0.0
 
     @property
-    def bindings(self) -> Dict[str, SlotBinding]:
-        return dict(self._bindings)
-
-    @property
     def events(self) -> List[dict]:
         return list(self._events)
-
-    @property
-    def active_departure_tokens(self) -> Dict[str, DepartureToken]:
-        """Return a shallow copy for diagnostics without exposing ownership."""
-        return dict(self._departure_tokens)
-
-    def get_vehicle_id_for_slot(self, slot_id: str) -> Optional[int]:
-        binding = self._bindings.get(slot_id)
-        return binding.vehicle_id if binding else None
 
     def get_slot_for_vehicle(self, vehicle_id: int) -> Optional[str]:
         return self._vehicle_to_slot.get(int(vehicle_id))
@@ -2644,12 +2631,6 @@ class SlotVehicleBinder:
                 state.candidate_slot_id = None
                 state.movement_state = "moving"
             self._event("parking_slot_removed", global_id=global_id, slot_id=slot_id)
-
-    def update(self, active_tracks: dict, slot_results: list, frame_idx: int) -> None:
-        """Compatibility wrapper for the former low-frequency API."""
-        timestamp_s = float(frame_idx) / 30.0
-        self.update_vision(slot_results, frame_idx, timestamp_s)
-        self.update_tracks(active_tracks, frame_idx, timestamp_s)
 
     def _cleanup_pending(self, frame_idx: int) -> None:
         expired = [

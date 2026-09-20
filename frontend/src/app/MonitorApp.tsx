@@ -7,7 +7,7 @@ import { ParkingLegend } from "../components/ParkingLegend";
 import { ParkingMap, type GateMapOverlay } from "../components/ParkingMap";
 import type { RuntimeCameraId, RuntimeEvent, RuntimeGateConfig, RuntimeGateLine, RuntimePoint, RuntimeSnapshot } from "../domain/runtime";
 import { liveRuntimeError } from "../domain/runtime";
-import { PARKING_GEOMETRY, type Point } from "../geometry/parkingGeometry";
+import type { Point } from "../geometry/parkingGeometry";
 
 const POLL_INTERVAL_MS = 200;
 const MAX_RETRY_INTERVAL_MS = 5_000;
@@ -360,7 +360,6 @@ export function MonitorApp() {
                 cameras={cameras}
                 filter="all"
                 activeVehicles={vehicles}
-                frameSize={{ width: PARKING_GEOMETRY.width, height: PARKING_GEOMETRY.height }}
                 selectedVehicleId={selectedVehicleId}
                 onVehicleClick={setSelectedVehicleId}
                 gateOverlay={gateOverlay}

@@ -21,31 +21,47 @@ Navigate to the `frontend/` directory first (`cd frontend`):
 * `npm run build`: Build production bundle (`tsc && vite build`).
 * `npm run lint`: Run ESLint check.
 
-### 2. Backend & Simulator Commands
-From the project root directory (`D:\NCKH\TechGAR`):
+### 2. Backend Commands
+Backend Python lives in the venv inside `backend/main_detect` (`.\.venv\Scripts\python.exe`).
+Full session-by-session command reference: `backend/main_detect/docs/lenh-chay-theo-session.md`.
 
-#### 🟢 Sample Data Mode (Quick Demo / No GPU)
-Run in 2-3 separate terminal tabs:
+#### 🔵 Runtime Mode (two-camera AI tracking → session API)
 ```powershell
-# Terminal 1: Run Simulator for smooth car movements
-python backend/sample_tracking_simulator.py
+# Terminal 1: two-camera runtime server (port 8001 snapshot API)
+cd D:\TechGar2\backend\main_detect
+.\.venv\Scripts\python.exe .\runtime_server.py `
+  --cam1-url "http://192.168.100.53:4747/video/force/1280x720" `
+  --cam2-url "http://192.168.100.198:4747/video/force/1280x720" `
+  --slots-cam1 "config\parking_slots_cam1.json" `
+  --slots-cam2 "config\parking_slots_cam2.json" `
+  --calibration "config\two_camera.shared_cm_01.json" `
+  --mask-cam1 "config\roi_mask_cam1.json" `
+  --mask-cam2 "config\roi_mask_cam2.json" `
+  --api-port 8001 --no-display
 
-# Terminal 2: Run Gate Session Controller & REST API
+# Terminal 2: gate session controller (port 8000 REST API)
+cd D:\TechGar2
+.\backend\main_detect\.venv\Scripts\python.exe .\backend\gate_session_controller.py `
+  --runtime-url "http://127.0.0.1:8001/api/runtime/snapshot" `
+  --gate-config "backend\main_detect\config\gate_zones.json" `
+  --port 8000
+```
+To replay a recorded session instead of live cams, swap `--cam*-url` for
+`--cam*-video "experiment_test\output\<SESSION>\raw_camN.mp4"` and point every
+`config\` path at `config\sessions\<SESSION>\` (see the runbook).
+
+#### 🟢 File Mode (no cameras — deterministic JSON feed)
+```powershell
 python backend/gate_session_controller.py --source vehicle_positions_sample.json
 ```
+(`--source` names a JSON file in `frontend/public/`.)
 
-#### 🔵 Real OpenCV AI Tracking Mode (YOLOv8 + CNN)
+#### 🟡 Calibration / ROI Tools (`backend/main_detect/`)
 ```powershell
-# Terminal 1: Run OpenCV YOLOv8 + CNN tracking from video feed
-python backend/opencv_test_js_2.py
-
-# Terminal 2: Run Gate Session Controller with OpenCV source
-python backend/gate_session_controller.py --source vehicle_positions.json
-```
-
-#### 🟡 ROI Calibration Tool
-```powershell
-python backend/ParkingSpacePicker_ve_js.py
+.\.venv\Scripts\python.exe .\mask_roi.py --help                 # draw ROI masks per camera
+.\.venv\Scripts\python.exe .\tools\ParkingSpacePicker_ve_js.py  # draw parking-slot polygons
+.\.venv\Scripts\python.exe .\tools\draw_gate_zones.py --help    # draw ENTRY/EXIT gate lines
+.\.venv\Scripts\python.exe .\calibrate_map.py --help            # shared-map calibration
 ```
 
 ---
@@ -64,7 +80,7 @@ python backend/ParkingSpacePicker_ve_js.py
    * **Global ID Swapping & Motion Tracking**: Handles dual-camera vehicle handoff and tracking persistence across cameras.
 
 3. **Real-time Data Flow**:
-   * AI/Simulator $\longrightarrow$ `vehicle_positions.json` / `vehicle_positions_sample.json` $\longrightarrow$ `gate_session_controller.py` (Port 8000 REST/WebSocket API) $\longrightarrow$ Frontend Canvas Rendering.
+   * `runtime_server.py` (Port 8001 snapshot API) $\longrightarrow$ `gate_session_controller.py` (Port 8000 REST/WebSocket API) $\longrightarrow$ Frontend Canvas Rendering. Legacy `--source` file mode reads `vehicle_positions_sample.json` from `frontend/public/` instead.
 
 ---
 

@@ -26,4 +26,4 @@ for s in $SESSIONS; do
   if [ "$running" -ge 3 ]; then wait -n; running=$((running-1)); fi
 done
 wait
-echo "ALL_R2_DONE"
+echo "ALL_R3_DONE"

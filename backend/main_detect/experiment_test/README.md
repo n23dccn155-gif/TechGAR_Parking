@@ -52,21 +52,8 @@ Kiểm tra một session:
   --session experiment_test\output\droidcam_shared_m_01
 ```
 
-Chấm đồng thời bốn session và tạo báo cáo tổng hợp:
-
-```powershell
-..\.venv\Scripts\python.exe evaluate.py `
-  experiment_test\output\droidcam_shared_m_01 `
-  experiment_test\output\droidcam_shared_m_02 `
-  experiment_test\output\droidcam_shared_m_03 `
-  experiment_test\output\droidcam_shared_m_04 `
-  --fps 25
-```
-
-Mỗi session sinh `evaluation_results_v3.json` và `evaluation_report_v3.md`.
-Thư mục cha sinh `evaluation_summary_v3.json` và
-`evaluation_summary_v3.md`. CLI trả exit code `1` nếu có session `FAIL`; đây là
-kết quả đánh giá, không phải lỗi chạy Python.
-
-Evaluator chỉ nhận schema v3. Một lỗi gán nhầm GID, dùng chung GID cho hai xe,
-hoặc lưu sai chủ ô đủ lâu sẽ làm session `FAIL` và giới hạn điểm tối đa 49/100.
+> [!NOTE]
+> Công cụ chấm điểm tổng hợp `evaluate.py` (schema v3 evaluator) đã được loại bỏ
+> trong refactor_20_9. `validate_session.py` ở trên vẫn kiểm tra đủ schema;
+> chấm điểm Precision/Recall/F1 của ô đỗ hiện đối chiếu thủ công giữa
+> `ground_truth_slots.csv` và `predictions.jsonl`.

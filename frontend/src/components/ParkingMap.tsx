@@ -14,17 +14,7 @@ import { PARKING_GEOMETRY, type Point } from "../geometry/parkingGeometry";
 import type { RouteResult } from "../routing/routeEngine";
 import { MapControls } from "./MapControls";
 import { ParkingSpotShape, type SpotHighlight } from "./ParkingSpotShape";
-import type { ActiveVehicle, FrameSize } from "../domain/runtime";
-
-// ── Chuyển tọa độ camera → tọa độ bản đồ SVG (1200×900) ────────────────────
-// Kích thước nguồn được truyền động từ frame_size trong vehicle_positions.json
-// nên tự điều chỉnh theo mọi camera/video khác nhau.
-function camToMap(cx: number, cy: number, fs: FrameSize): Point {
-  return {
-    x: (cx / fs.width)  * PARKING_GEOMETRY.width,
-    y: (cy / fs.height) * PARKING_GEOMETRY.height,
-  };
-}
+import type { ActiveVehicle } from "../domain/runtime";
 
 interface ViewBoxState {
   x: number;
@@ -51,7 +41,6 @@ interface ParkingMapProps {
   route?: RouteResult | null;
   routePaused?: boolean;
   activeVehicles?: ActiveVehicle[];   // ← xe đang di chuyển thời gian thực
-  frameSize?: FrameSize;              // ← kích thước frame camera (tự động từ JSON)
   selectedVehicleId?: number;
   onVehicleClick?: (globalId: number) => void;
   gateOverlay?: GateMapOverlay;
@@ -144,7 +133,6 @@ export function ParkingMap({
   route,
   routePaused = false,
   activeVehicles = [],
-  frameSize = { width: 1100, height: 720 },
   selectedVehicleId,
   onVehicleClick,
   gateOverlay,
@@ -152,7 +140,6 @@ export function ParkingMap({
 }: ParkingMapProps) {
   const [view, setView] = useState(INITIAL_VIEW);
   const pointers = useRef(new Map<number, Point>());
-  const svgRef = useRef<SVGSVGElement>(null);
   const spotById = new Map(spots.map((spot) => [spot.id, spot]));
   const recommendedIds = new Set(recommendation ? [recommendation.best.spotId, ...recommendation.alternatives.map((spot) => spot.spotId)] : []);
 
@@ -254,7 +241,6 @@ export function ParkingMap({
     <section className="map-panel" aria-label="Sơ đồ bãi đỗ xe">
       <div className="map-canvas" data-testid="parking-map">
         <svg
-          ref={svgRef}
           viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
           preserveAspectRatio="xMidYMin meet"
           role="img"
@@ -429,12 +415,6 @@ export function ParkingMap({
 
           {/* ── Icon xe di chuyển thời gian thực (từ tracker của An) ────────── */}
           {activeVehicles.map((vehicle) => {
-            const pos = camToMap(vehicle.x, vehicle.y, frameSize);
-            const trailPoints = vehicle.trail
-              .slice(-25)
-              .map((p) => camToMap(p.x, p.y, frameSize))
-              .map((p) => `${p.x},${p.y}`)
-              .join(" ");
             return (
               <g
                 key={vehicle.trackId}
@@ -452,23 +432,10 @@ export function ParkingMap({
                   }
                 }}
               >
-                {/* Đường trail động – màu vàng đứt nút */}
-                {trailPoints && (
-                  <polyline
-                    points={trailPoints}
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={0.55}
-                    strokeDasharray="8 5"
-                  />
-                )}
                 {/* Xe + Nhãn ID - Di chuyển mượt bằng CSS transform transition */}
                 <g
                   style={{
-                    transform: `translate(${pos.x}px, ${pos.y}px)`,
+                    transform: `translate(${vehicle.x}px, ${vehicle.y}px)`,
                     transition: "transform 0.12s linear",
                     opacity: vehicle.observed === false ? 0.45 : 1,
                     willChange: "transform",

@@ -144,7 +144,6 @@ backend/
 │   │   ├── parking_detector.py       # Vision-based slot state
 │   │   ├── tracklet_descriptor.py    # HSV/LAB appearance
 │   │   ├── trajectory_memory.py       # World trajectory
-│   │   ├── deep_reid_model.py        # Deep Re-ID (optional)
 │   │   └── latest_frame_capture.py   # MJPEG stream sync
 │   │
 │   ├── config/                    # Configuration Files (NEW)
@@ -169,17 +168,14 @@ backend/
 │   │   ├── raw_cam1.mp4            # Test videos
 │   │   ├── raw_cam2.mp4
 │   │   ├── diagnose_identity_churn.py  # Diagnostic tool
-│   │   ├── validate_session.py
-│   │   └── evaluate.py
+│   │   └── validate_session.py
 │   │
 │   ├── two_camera.py              # Main 2-camera pipeline
 │   ├── runtime_server.py          # HTTP API Server (Port 8001)
 │   └── .venv/                     # Python Virtual Environment
 │
-├── gate_session_controller.py      # Gate API (Port 8000) - LEGACY
-├── session_manager.py              # Session management - LEGACY
-├── sample_tracking_simulator.py   # Demo simulator - LEGACY
-└── opencv_test_js_2.py           # YOLO detector - LEGACY
+├── gate_session_controller.py      # Gate API (Port 8000)
+└── session_manager.py              # Session management
 ```
 
 ### 3.2. Core Algorithm Files (`src/techgar/`)
@@ -204,7 +200,6 @@ frontend/
 ├── src/
 │   ├── app/
 │   │   ├── App.tsx                 # Main controller
-│   │   ├── App_Hiep4.tsx          # Legacy
 │   │   └── worldToSvg.ts          # Coordinate transform
 │   │
 │   ├── domain/
@@ -234,7 +229,9 @@ frontend/
 │       └── useVehicleSession.ts   # NEW: Session sync hook
 │
 └── public/
-    └── vehicle_positions.json     # From OpenCV (legacy)
+    ├── vehicle_positions_sample.json  # Sample feed (gate controller --source mode)
+    ├── parking_status_sample.json     # Sample slot states
+    └── gate_roi.json                  # Legacy gate ROI config
 ```
 
 ---

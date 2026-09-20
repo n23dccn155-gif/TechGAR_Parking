@@ -1,7 +1,7 @@
 """Run TechGAR tracking and parking on two real camera streams.
 
-This entrypoint deliberately leaves ``main.py`` unchanged: main.py remains the
-four-crop simulator, while this file accepts two independent MJPEG/RTSP feeds.
+This entrypoint accepts two independent MJPEG/RTSP feeds or recorded video
+files and drives the shared-map tracking, slot binding, and runtime API.
 """
 
 from __future__ import annotations

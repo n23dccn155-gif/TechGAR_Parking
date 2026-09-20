@@ -23,6 +23,5 @@
     "noUnusedParameters": true
     ,"types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "tests"],
-  "exclude": ["src/app/App_Hiep4.tsx"]
+  "include": ["src", "tests"]
 }

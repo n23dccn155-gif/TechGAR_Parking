@@ -8,7 +8,6 @@ import {
 } from "../domain/parking";
 import { AlternativeSpotList } from "./AlternativeSpotList";
 import { DestinationNeedSelector } from "./DestinationNeedSelector";
-import { useFocusTrap } from "./useFocusTrap";
 
 interface RecommendationPanelProps {
   need?: DestinationNeed;
@@ -28,7 +27,6 @@ export function RecommendationPanel({
   onAbandon,
 }: RecommendationPanelProps) {
   const panelRef = useRef<HTMLElement>(null);
-  useFocusTrap(false, panelRef);
 
   return (
     <section ref={panelRef} className="driver-panel recommendation-panel" aria-labelledby="recommendation-title">

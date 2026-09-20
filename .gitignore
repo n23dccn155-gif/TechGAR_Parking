@@ -16,6 +16,8 @@ backend/__pycache__/
 # Pytest
 .pytest_cache/
 */.pytest_cache/
+.pytest_*/
+*/.pytest_*/
 _pytest_tmp/
 */_pytest_tmp/
 

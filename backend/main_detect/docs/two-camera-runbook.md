@@ -4,8 +4,8 @@ Neu cam1/cam2 chi nhin hai phan cua bai va co mot overlap hep, dung workflow
 toa do centimet tai `docs/shared-map-calibration.md`. Khong dung pixel cam1 lam
 toan bo world map cho setup partial-view nay.
 
-`main.py` van la demo cat mot video thanh bon camera. Dung `two_camera.py` khi
-can hai dien thoai that. Tracker, parking detector va HSV ReID dung nguyen ban.
+Dung `two_camera.py` khi can hai dien thoai that. Tracker, parking detector va
+HSV ReID dung nguyen ban.
 
 ## Chuan bi
 
@@ -19,7 +19,7 @@ can hai dien thoai that. Tracker, parking detector va HSV ReID dung nguyen ban.
 .\.venv\Scripts\python.exe tools\calibrate_two_cameras.py `
   --cam1-url "http://<IP_CAM1>:4747/video" `
   --cam2-url "http://<IP_CAM2>:4747/video" `
-  --output config\two_camera.local.json
+  --output config\two_camera.calibration.json
 ```
 
 Click bon goc theo chieu kim dong ho tren cam1, sau do click dung bon diem do
@@ -161,7 +161,7 @@ Nhan hien thi `R` (raw), `F` (filtered) va `C` (core). Mau do nghia la bang
 chung filtered/core da vuot nguong hien tai.
 Pass Canny/Edge bi tat trong `two_camera.py`; gia tri `edge_thr` cu trong profile
 khong tham gia ket qua nhan dien.
-Nhan `S` de luu cac thanh vao `config/two_camera_detector.local.json`; thoat
+Nhan `S` de luu cac thanh vao `config/two_camera.detector.json`; thoat
 bang `Q`/`Esc` cung tu dong luu. Lan chay sau profile nay duoc nap lai. Them
 `--no-parking-debug` neu chi can quay va muon giam tai hien thi.
 
@@ -177,24 +177,6 @@ Moi camera co sau tham so loc vien rieng trong detector profile:
 
 Voting van dung du 25 bien the gamma/CLAHE. Component vach duoc xac dinh tu
 threshold base, sau do spatial ignore-mask duoc ap vao tat ca 25 phieu.
-
-## Demo mot camera DroidCam
-
-Dung `single_camera.py` de kiem tra rieng detector, tracking va ROI cua mot dien
-thoai. Vi du cam1:
-
-```powershell
-.\.venv\Scripts\python.exe single_camera.py `
-  --stream-url "http://192.168.100.53:4747/video/force/1280x720" `
-  --slots-file config\parking_slots_cam1.json `
-  --detector-profile config\two_camera_detector.local.json `
-  --profile-camera cam1
-```
-
-Cua so `Parking B/W - raw | filtered` hien raw ben trai va filtered ben phai.
-Nhan `Q` hoac `Esc` de dung. Them `--no-parking-debug` neu chi can xem overlay
-ROI. Demo mot camera chi co local track ID; Global ID chuyen giao cam1 -> cam2
-chi co trong `two_camera.py`.
 
 ## Chinh ROI truc tiep tren hai camera
 

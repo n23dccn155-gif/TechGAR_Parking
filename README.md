@@ -16,8 +16,8 @@ Hệ thống Quản lý & Dẫn đường Bãi đỗ xe Thông minh kết hợp 
 ## 🏗 1. Kiến trúc Hệ thống & 2 Nguồn Dữ liệu
 
 Hệ thống hỗ trợ **2 chế độ vận hành**:
-1. **Chế độ Dữ liệu Mẫu (Sample Mode)**: Dùng `sample_tracking_simulator.py` để giả lập di chuyển xe mượt mà mà không cần GPU/Camera.
-2. **Chế độ Camera OpenCV Thực tế (Real OpenCV Mode)**: Dùng `opencv_test_js_2.py` chạy mô hình **YOLOv8** (`yolov8n.pt`) kết hợp **CNN** (`cnn_parking.h5`) xử lý video/camera thực tế (`output3_video.mp4`), ghi tọa độ xe thật vào `vehicle_positions.json`.
+1. **Chế độ File mẫu (File Mode)**: `gate_session_controller.py --source vehicle_positions_sample.json` đọc feed JSON trong `frontend/public/` — không cần GPU/Camera.
+2. **Chế độ Runtime AI 2 camera (Runtime Mode)**: `backend/main_detect/runtime_server.py` chạy pipeline motion tracking + Global ID trên 2 camera (DroidCam HTTP hoặc video replay), phát snapshot qua REST API port 8001 cho `gate_session_controller.py`. Xem runbook đầy đủ: `backend/main_detect/docs/lenh-chay-theo-session.md`.
 
 ---
 
@@ -39,9 +39,9 @@ pip install opencv-python ultralytics tensorflow numpy requests pillow
 
 ---
 
-### 🟢 CHẾ ĐỘ 1: Dữ liệu Mẫu (Sample Data Mode - Khuyên dùng khi Demo nhanh)
+### 🟢 CHẾ ĐỘ 1: File dữ liệu mẫu (File Mode - Demo nhanh không cần Camera)
 
-Mở 3 Terminal độc lập:
+Mở 2 Terminal độc lập:
 
 * **Terminal 1 (Frontend Web App)**:
   ```bash
@@ -50,19 +50,14 @@ Mở 3 Terminal độc lập:
   ```
   *(Truy cập `http://localhost:4173/`)*
 
-* **Terminal 2 (Simulator di chuyển xe)**:
-  ```bash
-  python backend/sample_tracking_simulator.py
-  ```
-
-* **Terminal 3 (Gate Session Controller & API)**:
+* **Terminal 2 (Gate Session Controller & API)**:
   ```bash
   python backend/gate_session_controller.py --source vehicle_positions_sample.json
   ```
 
 ---
 
-### 🔵 CHẾ ĐỘ 2: Camera AI Tracking Thực tế (Real OpenCV Mode - Nhận diện qua Video/Camera)
+### 🔵 CHẾ ĐỘ 2: Camera AI Tracking Thực tế (Runtime Mode - 2 camera)
 
 Mở 3 Terminal độc lập:
 
@@ -72,18 +67,30 @@ Mở 3 Terminal độc lập:
   npm run dev
   ```
 
-* **Terminal 2 (Chạy OpenCV YOLO + CNN Tracking từ Video)**:
-  ```bash
-  python backend/opencv_test_js_2.py
+* **Terminal 2 (Runtime Server - pipeline AI, port 8001)**:
+  ```powershell
+  cd backend\main_detect
+  .\.venv\Scripts\python.exe .\runtime_server.py `
+    --cam1-url "http://<CAM1_IP>:4747/video/force/1280x720" `
+    --cam2-url "http://<CAM2_IP>:4747/video/force/1280x720" `
+    --slots-cam1 "config\parking_slots_cam1.json" `
+    --slots-cam2 "config\parking_slots_cam2.json" `
+    --calibration "config\two_camera.shared_cm_01.json" `
+    --mask-cam1 "config\roi_mask_cam1.json" `
+    --mask-cam2 "config\roi_mask_cam2.json" `
+    --api-port 8001 --no-display
   ```
-  * Chương trình sẽ mở cửa sổ OpenCV xử lý video `output3_video.mp4`, nhận diện xe và ghi vị trí thời gian thực vào `public/vehicle_positions.json`.
+  * Để replay video đã ghi thay cho cam live, đổi `--cam*-url` thành `--cam*-video "experiment_test\output\<SESSION>\raw_camN.mp4"` và trỏ config vào `config\sessions\<SESSION>\` (xem `backend/main_detect/docs/lenh-chay-theo-session.md`).
 
-* **Terminal 3 (Gate Session Controller cho nguồn OpenCV)**:
-  ```bash
-  python backend/gate_session_controller.py --source vehicle_positions.json
+* **Terminal 3 (Gate Session Controller, port 8000)**:
+  ```powershell
+  python backend/gate_session_controller.py `
+    --runtime-url "http://127.0.0.1:8001/api/runtime/snapshot" `
+    --gate-config "backend\main_detect\config\gate_zones.json" `
+    --port 8000
   ```
 
-* **Thao tác trên Web**: Trên thanh Header Web, đổi công tắc nguồn từ **"Dữ liệu mẫu"** $\rightarrow$ **"Camera OpenCV"**.
+* **Thao tác trên Web**: Trên thanh Header Web, đổi công tắc nguồn từ **"Dữ liệu mẫu"** $\rightarrow$ **"Camera OpenCV"** (nguồn realtime lấy từ Runtime API).
 
 ---
 
@@ -153,38 +160,34 @@ Mở 3 Terminal độc lập:
 
 ---
 
-### 📌 PHẦN B: Test Nhận Diện Xe & AI Tracking Thực Tế (`opencv_test_js_2.py`)
+### 📌 PHẦN B: Test Nhận Diện Xe & AI Tracking Thực Tế (`runtime_server.py`)
 
-#### 🔹 Test Case 7: Kiểm thử Module OpenCV + YOLOv8 + CNN Detection
-1. Chạy lệnh:
-   ```bash
-   python backend/opencv_test_js_2.py
-   ```
+#### 🔹 Test Case 7: Kiểm thử Runtime AI 2 camera
+1. Chạy Runtime Server như **CHẾ ĐỘ 2 - Terminal 2** (live DroidCam hoặc replay video).
 2. **Kỳ vọng**:
-   * Màn hình OpenCV hiển thị frame video từ `carPark.mp4` / `output3_video.mp4`.
-   * Các ô đỗ xe được vẽ khung Polygon màu **Xanh (Trống)** hoặc **Đỏ (Đã đỗ)** dựa trên mô hình CNN `cnn_parking.h5`.
-   * Các xe đang di chuyển được YOLOv8 đóng khung Bounding Box và gán `track_id`.
-   * File `public/vehicle_positions.json` được cập nhật tọa độ liên tục.
+   * Snapshot API `http://127.0.0.1:8001/api/runtime/snapshot` trả `vehicles[]` với `global_id` ổn định và `parking_slots[]` với trạng thái ô đỗ.
+   * MJPEG stream tại `/api/runtime/cameras/cam1.mjpg` & `cam2.mjpg` hiển thị khung hình có nhận diện.
 
 #### 🔹 Test Case 8: Chuyển đổi Nguồn Dữ liệu Real-time trên Web
 1. Mở trang Web `http://localhost:4173/`.
 2. Nhấp nút chuyển nguồn ở Header từ **"Dữ liệu mẫu"** $\rightarrow$ **"Camera OpenCV"**.
 3. **Kỳ vọng**:
-   * Bản đồ Web hiển thị chính xác tọa độ các xe đang chạy được trích xuất trực tiếp từ video qua script `opencv_test_js_2.py`.
+   * Bản đồ Web hiển thị chính xác tọa độ các xe đang chạy lấy từ Runtime API (port 8001).
 
 ---
 
 ### 📌 PHẦN C: Công cụ Định vị & Căn chỉnh Ô đỗ (Parking Slot Picker)
 
 #### 🔹 Test Case 9: Chạy Công cụ Vẽ và Điều chỉnh Ô đỗ (ROI Calibration)
-1. Chạy lệnh:
-   ```bash
-   python backend/ParkingSpacePicker_ve_js.py
+1. Chạy lệnh (từ `backend/main_detect`):
+   ```powershell
+   cd backend\main_detect
+   .\.venv\Scripts\python.exe .\tools\ParkingSpacePicker_ve_js.py
    ```
 2. **Sử dụng**:
    * Click chuột trái vào hình ảnh bãi xe để thêm ô đỗ mới.
    * Click chuột phải để xóa ô đỗ.
-   * Tọa độ các ô đỗ sẽ tự động lưu vào `CarParkPos` / `parking_slots.json` để phục vụ cho OpenCV và Bản đồ Web.
+   * Tọa độ các ô đỗ lưu vào `config\parking_slots.json` (hoặc `--output` tùy chọn, vd. `config\sessions\<SESSION>\parking_slots_camN.json`).
 
 ---
 
@@ -193,17 +196,16 @@ Mở 3 Terminal độc lập:
 ```text
 TechGAR/
 ├── backend/
-│   ├── opencv_test_js_2.py             # Script AI Tracking chính (OpenCV + YOLOv8 + CNN)
-│   ├── sample_tracking_simulator.py    # Simulator dữ liệu giả lập di chuyển xe
 │   ├── gate_session_controller.py      # HTTP API Server (port 8000) & Gate Controller
-│   ├── ParkingSpacePicker_ve_js.py     # Công cụ UI vẽ & căn chỉnh tọa độ ô đỗ (ROI)
+│   ├── session_manager.py              # QR vehicle-session lifecycle
 │   ├── yolov8n.pt / cnn_parking.h5     # Các mô hình AI nhận diện xe & đỗ xe
-│   └── output3_video.mp4 / carPark.mp4 # Video đầu vào giả lập camera
+│   └── main_detect/                    # Pipeline AI 2 camera (runtime_server.py, port 8001)
+│       └── tools/ParkingSpacePicker_ve_js.py  # Công cụ UI vẽ & căn chỉnh ô đỗ (ROI)
 └── frontend/
     ├── public/
-    │   ├── vehicle_positions.json      # Tọa độ xe realtime từ OpenCV
-    │   ├── vehicle_positions_sample.json # Tọa độ xe realtime từ Simulator
-    │   └── parking_status_sample.json  # Trạng thái ô đỗ bãi xe
+    │   ├── vehicle_positions_sample.json # Feed mẫu cho gate controller --source mode
+    │   ├── parking_status_sample.json  # Trạng thái ô đỗ bãi xe mẫu
+    │   └── gate_roi.json               # Cấu hình ROI cổng (legacy file mode)
     └── src/
         ├── app/App.tsx                 # Web Controller chính
         ├── components/EntryQRKiosk.tsx # Widget QR Kiosk tại cổng vào

@@ -644,13 +644,6 @@ class ParkingDetector:
             ev.update(stable_occupied=result.occupied, pending=state['pending'], ready=state['initialized'])
         return True
 
-    def get_roi_polygon(self, slot_id: str) -> Optional[np.ndarray]:
-        """Trả polygon đã scale cho 1 slot ID."""
-        for roi in self._rois:
-            if roi is not None and roi.slot_id == slot_id:
-                return roi.polygon_pts
-        return None
-
     def build_debug_images(self, frame: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
         """Render raw and border-filtered black/white evidence without changing state."""
         if frame is not None and (self._debug_cache is None or self._debug_cache[0] is not frame):

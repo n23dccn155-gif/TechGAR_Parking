@@ -62,19 +62,6 @@ class HandoffEntry:
 
 
 @dataclass
-class LostTrackEntry:
-    global_id: int
-    camera_id: str
-    local_track_id: int
-    last_world: Tuple[float, float]
-    velocity_world: Tuple[float, float]
-    bbox_size: Tuple[int, int]
-    appearance: Optional[np.ndarray]
-    appearance_samples: Tuple[np.ndarray, ...]
-    lost_at_frame: int
-
-
-@dataclass
 class GlobalIdentityState:
     """Last reliable observation of one vehicle across local trackers."""
 
@@ -319,7 +306,6 @@ class CrossCameraManager:
         self._occluded_global_ids: set[int] = set()
         self._ownership_tracks = None
         self._handoffs: List[HandoffEntry] = []
-        self._recently_lost: List[LostTrackEntry] = []
         self._identities: Dict[int, GlobalIdentityState] = {}
         self._cross_camera_deferred_since: Dict[Tuple[str, int], int] = {}
         self._cross_camera_deferred_claims: Dict[Tuple[str, int], dict] = {}
@@ -340,9 +326,6 @@ class CrossCameraManager:
         # asynchronous vision worker is still deciding the slot.
         self._provisional_identity_holds: set[int] = set()
         self._same_camera_duplicate_evidence: Dict[
-            Tuple[str, int, int], Tuple[int, int]
-        ] = {}
-        self._lost_continuation_evidence: Dict[
             Tuple[str, int, int], Tuple[int, int]
         ] = {}
         self._dormant_rejection_last: Dict[
@@ -538,23 +521,6 @@ class CrossCameraManager:
             return False  # Already promoted or not provisional
         elapsed = frame_idx - identity.provisional_since_frame
         return elapsed < self.merge_probation_frames
-
-    def _promote_from_provisional(self, global_id: int, frame_idx: int) -> None:
-        """Promote a provisional identity to full GID after probation period."""
-        global_id = self._canonical_id(global_id)
-        identity = self._identities.get(global_id)
-        if identity is None or identity.provisional_since_frame is None:
-            return
-        elapsed = frame_idx - identity.provisional_since_frame
-        if elapsed >= self.merge_probation_frames:
-            identity.provisional_since_frame = None
-            self._event(
-                "identity_promoted_from_provisional",
-                frame_idx,
-                global_id,
-                probation_frames=self.merge_probation_frames,
-                actual_frames=elapsed,
-            )
 
     def _in_exit_zone(self, cam_id: str, point: Tuple[int, int]) -> bool:
         return any(
@@ -1108,18 +1074,6 @@ class CrossCameraManager:
         if global_id is None:
             return
         global_id = self._canonical_id(global_id)
-        self._recently_lost = [
-            item for item in self._recently_lost
-            if not (item.global_id == global_id and item.camera_id == cam_id)
-        ]
-        self._recently_lost.append(LostTrackEntry(
-            global_id=global_id, camera_id=cam_id, local_track_id=local_track_id,
-            last_world=self._track_world(cam_id, track),
-            velocity_world=self._world_velocity(cam_id, track), bbox_size=(track.w, track.h),
-            appearance=aggregate_appearance(track),
-            appearance_samples=self._tracklet_snapshot(track),
-            lost_at_frame=frame_idx,
-        ))
         self._set_identity_dormant(
             global_id, cam_id, local_track_id, track, frame_idx, timestamp_s
         )
@@ -1384,8 +1338,6 @@ class CrossCameraManager:
             canonical_state.camera_bbox_sizes = merged_camera_sizes
         for handoff in self._handoffs:
             handoff.global_id = self._canonical_id(handoff.global_id)
-        for lost in self._recently_lost:
-            lost.global_id = self._canonical_id(lost.global_id)
         remapped_direction_claims: Dict[
             Tuple[int, str, int], DirectionReIDClaim
         ] = {}
@@ -1410,65 +1362,6 @@ class CrossCameraManager:
             retired_id=duplicate_id,
             reason=reason,
         )
-
-    def _merge_recently_lost_duplicates(self, all_tracks: Dict[str, dict], frame_idx: int) -> None:
-        """Prefer the pre-existing ID when its motion echo outlives it."""
-        retained = []
-        for entry in self._recently_lost:
-            if self._canonical_id(entry.global_id) in self._parked_reservations:
-                retained.append(entry)
-                continue
-            elapsed = frame_idx - entry.lost_at_frame
-            if elapsed > 30:
-                continue
-            predicted = (
-                entry.last_world[0] + entry.velocity_world[0] * elapsed,
-                entry.last_world[1] + entry.velocity_world[1] * elapsed,
-            )
-            merged = False
-            for local_id, track in all_tracks.get(entry.camera_id, {}).items():
-                candidate_id = self._local_to_global.get((entry.camera_id, local_id))
-                if candidate_id is None or candidate_id == entry.global_id:
-                    continue
-                if self._canonical_id(candidate_id) in self._parked_reservations:
-                    continue
-                world = self._track_world(entry.camera_id, track)
-                if np.linalg.norm(np.subtract(world, predicted)) > 70.0:
-                    continue
-                if self._appearance_distance(
-                    track, entry.appearance_samples or entry.appearance
-                ) > 0.18:
-                    continue
-                if self._size_distance((track.w, track.h), entry.bbox_size) > 0.60:
-                    continue
-                direction = self._direction_cosine(entry.camera_id, track, entry.velocity_world)
-                if direction is not None and direction < 0.70:
-                    continue
-                evidence_key = (
-                    entry.camera_id,
-                    int(entry.global_id),
-                    int(candidate_id),
-                )
-                count, last_frame = self._lost_continuation_evidence.get(
-                    evidence_key, (0, -999999)
-                )
-                if last_frame == int(frame_idx):
-                    ready = count >= 3
-                else:
-                    count = count + 1 if int(frame_idx) - last_frame == 1 else 1
-                    self._lost_continuation_evidence[evidence_key] = (
-                        count, int(frame_idx)
-                    )
-                    ready = count >= 3
-                if not ready:
-                    continue
-                merge_result = self._merge_global_ids(entry.global_id, candidate_id, frame_idx, "lost_track_continuation")
-                if merge_result.accepted:
-                    merged = True
-                    break
-            if not merged:
-                retained.append(entry)
-        self._recently_lost = retained
 
     def _event(self, kind: str, frame_idx: int, global_id: int, **details) -> None:
         self._events.append({"type": kind, "frame": frame_idx, "global_id": global_id, **details})
@@ -1498,8 +1391,8 @@ class CrossCameraManager:
         A bbox centre is substantially more view-invariant for this top-down
         opposing-camera setup, but a normal ground-plane homography may still
         require bottom-centre.  The calibration therefore selects the anchor
-        explicitly. Virtual crop cameras keep their legacy tracker point so
-        ``main.py`` retains exactly the old coordinate semantics.
+        explicitly. Virtual crop cameras keep their legacy tracker point to
+        preserve the original coordinate semantics.
         """
         if (
             cam_id in self.camera_transforms
@@ -2619,11 +2512,8 @@ class CrossCameraManager:
                     v_cross_edge = v[0] * edge_vec[1] - v[1] * edge_vec[0]
                     if abs(v_cross_edge) > 1e-5:
                         t = ((a[0] - pos[0]) * edge_vec[1] - (a[1] - pos[1]) * edge_vec[0]) / v_cross_edge
-                        # print(f"[DEBUG _outward] cam={cam_id} track={getattr(track, 'id', '?')} t={t:.2f} speed={speed_towards:.2f} lookahead={self.lookahead_frames}")
                         if t > -5.0: # Allow slight overshoot
                             options.append((max(0.0, t), str(handoff_edge_index + 1), (vx, vy)))
-                # else:
-                #     print(f"[DEBUG _outward] cam={cam_id} track={getattr(track, 'id', '?')} rejected speed_towards={speed_towards:.2f}")
         else:
             if vx < -1.0:
                 options.append((max(0.0, track.cx) / abs(vx), "left", (vx, vy)))
