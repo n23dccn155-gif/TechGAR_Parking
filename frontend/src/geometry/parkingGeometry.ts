@@ -262,9 +262,9 @@ export function generateParkingGeometry(): ParkingGeometry {
     entrance: { x: ROAD_END_X, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 },
     exit: { x: ROAD_END_X, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 },
     anchors: {
-      shopping: { id: "shopping", label: "Shopping", x: ROAD_END_X - 100, y: CONNECTOR_BOTTOM_Y + CONNECTOR_HEIGHT / 2 + 20 },
+      shopping: { id: "shopping", label: "Shopping", x: centerLaneCenterX, y: 840 },
       services: { id: "services", label: "Dịch vụ", x: 50, y: MAP_HEIGHT / 2 },
-      entertainment: { id: "entertainment", label: "Giải trí", x: ROAD_END_X - 100, y: CONNECTOR_TOP_Y + CONNECTOR_HEIGHT / 2 - 10 },
+      entertainment: { id: "entertainment", label: "Giải trí", x: centerLaneCenterX, y: 40 },
     },
   };
 }
