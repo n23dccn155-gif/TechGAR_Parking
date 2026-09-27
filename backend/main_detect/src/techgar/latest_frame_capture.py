@@ -114,11 +114,6 @@ class LatestFrameCapture:
     def get(self, property_id: int) -> float:
         return float(self._capture.get(property_id))
 
-    @property
-    def skipped_decode_failures(self) -> int:
-        with self._condition:
-            return self._consecutive_failures
-
     def release(self) -> None:
         with self._condition:
             if self._stopped:

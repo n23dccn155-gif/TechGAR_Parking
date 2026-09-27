@@ -1,7 +1,7 @@
 """Run TechGAR tracking and parking on two real camera streams.
 
-This entrypoint deliberately leaves ``main.py`` unchanged: main.py remains the
-four-crop simulator, while this file accepts two independent MJPEG/RTSP feeds.
+This entrypoint accepts two independent MJPEG/RTSP feeds or recorded video
+files and drives the shared-map tracking, slot binding, and runtime API.
 """
 
 from __future__ import annotations
@@ -2017,6 +2017,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
     calibration_path = Path(args.calibration).resolve()
 
     session_dir = Path(args.session_dir).resolve() if args.session_dir else None
+    if session_dir is not None and session_dir == output_dir:
+        raise ValueError(
+            "--output-dir va --session-dir phai la hai thu muc khac nhau"
+        )
     if session_dir is not None and session_dir.exists():
         raise FileExistsError(f"Session da ton tai: {session_dir}")
 
@@ -2703,6 +2707,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         getattr(track, "appearance", None), frame_index,
                         timestamp_s=camera_timestamps_s.get(camera_id),
                         appearance_tracklet=getattr(track, "appearance_tracklet", None),
+                        roi_edge_starved=bool(getattr(track, "roi_edge_starved", False)),
                     )
 
             observable = {camera_id: tracker.observable_tracks for camera_id, tracker in trackers.items()}

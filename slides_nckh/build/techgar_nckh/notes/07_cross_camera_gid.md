@@ -1,0 +1,1 @@
+Một xe có thể có hai Local ID khác nhau vì hai camera sử dụng namespace độc lập. Khi hai track cùng xuất hiện trong overlap và cùng phù hợp về vị trí, topology và đặc trưng, hệ thống quy chúng về một Canonical Global ID duy nhất.

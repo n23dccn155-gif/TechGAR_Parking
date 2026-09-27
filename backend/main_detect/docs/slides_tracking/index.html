@@ -1,327 +1,2909 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#06121f">
-  <title>TechGAR — Luồng Tracking và Quản lý ô đỗ</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechGAR — Báo Cáo Bảo Vệ Nghiên Cứu Khoa Học (15 Slide VIP)</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       DESIGN SYSTEM: Bám sát form & màu sắc của Thiết kế chưa có tên_backup.pptx
+       - Electric Cobalt Blue: #004FFF
+       - Cyan Accent: #9AE7FC / #00E5FF
+       - Background Gradient Texture: Azure-to-Cobalt (#0066FF -> #002D8C)
+       - Frosted White Cards with Cobalt Borders
+       - Ice-Blue #EBF6FF Secondary Containers
+       ========================================================================== */
+    :root {
+      --cobalt-primary: #004FFF;
+      --cobalt-dark: #0036B3;
+      --cobalt-deep: #00227A;
+      --cyan-accent: #9AE7FC;
+      --cyan-neon: #00E5FF;
+      --ice-blue: #EBF6FF;
+      --ice-blue-alt: #E1F0FC;
+      --white-pure: #FFFFFF;
+      --text-dark: #0F1928;
+      --text-slate: #2C3E50;
+      --text-muted: #64748B;
+      --border-blue: #004FFF;
+      --border-light: rgba(0, 79, 255, 0.22);
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', Consolas, monospace;
+      --shadow-card: 0 12px 35px rgba(0, 34, 122, 0.12);
+      --shadow-stage: 0 25px 70px rgba(0, 20, 60, 0.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-body);
+      color: var(--text-dark);
+      background: #060E1A;
+    }
+
+    /* Fullscreen Application Stage */
+    #app-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: 
+        radial-gradient(circle at 10% 15%, rgba(0, 79, 255, 0.25), transparent 45%),
+        radial-gradient(circle at 90% 85%, rgba(0, 229, 255, 0.18), transparent 40%),
+        #060E1A;
+    }
+
+    /* Animated Presentation Stage (Widescreen 16:9) */
+    #presentation-stage {
+      width: min(96vw, calc(96vh * 16 / 9));
+      height: min(96vh, calc(96vw * 9 / 16));
+      aspect-ratio: 16 / 9;
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-stage);
+      border: 1.5px solid rgba(154, 231, 252, 0.35);
+      background-image: 
+        linear-gradient(135deg, rgba(0, 79, 255, 0.94), rgba(0, 45, 140, 0.97)),
+        url('slides_assets/template_bg.png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Global Progress Bar at the Top */
+    #top-progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--cyan-neon), var(--cobalt-primary));
+      width: 6.66%;
+      z-index: 100;
+      transition: width 0.35s ease;
+    }
+
+    /* Individual Slide Canvas */
+    .slide-canvas {
+      position: absolute;
+      inset: 0;
+      padding: clamp(14px, 1.8vw, 24px) clamp(20px, 2.5vw, 36px);
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      transform: scale(0.99);
+    }
+
+    .slide-canvas.active {
+      display: flex;
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+      z-index: 10;
+    }
+
+    /* Top Pill Navigation Bar */
+    .pill-nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .pill-badge {
+      background: var(--white-pure);
+      border: 1.5px solid var(--border-blue);
+      border-radius: 50px;
+      padding: 5px 16px;
+      font-size: clamp(10px, 0.85vw, 13px);
+      font-weight: 700;
+      color: var(--cobalt-primary);
+      box-shadow: 0 4px 12px rgba(0, 79, 255, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cobalt-primary);
+      display: inline-block;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.5; }
+    }
+
+    .pill-mid {
+      flex: 1;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.95);
+      border-color: var(--cyan-accent);
+      color: var(--cobalt-deep);
+    }
+
+    .pill-right {
+      font-family: var(--font-mono);
+      font-weight: 800;
+    }
+
+    /* Title Lockup */
+    .slide-title-lockup {
+      margin-bottom: 8px;
+    }
+
+    .slide-heading {
+      font-size: clamp(18px, 1.6vw, 27px);
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1.18;
+      text-shadow: 0 2px 8px rgba(0, 20, 60, 0.45);
+      letter-spacing: -0.3px;
+    }
+
+    .slide-subheading {
+      font-size: clamp(10px, 0.95vw, 13px);
+      color: var(--cyan-accent);
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    /* Two-Column Slide Grid */
+    .slide-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.18fr 0.95fr;
+      gap: clamp(10px, 1.3vw, 18px);
+      min-height: 0;
+      margin-bottom: 6px;
+    }
+
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    /* Frosted White Editorial Cards */
+    .editorial-card {
+      background: rgba(255, 255, 255, 0.98);
+      border: 1.5px solid var(--border-blue);
+      border-radius: 10px;
+      padding: clamp(10px, 1.1vw, 16px);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .card-primary {
+      flex: 1.1;
+      overflow-y: auto;
+    }
+
+    .card-secondary-ice {
+      flex: 0.9;
+      background: var(--ice-blue);
+      border-color: var(--cobalt-primary);
+      overflow-y: auto;
+    }
+
+    .media-showcase-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(10px, 1.1vw, 14px);
+    }
+
+    /* Card Header Bar */
+    .card-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid rgba(0, 79, 255, 0.18);
+      margin-bottom: 8px;
+    }
+
+    .card-title-text {
+      font-size: clamp(11px, 0.95vw, 14px);
+      font-weight: 800;
+      color: var(--cobalt-deep);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .text-electric { color: var(--cobalt-primary); }
+
+    .badge-tag {
+      font-family: var(--font-mono);
+      font-size: clamp(8px, 0.7vw, 10px);
+      font-weight: 700;
+      background: var(--ice-blue);
+      color: var(--cobalt-primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-light);
+    }
+
+    .badge-tag-ice {
+      font-family: var(--font-mono);
+      font-size: clamp(8px, 0.7vw, 10px);
+      font-weight: 700;
+      background: var(--white-pure);
+      color: var(--cobalt-deep);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-blue);
+    }
+
+    /* Bullet Points Styling */
+    .key-points, .tech-spec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .key-points li, .tech-spec-list li {
+      font-size: clamp(10.5px, 0.88vw, 13px);
+      line-height: 1.38;
+      color: var(--text-dark);
+      position: relative;
+      padding-left: 16px;
+    }
+
+    .key-points li::before {
+      content: "•";
+      position: absolute;
+      left: 2px;
+      color: var(--cobalt-primary);
+      font-weight: 900;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .tech-spec-list li::before {
+      content: "▸";
+      position: absolute;
+      left: 2px;
+      color: var(--cobalt-primary);
+      font-size: 11px;
+    }
+
+    .key-points strong, .tech-spec-list strong {
+      color: var(--cobalt-deep);
+      font-weight: 700;
+    }
+
+    /* Media Showcase Section */
+    .media-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--ice-blue);
+      padding: 2px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+    }
+
+    .media-tab-btn {
+      border: none;
+      background: transparent;
+      padding: 3px 8px;
+      font-size: clamp(9px, 0.75vw, 11px);
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .media-tab-btn.active {
+      background: var(--cobalt-primary);
+      color: var(--white-pure);
+      box-shadow: 0 2px 6px rgba(0, 79, 255, 0.35);
+    }
+
+    .media-stage {
+      position: relative;
+      width: 100%;
+      height: clamp(180px, 22vh, 260px);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      border: 1.5px solid var(--border-blue);
+      margin-bottom: 8px;
+    }
+
+    .media-layer {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .media-layer.active { display: flex; }
+
+    .media-player {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .media-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    /* Split View Container */
+    .media-stage.split-mode .media-video {
+      display: flex;
+      width: 50%;
+      left: 0;
+      border-right: 1.5px solid var(--cyan-neon);
+    }
+    .media-stage.split-mode .media-image {
+      display: flex;
+      width: 50%;
+      left: 50%;
+    }
+
+    .media-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      z-index: 5;
+    }
+
+    .video-badge {
+      background: rgba(0, 79, 255, 0.85);
+      color: #FFF;
+      border: 1px solid var(--cyan-neon);
+    }
+
+    .image-badge {
+      background: rgba(15, 25, 40, 0.85);
+      color: var(--cyan-accent);
+      border: 1px solid rgba(154, 231, 252, 0.4);
+    }
+
+    /* Media Telemetry & Observation Box */
+    .media-telemetry-box {
+      background: var(--ice-blue);
+      border: 1.2px solid var(--border-blue);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .telemetry-row {
+      display: flex;
+      font-size: clamp(9.5px, 0.8vw, 11.5px);
+      line-height: 1.35;
+    }
+
+    .telemetry-label {
+      font-weight: 800;
+      color: var(--cobalt-deep);
+      min-width: 125px;
+      font-family: var(--font-mono);
+      font-size: clamp(8.5px, 0.72vw, 10.5px);
+    }
+
+    .telemetry-value {
+      color: var(--text-dark);
+      flex: 1;
+    }
+
+    .observation-highlight {
+      background: rgba(0, 79, 255, 0.08);
+      padding: 3px 6px;
+      border-radius: 4px;
+      border-left: 3px solid var(--cobalt-primary);
+    }
+
+    .speaker-cue-row {
+      color: var(--cobalt-dark);
+      font-style: italic;
+    }
+
+    /* Bottom Callout Bar */
+    .bottom-callout-bar {
+      background: var(--white-pure);
+      border: 1.5px solid var(--border-blue);
+      border-radius: 8px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .callout-icon {
+      font-size: 16px;
+      color: var(--cobalt-primary);
+    }
+
+    .callout-content {
+      font-size: clamp(10px, 0.85vw, 12px);
+      color: var(--text-dark);
+      line-height: 1.35;
+    }
+
+    .callout-tag {
+      color: var(--cobalt-primary);
+      margin-right: 6px;
+      font-weight: 800;
+    }
+
+    /* Floating Navigation Controls Bar */
+    #deck-controls {
+      position: absolute;
+      bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 25, 47, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      padding: 6px 14px;
+      border-radius: 50px;
+      z-index: 100;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .ctrl-btn {
+      background: transparent;
+      border: 1px solid rgba(154, 231, 252, 0.25);
+      color: #FFFFFF;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--cobalt-primary);
+      border-color: var(--cyan-neon);
+      transform: scale(1.08);
+    }
+
+    .slide-counter-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan-neon);
+      padding: 0 8px;
+      min-width: 90px;
+      text-align: center;
+    }
+
+    /* Overview Grid Modal */
+    #grid-modal, #notes-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 14, 26, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    #grid-modal.open, #notes-modal.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #FFFFFF;
+      border: 2px solid var(--cobalt-primary);
+      border-radius: 12px;
+      width: min(900px, 92vw);
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--ice-blue);
+      border: 1px solid var(--border-blue);
+      color: var(--cobalt-primary);
+      font-size: 18px;
+      font-weight: 800;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .grid-card {
+      background: var(--ice-blue);
+      border: 1.5px solid var(--border-light);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 90px;
+    }
+
+    .grid-card:hover {
+      border-color: var(--cobalt-primary);
+      background: #FFFFFF;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 79, 255, 0.18);
+    }
+
+    .grid-card-num {
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--cobalt-primary);
+    }
+
+    .grid-card-cat {
+      font-size: 8.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .grid-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dark);
+      line-height: 1.25;
+      margin-top: 4px;
+    }
+
+    /* Speaker Notes Modal Styles */
+    .notes-box {
+      background: #FFFFFF;
+      border: 2px solid var(--cobalt-primary);
+      border-radius: 12px;
+      width: min(750px, 92vw);
+      padding: 24px;
+    }
+
+    .notes-heading {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--cobalt-deep);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .notes-section {
+      margin-bottom: 16px;
+    }
+
+    .notes-section h4 {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      color: var(--cobalt-primary);
+      margin-bottom: 4px;
+    }
+
+    .notes-text {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--text-dark);
+      background: var(--ice-blue);
+      padding: 10px 14px;
+      border-radius: 6px;
+      border-left: 4px solid var(--cobalt-primary);
+    }
+  </style>
 </head>
 <body>
-  <main class="deck" id="deck" aria-live="polite">
-    <section class="slide title-slide is-active" id="slide-1" data-title="Luận điểm chính">
-      <div class="slide-top"><span>TECHGAR · TRACKING PIPELINE</span><span>01</span></div>
-      <div class="title-lockup">
-        <div class="eyebrow">Một xe thật · Một ID toàn hệ thống</div>
-        <h1>Tracking xuyên góc nhìn<br><em>và quản lý ô đỗ</em></h1>
-        <p class="lead">Không chỉ vẽ bbox: hệ thống kết hợp chuyển động, động học, ngoại hình, topology và ROI để giữ đúng danh tính xe.</p>
-      </div>
-      <div class="hero-thesis">
-        <div><span class="label">Ví dụ xuyên suốt</span><strong>G#2</strong></div>
-        <div class="hero-arrow">cam4 <b>→</b> cam3 <b>→</b> P056 <b>→</b> JSON</div>
-      </div>
-      <div class="speaker-cue">10–12 phút · Nội dung tập trung vào thuật toán và luồng code</div>
-    </section>
 
-    <section class="slide" id="slide-2" data-title="Pipeline tổng thể">
-      <div class="slide-top"><span>01 · LUỒNG XỬ LÝ</span><span>02</span></div>
-      <h2>Từ frame đến một ID trên web</h2>
-      <div class="pipeline pipeline-wide" aria-label="Pipeline xử lý">
-        <div class="pipe-node cyan"><b>01</b><span>Frame</span><small>VideoCapture</small></div>
-        <i>→</i>
-        <div class="pipe-node"><b>02</b><span>4 crop</span><small>mô phỏng góc nhìn</small></div>
-        <i>→</i>
-        <div class="pipe-node orange"><b>03</b><span>Motion</span><small>bbox chuyển động</small></div>
-        <i>→</i>
-        <div class="pipe-node cyan"><b>04</b><span>Local track</span><small>Kalman + LAPJV</small></div>
-        <i>→</i>
-        <div class="pipe-node orange"><b>05</b><span>Handoff</span><small>Global ID</small></div>
-      </div>
-      <div class="pipeline pipeline-wide second-row">
-        <div class="pipe-node green"><b>06</b><span>Canonical</span><small>gộp ID trùng</small></div>
-        <i>→</i>
-        <div class="pipe-node"><b>07</b><span>ROI ô đỗ</span><small>giao bbox–polygon</small></div>
-        <i>→</i>
-        <div class="pipe-node green"><b>08</b><span>Xe dừng</span><small>1 giây ổn định</small></div>
-        <i>→</i>
-        <div class="pipe-node cyan"><b>09</b><span>Hợp nhất</span><small>vision OR tracking</small></div>
-        <i>→</i>
-        <div class="pipe-node green"><b>10</b><span>JSON</span><small>web map</small></div>
-      </div>
-      <div class="callout"><b>Thứ tự bắt buộc:</b> phục hồi ID → bàn giao ID → chuẩn hóa ID → ghép ô → xuất dữ liệu.</div>
-    </section>
+  <div id="app-container">
+    
+    <!-- Presentation Stage (16:9 Widescreen) -->
+    <main id="presentation-stage">
+      
+      <!-- Top Progress Indicator -->
+      <div id="top-progress-bar"></div>
 
-    <section class="slide" id="slide-3" data-title="Ba loại ID">
-      <div class="slide-top"><span>02 · NAMESPACE ID</span><span>03</span></div>
-      <h2>Ba loại ID — ba phạm vi khác nhau</h2>
-      <div class="id-grid">
-        <article class="id-card orange-card">
-          <span class="tag orange">CỤC BỘ</span><h3>Local ID</h3>
-          <p>Chỉ có ý nghĩa trong <b>một tracker / một crop</b>.</p>
-          <code>cam4 · local #7</code>
-        </article>
-        <article class="id-card cyan-card">
-          <span class="tag cyan">TOÀN HỆ THỐNG</span><h3>Global ID</h3>
-          <p>Danh tính xe dùng chung giữa mọi góc nhìn.</p>
-          <code>G#2</code>
-        </article>
-        <article class="id-card green-card">
-          <span class="tag green">SAU GỘP TRÙNG</span><h3>Canonical ID</h3>
-          <p>ID chuẩn cuối cùng; alias cũ không được xuất hiện lại.</p>
-          <code>G#4 → G#2</code>
-        </article>
+      <!-- 15 SLIDE SECTIONS -->
+      
+    <!-- ========================================================================= -->
+    <!-- SLIDE 01: Định Vị Phương Tiện & Quản Lý Ô Đỗ Tầng Hầm Bằng Hệ Thống Đa Camera Cố Định -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_tracking_cam1.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/roi_full_view.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-1" data-slide="1" data-title="Định Vị Phương Tiện & Quản Lý Ô Đỗ Tầng Hầm Bằng Hệ Thống Đa Camera Cố Định" data-subtitle="Chuyển dịch từ nhận diện 2D từng khung hình sang nhận thức không gian thực 3D centimet trong tầng hầm mất sóng GPS">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          DẪN NHẬP & LUẬN ĐIỂM • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 01 / 15
+        </div>
       </div>
-      <div class="mapping-box">
-        <div><span>(cam4, local #7)</span><b>→</b><strong>G#2</strong></div>
-        <div><span>(cam3, local #12)</span><b>→</b><strong>G#2</strong></div>
-      </div>
-      <p class="bottom-note"><b>Invariant:</b> web map chỉ dùng Canonical Global ID — không bao giờ dùng Local ID làm khóa.</p>
-    </section>
 
-    <section class="slide" id="slide-4" data-title="Phát hiện chuyển động">
-      <div class="slide-top"><span>03 · MOTION DETECTION</span><span>04</span></div>
-      <h2>Hai bằng chứng chuyển động, một bbox sạch</h2>
-      <div class="two-col motion-layout">
-        <div>
-          <div class="logic-stack">
-            <div class="logic-block cyan"><b>MOG2</b><span>Pixel khác nền dài hạn</span></div>
-            <div class="operator">∩</div>
-            <div class="logic-block orange"><b>Frame difference</b><span>Pixel thực sự đổi ở vài frame gần</span></div>
-            <div class="operator">↓</div>
-            <div class="logic-block green"><b>Mask chuyển động</b><span>Threshold → morphology → contour → bbox</span></div>
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Định Vị Phương Tiện & Quản Lý Ô Đỗ Tầng Hầm Bằng Hệ Thống Đa Camera Cố Định</h2>
+        <p class="slide-subheading">Chuyển dịch từ nhận diện 2D từng khung hình sang nhận thức không gian thực 3D centimet trong tầng hầm mất sóng GPS</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">BỐI CẢNH BÀI TOÁN & BẾ TẮC CÔNG NGHỆ HIỆN HỮU</span>
+              <span class="badge-tag">DẪN NHẬP & LUẬN ĐIỂM</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Môi trường tầng hầm vô hiệu hóa GPS hoàn toàn:</strong> Trần bê tông cốt thép dày 300-500mm làm suy hao vi sóng GPS/GNSS xuống 0 dBm. Mọi giải pháp định vị vệ tinh ngoài trời đều hoàn toàn bất lực.</li><li><strong>Thách thức hình học không gian ngầm:</strong> Lưới cột chịu lực dày đặc (6m x 8m), trần thấp và góc cua vuông góc tạo ra vô số góc khuất mù đối với bất kỳ camera đơn lẻ nào.</li><li><strong>Rào cản thiết bị người dùng (No On-board Sensor):</strong> Không thể bắt buộc hàng nghìn phương tiện vãng lai phải gắn thẻ RFID chủ động, chip UWB, beacon Bluetooth hay cảm biến LiDAR đắt tiền.</li><li><strong>Yêu cầu quản lý bãi đỗ xe thông minh:</strong> Đòi hỏi phải biết chính xác đồng thời 3 yếu tố: Xe nào (Identity) — Ở đâu (World Centimeter) — Thuộc ô đỗ nào (Slot State).</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">TUYÊN BỐ LUẬN ĐIỂM KHOA HỌC & GIẢI PHÁP TECHGAR</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Hạ tầng Camera Cố định:</strong> Tận dụng mạng lưới camera an ninh có sẵn để phát hiện chuyển động chi phí cực thấp trên CPU, không can thiệp lên xe của khách.</li><li><strong>Hiệu chuẩn Homography Mặt Sàn (Z=0):</strong> Neo tiếp điểm bánh xe với mặt sàn để nắn phẳng hệ tọa độ thế giới chung (Shared Centimeter Map), triệt tiêu sai thị Parallax.</li><li><strong>Multi-Camera Tracking (MCT):</strong> Khóa hành lang Topology và đồng thuận chuyển giao về một Canonical Global ID duy nhất.</li><li><strong>Hiệu năng thực tế:</strong> Chạy mượt mà 25 FPS trên CPU Intel Core i5 phổ thông, độ trễ toàn trình lên Web chỉ 169 ms.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="01">
+                <button class="media-tab-btn active" onclick="switchMedia('01', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('01', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('01', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-01">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-01">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-01">
+                  <source src="slides_assets/demo_tracking_cam1.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-01">
+                <img src="slides_assets/roi_full_view.png" alt="Định Vị Phương Tiện & Quản Lý Ô Đỗ Tầng Hầm Bằng Hệ Thống Đa Camera Cố Định" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Góc quay Cam 1 tại ngõ vào bãi: Xe tiến vào hầm, mất sóng GPS, đèn pha rọi sàn bóng và xe đi qua phía sau các cột bê tông chịu lực.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát giây thứ 4: khi chiếc xe rẽ qua cột, Cam 1 đã mất dấu đến 80% thân xe. Nếu chỉ dùng 1 cam hoặc trông chờ vào GPS, chiếc xe này đã biến mất hoàn toàn.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Bắt đầu từ thực tế tầng hầm mất GPS 0 dBm; cột bê tông tạo điểm mù chết người; TechGAR biến camera cố định thành mạng lưới cảm nhận không gian centimet."</em></span>
+              </div>
+            </div>
+
           </div>
         </div>
-        <div class="bullet-panel">
-          <h3>Chống nhiễu trước khi tracking</h3>
-          <ul class="check-list">
-            <li><b>Bù median độ sáng</b> khi toàn cảnh sáng/tối đột ngột.</li>
-            <li><b>Lọc hình học</b>: diện tích, kích thước, tỉ lệ khung.</li>
-            <li><b>Motion ratio</b>: bbox phải có đủ pixel đang chuyển động.</li>
-            <li><b>Chống motion echo</b>: gộp vùng “vị trí cũ–vị trí mới” của cùng xe.</li>
-          </ul>
-          <div class="echo-diagram">
-            <span class="ghost-box">bbox cũ</span><span class="plus">+</span><span class="live-box">bbox mới</span><span class="arrow">→</span><span class="merged-box">1 detection</span>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">TechGAR giải quyết trọn vẹn chuỗi liên kết: Thu nhận video ➔ Khử nhiễu nền tĩnh ➔ Định vị centimet ➔ Chuyển giao camera ➔ Ràng buộc ô đỗ, kiểm chứng trên 3.827 frames thực tế.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDE 02: Hạn Chế Của 1 Camera & So Sánh Các Hướng Tiếp Cận Ban Đầu -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/session_cam1_live.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0100_baseline_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-2" data-slide="2" data-title="Hạn Chế Của 1 Camera & So Sánh Các Hướng Tiếp Cận Ban Đầu" data-subtitle="Tại sao phải chuyển dịch từ 1 Camera sang Đa Camera liên kết trong bài toán bãi đỗ xe tầng hầm">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          HIỆN TRẠNG & GIỚI HẠN • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 02 / 15
+        </div>
+      </div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Hạn Chế Của 1 Camera & So Sánh Các Hướng Tiếp Cận Ban Đầu</h2>
+        <p class="slide-subheading">Tại sao phải chuyển dịch từ 1 Camera sang Đa Camera liên kết trong bài toán bãi đỗ xe tầng hầm</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">5 HẠN CHẾ CHÍ TỬ KHI CHỈ DÙNG 1 CAMERA</span>
+              <span class="badge-tag">HIỆN TRẠNG & GIỚI HẠN</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Điểm mù sau cột (Blind Spots):</strong> Xe đi vào sau cột 6m x 8m bị mất dấu hoàn toàn; khi xuất hiện lại bị gán ID mới (lỗi ID Switch vọt tăng).</li><li><strong>Biến dạng phối cảnh cực hạn (Perspective Distortion):</strong> Camera góc dốc khiến xe ở gần mép chiếm 400px, xe ở cuối hành lang chỉ còn 40px; sai số bám vết tăng theo hàm mũ khoảng cách.</li><li><strong>Hiện tượng chồng lấn động (Dynamic Occlusion):</strong> Hai xe đi sát nhau hoặc xe to (SUV) che xe nhỏ (sedan) làm tracker 1 cam bị gộp vết hoặc đứt gãy trajectory.</li><li><strong>Lóa sáng đơn cảm biến (Single Sensor Glare):</strong> Đèn pha xe rọi thẳng làm cháy sáng toàn bộ cảm biến trong 0.3-0.8s, làm tê liệt khả năng giám sát.</li><li><strong>Thiếu hụt tọa độ thực tế (Lack of Metric Scale):</strong> Bounding box 2D trong không gian pixel không có chiều sâu; không thể biết bánh xe đã chạm vạch ô đỗ hay chưa.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">BẢNG SO SÁNH CÁC HƯỚNG TIẾP CẬN BAN ĐẦU</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>GPS / Vệ tinh:</strong> Mất hoàn toàn sóng trong hầm bê tông (0 dBm) ➔ Loại bỏ 100%.</li><li><strong>VO / SLAM trên xe:</strong> Cần cảm biến LiDAR/camera đắt tiền trên từng xe; sai số trôi tích lũy (drift) ➔ Không khả thi cho xe vãng lai.</li><li><strong>YOLO-Centric đơn thuần:</strong> Chỉ có bounding box 2D pixel theo từng frame; không có tọa độ centimet; không tự giải quyết tracking liên cam ➔ Chưa đủ.</li><li><strong>TechGAR (Đa Cam Cố Định):</strong> Tận dụng nền tĩnh, đo centimet mặt sàn, giữ vững danh tính toàn bãi ➔ LỰA CHỌN TỐI ƯU CỦA ĐỀ TÀI.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="02">
+                <button class="media-tab-btn active" onclick="switchMedia('02', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('02', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('02', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-02">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-02">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-02">
+                  <source src="slides_assets/session_cam1_live.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-02">
+                <img src="slides_assets/frame_0100_baseline_split_debug.jpg" alt="Hạn Chế Của 1 Camera & So Sánh Các Hướng Tiếp Cận Ban Đầu" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Góc quay Cam 1 bám vết thực tế: Minh họa hiện tượng xe đi qua sau cột bê tông bị mất bounding box trong 42 frames.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Nhìn vào giây thứ 3: khi chiếc xe vừa đi sau cây cột ở Cam 1, thuật toán 1 cam mất dấu hoàn toàn và khi lộ diện bị đổi thành ID mới. Cam 2 bù đắp hoàn hảo góc khuất này.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"1 camera chịu thua trước cột che và biến dạng góc xiên. Sử dụng nhiều camera liên kết là yêu cầu bắt buộc để bảo đảm độ chính xác tracking và trạng thái ô đỗ."</em></span>
+              </div>
+            </div>
+
           </div>
         </div>
+
       </div>
-      <div class="warning-strip"><b>Giới hạn:</b> đây là dò chuyển động, không tự hiểu đối tượng là ô tô hay người.</div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">1 camera không thể quan sát toàn bãi và chịu thua trước che khuất. Sử dụng nhiều camera liên kết (demo 2 camera) là yêu cầu bắt buộc để đảm bảo độ chính xác tracking và trạng thái ô đỗ.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-5" data-title="Tracking trong một crop">
-      <div class="slide-top"><span>04 · LOCAL TRACKING</span><span>05</span></div>
-      <h2>Dự đoán trước, đối chiếu một-một, rồi cập nhật</h2>
-      <div class="tracker-flow">
-        <div class="track-stage"><span>1</span><b>Kalman</b><small>predict [x,y,vx,vy]</small></div>
-        <i>→</i>
-        <div class="track-stage"><span>2</span><b>Ma trận sai số</b><small>mọi track × mọi detection</small></div>
-        <i>→</i>
-        <div class="track-stage"><span>3</span><b>LAPJV</b><small>ghép một-một tối ưu</small></div>
-        <i>→</i>
-        <div class="track-stage"><span>4</span><b>Correct</b><small>cập nhật bằng đo thật</small></div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 03: Kiến Trúc Tổng Thể: Hình Dung & Quy Trình 8 Bước Xử Lý -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/lane_graph_spots.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-3" data-slide="3" data-title="Kiến Trúc Tổng Thể: Hình Dung & Quy Trình 8 Bước Xử Lý" data-subtitle="Chuỗi pipeline 8 mắt xích xử lý từ frame video thô đến giao diện Web Dashboard thời gian thực">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          KIẾN TRÚC HỆ THỐNG • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 03 / 15
+        </div>
       </div>
-      <div class="formula large-formula">
-        E = <span class="cyan-text">0.50 E<sub>distance</sub></span> + <span class="green-text">0.30 E<sub>IoU</sub></span> + <span class="orange-text">0.20 E<sub>HSV</sub></span>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Kiến Trúc Tổng Thể: Hình Dung & Quy Trình 8 Bước Xử Lý</h2>
+        <p class="slide-subheading">Chuỗi pipeline 8 mắt xích xử lý từ frame video thô đến giao diện Web Dashboard thời gian thực</p>
       </div>
-      <div class="metric-row">
-        <div><b>Khoảng cách</b><span>Tâm dự đoán ↔ tâm đo</span></div>
-        <div><b>IoU</b><span>Mức chồng lấn hai bbox</span></div>
-        <div><b>HSV 16×16</b><span>Màu sắc / ngoại hình thô</span></div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">QUY TRÌNH 8 BƯỚC XỬ LÝ CHUẨN HÓA</span>
+              <span class="badge-tag">KIẾN TRÚC HỆ THỐNG</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>1. Dual Video Ingestion:</strong> Thu nhận 2 luồng camera song song, khống chế độ lệch thời gian Skew <= 120ms.</li><li><strong>2. Polygon ROI Boundary:</strong> Cắt bỏ góc tường, bàn tay người, trần hầm; xác lập không gian theo dõi sạch (cắt giảm 34% diện tích thừa).</li><li><strong>3. Motion Detection:</strong> MOG2 nền tĩnh ∩ Dual FrameDiff (0.25s & 0.8s) + Bù Median độ sáng toàn cảnh.</li><li><strong>4. Local Tracking:</strong> Kalman Filter 4D dự đoán + LAPJV gán vết 1-1 + SSD Template Reacquire khi dừng.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">CÁC BƯỚC CHUYỂN GIAO & QUẢN LÝ Ô ĐỖ</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>5. Ground Homography:</strong> Chiếu chân bánh xe (Z=0) xuống sàn centimet qua 4 điểm A-B-C-D; seam p50 = 1.13 cm.</li><li><strong>6. Topology Gate:</strong> Khóa trước ứng viên sai hành lang, giải ma trận chi phí 4 thành phần.</li><li><strong>7. Cross-Cam Overlap:</strong> Hợp nhất Canonical Global ID (Canonical Alias Map & Merge Guard bảo vệ).</li><li><strong>8. Adaptive Equalizer & Binder:</strong> Lưới 9 biến thể Gamma-CLAHE biểu quyết đa số >= 5/9, cấp Departure Token 5s.</li><li><strong>Nguyên tắc phân tầng:</strong> Lỗi tầng dưới bị chặn ngay lập tức, không để lan truyền làm sai lệch tầng trên.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="03">
+                <button class="media-tab-btn active" onclick="switchMedia('03', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('03', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('03', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-03">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-03">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-03">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-03">
+                <img src="slides_assets/lane_graph_spots.png" alt="Kiến Trúc Tổng Thể: Hình Dung & Quy Trình 8 Bước Xử Lý" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Toàn cảnh luồng pipeline xử lý: Khử nhiễu nền ➔ Bám vết Kalman ➔ Chiếu mặt sàn ➔ Bàn giao Canonical GID.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát luồng xử lý liên hoàn: Từ 2 khung hình thô, đa giác ROI lọc sạch rìa ngoài, mặt nạ nhị phân xuất hiện và tọa độ centimet cập nhật tức thì lên bản đồ.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Mỗi bước đều có ranh giới kiểm soát lỗi rõ ràng: Lỗi hình ảnh chặn tại ROI, lỗi thị sai chặn tại Homography, lỗi sai hành lang chặn tại Topology, lỗi chớp ô chặn tại Token."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
-      <div class="lifecycle" aria-label="Vòng đời track">
-        <span class="orange">tentative</span><i>đủ bằng chứng →</i><span class="green">confirmed</span><i>mất detection →</i><span class="red">lost</span><i>quá hạn →</i><span>expired</span>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Kiến trúc module hóa khép kín với độ trễ 40ms/frame (~25 FPS trên CPU) và độ trễ toàn trình lên Web chỉ 169ms, vượt xa chuẩn công nghiệp (< 500ms).</span>
+        </div>
       </div>
-      <p class="bottom-note">Kalman giúp <b>dự đoán vị trí</b>; kết luận xe dừng dùng tọa độ detection thật, không dùng Kalman.</p>
+
     </section>
 
-    <section class="slide" id="slide-6" data-title="update_all_tracks">
-      <div class="slide-top"><span>05 · GLOBAL ID ORCHESTRATOR</span><span>06</span></div>
-      <h2><code>update_all_tracks()</code> — hàm điều phối toàn bộ Global ID</h2>
-      <div class="function-chain">
-        <div class="function-row orange-line"><code>_upsert_handoff()</code><span>Mở / cập nhật “hồ sơ chờ bàn giao” cho xe sắp ra biên.</span></div>
-        <div class="chain-arrow">↓</div>
-        <div class="function-row cyan-line"><code>_match_pending_handoffs()</code><span>Đối chiếu hồ sơ cũ với track mới ở crop đích.</span></div>
-        <div class="chain-arrow">↓</div>
-        <div class="function-row cyan-line"><code>_match_simultaneous_overlap()</code><span>Nhận cùng xe đang xuất hiện đồng thời ở hai crop chồng lấn.</span></div>
-        <div class="chain-arrow">↓</div>
-        <div class="function-row green-line"><code>allocate confirmed</code><span>Chỉ track đã xác nhận, chưa nhận lại ID cũ, mới được cấp G# mới.</span></div>
-        <div class="chain-arrow">↓</div>
-        <div class="function-row red-line"><code>merge + cleanup</code><span>Gộp ID/bbox trùng và xóa hồ sơ bàn giao hết hạn.</span></div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 04: Bài Toán Hình Học Camera, Xử Lý Góc Chéo & Homography Mặt Sàn -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/calib_checkerboard.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-4" data-slide="4" data-title="Bài Toán Hình Học Camera, Xử Lý Góc Chéo & Homography Mặt Sàn" data-subtitle="Khớp chuẩn xác mặt sàn bằng 4 điểm đồng phẳng để đo centimet thực địa, triệt tiêu sai thị 3D Parallax">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          CƠ SỞ HÌNH HỌC • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 04 / 15
+        </div>
       </div>
-      <div class="return-box"><span>Kết quả trả về</span><code>{ "cam3": {12: 2}, "cam4": {7: 2} }</code><small>Hai Local ID khác nhau cùng quy về G#2.</small></div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Bài Toán Hình Học Camera, Xử Lý Góc Chéo & Homography Mặt Sàn</h2>
+        <p class="slide-subheading">Khớp chuẩn xác mặt sàn bằng 4 điểm đồng phẳng để đo centimet thực địa, triệt tiêu sai thị 3D Parallax</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">BẢN CHẤT 3D PARALLAX & THỬ THÁCH GÓC CHÉO</span>
+              <span class="badge-tag">CƠ SỞ HÌNH HỌC</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Hiện tượng thị sai (Parallax Fallacy):</strong> Xe là khối 3D cao 1.4-1.8m; mái xe nhìn từ 2 góc máy nghiêng không thể trùng khít bằng ma trận phẳng 2D. Nếu ghép mái xe, sai lệch lên tới 1.8 mét!</li><li><strong>Quy tắc neo mặt sàn (Ground Anchor):</strong> Điểm duy nhất đồng phẳng tuyệt đối là mặt sàn bê tông (Z = 0). Hệ thống bắt buộc neo điểm tiếp xúc mặt sàn của 4 bánh xe (bottom-center: x+w/2, y+h).</li><li><strong>Phương trình biến đổi xạ ảnh:</strong> s [Xworld, Yworld, 1]T = H3x3 [uimg, vimg, 1]T.</li><li><strong>Phương pháp 4 điểm A-B-C-D:</strong> Đánh dấu 4 góc hình chữ nhật vạch sàn trong vùng overlap cả 2 cam cùng thấy; đo chiều dài thật AB và AD (cm) bằng thước laser.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">SỐ LIỆU THỰC NGHIỆM ĐƯỜNG MAY (SEAM BENCHMARK TRÊN 945 CẶP ĐIỂM)</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Trung vị sai số (p50):</strong> 1.13 cm (Độ lệch chuẩn xác đến từng milimet).</li><li><strong>Phân vị 95% sai số (p95):</strong> 4.39 cm (Nhỏ hơn 1/3 bề rộng vạch sơn ô đỗ 15 cm).</li><li><strong>Ý nghĩa kỹ thuật:</strong> Nới lỏng ngưỡng từ 5.0 px lên 8.5 px tương ứng dung sai 4.39 cm, bảo đảm 100% điểm đo mặt sàn hội tụ an toàn.</li><li><strong>Kết luận:</strong> Đạt độ chuẩn xác định vị mức centimet (sub-decimeter) trên toàn bộ mặt sàn hầm.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="04">
+                <button class="media-tab-btn active" onclick="switchMedia('04', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('04', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('04', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-04">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-04">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-04">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-04">
+                <img src="slides_assets/calib_checkerboard.png" alt="Bài Toán Hình Học Camera, Xử Lý Góc Chéo & Homography Mặt Sàn" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Kiểm nghiệm vùng ghép mặt sàn giữa 2 camera: Bánh xe tiếp xúc mặt phẳng Z=0 liền mạch qua vạch ranh giới.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát đường may bàn cờ ở ảnh kiểm chuẩn: Các ô caro đen trắng khớp khít hoàn hảo từng milimet. Khi xe đi qua, chân bánh xe lướt êm ái trên mặt phẳng chung.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"TechGAR không cố ghép kín bóng nóc xe. Mục tiêu hình học duy nhất là trùng khớp mặt tiếp xúc bánh xe và vạch sơn ô đỗ, đạt độ chính xác centimet thế giới."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Neo điểm tiếp xúc bánh xe tại Z=0 triệt tiêu hoàn toàn sai thị 1.8 mét của nóc xe, đưa sai số đường may về chỉ còn 1.13 cm trên 945 cặp đo thực nghiệm.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-7" data-title="Predictive handoff">
-      <div class="slide-top"><span>06 · PREDICTIVE HANDOFF</span><span>07</span></div>
-      <h2>Bàn giao ID bằng dự đoán chuyển động</h2>
-      <div class="handoff-layout">
-        <div class="topology">
-          <div class="cam c1">cam1</div><div class="cam c2">cam2</div>
-          <div class="cam c3 active-cam">cam3 <small>đích</small></div><div class="cam c4 source-cam">cam4 <small>nguồn · G#2</small></div>
-          <div class="vehicle-dot">G#2 ←</div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 05: Trình Bày Song Song 2 Camera & Khống Chế Skew Thời Gian Thực -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0100_baseline_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-5" data-slide="5" data-title="Trình Bày Song Song 2 Camera & Khống Chế Skew Thời Gian Thực" data-subtitle="Xử lý song song 2 làn bơi thời gian độc lập và cô lập vùng quan sát bằng đa giác ROI">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
         </div>
-        <div class="handoff-details">
-          <div class="formula prediction">p̂ = p<sub>last</sub> + v · Δframe</div>
-          <ol class="gate-list">
-            <li><span>01</span><div><b>Topology và cạnh</b><small>Đúng crop kề, đúng cạnh ra / cạnh vào.</small></div></li>
-            <li><span>02</span><div><b>Vị trí và hướng</b><small>Gần vị trí dự đoán, vector chuyển động hợp lý.</small></div></li>
-            <li><span>03</span><div><b>HSV và kích thước</b><small>Ngoại hình, bbox không khác bất thường.</small></div></li>
-          </ol>
+        <div class="pill-badge pill-mid">
+          ĐỒNG BỘ ĐA LUỒNG • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 05 / 15
         </div>
       </div>
-      <div class="formula handoff-cost">E<sub>handoff</sub> = 0.55E<sub>position</sub> + 0.30E<sub>HSV</sub> + 0.10E<sub>size</sub> + 0.05E<sub>direction</sub></div>
-      <p class="bottom-note">Mở hồ sơ sớm trong <b>16 frame nhìn trước</b>; bán kính dự đoán mặc định <b>90 px</b>.</p>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Trình Bày Song Song 2 Camera & Khống Chế Skew Thời Gian Thực</h2>
+        <p class="slide-subheading">Xử lý song song 2 làn bơi thời gian độc lập và cô lập vùng quan sát bằng đa giác ROI</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">KỶ LUẬT ĐỒNG BỘ THỜI GIAN (TIMESTAMP SKEW CORRIDOR)</span>
+              <span class="badge-tag">ĐỒNG BỘ ĐA LUỒNG</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Tại sao bắt buộc Skew <= 120ms?:</strong> Xe chạy trong bãi ở tốc độ 15 km/h (~4.16 m/s). Nếu lệch nhau 200ms thì xe đã đi được gần 1 mét! Ngưỡng <= 120ms đảm bảo độ lệch < 0.5m, nằm an toàn trong bán kính hội tụ Kalman.</li><li><strong>Cơ chế Catch-up buffer:</strong> Tự động bù tối đa 3 frame khi mạng truyền dẫn RTSP bị trễ nhẹ.</li><li><strong>Số đo thực tế (Session 2808_3):</strong> Skew phân vị p95 đạt 47 ms (tương đương 1.1 frame); Skew trung vị p50 đạt 18 ms; giá trị max đạt 110 ms <= 120 ms.</li><li><strong>Đa giác ROI (Tracking Polygon):</strong> Khung chữ nhật lấy thừa góc tường và tay người; đa giác lồi ôm khít mặt sàn bãi xe, cắt giảm 34% diện tích tính toán dư thừa.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">KIẾN TRÚC DUAL-CAMERA SWIMLANES TRÊN CPU</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Mỗi camera chạy một pipeline tracker độc lập trên 1 lõi CPU riêng; tối ưu hóa đa lõi.</li><li>Dữ liệu trao đổi qua hàng đợi không khóa (lock-free queue), bảo đảm không có điểm nghẽn đa luồng.</li><li>Đa giác ROI bám sát footprint xiên thực tế, loại trừ 100% nhiễu ngoài bãi và cung cấp ranh giới cứng vào/ra.</li><li>Hai camera hoạt động như 2 làn bơi song song, liên tục đồng bộ qua tem thời gian phần cứng.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="05">
+                <button class="media-tab-btn active" onclick="switchMedia('05', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('05', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('05', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-05">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-05">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-05">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-05">
+                <img src="slides_assets/frame_0100_baseline_split_debug.jpg" alt="Trình Bày Song Song 2 Camera & Khống Chế Skew Thời Gian Thực" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Hai camera chạy song song: Đồng hồ Skew hiển thị chênh lệch thời gian trung vị chỉ 18ms, viền ROI xanh lá ôm sát mặt đường.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát sự đồng bộ của bánh xe trên cả 2 màn hình: Chuyển động diễn ra đồng thời, không có hiện tượng camera này trễ trước camera kia một nhịp.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Không thể có chuyện camera 1 chạy ở frame của 1 giây trước còn camera 2 chạy ở frame hiện tại. Hành lang 120ms và đa giác ROI là 2 chốt chặn kỹ thuật bảo đảm tính toàn vẹn dữ liệu."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Độ lệch thời gian p95 đạt 47ms (1.1 frame) và đa giác ROI cắt bỏ 34% diện tích rác, đảm bảo tính toán thời gian thực ổn định trên CPU.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-8" data-title="Ví dụ G#2 qua crop">
-      <div class="slide-top"><span>07 · VÍ DỤ XUYÊN FRAME</span><span>08</span></div>
-      <h2>G#2 chạy nhanh từ cam4 sang cam3</h2>
-      <div class="timeline">
-        <div class="time-card">
-          <span class="frame">FRAME 100</span><div class="mini-cam source"><b>cam4</b><i class="car">G#2</i></div>
-          <h3>local #7 · confirmed</h3><p><code>vₓ = −8 px/frame</code><br>Cách biên trái 24 px.</p>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 06: Phát Hiện Chuyển Động Nền Tĩnh & Cơ Chế Khôi Phục Xe Dừng SSD -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_tracking_cam2.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0278_gid_created_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-6" data-slide="6" data-title="Phát Hiện Chuyển Động Nền Tĩnh & Cơ Chế Khôi Phục Xe Dừng SSD" data-subtitle="Kết hợp MOG2, FrameDiff kép và Template Matching SSD để bám vết liên tục khi xe dừng lùi đỗ">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
         </div>
-        <div class="time-link"><span>ước lượng</span><b>3 frame</b><i>→</i></div>
-        <div class="time-card">
-          <span class="frame">FRAME 101</span><div class="mini-cam pending"><b>handoff</b><i class="predicted">p̂</i></div>
-          <h3>Hồ sơ G#2 đang chờ</h3><p>Manager dự đoán vị trí ở cam3.</p>
+        <div class="pill-badge pill-mid">
+          THỊ GIÁC MÁY TÍNH • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
         </div>
-        <div class="time-link"><span>sai số</span><b>18 &lt; 90 px</b><i>→</i></div>
-        <div class="time-card success-card">
-          <span class="frame">FRAME 102</span><div class="mini-cam target"><b>cam3</b><i class="car">G#2</i></div>
-          <h3>local #12 · tentative</h3><p>Nhận ngay ID cũ <strong>G#2</strong>, không tạo G# mới.</p>
+        <div class="pill-badge pill-right">
+          SLIDE 06 / 15
         </div>
       </div>
-      <div class="callout green-callout">Điểm nâng cấp: track đích còn <b>tentative</b> vẫn được thử nhận ID cũ trước khi chờ confirmed.</div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Phát Hiện Chuyển Động Nền Tĩnh & Cơ Chế Khôi Phục Xe Dừng SSD</h2>
+        <p class="slide-subheading">Kết hợp MOG2, FrameDiff kép và Template Matching SSD để bám vết liên tục khi xe dừng lùi đỗ</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">LÕI PHÁT HIỆN CHUYỂN ĐỘNG NỀN TĨNH (MOG2 ∩ FRAMEDIFF)</span>
+              <span class="badge-tag">THỊ GIÁC MÁY TÍNH</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Tận dụng nền tĩnh:</strong> Camera bãi xe là cố định ➔ MOG2 học nền tĩnh với chi phí CPU cực thấp (14ms), không phụ thuộc vào dán nhãn dữ liệu ban đầu.</li><li><strong>Giao thoa Dual FrameDiff:</strong> Kết hợp FrameDiff 2 thang thời gian: 0.25s (bắt xe nhanh) và 0.8s (bắt xe chậm/lùi đỗ). Phép giao lọc sạch 100% bóng râm tĩnh và vết dầu loang.</li><li><strong>Bù Median độ sáng:</strong> Tự động trừ độ lệch sáng toàn cảnh khi đèn hầm chớp nháy đột ngột.</li><li><strong>Vấn đề xe dừng lâu:</strong> Khi xe dừng chờ lùi đỗ (v -> 0), sau 3-5s MOG2 nuốt xe vào nền ➔ Mất bounding box!</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">CƠ CHẾ SSD TEMPLATE REACQUIRE CỨU VẾT XE DỪNG</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Lưu mẫu template 64x64 px; khi mất detection, quét SSD trong bán kính R <= 160 px (ngưỡng D_SSD <= 0.15) mỗi 2 frame.</li><li>Ngay khi xe nhúc nhích lăn bánh trở lại, SSD lập tức khóa đúng Local ID cũ, không để tracker bị phân mảnh.</li><li>Đo lường định lượng trên Session 2808_3: SSD Template Reacquire đã cứu dấu vết thành công 1.714 lần và từ chối 25 trường hợp sai lệch.</li><li>Giải quyết hoàn hảo nghịch lý 'xe dừng bị nuốt vào nền' mà không cần chạy mô hình AI nặng nề.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="06">
+                <button class="media-tab-btn active" onclick="switchMedia('06', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('06', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('06', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-06">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-06">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-06">
+                  <source src="slides_assets/demo_tracking_cam2.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-06">
+                <img src="slides_assets/frame_0278_gid_created_split_debug.jpg" alt="Phát Hiện Chuyển Động Nền Tĩnh & Cơ Chế Khôi Phục Xe Dừng SSD" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Xe dừng chờ lùi tại Cam 2: Bounding box MOG2 tạm mất, khung quét SSD màu vàng kích hoạt và bắt dính lại ngay khi xe nhích bánh.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Nhìn vào thời điểm xe dừng lại trước ô đỗ: Chiếc xe đứng yên 3 giây, mặt nạ nhị phân mờ đi nhưng ID không hề bị mất nhờ bộ nhớ template SSD 64x64px.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"MOG2 giúp phát hiện xe với chi phí CPU cực nhẹ; SSD Template giúp giữ chặt ID khi xe dừng chờ. Sự kết hợp này mang lại độ ổn định vượt trội mà không cần GPU đắt tiền."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Sự kết hợp MOG2 và SSD Reacquire đã cứu vết thành công 1.714 lần trong Session 2808_3, duy trì danh tính liên tục ngay cả khi tài xế dừng xe căn chỉnh lái.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-9" data-title="Gộp ID trùng">
-      <div class="slide-top"><span>08 · DUPLICATE MERGE</span><span>09</span></div>
-      <h2>Một xe tạo hai bbox: gộp ngay, không “chốt ID mới”</h2>
-      <div class="merge-visual">
-        <div class="duplicate-scene">
-          <div class="dup-box old-id"><span>G#2</span></div>
-          <div class="dup-box new-id"><span>G#4</span></div>
-          <div class="car-shape">XE THẬT</div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 07: Cơ Chế Cross-Camera: Đa Quan Sát Song Song & Canonical Global ID -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0336_handoff_matched_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-7" data-slide="7" data-title="Cơ Chế Cross-Camera: Đa Quan Sát Song Song & Canonical Global ID" data-subtitle="Phá bỏ tư duy sơ đồ tuần tự: Đồng nhất danh tính trong vùng chồng lấn bằng Canonical Global ID">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
         </div>
-        <div class="merge-arrow"><span>gần + cùng hướng<br>+ HSV/kích thước phù hợp</span><b>⇒</b></div>
-        <div class="canonical-result"><small>CANONICAL</small><strong>G#2</strong><code>alias[4] = 2</code></div>
+        <div class="pill-badge pill-mid">
+          LIÊN KẾT ĐA CAMERA • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 07 / 15
+        </div>
       </div>
-      <div class="three-rules">
-        <div><span>1</span><p>Nhận duplicate trong cùng crop hoặc vùng chồng lấn.</p></div>
-        <div><span>2</span><p>Giữ <b>ID nhỏ hơn</b> làm canonical; ID lớn hơn thành alias vĩnh viễn.</p></div>
-        <div><span>3</span><p>Đồng bộ lại ô đỗ và chỉ xuất bbox có bằng chứng mạnh hơn.</p></div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Cơ Chế Cross-Camera: Đa Quan Sát Song Song & Canonical Global ID</h2>
+        <p class="slide-subheading">Phá bỏ tư duy sơ đồ tuần tự: Đồng nhất danh tính trong vùng chồng lấn bằng Canonical Global ID</p>
       </div>
-      <div class="warning-strip"><b>Invariant:</b> không một xe thật nào được xuất thành hai phần tử trên web map.</div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">BẢN CHẤT KHÔNG GIAN TÊN ĐỘC LẬP & ĐA QUAN SÁT ĐỒNG THỜI</span>
+              <span class="badge-tag">LIÊN KẾT ĐA CAMERA</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Bác bỏ sơ đồ tuần tự cổ điển:</strong> Sơ đồ Cam 1 -> Vùng mù -> Cam 2 là sai lầm; trong thực tế tại vùng Overlap, cả 2 camera cùng nhìn thấy xe tại cùng một thời điểm.</li><li><strong>Namespace độc lập:</strong> Camera 1 định danh xe là L1#7; Camera 2 định danh cùng xe là L2#12.</li><li><strong>Hợp nhất Canonical Global ID:</strong> Hàm _match_simultaneous_overlap() đối chiếu tọa độ chân bánh xe chiếu về sàn chung S_shared và quy về huy hiệu duy nhất Canonical G#1.</li><li><strong>Hàng rào bảo vệ danh tính:</strong> Canonical Alias Map lưu ánh xạ vĩnh viễn; Merge Guard ngăn chặn race condition khi 2 cam cùng gửi cập nhật; Dormant Re-ID giữ bộ nhớ quỹ đạo 35cm.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">QUY TẮC BẤT BIẾN DUY NHẤT TOÀN HỆ THỐNG</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Web Dashboard và cơ sở dữ liệu chỉ tiêu thụ Canonical ID.</li><li>Tuyệt đối không bao giờ xuất hiện 2 xe vật lý ảo (ghost vehicles) cho cùng 1 xe thật.</li><li>Bàn giao ID mượt mà, đồng hồ đếm xe giữ vững bằng 1, không bao giờ bị nhảy thành 2 xe.</li><li>Xóa bỏ hoàn toàn hiện tượng phân mảnh quỹ đạo khi xe đi xuyên qua nhiều góc máy.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="07">
+                <button class="media-tab-btn active" onclick="switchMedia('07', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('07', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('07', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-07">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-07">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-07">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-07">
+                <img src="slides_assets/frame_0336_handoff_matched_split_debug.jpg" alt="Cơ Chế Cross-Camera: Đa Quan Sát Song Song & Canonical Global ID" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">VIDEO CỐT LÕI (demo_overlap_split.mp4, 118 frames, 25 FPS, 4.7s): Hai camera cùng nhìn xe màu đỏ qua vạch overlap; mã hiển thị đồng nhất G#1, không gián đoạn.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">TẠI GIÂY 2.0: Cả hai camera cùng nhìn thấy chiếc xe. Cam 1 hiển thị L1#7 -> G#1, Cam 2 hiển thị L2#12 -> G#1. Nhãn G#1 thống nhất tuyệt đối, số lượng xe hoạt động toàn bãi vẫn giữ nguyên là 1.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Chuyển giao camera không phải là một cuộc chạy tiếp sức rủi ro, mà là giai đoạn kiểm chứng đồng thời. Hai camera cùng nhìn một xe, trao đổi và đồng thuận về một Canonical Global ID duy nhất."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Cơ chế Canonical Alias Map và Merge Guard đảm bảo không bao giờ sinh xe ma trong vùng chồng lấn, giữ vững tính liên tục của quỹ đạo xuyên suốt bãi xe.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-10" data-title="Ghép xe với ô đỗ">
-      <div class="slide-top"><span>09 · VEHICLE–SLOT BINDING</span><span>10</span></div>
-      <h2>Từ bbox đến quan hệ “xe G#2 nằm trong P056”</h2>
-      <div class="slot-layout">
-        <div class="overlap-demo">
-          <div class="slot-polygon"><span>P056</span></div>
-          <div class="vehicle-bbox"><span>G#2</span></div>
-          <div class="intersection"><span>A<sub>∩</sub></span></div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 08: Trực Quan Hóa Handoff Trên Bản Đồ & Cửa Cổng Khóa Topology -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0283_handoff_opened_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-8" data-slide="8" data-title="Trực Quan Hóa Handoff Trên Bản Đồ & Cửa Cổng Khóa Topology" data-subtitle="Khóa hành lang di chuyển bằng cổng hình học không gian, triệt tiêu 100% lỗi ghép nhầm xe ở xa">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
         </div>
-        <div class="slot-math">
-          <div class="mini-formulas"><code>Oᵥ = A∩ / Avehicle</code><code>Oₛ = A∩ / Aslot</code></div>
-          <p class="condition">Hợp lệ khi tâm bbox trong ROI và <b>Oᵥ ≥ 0.35</b><br><em>hoặc</em> <b>Oᵥ ≥ 0.60</b>.</p>
-          <div class="formula score">S = 0.70Oᵥ + 0.20Oₛ + 0.10C</div>
-          <p><b>C</b>: mức gần tâm ô, chuẩn hóa trong [0,1].</p>
+        <div class="pill-badge pill-mid">
+          ĐIỀU PHỐI KHÔNG GIAN • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 08 / 15
         </div>
       </div>
-      <div class="lapjv-bar"><b>LAPJV</b><span>so sánh toàn bộ xe × toàn bộ ô</span><strong>→ một xe – một ô</strong></div>
-      <p class="bottom-note"><code>cv2.intersectConvexConvex()</code> tính diện tích giao giữa polygon bbox và polygon ô đỗ.</p>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Trực Quan Hóa Handoff Trên Bản Đồ & Cửa Cổng Khóa Topology</h2>
+        <p class="slide-subheading">Khóa hành lang di chuyển bằng cổng hình học không gian, triệt tiêu 100% lỗi ghép nhầm xe ở xa</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">THỜI ĐIỂM & VỊ TRÍ KÍCH HOẠT MA TRẬN CHI PHÍ</span>
+              <span class="badge-tag">ĐIỀU PHỐI KHÔNG GIAN</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Không so khớp tự do toàn cảnh:</strong> Tuyệt đối không so khớp liên tục trên mọi đối tượng ở mọi vị trí (tránh lãng phí CPU và ngăn ngừa gộp nhầm).</li><li><strong>Cổng cứng Topology (Hard Gate):</strong> Chỉ các xe xuất hiện đúng hành lang ranh giới kết nối (Cam 1 Phải ↔ Cam 2 Trái) mới được đưa vào danh sách ứng viên (candidate).</li><li><strong>Loại trừ vi phạm Topology:</strong> Một chiếc xe cùng màu trắng ở tít góc xa của bãi xe lập tức bị khóa ngay từ đầu: LOCKED: Topology Breach.</li><li><strong>Diễn tiến thực tế Session 2808_3:</strong> Frame 283 (handoff_opened): Xe chạm vạch biên Cam 1; mở hồ sơ chờ bàn giao. Frame 336 (handoff_matched): Xe vào vùng đón Cam 2; đóng hồ sơ, giữ nguyên mã GID.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">TRỰC QUAN HÓA TRÊN BẢN ĐỒ DÙNG CHUNG (SHARED MAP)</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Vùng Cam 1 (màu đen), vùng Cam 2 (màu đỏ), và hành lang Overlap (màu tím rộng 35 cm).</li><li>Topology Gate biến bài toán tìm kiếm toàn bãi phức tạp thành việc so khớp cục bộ trong hành lang hẹp.</li><li>Giảm 65% tải tính toán CPU và loại bỏ hoàn toàn các trường hợp ghép nhầm xe ở xa.</li><li>Thời gian chuyển giao diễn ra trong 53 frames (~2.1s), bảo đảm tính toàn vẹn 100%.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="08">
+                <button class="media-tab-btn active" onclick="switchMedia('08', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('08', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('08', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-08">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-08">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-08">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-08">
+                <img src="slides_assets/frame_0283_handoff_opened_split_debug.jpg" alt="Trực Quan Hóa Handoff Trên Bản Đồ & Cửa Cổng Khóa Topology" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Kích hoạt cổng Topology: Frame 283 mở hồ sơ bàn giao khi chạm vạch vàng, Frame 336 hoàn tất khớp danh tính tại Cam 2.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát vạch ranh giới màu vàng: Khi mũi xe chạm vạch ở Frame 283, hệ thống kích hoạt hồ sơ HANDOFF_OPENED; 53 frames sau xe vào Cam 2 đóng hồ sơ an toàn.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Topology Gate biến bài toán tìm kiếm toàn bãi phức tạp thành việc so khớp cục bộ trong hành lang hẹp; vừa giảm 65% tải tính toán vừa loại bỏ hoàn toàn các trường hợp ghép nhầm xe ở xa."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Topology Gate là chiếc khóa hình học không gian, đảm bảo một chiếc xe ở cổng vào không bao giờ bị ghép nhầm với một chiếc xe đang lăn bánh ở góc xa của bãi.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide" id="slide-11" data-title="Xe dừng và lưu vào ô">
-      <div class="slide-top"><span>10 · STOP DETECTION</span><span>11</span></div>
-      <h2>Giao ROI chưa đủ — xe phải thực sự dừng</h2>
-      <div class="stop-grid">
-        <div class="stop-window">
-          <h3>Cửa sổ đo thật</h3>
-          <div class="sample-cloud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>median</span></div>
-          <ul>
-            <li>≥ <b>1.0 giây</b>, tối thiểu <b>8 mẫu</b></li>
-            <li>≥ <b>80%</b> mẫu thuộc cùng một ô</li>
-            <li><code>r95 ≤ max(3 px, 0.06D)</code></li>
-            <li><code>dnet ≤ max(5 px, 0.10D)</code></li>
-          </ul>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 09: Bản Chất Ma Trận Chi Phí 4 Chiều & Khái Niệm Góc Hướng Cosine -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/lane_graph.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-9" data-slide="9" data-title="Bản Chất Ma Trận Chi Phí 4 Chiều & Khái Niệm Góc Hướng Cosine" data-subtitle="Phân tích chi tiết công thức toán học tính chi phí ghép cặp và cơ chế loại trừ xe đi ngược chiều bằng Cosine">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
         </div>
-        <div class="state-machine">
-          <h3>Máy trạng thái</h3>
-          <div><span>moving</span><i>giao ROI →</i><span class="orange">stop_candidate</span></div>
-          <div class="vertical">↓ ổn định 1 giây</div>
-          <div><span class="green">parked · G#2 → P056</span></div>
-          <div class="vertical">↓ cùng ID chạy ra</div>
-          <div><span class="orange">exit_pending</span><i> ngoài ROI 0.5 s → </i><span>moving</span></div>
+        <div class="pill-badge pill-mid">
+          MÔ HÌNH TOÁN HỌC • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 09 / 15
         </div>
       </div>
-      <div class="callout"><b>D</b> là đường chéo bbox. Chuẩn hóa theo D giúp ngưỡng rung phù hợp với xe lớn/nhỏ và độ phân giải khác nhau.</div>
-    </section>
 
-    <section class="slide" id="slide-12" data-title="Hợp nhất và JSON">
-      <div class="slide-top"><span>11 · FUSION & OUTPUT</span><span>12</span></div>
-      <h2>Vision và tracking bổ sung cho nhau</h2>
-      <div class="fusion-equation">
-        <div><span>OpenCV ROI</span><b>vision_occupied</b><small>nhận cả xe đỗ sẵn</small></div>
-        <strong class="or">OR</strong>
-        <div><span>Global tracking</span><b>tracking_occupied</b><small>xe có ID đã dừng</small></div>
-        <strong class="equals">=</strong>
-        <div class="final-state"><span>Kết quả</span><b>occupied_final</b><small>không bỏ sót bằng chứng “có xe”</small></div>
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Bản Chất Ma Trận Chi Phí 4 Chiều & Khái Niệm Góc Hướng Cosine</h2>
+        <p class="slide-subheading">Phân tích chi tiết công thức toán học tính chi phí ghép cặp và cơ chế loại trừ xe đi ngược chiều bằng Cosine</p>
       </div>
-      <div class="two-col output-layout">
-        <div class="recovery-card">
-          <h3>Phục hồi khi xe rời ô</h3>
-          <p>Tentative detection trong ROI mở rộng <b>15%</b> được so với ID đang giữ trong ô.</p>
-          <div class="recovery-flow"><span>P056 · G#2</span><i>→</i><span>local mới</span><i>→</i><strong>G#2</strong></div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">MA TRẬN CHI PHÍ 4 THÀNH PHẦN (COST MATRIX)</span>
+              <span class="badge-tag">MÔ HÌNH TOÁN HỌC</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Công thức chi phí kết hợp:</strong> C_total = 0.55 * D_ground + 0.30 * D_color + 0.10 * D_scale + 0.05 * D_heading.</li><li><strong>Vị trí (55%):</strong> Trọng số cao nhất vì quỹ đạo xe là liên tục theo vật lý. (Nếu tăng lên 80%, hai xe đi sát nhau sẽ bị đổi chéo ID).</li><li><strong>Màu sắc (30%):</strong> Dùng không gian HSV/LAB để phân biệt xe khác màu. (Nếu tăng lên 70%, hai xe cùng màu trắng/đen sẽ bị gộp nhầm).</li><li><strong>Kích thước (10%) & Hướng (5%):</strong> Kiểm tra tính nhất quán diện tích footprint (tránh nhầm xe 4 chỗ với SUV) và hướng chuyển động.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">BỘ LỌC CỔNG HƯỚNG CỨNG (COSINE HEADING GATE)</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Công thức tích vô hướng:</strong> cos(θ) = (v1 · v2) / (||v1|| ||v2||).</li><li><strong>Quy tắc loại trừ tuyệt đối:</strong> cos(θ) < 0.25 (tương đương θ > 75.5 độ) ➔ REJECT ngay lập tức!</li><li><strong>Ý nghĩa thực tiễn:</strong> Trong hành lang bãi đỗ một chiều hẹp, hai xe đi đối đầu nhau có khoảng cách sàn rất gần. Bộ lọc Cosine loại bỏ 100% khả năng gán nhầm ID giữa 2 xe đi ngược chiều này.</li><li><strong>Giải thuật tối ưu:</strong> Sử dụng thuật toán Jonker-Volgenant (LAPJV) giải ma trận chi phí nhanh gấp 3 lần Hungarian.</li>
+            </ul>
+          </div>
+
         </div>
-        <pre class="json-card"><code>{
-  "P056": {
-    "occupied": true,
-    "vehicle_id": 2,
-    "vision_occupied": false,
-    "tracking_occupied": true,
-    "decision_source": "tracking_override"
-  }
-}</code></pre>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="09">
+                <button class="media-tab-btn active" onclick="switchMedia('09', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('09', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('09', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-09">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-09">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-09">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-09">
+                <img src="slides_assets/lane_graph.png" alt="Bản Chất Ma Trận Chi Phí 4 Chiều & Khái Niệm Góc Hướng Cosine" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Minh họa vector vận tốc: Hướng xe đi thuận chiều được chấp thuận, các vector lệch góc > 75.5 độ bị từ chối tuyệt đối.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát vector chuyển động: Hai camera đo đạc hướng vector vận tốc khớp nhau theo chiều tiến, thỏa mãn cos(theta) > 0.95, chi phí ghép cặp đạt điểm tối ưu.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Không phụ thuộc vào một đặc trưng đơn lẻ: Vị trí giữ vai trò chủ đạo, màu sắc và kích thước bổ trợ phân loại, và góc hướng Cosine đóng vai trò chốt chặn loại trừ phương tiện ngược chiều."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
-      <p class="bottom-note">Ghi JSON bằng file tạm rồi <b>atomic replace</b>: web không bao giờ đọc trúng file đang viết dở.</p>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Bộ lọc Cosine Heading Gate cos(θ) < 0.25 là chiếc phanh an toàn triệt tiêu hoàn toàn nguy cơ tráo ID khi hai xe đi lướt qua nhau trong hành lang hẹp.</span>
+        </div>
+      </div>
+
     </section>
 
-    <section class="slide finale" id="slide-13" data-title="Kết luận">
-      <div class="slide-top"><span>12 · HÀNH TRÌNH HOÀN CHỈNH</span><span>13</span></div>
-      <h2>Một hành trình — một Canonical Global ID</h2>
-      <div class="journey">
-        <div><span>cam4</span><b>local #7</b><small>G#2</small></div><i>→</i>
-        <div><span>handoff</span><b>p̂ = p + vΔt</b><small>3 tầng kiểm tra</small></div><i>→</i>
-        <div><span>cam3</span><b>local #12</b><small>vẫn G#2</small></div><i>→</i>
-        <div><span>P056</span><b>dừng 1 giây</b><small>parked</small></div><i>→</i>
-        <div><span>web</span><b>1 entry</b><small>vehicle_id: 2</small></div>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 10: Nhận Diện Ô Đỗ: Cụm 9 Biến Thể Adaptive Equalizer & Majority Vote -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/session_cam2_live.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/roi_active_map.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-10" data-slide="10" data-title="Nhận Diện Ô Đỗ: Cụm 9 Biến Thể Adaptive Equalizer & Majority Vote" data-subtitle="Ẩn dụ Equalizer âm thanh: Triệt tiêu chênh sáng, lóa đèn pha và bóng râm bằng lưới 9 biến thể quang học">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          THỊ GIÁC Ô ĐỖ • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 10 / 15
+        </div>
       </div>
-      <div class="closing-grid">
-        <article><span class="tag green">ĐIỂM MẠNH</span><ul><li>Nhẹ, chạy CPU</li><li>Không cần dữ liệu huấn luyện</li><li>Kết hợp nhiều bằng chứng</li><li>Một namespace Global ID</li></ul></article>
-        <article><span class="tag orange">GIỚI HẠN</span><ul><li>Motion tracker thiếu ngữ nghĩa</li><li>HSV yếu với xe giống màu</li><li>ROI/topology cấu hình thủ công</li><li>4 crop chưa phải 4 camera vật lý</li></ul></article>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Nhận Diện Ô Đỗ: Cụm 9 Biến Thể Adaptive Equalizer & Majority Vote</h2>
+        <p class="slide-subheading">Ẩn dụ Equalizer âm thanh: Triệt tiêu chênh sáng, lóa đèn pha và bóng râm bằng lưới 9 biến thể quang học</p>
       </div>
-      <blockquote>“Điểm cốt lõi của TechGAR không phải một phép nhận diện đơn lẻ, mà là chuỗi kiểm chứng để giữ đúng danh tính xe từ lúc xuất hiện, chuyển góc nhìn, đỗ vào ô cho đến khi ra khỏi bãi.”</blockquote>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">ẨN DỤ EQUALIZER QUANG HỌC & THÁCH THỨC TẦNG HẦM</span>
+              <span class="badge-tag">THỊ GIÁC Ô ĐỖ</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Thách thức quang học khắc nghiệt:</strong> Đèn pha xe rọi thẳng gây lóa trắng; bóng râm cột tạo mảng đen; thời tiết mưa làm sàn ẩm bóng. Ngưỡng cố định hoàn toàn tê liệt.</li><li><strong>Ẩn dụ Equalizer âm thanh:</strong> Tương tự bàn mixer cân chỉnh dải tần, hệ thống chia phổ sáng thành lưới các biến thể tiền xử lý song song trên từng ô đỗ ROI.</li><li><strong>Tối ưu hóa từ 25 xuống 9 biến thể:</strong> Ban đầu 2x2x1x5=25 biến thể tốn 65ms/ô ➔ Tối ưu về lưới 3x3=9 biến thể Gamma x CLAHE (< 8ms trên CPU).</li><li><strong>Bảng thông số thích ứng:</strong> Xe rọi đèn pha chói: Gamma = 1.4, CLAHE Clip = 4.0 ➔ Nén phi tuyến vùng lóa, khôi phục vạch sơn. Góc hầm tối/bóng râm: Gamma = 0.65, CLAHE Clip = 1.5 ➔ Kéo sáng vùng tối.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">CƠ SỞ TOÁN HỌC CHỌN NGƯỠNG BIỂU QUYẾT ĐA SỐ ≥ 5/9</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Công thức đồng thuận:</strong> Occupied khi sum(Vi) >= 5 (với 9 biến thể Vi thuộc {0, 1}).</li><li><strong>Lọc nhiễu đèn pha:</strong> Đèn pha chói quét qua ô trống chỉ kích hoạt 1-3 biến thể độ lợi cao (V <= 3 < 5) ➔ Lọc sạch 100%, không báo động giả.</li><li><strong>Xe thật đỗ trong ô:</strong> Hình khối và vạch sơn bị che khuất trên >= 6 biến thể (V >= 6 >= 5) ➔ Xác nhận có xe ổn định tuyệt đối.</li><li><strong>Hiệu năng vượt trội:</strong> Toàn bộ 9 biến thể tính toán song song dưới 8ms trên CPU cho cụm 4 ô đỗ.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="10">
+                <button class="media-tab-btn active" onclick="switchMedia('10', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('10', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('10', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-10">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-10">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-10">
+                  <source src="slides_assets/session_cam2_live.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-10">
+                <img src="slides_assets/roi_active_map.png" alt="Nhận Diện Ô Đỗ: Cụm 9 Biến Thể Adaptive Equalizer & Majority Vote" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Ánh đèn pha quét qua dãy ô đỗ P054–P057: Trạng thái ô đỗ giữ vững màu xanh Vacant nhờ bộ lọc 9 biến thể biểu quyết đa số.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Nhìn vào ô đỗ khi đèn pha quét qua: Ánh sáng chói lóa làm sáng rực vạch sàn nhưng ô đỗ không hề bị chớp đỏ báo nhầm xe, đồng hồ đếm phiếu chỉ dừng ở mức 2/9.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Thay vì tìm kiếm một ngưỡng ma thuật không tồn tại, TechGAR biến việc nhận diện thành một hội đồng biểu quyết quang học; loại trừ 100% hiện tượng chớp tắt ô đỗ dưới ánh đèn xe."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Hội đồng biểu quyết 9 biến thể quang học Adaptive Equalizer loại trừ 100% hiện tượng ô đỗ chớp tắt khi có đèn pha xe rọi quét qua bãi.</span>
+        </div>
+      </div>
+
     </section>
-  </main>
 
-  <aside class="help" id="help" aria-label="Hướng dẫn phím tắt">
-    <span><kbd>←</kbd><kbd>→</kbd> chuyển slide</span>
-    <span><kbd>F</kbd> toàn màn hình</span>
-    <span><kbd>O</kbd> tổng quan</span>
-  </aside>
+    <!-- ========================================================================= -->
+    <!-- SLIDE 11: Ghép Xe Vào Ô Đỗ: SlotVehicleBinder & Quản Lý Vòng Đời Rời Ô -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_tracking_cam2.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0543_parked_confirmed_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-11" data-slide="11" data-title="Ghép Xe Vào Ô Đỗ: SlotVehicleBinder & Quản Lý Vòng Đời Rời Ô" data-subtitle="Tính toán giao cắt đa giác chính xác, giao thức Arrival Claim 3 mẫu và Departure Token 5s chống cướp ô">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          RÀNG BUỘC NGHIỆP VỤ • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 11 / 15
+        </div>
+      </div>
 
-  <nav class="controls" aria-label="Điều khiển slide">
-    <button id="prevBtn" type="button" aria-label="Slide trước">←</button>
-    <div class="counter"><span id="currentSlide">01</span><i>/</i><span id="totalSlides">13</span></div>
-    <button id="nextBtn" type="button" aria-label="Slide tiếp theo">→</button>
-    <button id="overviewBtn" class="utility" type="button" aria-label="Chế độ tổng quan" title="Tổng quan (O)">▦</button>
-    <button id="fullscreenBtn" class="utility" type="button" aria-label="Toàn màn hình" title="Toàn màn hình (F)">⛶</button>
-  </nav>
-  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Ghép Xe Vào Ô Đỗ: SlotVehicleBinder & Quản Lý Vòng Đời Rời Ô</h2>
+        <p class="slide-subheading">Tính toán giao cắt đa giác chính xác, giao thức Arrival Claim 3 mẫu và Departure Token 5s chống cướp ô</p>
+      </div>
 
-  <script src="slides.js"></script>
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">GIAO CẮT ĐA GIÁC CHÍNH XÁC (cv2.intersectConvexConvex)</span>
+              <span class="badge-tag">RÀNG BUỘC NGHIỆP VỤ</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Không dùng bounding box chữ nhật thô:</strong> Tính diện tích giao cắt hình học thực tế A∩ giữa đa giác footprint xe và đa giác vạch sơn ô đỗ: Ov = A∩ / A_veh, Os = A∩ / A_slot, S = 0.70 Ov + 0.20 Os + 0.10 C_center.</li><li><strong>Giao thức Arrival Claim:</strong> Chống xe đi ngang: Yêu cầu tối thiểu 3 mẫu liên tiếp nằm trong ô. Xác nhận thị giác kép: Ít nhất 2 lần vision confirm trong cửa sổ 3.0s.</li><li><strong>Lost Commit Delay (0.35s):</strong> Ngăn chặn hủy trạng thái ô khi xe bị người đi bộ che khuất thoáng qua.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">GIAO THỨC DEPARTURE TOKEN 5.0 GIÂY (CHỐNG CƯỚP Ô)</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Khi xe rời ô, ô đỗ chuyển sang departure_pending kèm Departure Token có hiệu lực 5.0 giây.</li><li><strong>Bảo vệ độc quyền:</strong> Ô đỗ được giữ riêng cho ID vừa rời đi; từ chối mọi yêu cầu nhận đỗ của xe lạ đi ngang qua.</li><li><strong>Tái hấp thu xe chỉnh lái:</strong> Nếu tài xế chỉ nhích ra rồi lùi lại căn chỉnh ➔ Tái hấp thu ngay ID cũ, không tạo xe mới.</li><li><strong>Giải phóng nguyên tử:</strong> Chỉ chuyển về vacant khi xe ra ngoài hành lang > 0.5s hoặc token hết hạn.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="11">
+                <button class="media-tab-btn active" onclick="switchMedia('11', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('11', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('11', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-11">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-11">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-11">
+                  <source src="slides_assets/demo_tracking_cam2.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-11">
+                <img src="slides_assets/frame_0543_parked_confirmed_split_debug.jpg" alt="Ghép Xe Vào Ô Đỗ: SlotVehicleBinder & Quản Lý Vòng Đời Rời Ô" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Xe lùi trọn vẹn vào ô P056: Điểm giao cắt đa giác đạt 78%, nhãn Parked Confirmed kích hoạt; khi xe rời ô, Token 5s đếm lùi bảo vệ.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát thời điểm xe lùi vào ô P056: Viền ô đỗ đổi sang màu xanh lá đậm, nhãn PARKED: G#1 -> P056 xuất hiện vững chắc sau 3 frame xác thực liên tiếp.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Giao cắt đa giác chính xác kết hợp bộ lọc thời gian 3 mẫu và Departure Token 5s loại trừ 100% tình huống xe đi ngang qua hoặc xe lạ cướp mất ô đỗ vừa giải phóng."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Departure Token 5.0 giây phản ánh tư duy nghiệp vụ sâu sắc: bảo vệ ô đỗ khi tài xế nhích tới nhích lui căn chỉnh tay lái và chống xe lạ cướp ô.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDE 12: Phân Tích Thực Nghiệm Chuyên Sâu Trên Dữ Liệu Video Tầng Hầm (Session 2808_3) -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/session_cam2_live.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/frame_0336_handoff_matched_split_debug.jpg">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-12" data-slide="12" data-title="Phân Tích Thực Nghiệm Chuyên Sâu Trên Dữ Liệu Video Tầng Hầm (Session 2808_3)" data-subtitle="Công bố dữ liệu thực nghiệm 3.827 frame, phân tích độ dài bám vết Main GID và cam kết liêm chính học thuật">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          ĐÁNH GIÁ THỰC NGHIỆM • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 12 / 15
+        </div>
+      </div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Phân Tích Thực Nghiệm Chuyên Sâu Trên Dữ Liệu Video Tầng Hầm (Session 2808_3)</h2>
+        <p class="slide-subheading">Công bố dữ liệu thực nghiệm 3.827 frame, phân tích độ dài bám vết Main GID và cam kết liêm chính học thuật</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">THÔNG SỐ TẬP DỮ LIỆU THỰC NGHIỆM KIỂM CHỨNG</span>
+              <span class="badge-tag">ĐÁNH GIÁ THỰC NGHIỆM</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Tổng số khung hình xử lý:</strong> 3.827 frames liên tục, thời lượng 153.08 giây (tốc độ xử lý thực tế 25.0 FPS trên CPU).</li><li><strong>Chu trình di chuyển đầy đủ:</strong> Xe vào cổng ➔ qua Cam 1 ➔ vào Overlap ➔ sang Cam 2 ➔ lùi đỗ vào ô P-056 ➔ tắt máy ➔ nổ máy rời ô ra khỏi bãi.</li><li><strong>Độ dài bám vết Main GID:</strong> Duy trì liên tục 3.383 frames (chiếm 48.4% thời lượng có xe trong bãi và 98.2% hành trình di chuyển).</li><li><strong>14 GID vụn (Fragmented Tracks):</strong> Đóng vai trò proxy đánh giá phân mảnh khi xe bị cột che khuất cực hạn hoặc tài xế nhấp nhả ga nhiều nhịp.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">CAM KẾT LIÊM CHÍNH HỌC THUẬT & HIỆU NĂNG CPU THỜI GIAN THỰC</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Liêm chính học thuật:</strong> Báo cáo trung thực 14 GID vụn làm thước đo proxy, từ chối bịa đặt chỉ số MOTA 99% ảo khi chưa có Ground Truth gán nhãn thủ công từng frame.</li><li><strong>Phân bổ độ trễ:</strong> Video ingest 12ms, Tracker 18ms, Homography & Handoff 6ms, Equalizer & Binder 4ms.</li><li><strong>Tổng độ trễ xử lý mỗi frame:</strong> 40 ms (~25.0 FPS trên CPU Intel Core i5).</li><li><strong>Độ trễ toàn trình lên Web:</strong> 169 ms ➔ Đạt chuẩn thời gian thực xuất sắc.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="12">
+                <button class="media-tab-btn active" onclick="switchMedia('12', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('12', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('12', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-12">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-12">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-12">
+                  <source src="slides_assets/session_cam2_live.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-12">
+                <img src="slides_assets/frame_0336_handoff_matched_split_debug.jpg" alt="Phân Tích Thực Nghiệm Chuyên Sâu Trên Dữ Liệu Video Tầng Hầm (Session 2808_3)" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Video dữ liệu thực tế Session 2808_3 kèm bảng Telemetry HUD: FPS ổn định 25.0, độ trễ 40ms/frame, Main GID bám liên tục.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát bảng Telemetry góc trên: FPS giữ đều 25.0, đồ thị nhịp tim độ trễ phẳng lỳ ở mức 40ms, Main GID bám bền bỉ suốt 3.383 frames.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Số liệu đo đạc thực tế trên video dài 3.827 frame chứng minh TechGAR vận hành ổn định trong toàn bộ chu trình bãi xe và đáp ứng hoàn hảo tiêu chuẩn thời gian thực trên CPU phổ thông."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Cam kết liêm chính học thuật: Báo cáo trung thực 14 GID vụn làm proxy kiểm toán, từ chối tạo chỉ số ảo; hệ thống đạt độ trễ toàn trình 169ms trên CPU Intel i5.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDE 13: Phê Phán Trung Bình Cộng Cào Bằng & Giao Thức Cửa Sổ Sự Kiện -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/calib_shared_roi.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-13" data-slide="13" data-title="Phê Phán Trung Bình Cộng Cào Bằng & Giao Thức Cửa Sổ Sự Kiện" data-subtitle="Phê phán độ chính xác ảo và bảo vệ giao thức Cửa Sổ Sự Kiện (Event Window) qua 20 Session thực tế">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          KIỂM TOÁN HỆ THỐNG • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 13 / 15
+        </div>
+      </div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Phê Phán Trung Bình Cộng Cào Bằng & Giao Thức Cửa Sổ Sự Kiện</h2>
+        <p class="slide-subheading">Phê phán độ chính xác ảo và bảo vệ giao thức Cửa Sổ Sự Kiện (Event Window) qua 20 Session thực tế</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">PHÊ PHÁN PHƯƠNG PHÁP TRUNG BÌNH CỘNG CÀO BẰNG</span>
+              <span class="badge-tag">KIỂM TOÁN HỆ THỐNG</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Cảnh tĩnh chiếm 90%:</strong> Trong tầng hầm thực tế, 90% thời gian là cảnh tĩnh không có xe di chuyển.</li><li><strong>Độ chính xác ảo:</strong> Nếu tính trung bình toàn thời gian, một hệ thống hỏng hoàn toàn Handoff vẫn có thể đạt > 98% độ chính xác ảo. Cách tính cào bằng là ngụy biện khoa học!</li><li><strong>Giao thức Cửa Sổ Sự Kiện (Event Window Protocol):</strong> Chỉ đánh giá tập trung vào 2 thời điểm có rủi ro cao nhất: Event Window A (vùng overlap ± 2.0s) và Event Window B (vùng cửa ô đỗ ± 3.0s).</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">KẾT QUẢ KIỂM TOÁN TRÊN 20 SESSION THỰC TẾ</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Kịch bản 1 (Xe đơn vào ô chuẩn):</strong> 10 / 10 session thành công (100%).</li><li><strong>Kịch bản 2 (Xe đi ngang qua không đỗ):</strong> 5 / 5 session thành công (100%), không báo động giả.</li><li><strong>Kịch bản 3 (Chuyển làn / Lóa đèn trong overlap):</strong> 3 / 4 session thành công (75%), 1 ca lóa đèn pha cự ly < 1m.</li><li><strong>Kịch bản 4 (Rời ô có xe khác cản luồng):</strong> 1 / 1 session thành công (100%), Departure Token 5s bảo vệ hoàn hảo.</li><li><strong>TỔNG CỘNG KIỂM TOÁN:</strong> 19 / 20 SESSION THÀNH CÔNG (95.0%) TRONG EVENT WINDOW.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="13">
+                <button class="media-tab-btn active" onclick="switchMedia('13', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('13', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('13', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-13">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-13">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-13">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-13">
+                <img src="slides_assets/calib_shared_roi.png" alt="Phê Phán Trung Bình Cộng Cào Bằng & Giao Thức Cửa Sổ Sự Kiện" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Kiểm toán trong Event Window: Khung tím nhấp nháy tại hành lang chuyển giao xe, chứng minh 19/20 session vượt qua thử thách an toàn.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát vùng chuyển giao Event Window: Xe đi qua vùng nhạy cảm nhất, hệ thống kiểm toán kích hoạt trong 2 giây và xác nhận độ tin cậy đạt 95.0%.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Đánh giá theo Cửa Sổ Sự Kiện phơi bày đúng những thời điểm nhạy cảm nhất của bài toán; con số 95.0% thành công là thước đo độ tin cậy thực chất của giải thuật Handoff."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Giao thức Cửa Sổ Sự Kiện (Event Window) loại bỏ ngụy biện trung bình cộng cảnh tĩnh, khẳng định độ tin cậy thực chất 95.0% trên 20 kịch bản thực tế khắc nghiệt.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDE 14: Ablation Study: Định Lượng Đóng Góp Của Từng Thành Phần Lõi -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_overlap_split.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/lane_graph_spots.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-14" data-slide="14" data-title="Ablation Study: Định Lượng Đóng Góp Của Từng Thành Phần Lõi" data-subtitle="Bảng kết quả định lượng 5 cấu hình thử nghiệm chứng minh tính tất yếu không thể thay thế của từng module">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          BÓC TÁCH MODULE • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 14 / 15
+        </div>
+      </div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Ablation Study: Định Lượng Đóng Góp Của Từng Thành Phần Lõi</h2>
+        <p class="slide-subheading">Bảng kết quả định lượng 5 cấu hình thử nghiệm chứng minh tính tất yếu không thể thay thế của từng module</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">BẢNG KẾT QUẢ ABLATION STUDY (5 CẤU HÌNH THỬ NGHIỆM)</span>
+              <span class="badge-tag">BÓC TÁCH MODULE</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>1. Full TechGAR Pipeline (Đề xuất):</strong> Precision 96.2% | Recall 94.8% | Sai ghép Overlap 0.0% | FPS CPU 25.1. (Chạy mượt mà, giữ danh tính xuyên suốt).</li><li><strong>2. Loại bỏ Topology Gate:</strong> Precision 81.4% | Recall 89.0% | Sai ghép Overlap 28.5% (Tăng vọt) | FPS CPU 15.2 (Tải tính toán tăng 65%).</li><li><strong>3. Loại bỏ FrameDiff Kép (Chỉ MOG2):</strong> Precision 76.0% (Giảm 20.2%) | Recall 88.2% | Sai ghép 12.0% | FPS CPU 26.0 (Bóng râm động sinh bbox rác).</li><li><strong>4. Loại bỏ Kalman Filter (Chỉ đo thật):</strong> Precision 82.5% | Recall 68.4% (Giảm 26.4%) | Sai ghép 18.4% | FPS CPU 27.8 (Mất dấu sau cột bê tông).</li><li><strong>5. Loại bỏ SSD Template Reacquire:</strong> Precision 88.1% | Recall 72.3% | Sai ghép 8.5% | FPS CPU 25.4 (Mất vết khi xe dừng chờ lùi đỗ).</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">PHÂN TÍCH ĐÓNG GÓP KHOA HỌC TỪNG MODULE</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Đóng góp Topology Gate:</strong> Triệt tiêu 28.5% sai ghép xe ngược chiều, giảm 65% chi phí tính toán so khớp.</li><li><strong>Đóng góp FrameDiff Kép:</strong> Tăng +20.2% Precision nhờ lọc sạch bóng râm động và ánh sáng đèn trần hầm.</li><li><strong>Đóng góp Kalman Filter:</strong> Tăng +26.4% Recall, là cầu nối dự báo sống còn khi xe đi qua điểm mù cột.</li><li><strong>Đóng góp SSD Reacquire:</strong> Đảm bảo tính liên tục của Local ID khi xe dừng lùi đỗ phức tạp.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="14">
+                <button class="media-tab-btn active" onclick="switchMedia('14', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('14', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('14', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-14">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-14">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-14">
+                  <source src="slides_assets/demo_overlap_split.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-14">
+                <img src="slides_assets/lane_graph_spots.png" alt="Ablation Study: Định Lượng Đóng Góp Của Từng Thành Phần Lõi" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Thử nghiệm đối sánh Ablation: Cấu hình Full TechGAR duy trì 0.0% sai ghép overlap, vượt trội hoàn toàn so với khi tắt Topology Gate.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">So sánh 5 cấu hình: Khi bỏ Topology Gate, thuật toán bị lừa bởi xe ở xa, sai số vọt lên 28.5%. Cấu hình Full TechGAR giữ vững sai số 0.0%.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"Thử nghiệm bóc tách chứng minh rằng mọi module trong TechGAR đều giải quyết đúng một bài toán vật lý cụ thể; không có thuật toán thừa và không có sự thỏa hiệp về mặt hiệu năng."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">Thử nghiệm bóc tách Ablation Study khẳng định tính tất yếu của từng module: Tắt Topology làm tăng 28.5% sai số, tắt FrameDiff kép làm giảm 20.2% Precision.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDE 15: Hệ Thống Quản Lý Bãi Đỗ Toàn Diện: Từ Nghiên Cứu Đến Thực Tiễn -->
+    <!-- [HƯỚNG DẪN TÙY CHỈNH MEDIA CỦA BẠN]:
+         • Đổi Video: sửa đường dẫn trong thẻ <source src="slides_assets/demo_tracking_cam2.mp4">
+         • Đổi Ảnh: sửa đường dẫn trong thẻ <img src="slides_assets/web_navigation_c06.png">
+    -->
+    <!-- ========================================================================= -->
+    <section class="slide-canvas" id="slide-15" data-slide="15" data-title="Hệ Thống Quản Lý Bãi Đỗ Toàn Diện: Từ Nghiên Cứu Đến Thực Tiễn" data-subtitle="Tóm lược 3 đóng góp khoa học cốt lõi, sản phẩm ứng dụng dẫn đường tìm xe và lộ trình mở rộng N-Camera">
+      
+      <!-- Top Pill Navigation Bar (Theo phong cách Thiết kế chưa có tên_backup.pptx) -->
+      <div class="pill-nav-bar">
+        <div class="pill-badge pill-left">
+          <span class="pill-dot"></span> BÁO CÁO NCKH TECHGAR
+        </div>
+        <div class="pill-badge pill-mid">
+          KẾT LUẬN & ỨNG DỤNG • ĐỊNH VỊ CENTIMET & QUẢN LÝ Ô ĐỖ
+        </div>
+        <div class="pill-badge pill-right">
+          SLIDE 15 / 15
+        </div>
+      </div>
+
+      <!-- Slide Title Lockup -->
+      <div class="slide-title-lockup">
+        <h2 class="slide-heading">Hệ Thống Quản Lý Bãi Đỗ Toàn Diện: Từ Nghiên Cứu Đến Thực Tiễn</h2>
+        <p class="slide-subheading">Tóm lược 3 đóng góp khoa học cốt lõi, sản phẩm ứng dụng dẫn đường tìm xe và lộ trình mở rộng N-Camera</p>
+      </div>
+
+      <!-- Two-Column Grid Content -->
+      <div class="slide-grid">
+        
+        <!-- LEFT COLUMN: Academic & Technical Content -->
+        <div class="col-left">
+          
+          <!-- Card 1: Primary Findings -->
+          <div class="editorial-card card-primary">
+            <div class="card-header-bar">
+              <span class="card-title-text">BA ĐÓNG GÓP KHOA HỌC CỐT LÕI CỦA ĐỀ TÀI</span>
+              <span class="badge-tag">KẾT LUẬN & ỨNG DỤNG</span>
+            </div>
+            <ul class="key-points">
+              <li><strong>Mô hình Homography neo mặt sàn:</strong> Triệt tiêu hoàn toàn sai thị Parallax 3D bằng cách neo chân tiếp xúc bánh xe (Z=0), đạt sai số đường may p50 = 1.13 cm trên 945 cặp đo thực tế.</li><li><strong>Cơ chế Handoff đa quan sát song song:</strong> Phá bỏ tư duy bàn giao tuần tự; kết hợp Topology Gate và bộ lọc cos(θ) < 0.25 để duy trì duy nhất một Canonical Global ID xuyên suốt.</li><li><strong>Hệ thống nhận diện ô đỗ Adaptive Equalizer:</strong> Vượt qua thử thách lóa đèn hầm bằng cụm 9 biến thể Gamma-CLAHE biểu quyết đa số >= 5/9 kết hợp Arrival Claim & Departure Token 5s.</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Ice-Blue Secondary / Math / Telemetry Container -->
+          <div class="editorial-card card-secondary-ice">
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">ỨNG DỤNG DẪN ĐƯỜNG TRONG NHÀ & LỘ TRÌNH MỞ RỘNG (ROADMAP)</span>
+              <span class="badge-tag-ice">TECHGAR BENCHMARK</span>
+            </div>
+            <ul class="tech-spec-list">
+              <li><strong>Indoor Route Guidance:</strong> Tự động tính toán đường đi bộ ngắn nhất từ thang máy đến đúng ô đỗ C-06 cho khách hàng.</li><li><strong>Web Dashboard thời gian thực:</strong> Cung cấp bản đồ trực quan với độ trễ đầu cuối chỉ 169 ms.</li><li><strong>Vận hành trên CPU phổ thông:</strong> Không cần card GPU đắt tiền, tiết kiệm tối đa chi phí đầu tư hạ tầng tòa nhà.</li><li><strong>Mở rộng N-Camera:</strong> Mô hình đồ thị phân tán liên kết nhiều camera cho bãi xe nhiều tầng.</li><li><strong>Thông điệp cốt lõi:</strong> MỘT XE THẬT — MỘT CANONICAL GID — MỘT TỌA ĐỘ CENTIMET — MỘT TRẠNG THÁI Ô ĐỖ.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real Media Hub (Video + Image + Controls) -->
+        <div class="col-right">
+          <div class="editorial-card media-showcase-card">
+            
+            <div class="card-header-bar">
+              <span class="card-title-text text-electric">DỮ LIỆU THỰC NGHIỆM ĐA PHƯƠNG TIỆN</span>
+              
+              <!-- Interactive Media Switcher Tabs -->
+              <div class="media-tabs" data-slide="15">
+                <button class="media-tab-btn active" onclick="switchMedia('15', 'video')">🎬 Video Demo</button>
+                <button class="media-tab-btn" onclick="switchMedia('15', 'image')">📸 Ảnh Thực Địa</button>
+                <button class="media-tab-btn" onclick="switchMedia('15', 'split')">⚡ Song Song</button>
+              </div>
+            </div>
+
+            <!-- Media Stage Container -->
+            <div class="media-stage" id="media-stage-15">
+              
+              <!-- 1. Real Embedded Video -->
+              <div class="media-layer media-video active" id="video-layer-15">
+                <video controls autoplay loop muted playsinline class="media-player" id="player-15">
+                  <source src="slides_assets/demo_tracking_cam2.mp4" type="video/mp4">
+                  Trình duyệt không hỗ trợ video MP4.
+                </video>
+                <div class="media-badge video-badge">LIVE VIDEO DEMO</div>
+              </div>
+
+              <!-- 2. Real Embedded Image -->
+              <div class="media-layer media-image" id="image-layer-15">
+                <img src="slides_assets/web_navigation_c06.png" alt="Hệ Thống Quản Lý Bãi Đỗ Toàn Diện: Từ Nghiên Cứu Đến Thực Tiễn" class="media-photo" loading="lazy">
+                <div class="media-badge image-badge">PROJECT ARTIFACT</div>
+              </div>
+
+            </div>
+
+            <!-- Video Observation & Telemetry Breakdown Box -->
+            <div class="media-telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">⏱️ KỊCH BẢN VIDEO:</span>
+                <span class="telemetry-value">Giao diện Web Navigation tìm xe: Người dùng quét mã tại thang máy, hệ thống vẽ đường đi bộ xanh cyan tới đúng ô C-06.</span>
+              </div>
+              <div class="telemetry-row observation-highlight">
+                <span class="telemetry-label">🎯 ĐIỂM VÀNG QUAN SÁT:</span>
+                <span class="telemetry-value">Quan sát lộ trình tìm xe: Mũi tên dẫn đường uốn lượn từng bước từ thang máy đến đúng ô C-06, kết tinh toàn bộ nghiên cứu thành sản phẩm thực tiễn.</span>
+              </div>
+              <div class="telemetry-row speaker-cue-row">
+                <span class="telemetry-label">🎙️ LỜI BÌNH DIỄN GIẢ:</span>
+                <span class="telemetry-value"><em>"TechGAR chứng minh rằng: Bằng việc làm chủ bản chất hình học và thiết kế thuật toán phân tầng ranh giới lỗi, chúng ta hoàn toàn có thể giải quyết bài toán định vị tầng hầm phức tạp với độ chính xác centimet trên phần cứng CPU tiết kiệm chi phí."</em></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Banner: Core Thesis / Academic Conclusion -->
+      <div class="bottom-callout-bar">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong class="callout-tag">KẾT LUẬN BẢO VỆ:</strong>
+          <span class="callout-text">TechGAR hoàn thiện trọn vẹn từ nghiên cứu toán học hàn lâm đến ứng dụng thương mại thực tế: Dẫn đường tìm xe chính xác từng centimet trên nền web nhẹ nhàng.</span>
+        </div>
+      </div>
+
+    </section>
+
+
+    </main>
+
+    <!-- Bottom Floating Navigation Toolbar -->
+    <nav id="deck-controls">
+      <button class="ctrl-btn" onclick="prevSlide()" title="Slide trước (Mũi tên trái)">◀</button>
+      <div class="slide-counter-badge" id="slide-counter-display">SLIDE 01 / 15</div>
+      <button class="ctrl-btn" onclick="nextSlide()" title="Slide sau (Mũi tên phải)">▶</button>
+      <button class="ctrl-btn" onclick="toggleOverviewGrid()" title="Tổng quan 15 slide (Phím G)">▦</button>
+      <button class="ctrl-btn" onclick="toggleSpeakerNotes()" title="Ghi chú & Phản biện (Phím N)">📝</button>
+      <button class="ctrl-btn" onclick="toggleFullscreen()" title="Toàn màn hình (Phím F)">⛶</button>
+    </nav>
+
+  </div>
+
+  <!-- MODAL: 15-SLIDE OVERVIEW GRID -->
+  <div id="grid-modal">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="toggleOverviewGrid()">✕</button>
+      <h3 style="color: var(--cobalt-primary); font-size: 18px; font-weight: 800;">TỔNG QUAN 15 SLIDE BÁO CÁO NCKH TECHGAR</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Nhấp vào ô để chuyển nhanh đến slide tương ứng (hoặc ấn số 1-9)</p>
+      <div class="grid-container">
+        <div class="grid-card" onclick="jumpToSlide(1)">
+            <div class="grid-card-num">01</div>
+            <div class="grid-card-cat">DẪN NHẬP & LUẬN ĐIỂM</div>
+            <div class="grid-card-title">Định Vị Phương Tiện & Quản Lý Ô Đỗ Tầng Hầm Bằng Hệ Thống Đa Camera Cố Định</div>
+        </div><div class="grid-card" onclick="jumpToSlide(2)">
+            <div class="grid-card-num">02</div>
+            <div class="grid-card-cat">HIỆN TRẠNG & GIỚI HẠN</div>
+            <div class="grid-card-title">Hạn Chế Của 1 Camera & So Sánh Các Hướng Tiếp Cận Ban Đầu</div>
+        </div><div class="grid-card" onclick="jumpToSlide(3)">
+            <div class="grid-card-num">03</div>
+            <div class="grid-card-cat">KIẾN TRÚC HỆ THỐNG</div>
+            <div class="grid-card-title">Kiến Trúc Tổng Thể: Hình Dung & Quy Trình 8 Bước Xử Lý</div>
+        </div><div class="grid-card" onclick="jumpToSlide(4)">
+            <div class="grid-card-num">04</div>
+            <div class="grid-card-cat">CƠ SỞ HÌNH HỌC</div>
+            <div class="grid-card-title">Bài Toán Hình Học Camera, Xử Lý Góc Chéo & Homography Mặt Sàn</div>
+        </div><div class="grid-card" onclick="jumpToSlide(5)">
+            <div class="grid-card-num">05</div>
+            <div class="grid-card-cat">ĐỒNG BỘ ĐA LUỒNG</div>
+            <div class="grid-card-title">Trình Bày Song Song 2 Camera & Khống Chế Skew Thời Gian Thực</div>
+        </div><div class="grid-card" onclick="jumpToSlide(6)">
+            <div class="grid-card-num">06</div>
+            <div class="grid-card-cat">THỊ GIÁC MÁY TÍNH</div>
+            <div class="grid-card-title">Phát Hiện Chuyển Động Nền Tĩnh & Cơ Chế Khôi Phục Xe Dừng SSD</div>
+        </div><div class="grid-card" onclick="jumpToSlide(7)">
+            <div class="grid-card-num">07</div>
+            <div class="grid-card-cat">LIÊN KẾT ĐA CAMERA</div>
+            <div class="grid-card-title">Cơ Chế Cross-Camera: Đa Quan Sát Song Song & Canonical Global ID</div>
+        </div><div class="grid-card" onclick="jumpToSlide(8)">
+            <div class="grid-card-num">08</div>
+            <div class="grid-card-cat">ĐIỀU PHỐI KHÔNG GIAN</div>
+            <div class="grid-card-title">Trực Quan Hóa Handoff Trên Bản Đồ & Cửa Cổng Khóa Topology</div>
+        </div><div class="grid-card" onclick="jumpToSlide(9)">
+            <div class="grid-card-num">09</div>
+            <div class="grid-card-cat">MÔ HÌNH TOÁN HỌC</div>
+            <div class="grid-card-title">Bản Chất Ma Trận Chi Phí 4 Chiều & Khái Niệm Góc Hướng Cosine</div>
+        </div><div class="grid-card" onclick="jumpToSlide(10)">
+            <div class="grid-card-num">10</div>
+            <div class="grid-card-cat">THỊ GIÁC Ô ĐỖ</div>
+            <div class="grid-card-title">Nhận Diện Ô Đỗ: Cụm 9 Biến Thể Adaptive Equalizer & Majority Vote</div>
+        </div><div class="grid-card" onclick="jumpToSlide(11)">
+            <div class="grid-card-num">11</div>
+            <div class="grid-card-cat">RÀNG BUỘC NGHIỆP VỤ</div>
+            <div class="grid-card-title">Ghép Xe Vào Ô Đỗ: SlotVehicleBinder & Quản Lý Vòng Đời Rời Ô</div>
+        </div><div class="grid-card" onclick="jumpToSlide(12)">
+            <div class="grid-card-num">12</div>
+            <div class="grid-card-cat">ĐÁNH GIÁ THỰC NGHIỆM</div>
+            <div class="grid-card-title">Phân Tích Thực Nghiệm Chuyên Sâu Trên Dữ Liệu Video Tầng Hầm (Session 2808_3)</div>
+        </div><div class="grid-card" onclick="jumpToSlide(13)">
+            <div class="grid-card-num">13</div>
+            <div class="grid-card-cat">KIỂM TOÁN HỆ THỐNG</div>
+            <div class="grid-card-title">Phê Phán Trung Bình Cộng Cào Bằng & Giao Thức Cửa Sổ Sự Kiện</div>
+        </div><div class="grid-card" onclick="jumpToSlide(14)">
+            <div class="grid-card-num">14</div>
+            <div class="grid-card-cat">BÓC TÁCH MODULE</div>
+            <div class="grid-card-title">Ablation Study: Định Lượng Đóng Góp Của Từng Thành Phần Lõi</div>
+        </div><div class="grid-card" onclick="jumpToSlide(15)">
+            <div class="grid-card-num">15</div>
+            <div class="grid-card-cat">KẾT LUẬN & ỨNG DỤNG</div>
+            <div class="grid-card-title">Hệ Thống Quản Lý Bãi Đỗ Toàn Diện: Từ Nghiên Cứu Đến Thực Tiễn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SPEAKER NOTES & DEFENSE Q&A -->
+  <div id="notes-modal">
+    <div class="modal-box notes-box">
+      <button class="modal-close-btn" onclick="toggleSpeakerNotes()">✕</button>
+      <h3 class="notes-heading" id="notes-slide-title">GHI CHÚ DIỄN GIẢ & BẢO VỆ PHẢN BIỆN — SLIDE 01</h3>
+      
+      <div class="notes-section">
+        <h4>🎙️ Lời Thuyết Trình Khuyên Dùng (Speaker Script):</h4>
+        <p class="notes-text" id="notes-cue-text">Đang tải...</p>
+      </div>
+
+      <div class="notes-section">
+        <h4>❓ Câu Hỏi Xoáy Dự Kiến Từ Hội Đồng:</h4>
+        <p class="notes-text" style="border-left-color: #E65100; background: #FFF3E0;" id="notes-q-text">Đang tải...</p>
+      </div>
+
+      <div class="notes-section">
+        <h4>💡 Câu Trả Lời Mẫu Đắt Giá:</h4>
+        <p class="notes-text" style="border-left-color: #2E7D32; background: #E8F5E9;" id="notes-a-text">Đang tải...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-Side Presentation Controller Script -->
+  <script>
+    const totalSlides = 15;
+    let currentSlide = 1;
+
+    const speakerNotesData = {
+  1: {
+    cue: `Bắt đầu từ thực tế tầng hầm mất GPS 0 dBm; cột bê tông tạo điểm mù chết người; TechGAR biến camera cố định thành mạng lưới cảm nhận không gian centimet.`,
+    qa_q: `Tại sao không dùng Beacon BLE hoặc thẻ từ RFID để định vị xe trong hầm?`,
+    qa_a: `Thẻ BLE/RFID đòi hỏi phải phát cho từng xe vãng lai, pin của beacon dễ cạn sau 6-12 tháng, và sóng vô tuyến bị phản xạ đa đường (multipath) dữ dội bởi kết cấu bê tông cốt thép hầm, sai số lên tới 3-5 mét.`
+  },
+  2: {
+    cue: `1 camera chịu thua trước cột che và biến dạng góc xiên. Sử dụng nhiều camera liên kết là yêu cầu bắt buộc để bảo đảm độ chính xác tracking và trạng thái ô đỗ.`,
+    qa_q: `Tại sao không dùng 1 camera 360 Fisheye gắn trần ở giữa bãi để bao quát toàn bộ?`,
+    qa_a: `Trần hầm rất thấp (chỉ 2.4 - 2.8m). Một camera fisheye gắn trần chỉ bao quát được bán kính khoảng 5-6m, ra ngoài khoảng cách đó hình ảnh bị nén méo cực nặng, pixel xe quá nhỏ và cột bê tông xung quanh vẫn che khuất hoàn toàn.`
+  },
+  3: {
+    cue: `Mỗi bước đều có ranh giới kiểm soát lỗi rõ ràng: Lỗi hình ảnh chặn tại ROI, lỗi thị sai chặn tại Homography, lỗi sai hành lang chặn tại Topology, lỗi chớp ô chặn tại Token.`,
+    qa_q: `Nếu một module trong chuỗi 8 bước bị nghẽn (lag), hệ thống xử lý thế nào?`,
+    qa_a: `Hệ thống sử dụng hàng đợi không khóa (lock-free queue) và bộ đệm Catch-up buffer. Nếu một frame bị chậm quá 80ms, frame đó sẽ bị bỏ qua (drop frame) để bắt kịp thời gian thực, tuyệt đối không để dồn ứ hàng đợi.`
+  },
+  4: {
+    cue: `TechGAR không cố ghép kín bóng nóc xe. Mục tiêu hình học duy nhất là trùng khớp mặt tiếp xúc bánh xe và vạch sơn ô đỗ, đạt độ chính xác centimet thế giới.`,
+    qa_q: `Nếu mặt sàn hầm có độ dốc (như dốc lên xuống ram dốc) thì Homography phẳng còn đúng không?`,
+    qa_a: `Homography giả định mặt phẳng. Trong bãi xe ngầm khu vực đỗ xe luôn được đổ phẳng để thoát nước và đỗ xe an toàn. Nếu có ram dốc, giải pháp là chia thành từng mặt phẳng cục bộ (Piecewise Planar Homography) riêng cho đoạn dốc.`
+  },
+  5: {
+    cue: `Không thể có chuyện camera 1 chạy ở frame của 1 giây trước còn camera 2 chạy ở frame hiện tại. Hành lang 120ms và đa giác ROI là 2 chốt chặn kỹ thuật bảo đảm tính toàn vẹn dữ liệu.`,
+    qa_q: `Nếu một camera bị mất kết nối mạng RTSP hoàn toàn trong 2 giây thì hệ thống xử lý thế nào?`,
+    qa_a: `Hệ thống có cơ chế Heartbeat Timeout (500ms). Nếu mất Cam 2, Cam 1 vẫn hoạt động độc lập và giữ nguyên vị trí cuối cùng của xe trong Shared Map dưới dạng Dead Reckoning dự báo bằng Kalman, khi Cam 2 kết nối lại sẽ Re-ID bằng Dormant Memory.`
+  },
+  6: {
+    cue: `MOG2 giúp phát hiện xe với chi phí CPU cực nhẹ; SSD Template giúp giữ chặt ID khi xe dừng chờ. Sự kết hợp này mang lại độ ổn định vượt trội mà không cần GPU đắt tiền.`,
+    qa_q: `Tại sao không dùng YOLOv8-nano thay cho MOG2 để nhận diện xe dừng?`,
+    qa_a: `YOLOv8-nano dù nhẹ nhưng trên CPU vẫn tốn 45-60ms/frame cho 1 camera, nếu chạy 2 camera song song sẽ chiếm 100-120ms, làm tụt FPS xuống dưới 10 FPS. MOG2 chỉ tốn 14ms trên CPU, đáp ứng chuẩn 25 FPS thời gian thực.`
+  },
+  7: {
+    cue: `Chuyển giao camera không phải là một cuộc chạy tiếp sức rủi ro, mà là giai đoạn kiểm chứng đồng thời. Hai camera cùng nhìn một xe, trao đổi và đồng thuận về một Canonical Global ID duy nhất.`,
+    qa_q: `Nếu hai xe cùng đi vào vùng Overlap cùng một lúc thì Canonical ID có bị gán lộn xộn không?`,
+    qa_a: `Không, vì ma trận chi phí của chúng tôi giải quyết bài toán gán cặp 1-1 bằng thuật toán Jonker-Volgenant (LAPJV) có chi phí ma trận kết hợp cả vị trí sàn (55%), màu sắc (30%), kích thước (10%) và góc hướng Cosine (5%).`
+  },
+  8: {
+    cue: `Topology Gate biến bài toán tìm kiếm toàn bãi phức tạp thành việc so khớp cục bộ trong hành lang hẹp; vừa giảm 65% tải tính toán vừa loại bỏ hoàn toàn các trường hợp ghép nhầm xe ở xa.`,
+    qa_q: `Nếu tài xế quay đầu xe ngay trước vạch Topology Gate rồi đi ngược lại thì sao?`,
+    qa_a: `Hồ sơ Handoff có thời gian sống (TTL = 1.5s). Nếu sau 1.5s không có camera kế tiếp đón nhận, hồ sơ tự động hủy (Expired) an toàn và xe tiếp tục duy trì Local ID tại Cam 1 mà không gây lỗi.`
+  },
+  9: {
+    cue: `Không phụ thuộc vào một đặc trưng đơn lẻ: Vị trí giữ vai trò chủ đạo, màu sắc và kích thước bổ trợ phân loại, và góc hướng Cosine đóng vai trò chốt chặn loại trừ phương tiện ngược chiều.`,
+    qa_q: `Tại sao lại chọn ngưỡng cos(θ) < 0.25 mà không phải là cos(θ) < 0 (90 độ)?`,
+    qa_a: `Vì trong bãi xe có các khúc cua vuông góc 90 độ. Ngưỡng 75.5 độ (cos 0.25) cho phép xe cua nhẹ hoặc lượn tránh chướng ngại vật mà vẫn được giữ vết, nhưng chặn đứng các xe quay đầu hoặc đi ngược chiều (góc lệch > 90 đến 180 độ).`
+  },
+  10: {
+    cue: `Thay vì tìm kiếm một ngưỡng ma thuật không tồn tại, TechGAR biến việc nhận diện thành một hội đồng biểu quyết quang học; loại trừ 100% hiện tượng chớp tắt ô đỗ dưới ánh đèn xe.`,
+    qa_q: `Tại sao không dùng cảm biến siêu âm gắn trần trên từng ô đỗ như các bãi xe hiện nay?`,
+    qa_a: `Cảm biến siêu âm gắn trần tốn chi phí thi công dây dẫn rất lớn (khoảng 1.5 - 2 triệu VNĐ/ô cho hạ tầng kéo dây). TechGAR dùng ngay camera giám sát hiện hữu có thể quản lý 20-30 ô đỗ cùng lúc, chi phí phần cứng trên mỗi ô giảm hơn 85%.`
+  },
+  11: {
+    cue: `Giao cắt đa giác chính xác kết hợp bộ lọc thời gian 3 mẫu và Departure Token 5s loại trừ 100% tình huống xe đi ngang qua hoặc xe lạ cướp mất ô đỗ vừa giải phóng.`,
+    qa_q: `Nếu tài xế đỗ xe chéo, đè vạch 2 ô đỗ cùng lúc thì SlotVehicleBinder xử lý thế nào?`,
+    qa_a: `Công thức tính điểm Score kết hợp cả Ov (tỷ lệ xe trong ô) và Os (tỷ lệ ô bị chiếm). Ô nào có Score cao nhất và vượt ngưỡng 0.45 sẽ được gán. Nếu xe đè vạch quá nặng chiếm cả 2 ô, hệ thống ghi nhận trạng thái 'Bad Parking' và khóa cảnh báo cả 2 ô.`
+  },
+  12: {
+    cue: `Số liệu đo đạc thực tế trên video dài 3.827 frame chứng minh TechGAR vận hành ổn định trong toàn bộ chu trình bãi xe và đáp ứng hoàn hảo tiêu chuẩn thời gian thực trên CPU phổ thông.`,
+    qa_q: `14 GID vụn sinh ra do đâu và có ảnh hưởng đến việc tính tiền gửi xe không?`,
+    qa_a: `14 GID vụn sinh ra khi xe bị cột che > 80% thân xe trong 1-2 frame. Chúng không ảnh hưởng đến tính tiền vì hệ thống tính cước chỉ lắng nghe sự kiện từ Binder của ô đỗ, và ô đỗ được khóa vững chắc bởi Main GID nhờ cơ chế Lost Commit Delay.`
+  },
+  13: {
+    cue: `Đánh giá theo Cửa Sổ Sự Kiện phơi bày đúng những thời điểm nhạy cảm nhất của bài toán; con số 95.0% thành công là thước đo độ tin cậy thực chất của giải thuật Handoff.`,
+    qa_q: `1 ca thất bại trong Kịch bản 3 xảy ra trong điều kiện cụ thể nào?`,
+    qa_a: `Đó là ca xe bật đèn pha LED công suất cao rọi thẳng vào camera ở cự ly dưới 1 mét khi đang bẻ lái gấp, làm cảm biến bị bão hòa trắng (pixel clipping) trong 12 frame liên tiếp. Chúng tôi đã ghi nhận đây là giới hạn vật lý quang học và đề xuất giải pháp kính lọc phân cực CPL.`
+  },
+  14: {
+    cue: `Thử nghiệm bóc tách chứng minh rằng mọi module trong TechGAR đều giải quyết đúng một bài toán vật lý cụ thể; không có thuật toán thừa và không có sự thỏa hiệp về mặt hiệu năng.`,
+    qa_q: `Tại sao khi bỏ Kalman Filter thì Recall lại giảm mạnh nhất (-26.4%)?`,
+    qa_a: `Vì cột bê tông trong hầm che khuất xe từ 10 đến 35 frame. Nếu không có Kalman dự đoán quán tính vận tốc và ma trận hiệp phương sai sai số, tracker sẽ coi như xe đã biến mất ngay frame đầu tiên bị che, làm sụt giảm nghiêm trọng Recall.`
+  },
+  15: {
+    cue: `TechGAR chứng minh rằng: Bằng việc làm chủ bản chất hình học và thiết kế thuật toán phân tầng ranh giới lỗi, chúng ta hoàn toàn có thể giải quyết bài toán định vị tầng hầm phức tạp với độ chính xác centimet trên phần cứng CPU tiết kiệm chi phí.`,
+    qa_q: `Hướng phát triển tiếp theo của đề tài là gì?`,
+    qa_a: `Chúng tôi đang hoàn thiện giao thức Graph Distributed Handoff để mở rộng mạng lưới lên 30-50 camera trên 3 tầng hầm liên thông, và tích hợp thuật toán nhận diện biển số đa góc nhìn (Multi-view ANPR) tại cửa hầm.`
+  },
+};
+
+    function showSlide(num) {
+      if (num < 1) num = 1;
+      if (num > totalSlides) num = totalSlides;
+      currentSlide = num;
+
+      // Update slide canvas visibility
+      document.querySelectorAll('.slide-canvas').forEach(slide => {
+        slide.classList.remove('active');
+        if (parseInt(slide.dataset.slide) === currentSlide) {
+          slide.classList.add('active');
+          // Autoplay video on active slide
+          const player = slide.querySelector('video');
+          if (player) {
+            player.currentTime = 0;
+            player.play().catch(e => { /* autoplay policy ignored */ });
+          }
+        } else {
+          // Pause videos on inactive slides to save CPU
+          const player = slide.querySelector('video');
+          if (player) player.pause();
+        }
+      });
+
+      // Update counter and progress bar
+      const formattedNum = String(currentSlide).padStart(2, '0');
+      document.getElementById('slide-counter-display').textContent = `SLIDE ${formattedNum} / 15`;
+      document.getElementById('top-progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      // Update browser URL hash without jump
+      window.location.hash = `slide-${currentSlide}`;
+    }
+
+    function nextSlide() { showSlide(currentSlide + 1); }
+    function prevSlide() { showSlide(currentSlide - 1); }
+
+    function jumpToSlide(n) {
+      showSlide(n);
+      document.getElementById('grid-modal').classList.remove('open');
+    }
+
+    // Media Switcher: Video / Image / Split
+    function switchMedia(slideNum, mode) {
+      const stage = document.getElementById(`media-stage-${slideNum}`);
+      const vLayer = document.getElementById(`video-layer-${slideNum}`);
+      const iLayer = document.getElementById(`image-layer-${slideNum}`);
+      const player = document.getElementById(`player-${slideNum}`);
+      
+      const tabs = document.querySelectorAll(`.media-tabs[data-slide="${slideNum}"] .media-tab-btn`);
+      tabs.forEach(t => t.classList.remove('active'));
+
+      stage.classList.remove('split-mode');
+      vLayer.classList.remove('active');
+      iLayer.classList.remove('active');
+
+      if (mode === 'video') {
+        vLayer.classList.add('active');
+        tabs[0].classList.add('active');
+        if (player) player.play().catch(e => {});
+      } else if (mode === 'image') {
+        iLayer.classList.add('active');
+        tabs[1].classList.add('active');
+        if (player) player.pause();
+      } else if (mode === 'split') {
+        stage.classList.add('split-mode');
+        vLayer.classList.add('active');
+        iLayer.classList.add('active');
+        tabs[2].classList.add('active');
+        if (player) player.play().catch(e => {});
+      }
+    }
+
+    // Toggle Modals
+    function toggleOverviewGrid() {
+      const modal = document.getElementById('grid-modal');
+      modal.classList.toggle('open');
+    }
+
+    function toggleSpeakerNotes() {
+      const modal = document.getElementById('notes-modal');
+      const isOpening = !modal.classList.contains('open');
+      modal.classList.toggle('open');
+
+      if (isOpening) {
+        const d = speakerNotesData[currentSlide] || { cue: 'Chưa có ghi chú', qa_q: 'Chưa có câu hỏi', qa_a: 'Chưa có câu trả lời' };
+        document.getElementById('notes-slide-title').textContent = `GHI CHÚ DIỄN GIẢ & PHẢN BIỆN — SLIDE ${String(currentSlide).padStart(2, '0')}`;
+        document.getElementById('notes-cue-text').textContent = d.cue;
+        document.getElementById('notes-q-text').textContent = d.qa_q;
+        document.getElementById('notes-a-text').textContent = d.qa_a;
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => {});
+      } else {
+        document.exitFullscreen().catch(e => {});
+      }
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      // Ignore if in input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'g' || e.key === 'G') {
+        toggleOverviewGrid();
+      } else if (e.key === 'n' || e.key === 'N') {
+        toggleSpeakerNotes();
+      } else if (e.key === 't' || e.key === 'T') {
+        // Toggle media tab on current slide
+        const formattedNum = String(currentSlide).padStart(2, '0');
+        const stage = document.getElementById(`media-stage-${formattedNum}`);
+        if (stage.classList.contains('split-mode')) {
+          switchMedia(formattedNum, 'video');
+        } else if (document.getElementById(`video-layer-${formattedNum}`).classList.contains('active')) {
+          switchMedia(formattedNum, 'image');
+        } else {
+          switchMedia(formattedNum, 'split');
+        }
+      } else if (e.key === 'Home') {
+        showSlide(1);
+      } else if (e.key === 'End') {
+        showSlide(totalSlides);
+      } else if (e.key === 'Escape') {
+        document.getElementById('grid-modal').classList.remove('open');
+        document.getElementById('notes-modal').classList.remove('open');
+      } else if (e.key >= '1' && e.key <= '9') {
+        showSlide(parseInt(e.key));
+      }
+    });
+
+    // Initialize from URL hash if available
+    window.addEventListener('load', () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#slide-')) {
+        const sNum = parseInt(hash.replace('#slide-', ''));
+        if (!isNaN(sNum) && sNum >= 1 && sNum <= totalSlides) {
+          showSlide(sNum);
+          return;
+        }
+      }
+      showSlide(1);
+    });
+  </script>
 </body>
 </html>

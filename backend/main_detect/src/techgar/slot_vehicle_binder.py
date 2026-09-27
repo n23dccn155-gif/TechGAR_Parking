@@ -144,6 +144,9 @@ class DepartureToken:
     empty_observations: int = 0
     predeparture: bool = False
     candidates: Dict[Hashable, RecoveryCandidateEvidence] = field(default_factory=dict)
+    # Incremental retention extensions granted while departure evidence was
+    # still making progress (live15/E01 slow departures).
+    retention_extensions: int = 0
 
 
 @dataclass
@@ -213,6 +216,7 @@ class SlotVehicleBinder:
         stop_commit_grace_seconds: float = 0.15,
         policy: str = "legacy",
         recovery_retention_seconds: float = 5.0,
+        recovery_extension_seconds: float = 15.0,
         recovery_initial_expand_ratio: float = 0.05,
         recovery_max_expand_ratio: float = 0.45,
         recovery_expand_seconds: float = 1.0,
@@ -258,6 +262,13 @@ class SlotVehicleBinder:
             raise ValueError("policy must be 'legacy' or 'vision_primary'")
         self.policy = normalized_policy
         self.recovery_retention_seconds = max(0.25, float(recovery_retention_seconds))
+        # Hard ceiling on incremental retention extensions granted while a
+        # departure is verifiably still in progress.  The default keeps a
+        # live candidate's token to at most 4x the plain TTL.
+        self.recovery_extension_seconds = max(
+            0.0,
+            float(recovery_extension_seconds),
+        )
         self.recovery_initial_expand_ratio = max(0.0, float(recovery_initial_expand_ratio))
         self.recovery_max_expand_ratio = max(
             self.recovery_initial_expand_ratio,
@@ -320,21 +331,8 @@ class SlotVehicleBinder:
         self._last_timestamp_s = 0.0
 
     @property
-    def bindings(self) -> Dict[str, SlotBinding]:
-        return dict(self._bindings)
-
-    @property
     def events(self) -> List[dict]:
         return list(self._events)
-
-    @property
-    def active_departure_tokens(self) -> Dict[str, DepartureToken]:
-        """Return a shallow copy for diagnostics without exposing ownership."""
-        return dict(self._departure_tokens)
-
-    def get_vehicle_id_for_slot(self, slot_id: str) -> Optional[int]:
-        binding = self._bindings.get(slot_id)
-        return binding.vehicle_id if binding else None
 
     def get_slot_for_vehicle(self, vehicle_id: int) -> Optional[str]:
         return self._vehicle_to_slot.get(int(vehicle_id))
@@ -1628,6 +1626,112 @@ class SlotVehicleBinder:
             reason="false_empty",
         )
 
+    def _token_extension_blocker(
+        self,
+        token: DepartureToken,
+        now_s: float,
+    ) -> Optional[str]:
+        """Why an expired token should stay alive, or ``None``.
+
+        Fail closed like the rearm/guard paths: a token may only outlive its
+        ordinary retention while departure work is verifiably in progress -
+        either vision has not finished the empty confirmation, or a live
+        fragment inside the expanding gate is still accumulating recovery
+        evidence.  With no fresh or qualified evidence the departure is
+        stalled/abandoned and the token dies on time.
+        """
+        fresh_evidence = False
+        qualified_evidence = False
+        for evidence in token.candidates.values():
+            age_s = now_s - evidence.last_seen_s
+            if age_s <= self.false_empty_grace_seconds:
+                fresh_evidence = True
+            if (
+                (
+                    evidence.qualified_predeparture
+                    or evidence.world_trajectory_qualified
+                )
+                and age_s <= self.recovery_retention_seconds
+            ):
+                qualified_evidence = True
+        if not (fresh_evidence or qualified_evidence):
+            return None
+        if not token.confirmed_empty:
+            # The candidate's only remaining blocker is the second empty
+            # vision sample (``departure_not_yet_confirmed``).
+            return "departure_not_yet_confirmed"
+        return "candidate_evidence_in_progress"
+
+    def _rank_fragment_continuations(
+        self,
+        token: DepartureToken,
+        possible_sources: List[Tuple[Hashable, RecoveryCandidateEvidence]],
+        candidate: dict,
+        timestamp_s: float,
+    ) -> Optional[Tuple[Hashable, RecoveryCandidateEvidence]]:
+        """Pick the best dead fragment to continue into a live key.
+
+        Appearance agreement with the parked descriptor dominates (a real
+        continuation sits at a similar distance from the parked histogram),
+        then world/pixel distance between the dead fragment's last position
+        and the live point, then recency.  ``None`` keeps the conservative
+        uniqueness path when the top scores tie.
+        """
+        live_appearance_distance = self._appearance_distance(
+            token.last_appearance,
+            candidate.get("appearance"),
+        )
+        point = candidate["point"]
+        scored: List[Tuple[float, Hashable, RecoveryCandidateEvidence]] = []
+        for old_key, old_evidence in possible_sources:
+            spatial = float(
+                np.linalg.norm(np.subtract(point, old_evidence.last_center))
+            ) / max(1.0, token.slot_diagonal)
+            dead_appearance = (
+                float(
+                    np.median(
+                        np.asarray(
+                            old_evidence.appearance_distances,
+                            dtype=np.float64,
+                        )
+                    )
+                )
+                if old_evidence.appearance_distances
+                else None
+            )
+            if (
+                live_appearance_distance is not None
+                and dead_appearance is not None
+            ):
+                appearance_term = abs(
+                    live_appearance_distance - dead_appearance
+                )
+            elif live_appearance_distance is None and dead_appearance is None:
+                appearance_term = 0.0
+            else:
+                # One side lacks an appearance basis; a neutral penalty keeps
+                # spatial agreement decisive without inventing a match.
+                appearance_term = 0.5
+            recency = min(
+                1.0,
+                max(0.0, float(timestamp_s) - old_evidence.last_seen_s)
+                / self.recovery_retention_seconds,
+            )
+            score = (
+                0.50 * min(1.0, spatial)
+                + 0.35 * appearance_term
+                + 0.15 * recency
+            )
+            scored.append((score, old_key, old_evidence))
+        scored.sort(key=lambda item: item[0])
+        if (
+            len(scored) > 1
+            and scored[1][0] - scored[0][0] < self.recovery_ambiguity_margin
+        ):
+            return None
+        _, best_key, best_evidence = scored[0]
+        return best_key, best_evidence
+
     def _cleanup_tokens(self, timestamp_s: float) -> None:
         now_s = float(timestamp_s)
         for slot_id, token in list(self._departure_tokens.items()):
@@ -1657,7 +1761,31 @@ class SlotVehicleBinder:
                     <= self.recovery_retention_seconds
                     for evidence in token.candidates.values()
                 )
-                if not fresh_evidence and not qualified_evidence:
+                # hiep2/P0: a guard shorter than the vision-empty latency
+                # (0.75 s vs >= 1 s) must not cancel while the verdict is
+                # still pending.  ``created_at_s`` is refreshed by
+                # ``prepare_predeparture_tokens`` while a fragment is
+                # physically at the slot, so its age measures how recently a
+                # candidate was tracking the departee.  Inside the verdict
+                # window - the wider of the guard TTL and the vision grace -
+                # protection holds until the verdict can land; afterwards a
+                # stale provisional token is collected exactly as before.
+                guard_binding = self._bindings.get(slot_id)
+                verdict_pending = bool(
+                    guard_binding is not None and guard_binding.vision_occupied
+                )
+                candidate_tracking = (
+                    now_s - token.created_at_s
+                    <= max(
+                        self.predeparture_guard_seconds,
+                        self.false_empty_grace_seconds,
+                    )
+                )
+                if (
+                    not fresh_evidence
+                    and not qualified_evidence
+                    and not (verdict_pending and candidate_tracking)
+                ):
                     self._departure_tokens.pop(slot_id, None)
                     self._event(
                         "departure_token_cancelled",
@@ -1682,6 +1810,33 @@ class SlotVehicleBinder:
                     if now_s - evidence.last_seen_s > evidence_ttl:
                         token.candidates.pop(key, None)
                 continue
+            # live15/E01 + live15/D01: a slow departure can still be moving
+            # when the flat TTL fires.  Extend retention incrementally while
+            # evidence is verifiably progressing, capped at
+            # ``recovery_retention_seconds + recovery_extension_seconds``
+            # (<= 4x TTL by default) so abandoned candidates still die.
+            extension_deadline = (
+                token.created_at_s
+                + self.recovery_retention_seconds
+                + self.recovery_extension_seconds
+            )
+            if now_s < extension_deadline:
+                blocker = self._token_extension_blocker(token, now_s)
+                if blocker is not None:
+                    token.expires_at_s = min(
+                        now_s + max(0.25, self.recovery_expand_seconds),
+                        extension_deadline,
+                    )
+                    token.retention_extensions += 1
+                    self._event(
+                        "departure_token_retention_extended",
+                        global_id=token.global_id,
+                        slot_id=slot_id,
+                        blocker=blocker,
+                        extensions=token.retention_extensions,
+                        expires_at_s=round(token.expires_at_s, 3),
+                    )
+                    continue
             self._departure_tokens.pop(slot_id, None)
             binding = self._bindings.get(slot_id)
             if (
@@ -1702,6 +1857,45 @@ class SlotVehicleBinder:
                     reason="provisional_expired_owner_still_parked",
                 )
                 continue
+            if token.candidates:
+                # Diagnostic hardening: surface mid-qualification candidates
+                # that were still attached when the token died, so the
+                # registry can tell a truly abandoned departure from a
+                # recovery that ran out of time.
+                self._event(
+                    "departure_token_expired_with_pending_candidates",
+                    global_id=token.global_id,
+                    slot_id=slot_id,
+                    candidate_count=len(token.candidates),
+                    candidates=[
+                        {
+                            "local_key": repr(key),
+                            "observations": int(evidence.observations),
+                            "qualified_predeparture": bool(
+                                evidence.qualified_predeparture
+                            ),
+                            "world_trajectory_qualified": bool(
+                                evidence.world_trajectory_qualified
+                            ),
+                            "evidence_age_s": round(
+                                now_s - evidence.last_seen_s, 3
+                            ),
+                            "blocker": (
+                                "departure_not_yet_confirmed"
+                                if not token.confirmed_empty
+                                else (
+                                    "qualified_candidate_unconsumed"
+                                    if (
+                                        evidence.qualified_predeparture
+                                        or evidence.world_trajectory_qualified
+                                    )
+                                    else "insufficient_outward_evidence"
+                                )
+                            ),
+                        }
+                        for key, evidence in token.candidates.items()
+                    ],
+                )
             self._transition_parking_episode(
                 slot_id,
                 "released",
@@ -2438,12 +2632,6 @@ class SlotVehicleBinder:
                 state.movement_state = "moving"
             self._event("parking_slot_removed", global_id=global_id, slot_id=slot_id)
 
-    def update(self, active_tracks: dict, slot_results: list, frame_idx: int) -> None:
-        """Compatibility wrapper for the former low-frequency API."""
-        timestamp_s = float(frame_idx) / 30.0
-        self.update_vision(slot_results, frame_idx, timestamp_s)
-        self.update_tracks(active_tracks, frame_idx, timestamp_s)
-
     def _cleanup_pending(self, frame_idx: int) -> None:
         expired = [
             slot_id
@@ -2748,6 +2936,23 @@ class SlotVehicleBinder:
                         ]
                         if nearby_current == [key]:
                             possible_sources.append((old_key, old_evidence))
+                    possible_source_count = len(possible_sources)
+                    if possible_source_count > 1:
+                        # Several dead fragments could continue into this
+                        # live key.  Score each continuation (appearance
+                        # distance to the parked descriptor plus world
+                        # distance between the dead fragment's last position
+                        # and the live point) and keep the best instead of
+                        # stalling; a score tie stays conservative.
+                        ranked = self._rank_fragment_continuations(
+                            token,
+                            possible_sources,
+                            data,
+                            float(timestamp_s),
+                        )
+                        possible_sources = (
+                            [ranked] if ranked is not None else []
+                        )
                     if len(possible_sources) == 1:
                         old_key, evidence = possible_sources[0]
                         token.candidates.pop(old_key, None)
@@ -2760,6 +2965,7 @@ class SlotVehicleBinder:
                             previous_local_key=repr(old_key),
                             current_local_key=repr(key),
                             observations=evidence.observations,
+                            candidate_sources=possible_source_count,
                         )
 
                 bbox = data["bbox"]

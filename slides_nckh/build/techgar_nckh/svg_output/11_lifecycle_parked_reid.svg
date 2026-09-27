@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 124">
+    <text x="64" y="52" font-size="15" font-weight="bold" fill="#004FFF">VEHICLE ↔ SLOT — VÒNG ĐỜI TRẠNG THÁI</text>
+    <text x="64" y="92" font-size="40" font-weight="bold" fill="#0F1928">Từ xe đi ngang đến trạng thái đỗ —<tspan x="64" dy="46">và khôi phục ID khi rời ô</tspan></text>
+    <rect x="64" y="152" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="152" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="52" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">11 / 13</text>
+  </g>
+
+  <g id="lifecycle-timeline" data-pptx-bounds="64 170 1152 70">
+    <line x1="200" y1="196" x2="1064" y2="196" stroke="#B9CFE8" stroke-width="3" />
+    <circle cx="200" cy="196" r="10" fill="#004FFF" />
+    <circle cx="488" cy="196" r="10" fill="#00227A" />
+    <circle cx="776" cy="196" r="10" fill="#004FFF" />
+    <circle cx="1064" cy="196" r="10" fill="#00E5FF" />
+    <text x="200" y="230" font-size="15" font-weight="bold" fill="#004FFF" text-anchor="middle">MOVING</text>
+    <text x="488" y="230" font-size="15" font-weight="bold" fill="#00227A" text-anchor="middle">PARKED</text>
+    <text x="776" y="230" font-size="15" font-weight="bold" fill="#004FFF" text-anchor="middle">MOVING (RỜI Ô)</text>
+    <text x="1064" y="230" font-size="15" font-weight="bold" fill="#00227A" text-anchor="middle">RE-ID → GID CŨ</text>
+  </g>
+
+  <g id="stage-moving" data-pptx-bounds="64 246 272 326">
+    <image href="../images/frame_0278_gid_created_split_debug.jpg" x="64" y="246" width="272" height="153" preserveAspectRatio="xMidYMid slice" />
+    <rect x="64" y="246" width="272" height="153" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="64" y="424" font-size="16" font-weight="bold" fill="#0F1928">Xe đi ngang qua ô<tspan x="64" dy="21">≠ đã đỗ</tspan></text>
+    <text x="64" y="492" font-size="14" fill="#4E5D78">Polygon overlap — Vehicle<tspan x="64" dy="19">Footprint ↔ Slot</tspan></text>
+    <text x="64" y="538" font-size="13" fill="#4E5D78">GID tạo — split debug @f278<tspan x="64" dy="18">· mô hình thu nhỏ</tspan></text>
+  </g>
+
+  <g id="stage-parked" data-pptx-bounds="360 246 272 326">
+    <image href="../images/frame_0543_parked_confirmed_debug_cam1.jpg" x="360" y="246" width="272" height="153" preserveAspectRatio="xMidYMid slice" />
+    <rect x="360" y="246" width="272" height="153" fill="none" stroke="#00227A" stroke-width="2" />
+    <text x="360" y="424" font-size="16" font-weight="bold" fill="#004FFF">Arrival [design-param]</text>
+    <text x="360" y="452" font-size="17" font-weight="bold" fill="#0F1928">≥ 3 mẫu liên tiếp<tspan x="360" dy="26">vision ≥ 2 lần / ~1.5 s</tspan></text>
+    <text x="360" y="512" font-size="15" fill="#4E5D78">G#1 → P056 → PARKED</text>
+    <text x="360" y="538" font-size="13" fill="#4E5D78">Ô D02 đỏ · "14/24 free" @f543<tspan x="360" dy="18">· mô hình thu nhỏ</tspan></text>
+  </g>
+
+  <g id="stage-departure" data-pptx-bounds="656 246 272 328">
+    <image href="../images/frame_0705_departure_token_debug_cam2.jpg" x="656" y="246" width="272" height="153" preserveAspectRatio="xMidYMid slice" />
+    <rect x="656" y="246" width="272" height="153" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <text x="656" y="424" font-size="16" font-weight="bold" fill="#004FFF">Departure [design-param]</text>
+    <text x="656" y="452" font-size="17" font-weight="bold" fill="#0F1928">Departure Token = 5 s<tspan x="656" dy="26">gia hạn tiệm cận ≤ 15 s</tspan></text>
+    <text x="656" y="512" font-size="15" fill="#4E5D78">nhích căn chỉnh → giữ ID<tspan x="656" dy="20">rời thật → giải phóng ô</tspan></text>
+    <text x="656" y="552" font-size="13" fill="#4E5D78">Departure + trajectory đuôi @f705<tspan x="656" dy="16">· mô hình thu nhỏ</tspan></text>
+  </g>
+
+  <g id="stage-reid" data-pptx-bounds="952 246 264 318">
+    <image href="../images/poster_s11.jpg" x="952" y="246" width="264" height="149" preserveAspectRatio="xMidYMid slice" />
+    <rect x="952" y="246" width="264" height="149" fill="none" stroke="#00E5FF" stroke-width="2" />
+    <circle cx="1084" cy="320" r="22" fill="#00227A" fill-opacity="0.85" />
+    <path d="M1077 307 l20 13 l-20 13 z" fill="#00E5FF" />
+    <text x="952" y="424" font-size="16" font-weight="bold" fill="#00227A">Departure Re-ID</text>
+    <text x="952" y="452" font-size="15" fill="#0F1928">Nối track mới về Canonical<tspan x="952" dy="20">GID cũ — không tạo G#2</tspan></text>
+    <text x="952" y="512" font-size="14" fill="#4E5D78">Local track dormant khi đỗ;<tspan x="952" dy="19">khôi phục theo trạng thái ô +</tspan><tspan x="952" dy="19">vị trí sàn + quỹ đạo rời ô</tspan></text>
+  </g>
+
+  <g id="status-band" data-pptx-bounds="64 574 1152 92">
+    <rect x="64" y="574" width="1152" height="92" fill="#00227A" />
+    <use data-icon="tabler-outline/flask" x="96" y="600" width="26" height="26" fill="#00E5FF" stroke-width="2" />
+    <text x="140" y="606" font-size="16" font-weight="bold" fill="#FFFFFF">Trạng thái kiểm chứng — Departure Re-ID</text>
+    <text x="140" y="634" font-size="15" fill="#9AE7FC">đã triển khai + unit-tested · đang kiểm chứng trên replay</text>
+    <text x="140" y="656" font-size="14" fill="#9AE7FC">documented failure: hiep2 — G#2 đỗ D01, rời ô bị cấp G#4 @f1181 (slide 12)</text>
+    <text x="1152" y="620" font-size="14" font-weight="bold" fill="#00E5FF" text-anchor="end">clip_s11_park_cycle.mp4</text>
+    <text x="1152" y="644" font-size="13" fill="#9AE7FC" text-anchor="end">arrival→parked→departure · 25 FPS</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">arrival_min_samples=3 · vision 2×/1.5 s · token 5 s → ≤15 s [design-param]: slot_vehicle_binder.py:218-236 · scale-model</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

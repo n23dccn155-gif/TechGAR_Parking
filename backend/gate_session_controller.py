@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import subprocess
 import sys
 import threading
 import time
@@ -55,8 +54,6 @@ DEFAULT_GATE_CONFIG = BASE_DIR / "main_detect" / "config" / "gate_zones.json"
 PARKING_STATUS_SAMPLE = ROOT_DIR / "frontend" / "public" / "parking_status_sample.json"
 DEFAULT_RUNTIME_URL = "http://127.0.0.1:8001/api/runtime/snapshot"
 
-detection_process: Optional[subprocess.Popen] = None
-active_video_url: Optional[str] = None
 _LATEST_RUNTIME_LOCK = threading.RLock()
 _latest_runtime_snapshot: Optional[dict[str, Any]] = None
 _latest_runtime_received_at: Optional[float] = None
@@ -728,27 +725,6 @@ def _sample_snapshot(path: Path) -> dict[str, Any]:
     return {"vehicles": vehicles, "recent_events": []}
 
 
-def start_detection_process(video_source: str) -> None:
-    global detection_process, active_video_url
-    stop_detection_process()
-    active_video_url = video_source
-    script = BASE_DIR / "main_detect" / "main.py"
-    detection_process = subprocess.Popen(
-        [sys.executable, str(script), "--video", video_source, "--loop", "--no-display"]
-    )
-
-
-def stop_detection_process() -> None:
-    global detection_process
-    if detection_process is not None and detection_process.poll() is None:
-        detection_process.terminate()
-        try:
-            detection_process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            detection_process.kill()
-    detection_process = None
-
-
 class SessionAPIRequestHandler(BaseHTTPRequestHandler):
     def _cors(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -805,10 +781,6 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
             except SessionNotFound as error:
                 self._json({"error": str(error), "code": "SESSION_NOT_FOUND"}, 404)
             return
-        if path == "/api/detection/status":
-            running = detection_process is not None and detection_process.poll() is None
-            self._json({"running": running, "videoUrl": active_video_url})
-            return
         self._json({"error": "Route not found"}, 404)
 
     def do_POST(self) -> None:
@@ -841,15 +813,6 @@ class SessionAPIRequestHandler(BaseHTTPRequestHandler):
             elif path == "/api/session/exit":
                 session = set_exit_navigation(str(payload.get("sessionId") or ""), **options)
                 self._json(session)
-            elif path == "/api/detection/start":
-                video_url = str(payload.get("videoUrl") or "")
-                if not video_url:
-                    raise ValueError("videoUrl is required")
-                start_detection_process(video_url)
-                self._json({"ok": True, "running": True, "videoUrl": video_url})
-            elif path == "/api/detection/stop":
-                stop_detection_process()
-                self._json({"ok": True, "running": False})
             else:
                 self._json({"error": "Route not found"}, 404)
         except SessionNotFound as error:

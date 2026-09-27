@@ -128,23 +128,6 @@ export function findExitRoute(graph: LaneGraph, spotId: SpotId): RouteResult | n
   return findRoute(graph, startNodeId, graph.exitNodeId);
 }
 
-/**
- * Tìm nút (node) trong đồ thị gần nhất với tọa độ (x, y) hiện tại của xe.
- * Dùng để tính điểm xuất phát động khi xe đang di chuyển.
- */
-export function findNearestNode(graph: LaneGraph, x: number, y: number): string | null {
-  const nodes = findKNearestNodes(graph, x, y, 1);
-  return nodes[0]?.id ?? null;
-}
-
-function findKNearestNodes(graph: LaneGraph, x: number, y: number, k: number = 2): LaneNode[] {
-  const nodes = graph.nodes
-    .filter((n) => n.kind !== "access-anchor" && n.kind !== "spot-entry")
-    .map((n) => ({ node: n, d: Math.hypot(n.x - x, n.y - y) }))
-    .sort((a, b) => a.d - b.d);
-  return nodes.slice(0, k).map((item) => item.node);
-}
-
 function routeFromPos(graph: LaneGraph, vehicleX: number, vehicleY: number, targetNodeId: string): RouteResult | null {
   // Start ON a drivable edge. Never draw a straight connector through slots
   // to an arbitrary nearest node, nor reverse a one-way lane for an exit.

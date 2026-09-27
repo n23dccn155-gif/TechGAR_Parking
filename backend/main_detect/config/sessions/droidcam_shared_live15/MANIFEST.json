@@ -1,0 +1,10 @@
+{
+  "session": "droidcam_shared_live15",
+  "files": {
+    "calibration": "recovered_cal",
+    "mask_cam1": "MISSING-needs-redraw",
+    "mask_cam2": "MISSING-needs-redraw",
+    "slots_cam1": "MISSING-needs-redraw",
+    "slots_cam2": "MISSING-needs-redraw"
+  }
+}

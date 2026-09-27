@@ -78,12 +78,6 @@ python diagnose_identity_churn.py <session_dir> [--body-length-cm 7.0]
 python validate_session.py --session <session_dir>
 ```
 
-### `evaluate.py`
-```bash
-python evaluate.py session_a session_b --fps 25
-```
-Session FAIL nếu có GID assignment error → điểm ≤ 49/100
-
 ## Setup Required
 
 ### Step 1: Create Python venv

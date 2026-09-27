@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">KẾT LUẬN — ĐÓNG GÓP &amp; HẠN CHẾ</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Đóng góp nghiên cứu và hướng phát triển</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">13 / 13</text>
+  </g>
+
+  <g id="contrib-cards" data-pptx-bounds="64 142 560 456">
+    <g id="card-homography">
+      <rect x="64" y="142" width="560" height="144" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <rect x="64" y="142" width="6" height="144" fill="#004FFF" />
+      <text x="90" y="172" font-size="15" font-weight="bold" fill="#4E5D78">ĐÓNG GÓP 1 — GROUND-PLANE HOMOGRAPHY</text>
+      <text x="90" y="204" font-size="17" font-weight="bold" fill="#0F1928">Hệ tọa độ mặt sàn dùng chung cho 2 camera</text>
+      <text x="90" y="240" font-size="30" font-weight="bold" fill="#004FFF">p50 = 1,13 cm</text>
+      <text x="90" y="268" font-size="13" fill="#4E5D78">seam benchmark · [doc-claimed: session 2808_3]</text>
+    </g>
+    <g id="card-gid">
+      <rect x="64" y="298" width="560" height="144" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <rect x="64" y="298" width="6" height="144" fill="#0036B3" />
+      <text x="90" y="328" font-size="15" font-weight="bold" fill="#4E5D78">ĐÓNG GÓP 2 — CANONICAL GLOBAL ID</text>
+      <text x="90" y="360" font-size="17" font-weight="bold" fill="#0F1928">Nhiều Local ID → một Global ID duy nhất</text>
+      <text x="90" y="392" font-size="15" fill="#4E5D78">Topology Gate + Cost Matrix · handoff qua overlap</text>
+      <text x="90" y="420" font-size="15" fill="#4E5D78">duy trì danh tính xuyên Moving ↔ Parked ↔ Moving</text>
+    </g>
+    <g id="card-slot">
+      <rect x="64" y="454" width="560" height="144" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+      <rect x="64" y="454" width="6" height="144" fill="#00227A" />
+      <text x="90" y="484" font-size="15" font-weight="bold" fill="#4E5D78">ĐÓNG GÓP 3 — ADAPTIVE SLOT MANAGEMENT</text>
+      <text x="90" y="516" font-size="17" font-weight="bold" fill="#0F1928">Trạng thái ô đỗ gắn với danh tính phương tiện</text>
+      <text x="90" y="548" font-size="15" fill="#4E5D78">Equalizer 25 biến thể · Majority Vote ≥ 12/25</text>
+      <text x="90" y="576" font-size="15" fill="#4E5D78">Arrival / Departure · Vehicle ↔ Slot binding</text>
+    </g>
+  </g>
+
+  <g id="limits-roadmap" data-pptx-bounds="656 142 560 488">
+    <rect x="656" y="142" width="560" height="202" fill="#FFFFFF" stroke="#B9CFE8" stroke-width="1" />
+    <use data-icon="tabler-outline/alert-triangle" x="680" y="158" width="20" height="20" fill="#00227A" stroke-width="2" />
+    <text x="710" y="174" font-size="16" font-weight="bold" fill="#00227A">HẠN CHẾ HIỆN TẠI</text>
+    <text x="680" y="206" font-size="16" fill="#0F1928">· Dataset scale-model trong nhà — chưa kiểm chứng outdoor</text>
+    <text x="680" y="234" font-size="16" fill="#0F1928">· Tham số cần recalibration khi đổi miền dữ liệu</text>
+    <text x="680" y="262" font-size="16" fill="#0F1928">· Baseline 1-cam vs 2-cam chưa đủ</text>
+    <text x="680" y="290" font-size="16" fill="#0F1928">· Chưa có ground truth đầy đủ cho MOTA / P / R</text>
+    <text x="680" y="318" font-size="16" fill="#0F1928">· Departure Re-ID cần kiểm chứng riêng (replay)</text>
+    <rect x="656" y="360" width="560" height="270" fill="#00227A" />
+    <use data-icon="tabler-outline/route" x="680" y="378" width="20" height="20" fill="#00E5FF" stroke-width="2" />
+    <text x="710" y="394" font-size="16" font-weight="bold" fill="#FFFFFF">HƯỚNG PHÁT TRIỂN</text>
+    <g id="roadmap-list" font-size="16" fill="#9AE7FC">
+      <text x="680" y="426">→ N-camera topology</text>
+      <text x="680" y="452">→ nhiều tầng / khu vực</text>
+      <text x="680" y="478">→ dataset lớn, nhiều loại xe</text>
+      <text x="680" y="504">→ nhiều điều kiện sáng</text>
+      <text x="680" y="530">→ tự động tuning tham số</text>
+      <text x="680" y="556">→ ground truth → MOTA / P / R</text>
+      <text x="680" y="582">→ eval 1-cam vs multi-cam</text>
+      <text x="680" y="608">→ outdoor adaptation</text>
+    </g>
+    <image href="../images/web_dashboard_desktop.png" x="916" y="404" width="276" height="173" preserveAspectRatio="xMidYMid slice" />
+    <rect x="916" y="404" width="276" height="173" fill="none" stroke="#9AE7FC" stroke-width="1" />
+    <text x="916" y="596" font-size="12" fill="#9AE7FC">Dashboard web hiện tại — slot xanh/đỏ, counter<tspan x="916" dy="18">(demo trên scale-model testbed)</tspan></text>
+  </g>
+
+  <g id="closing-band" data-pptx-bounds="64 640 1152 36">
+    <rect x="64" y="640" width="1152" height="36" fill="#004FFF" />
+    <text x="640" y="664" font-size="17" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Một xe thật → Một Canonical Global ID → Một tọa độ mặt sàn → Một trạng thái ô đỗ</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Kiểm chứng trên mô hình bãi đỗ thu nhỏ trong nhà — không khuyến nghị tổng quát hóa ngoài trời</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

@@ -1,0 +1,1 @@
+Nhóm không chỉ tính trung bình trên toàn bộ video vì phần lớn thời gian bãi xe là cảnh tĩnh. Thay vào đó, nhóm tập trung vào các Event Window có rủi ro cao nhất: vùng chuyển camera và vùng cửa ô đỗ. Trong 20 session thử nghiệm, 19 session hoàn thành thành công. Session còn lại thất bại ở cơ chế khôi phục ID sau khi rời ô — một giới hạn nhóm ghi nhận và cần kiểm chứng thêm.

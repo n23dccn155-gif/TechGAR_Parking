@@ -12,14 +12,4 @@ __all__ = [
     "ParkingDetector",
     "SlotVehicleBinder",
     "AppearanceTracklet",
-    "DeepReIDExtractor",
 ]
-
-
-def __getattr__(name: str):
-    """Load the experimental Torch dependency only when explicitly requested."""
-    if name == "DeepReIDExtractor":
-        from .deep_reid_model import DeepReIDExtractor
-
-        return DeepReIDExtractor
-    raise AttributeError(name)

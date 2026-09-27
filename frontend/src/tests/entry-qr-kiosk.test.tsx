@@ -37,7 +37,7 @@ describe("entry QR kiosk", () => {
   afterEach(() => vi.useRealTimers());
 
   it("renders a locally-generated QR for the newest waiting Global ID session", async () => {
-    render(<EntryQRKiosk standalone />);
+    render(<EntryQRKiosk />);
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByText("#42")).toBeVisible();
     await act(async () => { await Promise.resolve(); });
@@ -47,14 +47,14 @@ describe("entry QR kiosk", () => {
 
   it("shows a waiting screen before any car crosses the entry gate", async () => {
     vi.mocked(getWaitingSessions).mockResolvedValue([]);
-    render(<EntryQRKiosk standalone />);
+    render(<EntryQRKiosk />);
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByText("Đang chờ xe đi qua vạch cổng vào…")).toBeVisible();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("hides the QR exactly ten seconds after it was created without a scan", async () => {
-    render(<EntryQRKiosk standalone />);
+    render(<EntryQRKiosk />);
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByText("#42")).toBeVisible();
 
@@ -76,7 +76,7 @@ describe("entry QR kiosk", () => {
     vi.mocked(getWaitingSessions)
       .mockResolvedValueOnce([vehicle1])
       .mockResolvedValue([vehicle1, vehicle2]);
-    render(<EntryQRKiosk standalone />);
+    render(<EntryQRKiosk />);
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByText("#1")).toBeVisible();
 

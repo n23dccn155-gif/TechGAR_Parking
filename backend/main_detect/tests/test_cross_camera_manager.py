@@ -1902,6 +1902,10 @@ def test_handoff_merge_cannot_create_two_real_tracks_in_same_camera():
     second_view = one_hot_histogram(8)
     source = DummyTrack(60, 240, h=80, appearance=first_view)
     other_same_camera = DummyTrack(260, 240, h=80, appearance=second_view)
+    # A coasting member keeps its binding but is not a fresh detection, so
+    # the cross-camera ownership resolver will not treat G#2's cam1/cam2
+    # pair as a divergent live-member conflict.
+    other_same_camera.consecutive_invisible_count = 3
     # It looks plausible to the incoming G#1, while G#2 already owns a clearly
     # different live car in cam2. The rejection must therefore come from the
     # same-camera owner invariant, not the appearance gate.

@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">KIẾN TRÚC HỆ THỐNG — TỔNG QUAN</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Từ video camera đến quyết định ô đỗ</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">03 / 13</text>
+  </g>
+
+  <g id="pipeline-strip" data-pptx-bounds="64 142 1152 74">
+<g id="p03-stage-1" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="64 150 152 56" fill="#004FFF" stroke="none">
+<path d="M 64 150 L 188 150 L 216 178 L 188 206 L 64 206 L 92 178 Z" />
+</g>
+<g id="p03-stage-2" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="208 150 152 56" fill="#004FFF" stroke="none">
+<path d="M 208 150 L 332 150 L 360 178 L 332 206 L 208 206 L 236 178 Z" />
+</g>
+<g id="p03-stage-3" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="352 150 152 56" fill="#004FFF" stroke="none">
+<path d="M 352 150 L 476 150 L 504 178 L 476 206 L 352 206 L 380 178 Z" />
+</g>
+<g id="p03-stage-4" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="496 150 152 56" fill="#004FFF" stroke="none">
+<path d="M 496 150 L 620 150 L 648 178 L 620 206 L 496 206 L 524 178 Z" />
+</g>
+<g id="p03-stage-5" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="640 150 152 56" fill="#0036B3" stroke="none">
+<path d="M 640 150 L 764 150 L 792 178 L 764 206 L 640 206 L 668 178 Z" />
+</g>
+<g id="p03-stage-6" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="784 150 152 56" fill="#0036B3" stroke="none">
+<path d="M 784 150 L 908 150 L 936 178 L 908 206 L 784 206 L 812 178 Z" />
+</g>
+<g id="p03-stage-7" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="928 150 152 56" fill="#00227A" stroke="none">
+<path d="M 928 150 L 1052 150 L 1080 178 L 1052 206 L 928 206 L 956 178 Z" />
+</g>
+<g id="p03-stage-8" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="chevron" data-pptx-frame="1072 150 144 56" fill="#00227A" stroke="none">
+<path d="M 1072 150 L 1188 150 L 1216 178 L 1188 206 L 1072 206 L 1100 178 Z" />
+</g>
+    <g id="pipeline-labels" font-size="11" font-weight="bold" fill="#FFFFFF" text-anchor="middle">
+      <text x="124" y="173">VIDEO</text>
+      <text x="124" y="188">2 CAM</text>
+      <text x="268" y="173">PHÁT HIỆN</text>
+      <text x="268" y="188">XE</text>
+      <text x="412" y="173">LOCAL</text>
+      <text x="412" y="188">TRACKING</text>
+      <text x="556" y="173">TỌA ĐỘ</text>
+      <text x="556" y="188">MẶT SÀN</text>
+      <text x="700" y="173">CROSS-CAM</text>
+      <text x="700" y="188">MATCHING</text>
+      <text x="844" y="173">CANONICAL</text>
+      <text x="844" y="188">GID</text>
+      <text x="988" y="173">NHẬN DIỆN</text>
+      <text x="988" y="188">Ô ĐỖ</text>
+      <text x="1136" y="173">VEHICLE</text>
+      <text x="1136" y="188">↔ SLOT</text>
+    </g>
+  </g>
+
+  <g id="mechanism-table" data-pptx-bounds="64 246 700 420">
+    <text x="64" y="270" font-size="15" font-weight="bold" fill="#4E5D78">TẦNG</text>
+    <text x="250" y="270" font-size="15" font-weight="bold" fill="#4E5D78">LỖI VẬT LÝ</text>
+    <text x="496" y="270" font-size="15" font-weight="bold" fill="#4E5D78">CƠ CHẾ</text>
+    <line x1="64" y1="282" x2="764" y2="282" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-1">
+      <text x="64" y="312" font-size="17" font-weight="bold" fill="#0F1928">Detection</text>
+      <text x="250" y="312" font-size="16" fill="#4E5D78">ánh sáng / bóng đổ</text>
+      <text x="496" y="312" font-size="16" fill="#004FFF">MOG2 + FrameDiff</text>
+    </g>
+    <line x1="64" y1="328" x2="764" y2="328" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-2">
+      <text x="64" y="348" font-size="17" font-weight="bold" fill="#0F1928">Local Tracking</text>
+      <text x="250" y="348" font-size="16" fill="#4E5D78">che khuất / xe dừng</text>
+      <text x="496" y="348" font-size="16" fill="#004FFF">Kalman + SSD Reacquire</text>
+    </g>
+    <line x1="64" y1="364" x2="764" y2="364" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-3">
+      <text x="64" y="384" font-size="17" font-weight="bold" fill="#0F1928">Ground Mapping</text>
+      <text x="250" y="384" font-size="16" fill="#4E5D78">camera góc chéo</text>
+      <text x="496" y="384" font-size="16" fill="#004FFF">Homography</text>
+    </g>
+    <line x1="64" y1="400" x2="764" y2="400" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-4">
+      <text x="64" y="420" font-size="17" font-weight="bold" fill="#0F1928">Cross-Camera</text>
+      <text x="250" y="420" font-size="16" fill="#4E5D78">2 Local ID cho 1 xe</text>
+      <text x="496" y="420" font-size="16" fill="#004FFF">Canonical GID</text>
+    </g>
+    <line x1="64" y1="436" x2="764" y2="436" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-5">
+      <text x="64" y="456" font-size="17" font-weight="bold" fill="#0F1928">Matching</text>
+      <text x="250" y="456" font-size="16" fill="#4E5D78">ghép nhầm</text>
+      <text x="496" y="456" font-size="16" fill="#004FFF">Topology + Cost</text>
+    </g>
+    <line x1="64" y1="472" x2="764" y2="472" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-6">
+      <text x="64" y="492" font-size="17" font-weight="bold" fill="#0F1928">Slot State</text>
+      <text x="250" y="492" font-size="16" fill="#4E5D78">ánh sáng biến thiên</text>
+      <text x="496" y="492" font-size="16" fill="#004FFF">Adaptive Equalizer</text>
+    </g>
+    <line x1="64" y1="508" x2="764" y2="508" stroke="#B9CFE8" stroke-width="1" />
+    <g id="mech-row-7">
+      <text x="64" y="528" font-size="17" font-weight="bold" fill="#0F1928">Vehicle ↔ Slot</text>
+      <text x="250" y="528" font-size="16" fill="#4E5D78">xe đi ngang / căn chỉnh</text>
+      <text x="496" y="528" font-size="16" fill="#004FFF">Arrival + Departure logic</text>
+    </g>
+    <line x1="64" y1="544" x2="764" y2="544" stroke="#B9CFE8" stroke-width="1" />
+    <text x="64" y="566" font-size="16" fill="#4E5D78">Mỗi tầng xử lý một lỗi vật lý riêng —<tspan x="64" dy="22">không phải một thuật toán duy nhất.</tspan></text>
+    <text x="64" y="612" font-size="16" fill="#4E5D78">Video 2 camera → quỹ đạo Local → tọa độ mặt sàn →<tspan x="64" dy="22">danh tính toàn bãi → trạng thái ô đỗ gắn với phương tiện.</tspan></text>
+  </g>
+
+  <g id="map-panel" data-pptx-bounds="800 246 416 420">
+    <text x="800" y="270" font-size="15" font-weight="bold" fill="#4E5D78">BẢN ĐỒ VẬN HÀNH THẬT — ROI 2 CAMERA</text>
+    <image href="../images/roi_active_map.png" x="800" y="284" width="416" height="267" preserveAspectRatio="xMidYMid meet" />
+    <rect x="800" y="284" width="416" height="267" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <g id="map-legend">
+      <rect x="800" y="566" width="14" height="14" fill="#0F1928" />
+      <text x="820" y="578" font-size="14" fill="#4E5D78">cam 1</text>
+      <rect x="876" y="566" width="14" height="14" fill="#DC2626" />
+      <text x="896" y="578" font-size="14" fill="#4E5D78">cam 2</text>
+      <rect x="952" y="566" width="14" height="14" fill="#7C3AED" />
+      <text x="972" y="578" font-size="14" fill="#4E5D78">overlap</text>
+    </g>
+    <text x="800" y="612" font-size="14" fill="#4E5D78">Vùng ROI hoạt động trên shared map — hai camera<tspan x="800" dy="20">phủ các hướng khác nhau, giao nhau tại overlap.</tspan></text>
+    <text x="800" y="660" font-size="13" fill="#4E5D78">Ảnh: roi_active_map — cấu hình shared_map_01</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Pipeline 8 tầng · mô hình bãi đỗ thu nhỏ · map: config shared_map_01</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

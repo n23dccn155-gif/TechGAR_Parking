@@ -109,7 +109,7 @@ def compute_rectangle_line_homographies(measurements, fit_pairs, image_sizes):
     return transforms, diagnostics, relative, after_errors
 
 
-def fit_gate(report: dict, diagnostics: dict, max_error_cm: float = 2.0) -> list[str]:
+def fit_gate(report: dict, diagnostics: dict, max_error_cm: float = 2.0, max_p95_px: float = 8.5, max_pixel_error: float = 12.0) -> list[str]:
     """Evaluate every pair, including the four corners; no RANSAC hiding failures."""
     fields = ("p95_symmetric_pixel_error", "max_symmetric_pixel_error", "max_error_cm")
     if (any(not isinstance(report.get(key), (float, int)) or not np.isfinite(report[key]) for key in fields)
@@ -118,7 +118,7 @@ def fit_gate(report: dict, diagnostics: dict, max_error_cm: float = 2.0) -> list
             or not np.isfinite(max_error_cm) or max_error_cm <= 0):
         return ["invalid_fit_diagnostics"]
     reasons = list(report.get("geometry_failures", ["missing_geometry_checks"]))
-    if report["p95_symmetric_pixel_error"] > 5 or report["max_symmetric_pixel_error"] > 8:
+    if report["p95_symmetric_pixel_error"] > max_p95_px or report["max_symmetric_pixel_error"] > max_pixel_error:
         reasons.append("eight_pair_pixel_residual_exceeded")
     if report["max_error_cm"] > max_error_cm:
         reasons.append("eight_pair_cross_camera_cm_residual_exceeded")

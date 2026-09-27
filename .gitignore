@@ -16,6 +16,8 @@ backend/__pycache__/
 # Pytest
 .pytest_cache/
 */.pytest_cache/
+.pytest_*/
+*/.pytest_*/
 _pytest_tmp/
 */_pytest_tmp/
 
@@ -25,3 +27,9 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 .DS_Store
+
+# Cleanup quarantine (temporary, pending final purge)
+_quarantine_*/
+
+# Local code snapshots for replay verification
+_snap/

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" lang="vi" data-pptx-page-role="content" font-family="Segoe UI, Arial">
+  <rect id="bg" data-pptx-role="background" x="0" y="0" width="1280" height="720" fill="#EBF6FF" />
+
+  <g id="chrome-header" data-pptx-bounds="64 32 1152 96">
+    <text x="64" y="54" font-size="15" font-weight="bold" fill="#004FFF">BÀI TOÁN — GIỚI HẠN MỘT CAMERA</text>
+    <text x="64" y="96" font-size="40" font-weight="bold" fill="#0F1928">Tại sao một camera chưa đủ?</text>
+    <rect x="64" y="114" width="72" height="4" fill="#004FFF" />
+    <rect x="136" y="114" width="20" height="4" fill="#00E5FF" />
+    <text x="1216" y="54" font-size="15" font-weight="bold" fill="#4E5D78" text-anchor="end">02 / 13</text>
+  </g>
+
+  <g id="panel-one-cam" data-pptx-bounds="64 142 560 452">
+    <rect x="64" y="142" width="560" height="44" fill="#4E5D78" />
+    <text x="88" y="170" font-size="18" font-weight="bold" fill="#FFFFFF">1 CAMERA — giới hạn vật lý</text>
+    <image href="../images/slide2_cam1_blind.jpg" x="64" y="198" width="560" height="315" preserveAspectRatio="xMidYMid slice" />
+    <rect x="64" y="198" width="560" height="315" fill="none" stroke="#B9CFE8" stroke-width="2" />
+    <g id="one-cam-points">
+      <use data-icon="tabler-outline/eye-off" x="72" y="524" width="20" height="20" fill="#4E5D78" stroke-width="2" />
+      <text x="102" y="540" font-size="16" fill="#0F1928">Điểm mù sau cột · che khuất động · biến dạng phối cảnh</text>
+      <use data-icon="tabler-outline/alert-triangle" x="72" y="552" width="20" height="20" fill="#4E5D78" stroke-width="2" />
+      <text x="102" y="568" font-size="16" fill="#0F1928">Mất dấu → tạo Local ID mới · không phủ toàn bãi</text>
+    </g>
+  </g>
+
+  <g id="panel-multi-cam" data-pptx-bounds="656 142 560 462">
+    <rect x="656" y="142" width="560" height="44" fill="#004FFF" />
+    <text x="680" y="170" font-size="18" font-weight="bold" fill="#FFFFFF">MULTI-CAMERA — thiết kế của hệ thống</text>
+    <image href="../images/slide2_cam2_sees.jpg" x="656" y="198" width="560" height="315" preserveAspectRatio="xMidYMid slice" />
+    <rect x="656" y="198" width="560" height="315" fill="none" stroke="#004FFF" stroke-width="2" />
+    <g id="multi-cam-points">
+      <use data-icon="tabler-outline/device-cctv" x="664" y="524" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="694" y="540" font-size="16" fill="#0F1928">Bổ sung vùng quan sát — nhiều góc nhìn đồng thời</text>
+      <use data-icon="tabler-outline/arrows-left-right" x="664" y="552" width="20" height="20" fill="#004FFF" stroke-width="2" />
+      <text x="694" y="568" font-size="16" fill="#0F1928">Vùng overlap kiểm chứng cùng một xe —<tspan x="694" dy="26">duy trì danh tính toàn bãi theo topology</tspan></text>
+    </g>
+  </g>
+
+  <g id="design-decision-band" data-pptx-bounds="64 612 1152 66">
+    <rect x="64" y="612" width="1152" height="66" fill="#00227A" />
+    <text x="88" y="652" font-size="20" font-weight="bold" fill="#FFFFFF">Quyết định thiết kế: hệ nhiều camera cố định — demo nghiên cứu dùng 2 camera</text>
+    <text x="1216" y="652" font-size="14" fill="#9AE7FC" text-anchor="end">chưa có baseline định lượng 1-cam vs 2-cam</text>
+  </g>
+
+  <g id="chrome-footer" data-pptx-bounds="64 686 1152 24" fill="#4E5D78" font-size="13">
+    <text x="64" y="702">Mô hình bãi đỗ thu nhỏ — cam1 f300 (xe tại rìa FOV, vùng mù sau cột) · cam2 cùng thời điểm (xe rõ, nhãn G#1)</text>
+    <text x="1216" y="702" text-anchor="end">TechGAR · NCKH</text>
+  </g>
+</svg>

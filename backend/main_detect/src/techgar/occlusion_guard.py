@@ -4,7 +4,7 @@ No colour comparison can prove a *merged* blob belongs to one member. Geometry
 opens the group first; appearance is used only to validate separated regions.
 Predicted/partitioned pixels never refresh the last real observation time.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import combinations
 
 import cv2

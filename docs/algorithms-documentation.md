@@ -497,6 +497,11 @@ def on_vehicle_exit(binding, global_id, timestamp):
 
 ## 5. Deep Re-ID (CNN) - Nhận Dạng Xe Qua Hình Dáng
 
+> ⚠️ **Trạng thái:** Module `deep_reid_model.py` đã bị gỡ khỏi backend — Deep Re-ID
+> **không khả dụng** trong motion backend hiện tại (`use_deep_reid=True` sẽ
+> raise `ValueError`; torch không nằm trong requirements). Nội dung mục này là
+> thiết kế tham khảo, không phải code đang chạy.
+
 ### 🎯 Mục Đích
 Khi xe đi qua nhiều camera, dùng **hình dáng xe** để nhận ra đó là cùng một xe.
 
@@ -531,6 +536,8 @@ Khi xe đi qua nhiều camera, dùng **hình dáng xe** để nhận ra đó là
 
 #### B. Trích Xuất và So Sánh
 ```python
+# THIẾT KẾ THAM KHẢO — DeepReIDExtractor không còn trong codebase
+# (deep_reid_model.py đã bị xóa; backend chỉ dùng HSV/LAB histogram).
 class DeepReIDExtractor:
     def extract(self, vehicle_crop):
         """
@@ -561,7 +568,7 @@ class DeepReIDExtractor:
 feat1 = extractor.extract(vehicle_image_1)  # Camera 1
 feat2 = extractor.extract(vehicle_image_2)  # Camera 2
 
-dist = DeepReIDExtractor.distance(feat1, feat2)
+dist = DeepReIDExtractor.distance(feat1, feat2)  # API tham khảo — đã gỡ
 # dist < 0.55 → Cùng một xe
 # dist ≥ 0.55 → Xe khác nhau
 ```

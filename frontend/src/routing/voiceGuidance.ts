@@ -1,9 +1,5 @@
 // voiceGuidance.ts - Bộ Hướng dẫn Giọng nói Web Speech API & Cảnh báo Đi Sai Đường
 
-export interface VoiceOptions {
-  muted?: boolean;
-}
-
 class VoiceManager {
   private lastSpokenText: string = "";
   private lastSpokenTime: number = 0;
@@ -16,10 +12,6 @@ class VoiceManager {
       window.speechSynthesis.cancel();
       this.isSpeaking = false;
     }
-  }
-
-  public getMuted(): boolean {
-    return this.isMuted;
   }
 
   public stop() {

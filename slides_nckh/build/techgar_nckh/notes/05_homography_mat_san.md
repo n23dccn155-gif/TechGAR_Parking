@@ -1,0 +1,1 @@
+Do camera được gắn chéo, vị trí pixel của xe không thể xem là khoảng cách thực. Nhóm dùng ground-plane homography và chỉ neo vào mặt sàn Z = 0. Mục tiêu không phải ghép toàn bộ hình khối 3D của xe, mà là tạo một hệ tọa độ mặt sàn thống nhất cho các camera.

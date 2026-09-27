@@ -1,0 +1,1 @@
+Hai camera trong hệ thống chạy song song. Khi xe đi qua overlap, cả hai camera có thể cùng thấy chiếc xe ở gần cùng một thời điểm. Đây là cơ sở để hợp nhất hai Local ID thành một Global ID duy nhất.

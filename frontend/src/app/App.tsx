@@ -23,7 +23,7 @@ import { getRuntimeGateConfig, getRuntimeSnapshot } from "../api/runtimeApi";
 import { runtimeCameraStates, runtimeParkingSpots, runtimeSlots, runtimeVehicles } from "../adapters/runtimeAdapter";
 import { createWorldToSvg, runtimeVehiclesOnSvg } from "../calibration/worldToSvg";
 import { PARKING_GEOMETRY } from "../geometry/parkingGeometry";
-import type { ActiveVehicle, FrameSize, RuntimeSnapshot } from "../domain/runtime";
+import type { ActiveVehicle, RuntimeSnapshot } from "../domain/runtime";
 import { canonicalRuntimeId, liveRuntimeError } from "../domain/runtime";
 import { buildSessionCompletionKey } from "../domain/session";
 import { BackendApiError, getNavigationReservations, type NavigationReservation } from "../api/backendApi";
@@ -39,7 +39,6 @@ interface AppProps {
 
 export function App({ sessionId }: AppProps = {}) {
   const [activeVehicles, setActiveVehicles] = useState<ActiveVehicle[]>([]);
-  const [frameSize, setFrameSize]           = useState<FrameSize>({ width: 1200, height: 900 });
   const {
     session: sessionInfo,
     ended: sessionEnded,
@@ -301,7 +300,6 @@ export function App({ sessionId }: AppProps = {}) {
             capturedAt: runtime.published_at,
           });
           setRuntimeSnapshot(runtime);
-          setFrameSize({ width: PARKING_GEOMETRY.width, height: PARKING_GEOMETRY.height });
           setActiveVehicles(runtimeVehiclesOnSvg(runtime, sessionTrackIdRef.current));
           if (active) {
             setRuntimeState("live");
@@ -1207,7 +1205,6 @@ export function App({ sessionId }: AppProps = {}) {
               route={route}
               routePaused={Boolean(warning || runtimeError || sessionParkingDecision?.kind === "target_occupied_by_other" || sessionParkingDecision?.kind === "runtime_unavailable" || sessionParkingDecision?.kind === "identity_invariant_error")}
               activeVehicles={displayedVehicles}
-              frameSize={frameSize}
               onSpotClick={handleSpotClick}
             />
             <ParkingLegend />

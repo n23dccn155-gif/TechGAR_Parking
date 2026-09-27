@@ -12,7 +12,7 @@ Trong nghiên cứu khoa học, **Ablation Study (Nghiên cứu bóc tách)** đ
 
 ### Chiến lược Đánh giá Lai (Hybrid Strategy):
 Thay vì tốn hàng chục giờ đồng hồ chấm từng tọa độ pixel $(x, y)$ cho hàng nghìn frame video (dễ sai sót và tốn công vô ích):
-* **Máy chấm tự động:** Sử dụng `evaluate.py` để đánh giá độ chính xác của các **Ô đỗ xe (Parking Slots)** dựa trên Ground Truth ô đỗ có sẵn.
+* **Máy chấm tự động:** ~~Sử dụng `evaluate.py`~~ *(công cụ đánh giá schema v3 đã được loại bỏ trong refactor_20_9 — chấm điểm ô đỗ hiện làm thủ công từ `ground_truth_slots.csv` và `predictions.jsonl`)*.
 * **Người quan sát + Script tự động đếm:** Người làm thực nghiệm chỉ cần nhìn màn hình hiển thị trực tiếp khi replay, ghi lại ID xe theo từng khoảng frame vào file `manual_tracking.csv`. Sau đó script `evaluate_manual_tracking.py` sẽ tự động đếm số lần **Nhảy ID (ID Switches - IDSW)** và **Mất dấu (False Negatives - FN)**.
 
 ---
@@ -105,7 +105,7 @@ Mục đích: Xác lập ma trận Homography chuyển đổi tọa độ từ C
 ..\..\.venv\Scripts\python.exe .\calibrate_map.py `
   --cam1-url "experiment_test\output\droidcam_shared_vd_18\raw_cam1.mp4" `
   --cam2-url "experiment_test\output\droidcam_shared_vd_18\raw_cam2.mp4" `
-  --workspace "config\shared_map_02" `
+  --workspace "config\shared_map_03" `
   --output "config\two_camera.shared_cm_01.json" `
   --coverage-cam1 "config\roi_mask_cam1.json" `
   --coverage-cam2 "config\roi_mask_cam2.json" `
@@ -219,7 +219,7 @@ Bao gồm: Handoff liên camera + Bộ nhớ danh tính 60s + Bộ nhớ ngoại
 Tại thư mục video gốc `experiment_test\output\droidcam_shared_vd_18`:
 1. **`ground_truth_slots.csv`:** Giữ nguyên (file này đã có nhãn chuẩn các khoảng thời gian đỗ xe).
 2. **`ground_truth_identity.csv` & `ground_truth_events.csv`:** Mở file lên bằng Notepad, **xóa sạch toàn bộ nội dung dữ liệu bên dưới, chỉ giữ lại đúng 1 dòng tiêu đề (header)**.
-   *(Thao tác này giúp `evaluate.py` bỏ qua bước chấm điểm quỹ đạo pixel tự động mà không phát sinh lỗi).*
+   *(Thao tác này giúp công cụ chấm điểm bỏ qua bước chấm quỹ đạo pixel tự động mà không phát sinh lỗi).*
 
 ### 6.2. Script PowerShell tự động đồng bộ Ground Truth và tạo file Ghi chép
 
@@ -303,19 +303,12 @@ start_frame,end_frame,physical_vehicle,ai_assigned_id
 
 ## 8. Giai đoạn 6: Đánh giá & Xuất Báo cáo Kép (Hybrid Evaluation)
 
-### 8.1. Phần 1: Máy chấm Đánh giá Bãi đỗ xe (Parking Slot Metrics)
-Chạy lệnh đánh giá tổng thể của hệ thống:
-
-```powershell
-# Chạy tại: D:\NCKH\TechGAR\backend\main_detect
-..\..\.venv\Scripts\python.exe .\evaluate.py `
-  experiment_test\output\ablation_baseline_run `
-  experiment_test\output\ablation_no_handoff_run `
-  experiment_test\output\ablation_no_retention_run `
-  experiment_test\output\ablation_no_appearance_run `
-  --fps 25
-```
-> Kết quả chi tiết về **Precision, Recall, F1-Score** của trạng thái ô đỗ xe sẽ được lưu tại file `experiment_test\output\evaluation_summary_v3.md`.
+### 8.1. Phần 1: Đánh giá Bãi đỗ xe (Parking Slot Metrics)
+> [!NOTE]
+> Công cụ `evaluate.py` + `evaluation_v3` đã được loại bỏ trong refactor_20_9.
+> Chấm **Precision, Recall, F1-Score** của trạng thái ô đỗ xe thủ công: đối chiếu
+> `ground_truth_slots.csv` với `predictions.jsonl` (`slot_states`) của từng run,
+> hoặc dùng `experiment_test\validate_session.py` để kiểm tra schema trước.
 
 ### 8.2. Phần 2: Script tự động tổng hợp lỗi Tracking từ file Ghi chép
 Chạy script phân tích `evaluate_manual_tracking.py`:

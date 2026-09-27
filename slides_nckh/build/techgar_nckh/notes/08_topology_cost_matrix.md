@@ -1,0 +1,1 @@
+Cost Matrix không chạy trên toàn bộ xe trong bãi. Topology Gate lọc ứng viên trước. Chỉ khi xe đi vào đúng hành lang và có candidate hợp lệ ở camera còn lại, hệ thống mới tính chi phí dựa trên vị trí, màu, kích thước và hướng.

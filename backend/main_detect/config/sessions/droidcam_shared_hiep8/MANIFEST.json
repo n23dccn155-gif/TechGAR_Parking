@@ -1,0 +1,10 @@
+{
+  "session": "droidcam_shared_hiep8",
+  "files": {
+    "calibration": "recovered_cal",
+    "mask_cam1": "git:a75d1d71",
+    "mask_cam2": "git:a75d1d71",
+    "slots_cam1": "git:a75d1d71",
+    "slots_cam2": "git:a75d1d71"
+  }
+}
