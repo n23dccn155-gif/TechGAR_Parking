@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "calibration_id": "cal-20260926-175058-c36aa67b",
+  "mode": "rectangle_line_v1",
+  "description": "A-D metric rectangle plus V1-V4 lateral line correction; all eight used for fitting",
+  "fit_pairs": [
+    {
+      "label": "A",
+      "role": "metric_anchor",
+      "cam1": [
+        1010,
+        217
+      ],
+      "cam2": [
+        324,
+        105
+      ]
+    },
+    {
+      "label": "B",
+      "role": "metric_anchor",
+      "cam1": [
+        974,
+        62
+      ],
+      "cam2": [
+        293,
+        256
+      ]
+    },
+    {
+      "label": "C",
+      "role": "metric_anchor",
+      "cam1": [
+        686,
+        59
+      ],
+      "cam2": [
+        635,
+        249
+      ]
+    },
+    {
+      "label": "D",
+      "role": "metric_anchor",
+      "cam1": [
+        690,
+        210
+      ],
+      "cam2": [
+        628,
+        92
+      ]
+    },
+    {
+      "label": "V1",
+      "role": "line_correction",
+      "cam1": [
+        382,
+        176
+      ],
+      "cam2": [
+        942,
+        126
+      ]
+    },
+    {
+      "label": "V2",
+      "role": "line_correction",
+      "cam1": [
+        510,
+        171
+      ],
+      "cam2": [
+        814,
+        128
+      ]
+    },
+    {
+      "label": "V3",
+      "role": "line_correction",
+      "cam1": [
+        668,
+        165
+      ],
+      "cam2": [
+        652,
+        128
+      ]
+    },
+    {
+      "label": "V4",
+      "role": "line_correction",
+      "cam1": [
+        830,
+        174
+      ],
+      "cam2": [
+        489,
+        135
+      ]
+    }
+  ],
+  "validation_pairs": [],
+  "independent_validation": false
+}

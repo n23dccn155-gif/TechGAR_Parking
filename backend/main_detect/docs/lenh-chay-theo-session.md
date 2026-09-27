@@ -82,8 +82,21 @@ Từ video cũ — lưu vào thư mục session (ví dụ hiep2):
 ```
 
 Lưu ý: `--output` ghi đè `calibration.json` đã khôi phục — backup trước nếu
-chỉ muốn thử nghiệm. Với cam live, đổi `--cam*-url` thành URL DroidCam và
-`--output` về `config\two_camera.shared_cm_01.json`.
+chỉ muốn thử nghiệm.
+
+Từ **cam live** (DroidCam) — lưu thẳng vào config live:
+
+```powershell
+.\.venv\Scripts\python.exe .\calibrate_map.py `
+  --cam1-url "http://192.168.100.53:4747/video/force/1280x720" `
+  --cam2-url "http://192.168.100.198:4747/video/force/1280x720" `
+  --workspace "config\shared_map_01" `
+  --output "config\two_camera.shared_cm_01.json" `
+  --coverage-cam1 "config\roi_mask_cam1.json" `
+  --coverage-cam2 "config\roi_mask_cam2.json" `
+  --slots-cam1 "config\parking_slots_cam1.json" `
+  --slots-cam2 "config\parking_slots_cam2.json"
+```
 
 ## 5. Vẽ vạch cổng vào/ra (gate zones) — từ video cũ
 

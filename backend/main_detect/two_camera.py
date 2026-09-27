@@ -2017,6 +2017,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
     calibration_path = Path(args.calibration).resolve()
 
     session_dir = Path(args.session_dir).resolve() if args.session_dir else None
+    if session_dir is not None and session_dir == output_dir:
+        raise ValueError(
+            "--output-dir va --session-dir phai la hai thu muc khac nhau"
+        )
     if session_dir is not None and session_dir.exists():
         raise FileExistsError(f"Session da ton tai: {session_dir}")
 
