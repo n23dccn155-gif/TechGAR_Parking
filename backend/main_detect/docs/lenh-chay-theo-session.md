@@ -190,12 +190,19 @@ Ví dụ điền sẵn cho `droidcam_shared_bt` (mask cần vẽ lại trước 
 
 ```powershell
 # Terminal 1 — tu D:\TechGar2 (venv nam trong main_detect):
+# ==== CAM LIVE (dung config\gate_zones.json CHUNG — KHONG co <SESSION>) ====
 cd D:\TechGar2
+.\backend\main_detect\.venv\Scripts\python.exe .\backend\gate_session_controller.py `
+  --runtime-url "http://127.0.0.1:8001/api/runtime/snapshot" `
+  --gate-config "backend\main_detect\config\gate_zones.json" `
+  --port 8000
+
+# ==== REPLAY VIDEO CU (chi khi session do da ve gate_zones rieng) ====
+# THAY <SESSION> bang ten that, vd droidcam_shared_bt — KHONG go nguyen <SESSION>
 .\backend\main_detect\.venv\Scripts\python.exe .\backend\gate_session_controller.py `
   --runtime-url "http://127.0.0.1:8001/api/runtime/snapshot" `
   --gate-config "backend\main_detect\config\sessions\<SESSION>\gate_zones.json" `
   --port 8000
-# (voi cam live: --gate-config "backend\main_detect\config\gate_zones.json")
 
 # Terminal 2 — frontend:
 cd D:\TechGar2\frontend
