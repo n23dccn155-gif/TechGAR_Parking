@@ -167,9 +167,9 @@ def _latest_spot_availability(
         if PARKING_STATUS_SAMPLE.exists():
             try:
                 sample_data = json.loads(PARKING_STATUS_SAMPLE.read_text(encoding="utf-8"))
-                avail = _spot_is_available(sample_data, spot_id)
-                if avail is not None:
-                    return avail
+                slot = (sample_data.get("slots") or {}).get(str(spot_id))
+                if isinstance(slot, dict) and slot.get("status") is not None:
+                    return str(slot.get("status")) == "empty"
             except Exception:
                 pass
         return True

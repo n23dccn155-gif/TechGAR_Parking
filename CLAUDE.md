@@ -5,11 +5,11 @@ Welcome to the **TechGAR** project guide for Claude Code! This document outlines
 ---
 
 ## 📌 Project Overview
-**TechGAR** is a Smart Parking Management & In-Parking Navigation System featuring real-time AI vehicle tracking (YOLOv8 + CNN), Dijkstra shortest-path navigation, dynamic QR Code Kiosk sessions, Vietnamese voice guidance, and off-route warnings.
+**TechGAR** is a Smart Parking Management & In-Parking Navigation System featuring real-time motion-based vehicle tracking (OpenCV + custom MOT), A* shortest-path navigation, dynamic QR Code Kiosk sessions, Vietnamese voice guidance, and off-route warnings.
 
 * **Tech Stack**:
   * **Frontend**: React (TypeScript), Vite, Zustand, Web Speech API, HTML5 Canvas.
-  * **Backend & AI**: Python 3.9+, OpenCV, Ultralytics YOLOv8, TensorFlow/Keras (CNN), FastAPI / HTTP Server.
+  * **Backend & AI**: Python 3.9+, OpenCV, NumPy, lap (Hungarian assignment), stdlib HTTP Server.
 
 ---
 
@@ -69,15 +69,15 @@ python backend/gate_session_controller.py --source vehicle_positions_sample.json
 ## 🏗 Key Algorithms & Architecture
 
 1. **Routing & Navigation (`frontend/src/routing/routeEngine.ts`)**:
-   * **Dijkstra Algorithm**: Computes shortest path on `laneGraph.ts` (lane coordinates graph).
+   * **A\* Algorithm**: Computes shortest path on `laneGraph.ts` (lane coordinates graph) with euclidean heuristic.
    * **Inbound Routing**: Guides from entry gate $\rightarrow$ target parking slot.
    * **Exit Routing**: Guides from current parked slot $\rightarrow$ exit gate.
    * **Off-Route Detection**: Triggers warning audio/alert if car deviates $>75\text{px}$ from planned route.
 
 2. **AI Vehicle Detection & Tracking (`backend/` & `backend/main_detect/`)**:
-   * **YOLOv8 (`yolov8n.pt`)**: Real-time multi-object vehicle detection and bounding box tracking.
-   * **CNN Parking Occupancy (`cnn_parking.h5`)**: Crop-based CNN classifier predicting `Occupied` vs `Empty` for defined ROI parking slots.
-   * **Global ID Swapping & Motion Tracking**: Handles dual-camera vehicle handoff and tracking persistence across cameras.
+   * **Motion-based detection (`MotionVehicleTracker`/`ParkingDetector`)**: Custom OpenCV pipeline — ROI-masked motion detection + multi-object tracking (no external model weights).
+   * **Slot Occupancy (`SlotVehicleBinder`)**: Binds tracked vehicles to parking-slot polygons defined in `config/parking_slots_cam*.json`.
+   * **Global ID Swapping & Cross-camera Tracking**: Handles dual-camera vehicle handoff and tracking persistence across cameras.
 
 3. **Real-time Data Flow**:
    * `runtime_server.py` (Port 8001 snapshot API) $\longrightarrow$ `gate_session_controller.py` (Port 8000 REST/WebSocket API) $\longrightarrow$ Frontend Canvas Rendering. Legacy `--source` file mode reads `vehicle_positions_sample.json` from `frontend/public/` instead.
@@ -109,7 +109,7 @@ When verifying features:
 ---
 
 ## 🖥 Environment Notes
-* `python` → Python 3.11 (all backend deps: cv2, ultralytics, ...). Keep backend commands on `python`.
+* `python` → Python 3.11 (backend deps: cv2, numpy, lap — see `backend/main_detect/requirements.txt`). Keep backend commands on `python`.
 * `python3` → Python 3.13 (added for slide-generation skills; backend deps are NOT installed here).
 * Slide/PPTX skills installed globally at `%APPDATA%\devin\skills\`: **ppt-master** (native .pptx generation, can learn a .pptx template) and **presentation-skill** (deck-as-code `outline.json` → .pptx with QA gates, lab/scientific presets). Invoke via `/ppt-master`, `/presentation-skill`, or ask the agent to build slides.
 * Machine has NO Microsoft PowerPoint / LibreOffice — `.pptx` files must be viewed on another machine or via an online viewer unless an office suite is installed.

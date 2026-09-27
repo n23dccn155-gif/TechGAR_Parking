@@ -79,6 +79,7 @@ export function findRoute(graph: LaneGraph, startNodeId: string, endNodeId: stri
     if (current === endNodeId) break;
 
     (adjacency.get(current) ?? []).forEach((step) => {
+      if (!nodeById.has(step.to)) return;
       const candidate = currentDistance + step.distance;
       if (candidate < (distances.get(step.to) ?? Number.POSITIVE_INFINITY)) {
         distances.set(step.to, candidate);

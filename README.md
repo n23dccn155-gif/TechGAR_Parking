@@ -1,6 +1,6 @@
 # 🅿️ TechGAR - Smart Parking & Navigation System
 
-Hệ thống Quản lý & Dẫn đường Bãi đỗ xe Thông minh kết hợp Camera AI Tracking thời gian thực (YOLOv8 + CNN), thuật toán tìm đường Dijkstra, Giao diện Cá nhân hóa QR Code, Hướng dẫn bằng Giọng nói Tiếng Việt và Cảnh báo Đi sai đường.
+Hệ thống Quản lý & Dẫn đường Bãi đỗ xe Thông minh kết hợp Camera AI Tracking thời gian thực (motion-based OpenCV pipeline), thuật toán tìm đường A*, Giao diện Cá nhân hóa QR Code, Hướng dẫn bằng Giọng nói Tiếng Việt và Cảnh báo Đi sai đường.
 
 ---
 
@@ -30,7 +30,7 @@ Hệ thống hỗ trợ **2 chế độ vận hành**:
 * **Python**: v3.9 trở lên
 * **Cài đặt thư viện Python**:
 ```bash
-pip install opencv-python ultralytics tensorflow numpy requests pillow
+pip install -r backend/main_detect/requirements.txt   # opencv-python, numpy, lap
 ```
 
 ---
@@ -100,7 +100,7 @@ Mở 3 Terminal độc lập:
    * **Root Directory**: `backend`
    * **Build Command**: `pip install -r requirements.txt` (nếu cần) hoặc giữ mặc định Python.
    * **Start Command**: `python gate_session_controller.py --port 8000`
-   * *Backend trên Render sẽ tự động kích hoạt luồng mô phỏng 3 xe chạy ngầm và cung cấp REST API công khai.*
+   * *Backend trên Render chạy ở File Mode và phục vụ REST API từ `vehicle_positions_sample.json`.*
 
 2. **Frontend Web App (Vercel Project)**:
    * **Root Directory**: `frontend`
@@ -198,7 +198,7 @@ TechGAR/
 ├── backend/
 │   ├── gate_session_controller.py      # HTTP API Server (port 8000) & Gate Controller
 │   ├── session_manager.py              # QR vehicle-session lifecycle
-│   ├── yolov8n.pt / cnn_parking.h5     # Các mô hình AI nhận diện xe & đỗ xe
+│   ├── sample_tracking_simulator.py    # Sinh feed mẫu cho File Mode
 │   └── main_detect/                    # Pipeline AI 2 camera (runtime_server.py, port 8001)
 │       └── tools/ParkingSpacePicker_ve_js.py  # Công cụ UI vẽ & căn chỉnh ô đỗ (ROI)
 └── frontend/
@@ -211,6 +211,6 @@ TechGAR/
         ├── components/EntryQRKiosk.tsx # Widget QR Kiosk tại cổng vào
         └── routing/
             ├── laneGraph.ts            # Đồ thị làn đường giao thông bãi đỗ
-            ├── routeEngine.ts          # Thuật toán tìm đường Dijkstra (Inbound/Exit)
+            ├── routeEngine.ts          # Thuật toán tìm đường A* (Inbound/Exit)
             └── voiceGuidance.ts        # Web Speech API Giọng nói Tiếng Việt & Off-route Warning
 ```

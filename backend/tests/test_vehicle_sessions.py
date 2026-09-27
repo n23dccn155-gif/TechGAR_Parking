@@ -68,17 +68,17 @@ def test_reused_global_id_is_isolated_by_runtime(monkeypatch, tmp_path):
     ] == ["new"]
 
 
-def test_waiting_qr_is_hidden_after_ten_seconds_without_being_claimed(monkeypatch, tmp_path):
+def test_waiting_qr_is_hidden_after_display_window_without_being_claimed(monkeypatch, tmp_path):
     use_temporary_store(monkeypatch, tmp_path)
     session_id = session_manager.create_session(global_vehicle_id=42, session_id="expires")
     session = session_manager.get_session(session_id)
     created_at = datetime.fromisoformat(session["createdAt"])
 
     assert session_manager.list_waiting_sessions(
-        now=created_at + timedelta(seconds=9, milliseconds=999)
+        now=created_at + timedelta(seconds=session_manager.QR_DISPLAY_SECONDS - 0.001)
     ) == [session]
     assert session_manager.list_waiting_sessions(
-        now=created_at + timedelta(seconds=10)
+        now=created_at + timedelta(seconds=session_manager.QR_DISPLAY_SECONDS)
     ) == []
 
 

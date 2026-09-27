@@ -25,7 +25,7 @@ async function stopServer(): Promise<void> {
 
 test.beforeEach(async () => {
   const directory = mkdtempSync(path.join(tmpdir(), "techgar-browser-session-"));
-  const python = process.env.TECHGAR_TEST_PYTHON ?? path.resolve("../.venv/Scripts/python.exe");
+  const python = process.env.TECHGAR_TEST_PYTHON ?? path.resolve("../backend/main_detect/.venv/Scripts/python.exe");
   server = spawn(python, ["-u", path.resolve("../backend/tests/browser_session_server.py"),
     "--store", path.join(directory,"sessions.json")], {windowsHide:true, stdio:["ignore","pipe","pipe"]});
   base = await new Promise<string>((resolve,reject) => {
