@@ -21,12 +21,13 @@ if (-not (Test-Path -LiteralPath $timestampTarget -PathType Leaf)) {
 }
 
 $pythonCandidates = @(
+    (Join-Path $projectRoot "..\..\.venv\Scripts\python.exe"),
     (Join-Path $projectRoot "..\.venv\Scripts\python.exe"),
     (Join-Path $projectRoot ".venv\Scripts\python.exe")
 )
 $pythonPath = $pythonCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
 if (-not $pythonPath) {
-    throw "Khong tim thay Python trong backend\.venv hoac main_detect\.venv"
+    throw "Khong tim thay Python trong .venv, backend\.venv hoac main_detect\.venv"
 }
 
 $requiredFiles = @(
@@ -66,6 +67,8 @@ $runtimeArguments = @(
     "--tracklet-sample-interval", "3",
     "--global-gallery-max-samples", "24",
     "--api-port", [string]$ApiPort,
+    "--replay-realtime",
+    "--live-mode",
     "--no-display"
 )
 

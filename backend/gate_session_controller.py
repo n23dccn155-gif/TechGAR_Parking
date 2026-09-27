@@ -163,6 +163,16 @@ def _latest_spot_availability(
         return None
     if time.monotonic() - received_at > max(0.0, max_age_seconds):
         return None
+    if snapshot.get("source_mode") is None:
+        if PARKING_STATUS_SAMPLE.exists():
+            try:
+                sample_data = json.loads(PARKING_STATUS_SAMPLE.read_text(encoding="utf-8"))
+                avail = _spot_is_available(sample_data, spot_id)
+                if avail is not None:
+                    return avail
+            except Exception:
+                pass
+        return True
     if not _fresh_live(snapshot):
         return None
     return _spot_is_available(snapshot, spot_id)
@@ -859,6 +869,8 @@ def parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = parser().parse_args()
+    if args.gate_config is None and args.source is not None:
+        args.gate_config = LEGACY_GATE_CONFIG
     gate_config = load_gate_config(args.gate_config)
     if args.source is None and gate_config["coordinate_space"] != "world":
         raise SystemExit(

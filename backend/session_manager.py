@@ -26,7 +26,7 @@ SESSIONS_FILE = Path(
         ROOT_DIR / "backend" / "data" / "navigation_sessions.json",
     )
 )
-QR_DISPLAY_SECONDS = 10.0
+QR_DISPLAY_SECONDS = 120.0
 
 _STORE_LOCK = threading.RLock()
 _LIVE_OBSERVATIONS: dict[tuple[str, str], tuple[tuple, dict]] = {}
@@ -177,7 +177,7 @@ def get_session(session_id: str) -> dict:
 
 
 def _matches_runtime(session: dict, runtime_id: Optional[str]) -> bool:
-    return runtime_id is None or session.get("runtimeId") == str(runtime_id)
+    return runtime_id is None or session.get("runtimeId") is None or session.get("runtimeId") == str(runtime_id)
 
 
 def find_session_by_global_id(

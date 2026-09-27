@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { getWaitingSessions } from "../api/backendApi";
 import type { VehicleSession } from "../domain/session";
 
-const QR_DISPLAY_MS = 10_000;
+const QR_DISPLAY_MS = 120_000;
 const WAITING_SESSIONS_POLL_MS = 250;
 
 function qrExpiryTime(session: VehicleSession): number {

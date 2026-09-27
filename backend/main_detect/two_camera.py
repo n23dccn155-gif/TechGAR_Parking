@@ -1743,6 +1743,11 @@ def make_parser() -> argparse.ArgumentParser:
             "trong session da ghi"
         ),
     )
+    parser.add_argument(
+        "--live-mode",
+        action="store_true",
+        help="Cong bo source_mode='live' ngay ca khi replay video de frontend va gate controller nhan nhu camera realtime",
+    )
     parser.add_argument("--slots-cam1", required=True)
     parser.add_argument("--slots-cam2", required=True)
     parser.add_argument("--calibration", required=True, help="JSON homography va overlap da hieu chinh")
@@ -2848,7 +2853,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                             camera_timestamps_ns=capture_timestamps_ns,
                             calibration=calibration_payload,
                             camera_skew_ms=abs(cam1_ns - cam2_ns) / 1_000_000.0,
-                            source_mode="replay" if replay is not None else "live",
+                            source_mode="live" if (getattr(args, "live_mode", False) or replay is None) else "replay",
                             applied_monotonic_ns=max(capture_timestamps_ns.values()) if replay is not None else time.monotonic_ns(),
                             parking_episodes=[
                                 episode
