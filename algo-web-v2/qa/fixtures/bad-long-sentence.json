@@ -1,0 +1,50 @@
+{
+  "id": "bad-long-sentence",
+  "group": "setup",
+  "title": "Fixture câu dài",
+  "order": 90,
+  "prev": null,
+  "next": null,
+  "fn": {
+    "text": "Câu mô tả bình thường."
+  },
+  "why": {
+    "paras": [
+      "Đoạn này chứa một câu cố tình viết rất dài để vượt ngưỡng cảnh báo ba mươi từ của luật lint văn phong bằng cách nhồi nhét thật nhiều từ phụ và trạng ngữ không cần thiết vào cùng một câu văn liên tục không ngắt."
+    ]
+  },
+  "how": [
+    {
+      "id": "3.1",
+      "name": "Bước",
+      "paras": [
+        "Bước duy nhất đủ dài."
+      ]
+    }
+  ],
+  "formulas": [],
+  "params": [
+    {
+      "name": "p",
+      "value": "1",
+      "kind": "runtime",
+      "role": "x",
+      "src": "algo-web-v2/js/core/tg.js:1"
+    }
+  ],
+  "figures": [],
+  "noFigureReason": "fixture",
+  "interactive": null,
+  "limits": [
+    {
+      "text": "x"
+    }
+  ],
+  "sources": [
+    {
+      "ref": "algo-web-v2/js/core/tg.js:1",
+      "kind": "config",
+      "note": "x"
+    }
+  ]
+}

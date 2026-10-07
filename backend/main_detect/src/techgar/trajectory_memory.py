@@ -68,6 +68,11 @@ class WorldTrajectoryMemory:
         self.max_samples = max(16, int(max_samples))
         self._global: Dict[int, List[TrajectorySample]] = {}
         self._provisional: Dict[Hashable, List[TrajectorySample]] = {}
+        # First sample of each fragment's current trail epoch, kept outside
+        # the rolling ``history_seconds`` window.  ``provisional_samples``[0]
+        # is "where the fragment was two seconds ago", not where it began --
+        # origin-membership checks need the true epoch start.
+        self._provisional_origins: Dict[Hashable, TrajectorySample] = {}
         self._parked: set[int] = set()
         self._parked_origins: Dict[int, Point] = {}
 
@@ -92,6 +97,8 @@ class WorldTrajectoryMemory:
             del samples[:-self.max_samples]
 
     def append_provisional(self, key: Hashable, sample: TrajectorySample) -> None:
+        if key not in self._provisional or not self._provisional[key]:
+            self._provisional_origins[key] = sample
         self._append(self._provisional, key, sample)
 
     def append_global(self, global_id: int, sample: TrajectorySample) -> None:
@@ -102,6 +109,7 @@ class WorldTrajectoryMemory:
 
     def promote(self, key: Hashable, global_id: int) -> None:
         incoming = self._provisional.pop(key, [])
+        self._provisional_origins.pop(key, None)
         if not incoming:
             return
         global_id = int(global_id)
@@ -203,6 +211,8 @@ class WorldTrajectoryMemory:
             else:
                 forgotten.append(key)
         self._provisional = retained
+        for key in forgotten:
+            self._provisional_origins.pop(key, None)
         return forgotten
 
     @staticmethod
@@ -531,3 +541,12 @@ class WorldTrajectoryMemory:
 
     def provisional_samples(self, key: Hashable) -> Tuple[TrajectorySample, ...]:
         return tuple(self._provisional.get(key, ()))
+
+    def provisional_origin(self, key: Hashable) -> Optional[TrajectorySample]:
+        """First sample of the fragment's current trail epoch.
+
+        Unlike ``provisional_samples()[0]`` this is not affected by the
+        rolling ``history_seconds`` window, so origin-membership checks stay
+        valid for fragments older than that window.
+        """
+        return self._provisional_origins.get(key)

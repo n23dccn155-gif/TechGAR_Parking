@@ -1,0 +1,5820 @@
+{
+  "generatedAt": "2026-10-04T08:48:03.393Z",
+  "scope": "FULL QA — ALL packs frozen (frontend ee4682454f1f8b80 · cv 27b693e84ff600d3 · integration 4092aa839ac25e8d): 117 lessons / 236 scenarios file+HTTP step-through + contract + controls + paramChanges ALL packs",
+  "browser": "151.0.7922.34",
+  "modes": {
+    "file": {
+      "lessonsTested": 117,
+      "scenariosTested": 236,
+      "checksOk": 547,
+      "checksTotal": 547,
+      "framesTotal": 956,
+      "fails": []
+    },
+    "http": {
+      "catalog": 117,
+      "lessonsTested": 117,
+      "scenariosTested": 236,
+      "fails": [],
+      "sourceLinks": [
+        "../backend/gate_session_controller.py#L190",
+        "../backend/gate_session_controller.py#L405",
+        "../backend/gate_session_controller.py#L874",
+        "../backend/main_detect/runtime_server.py#L25"
+      ]
+    }
+  },
+  "packCounts": {
+    "total": 117,
+    "byPack": {
+      "frontend": 37,
+      "cv": 57,
+      "integration": 23
+    },
+    "aliases": [
+      "live-runtime-validator",
+      "frame-cursor-guard",
+      "runtime-request-coalesce",
+      "qr-visibility-window",
+      "canonical-gid-chain",
+      "replay-session-sync"
+    ],
+    "packStatus": {
+      "frontend": {
+        "registered": true,
+        "count": 37,
+        "expected": 37
+      },
+      "cv": {
+        "registered": true,
+        "count": 57,
+        "expected": 57
+      },
+      "integration": {
+        "registered": true,
+        "count": 23,
+        "expected": 23
+      }
+    }
+  },
+  "contract": {
+    "file": {
+      "total": 236,
+      "ok": 236,
+      "fails": []
+    }
+  },
+  "lessons": {
+    "lane-graph-build/default": {
+      "pack": "frontend",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 9,
+      "explain": 125,
+      "newFrameSync": "single-frame"
+    },
+    "lane-graph-build/edge": {
+      "pack": "frontend",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 9,
+      "explain": 125,
+      "newFrameSync": "single-frame"
+    },
+    "adjacency-directed-expand/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 119,
+      "newFrameSync": "single-frame"
+    },
+    "adjacency-directed-expand/edge": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 3,
+      "explain": 91,
+      "newFrameSync": "single-frame"
+    },
+    "astar-find-route/default": {
+      "pack": "frontend",
+      "steps": 9,
+      "counter": "9 / 9",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 7,
+      "explain": 76,
+      "newFrameSync": "single-frame",
+      "shotFrame": "9 / 9 ink=897"
+    },
+    "astar-find-route/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 7,
+      "explain": 89,
+      "newFrameSync": "single-frame"
+    },
+    "spot-route-wrappers/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 3,
+      "explain": 111,
+      "newFrameSync": "single-frame"
+    },
+    "spot-route-wrappers/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 3,
+      "explain": 32,
+      "newFrameSync": "single-frame"
+    },
+    "drivable-edge-project/default": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 65,
+      "newFrameSync": "single-frame"
+    },
+    "drivable-edge-project/edge": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 72,
+      "newFrameSync": "single-frame"
+    },
+    "pos-route-wrappers/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 33,
+      "newFrameSync": "single-frame"
+    },
+    "pos-route-wrappers/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 93,
+      "newFrameSync": "single-frame"
+    },
+    "route-edge-validator/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 65,
+      "newFrameSync": "single-frame"
+    },
+    "route-edge-validator/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 76,
+      "newFrameSync": "single-frame"
+    },
+    "gate-node-mutate/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 3,
+      "explain": 134,
+      "newFrameSync": "single-frame"
+    },
+    "gate-node-mutate/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 134,
+      "newFrameSync": "single-frame"
+    },
+    "spot-rank-score/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 59,
+      "newFrameSync": "single-frame"
+    },
+    "spot-rank-score/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 32,
+      "newFrameSync": "single-frame"
+    },
+    "recommendation-promote/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 3,
+      "explain": 73,
+      "newFrameSync": "single-frame"
+    },
+    "recommendation-promote/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 3,
+      "explain": 114,
+      "newFrameSync": "single-frame"
+    },
+    "point-segment-dist/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 43,
+      "newFrameSync": "single-frame"
+    },
+    "point-segment-dist/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 45,
+      "newFrameSync": "single-frame"
+    },
+    "off-route-detect/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 95,
+      "newFrameSync": "single-frame"
+    },
+    "off-route-detect/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 111,
+      "newFrameSync": "single-frame"
+    },
+    "turn-instruction/default": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 47,
+      "newFrameSync": "single-frame"
+    },
+    "turn-instruction/edge": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 68,
+      "newFrameSync": "single-frame"
+    },
+    "voice-speak-throttle/default": {
+      "pack": "frontend",
+      "steps": 8,
+      "counter": "8 / 8",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 37,
+      "newFrameSync": "single-frame"
+    },
+    "voice-speak-throttle/edge": {
+      "pack": "frontend",
+      "steps": 8,
+      "counter": "8 / 8",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 42,
+      "newFrameSync": "single-frame"
+    },
+    "session-commit-guard/default": {
+      "pack": "frontend",
+      "steps": 9,
+      "counter": "9 / 9",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 7,
+      "explain": 171,
+      "newFrameSync": "single-frame"
+    },
+    "session-commit-guard/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 7,
+      "explain": 90,
+      "newFrameSync": "single-frame"
+    },
+    "session-action-serialize/default": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 62,
+      "newFrameSync": "single-frame"
+    },
+    "session-action-serialize/edge": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 62,
+      "newFrameSync": "single-frame"
+    },
+    "session-refresh-dedupe/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 81,
+      "newFrameSync": "single-frame"
+    },
+    "session-refresh-dedupe/edge": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 81,
+      "newFrameSync": "single-frame"
+    },
+    "action-id-gen/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 96,
+      "newFrameSync": "single-frame"
+    },
+    "action-id-gen/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 92,
+      "newFrameSync": "single-frame"
+    },
+    "completion-key-build/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 103,
+      "newFrameSync": "single-frame"
+    },
+    "completion-key-build/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 97,
+      "newFrameSync": "single-frame"
+    },
+    "occupancy-classify/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 32,
+      "newFrameSync": "single-frame"
+    },
+    "occupancy-classify/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 88,
+      "newFrameSync": "single-frame"
+    },
+    "spot-event-reducer/default": {
+      "pack": "frontend",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 118,
+      "newFrameSync": "single-frame"
+    },
+    "spot-event-reducer/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 85,
+      "newFrameSync": "single-frame"
+    },
+    "affine-fit-transform/default": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 88,
+      "newFrameSync": "single-frame"
+    },
+    "affine-fit-transform/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 155,
+      "newFrameSync": "single-frame"
+    },
+    "world-svg-project/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 67,
+      "newFrameSync": "single-frame",
+      "shotFrame": "3 / 3 ink=240"
+    },
+    "world-svg-project/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 105,
+      "newFrameSync": "single-frame"
+    },
+    "vehicle-svg-project/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 104,
+      "newFrameSync": "single-frame",
+      "shotFrame": "2 / 3 ink=2358"
+    },
+    "vehicle-svg-project/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 97,
+      "newFrameSync": "single-frame"
+    },
+    "route-polyline-simplify/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "route-polyline-simplify/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "route-arrow-place/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 69,
+      "newFrameSync": "single-frame"
+    },
+    "route-arrow-place/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 69,
+      "newFrameSync": "single-frame"
+    },
+    "viewbox-pan-zoom/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 84,
+      "newFrameSync": "single-frame"
+    },
+    "viewbox-pan-zoom/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 80,
+      "newFrameSync": "single-frame"
+    },
+    "parking-geometry-gen/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 124,
+      "newFrameSync": "single-frame"
+    },
+    "parking-geometry-gen/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 109,
+      "newFrameSync": "single-frame"
+    },
+    "spot-ownership-map/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 1,
+      "explain": 136,
+      "newFrameSync": "single-frame"
+    },
+    "spot-ownership-map/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 1,
+      "explain": 136,
+      "newFrameSync": "single-frame"
+    },
+    "parking-counts-derive/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 1,
+      "explain": 98,
+      "newFrameSync": "single-frame"
+    },
+    "parking-counts-derive/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 1,
+      "explain": 137,
+      "newFrameSync": "single-frame"
+    },
+    "driver-flow-machine/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 142,
+      "newFrameSync": "single-frame"
+    },
+    "driver-flow-machine/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 144,
+      "newFrameSync": "single-frame"
+    },
+    "nav-goal-resolve/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 105,
+      "newFrameSync": "single-frame"
+    },
+    "nav-goal-resolve/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 79,
+      "newFrameSync": "single-frame"
+    },
+    "invalid-spot-recovery/default": {
+      "pack": "frontend",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 167,
+      "newFrameSync": "single-frame"
+    },
+    "invalid-spot-recovery/edge": {
+      "pack": "frontend",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 98,
+      "newFrameSync": "single-frame"
+    },
+    "parked-marker-fallback/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 82,
+      "newFrameSync": "single-frame"
+    },
+    "parked-marker-fallback/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 58,
+      "newFrameSync": "single-frame"
+    },
+    "gate-line-derive/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 79,
+      "newFrameSync": "single-frame"
+    },
+    "gate-line-derive/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 109,
+      "newFrameSync": "single-frame"
+    },
+    "parking-decision-resolve/default": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 77,
+      "newFrameSync": "single-frame"
+    },
+    "parking-decision-resolve/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 104,
+      "newFrameSync": "single-frame"
+    },
+    "mock-scenario-emitter/default": {
+      "pack": "frontend",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 55,
+      "newFrameSync": "single-frame"
+    },
+    "mock-scenario-emitter/edge": {
+      "pack": "frontend",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 59,
+      "newFrameSync": "single-frame"
+    },
+    "mog2-foreground-mask/normal": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 103,
+      "newFrameSync": "single-frame",
+      "shotFrame": "3 / 4 ink=5192"
+    },
+    "mog2-foreground-mask/edge": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 103,
+      "newFrameSync": "single-frame"
+    },
+    "temporal-motion-gate/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 148,
+      "newFrameSync": "single-frame"
+    },
+    "temporal-motion-gate/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 148,
+      "newFrameSync": "single-frame"
+    },
+    "roi-strict-context-mask/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 105,
+      "newFrameSync": "single-frame"
+    },
+    "roi-strict-context-mask/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 124,
+      "newFrameSync": "single-frame"
+    },
+    "foreground-morphology/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 2,
+      "explain": 103,
+      "newFrameSync": "single-frame",
+      "shotFrame": "3 / 3 ink=12508"
+    },
+    "foreground-morphology/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 2,
+      "explain": 102,
+      "newFrameSync": "single-frame"
+    },
+    "contour-geometry-filter/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 6,
+      "explain": 142,
+      "newFrameSync": "single-frame"
+    },
+    "contour-geometry-filter/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 6,
+      "explain": 142,
+      "newFrameSync": "single-frame"
+    },
+    "bottom-center-anchor/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 125,
+      "newFrameSync": "single-frame"
+    },
+    "bottom-center-anchor/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 159,
+      "newFrameSync": "single-frame"
+    },
+    "cast-shadow-discriminator/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "cast-shadow-discriminator/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 117,
+      "newFrameSync": "single-frame"
+    },
+    "dark-foreground-rescue/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 3,
+      "explain": 103,
+      "newFrameSync": "single-frame"
+    },
+    "dark-foreground-rescue/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 3,
+      "explain": 83,
+      "newFrameSync": "single-frame"
+    },
+    "motion-echo-suppression/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 127,
+      "newFrameSync": "single-frame"
+    },
+    "motion-echo-suppression/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 127,
+      "newFrameSync": "single-frame"
+    },
+    "occlusion-group-guard/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 101,
+      "newFrameSync": "single-frame"
+    },
+    "occlusion-group-guard/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 136,
+      "newFrameSync": "single-frame"
+    },
+    "watershed-blob-partition/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 82,
+      "newFrameSync": "single-frame"
+    },
+    "watershed-blob-partition/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 114,
+      "newFrameSync": "single-frame"
+    },
+    "merged-blob-assignment-guard/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 91,
+      "newFrameSync": "single-frame"
+    },
+    "merged-blob-assignment-guard/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 138,
+      "newFrameSync": "single-frame"
+    },
+    "kalman-constant-velocity/normal": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 109,
+      "newFrameSync": "single-frame"
+    },
+    "kalman-constant-velocity/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 101,
+      "newFrameSync": "single-frame"
+    },
+    "prediction-age-decay/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 109,
+      "newFrameSync": "single-frame"
+    },
+    "prediction-age-decay/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 119,
+      "newFrameSync": "single-frame"
+    },
+    "association-distance-gate/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "association-distance-gate/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 4,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "iou-overlap-score/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 2,
+      "explain": 66,
+      "newFrameSync": "single-frame"
+    },
+    "iou-overlap-score/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 2,
+      "explain": 129,
+      "newFrameSync": "single-frame"
+    },
+    "association-cost-matrix/normal": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 5,
+      "explain": 140,
+      "newFrameSync": "single-frame",
+      "shotFrame": "4 / 4 ink=2007"
+    },
+    "association-cost-matrix/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 139,
+      "newFrameSync": "single-frame"
+    },
+    "lapjv-assignment/normal": {
+      "pack": "cv",
+      "steps": 16,
+      "counter": "16 / 16",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 121,
+      "newFrameSync": "single-frame",
+      "shotFrame": "8 / 16 ink=935"
+    },
+    "lapjv-assignment/edge": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 119,
+      "newFrameSync": "single-frame"
+    },
+    "lapjv-assignment/greedy": {
+      "pack": "cv",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 111,
+      "newFrameSync": "single-frame"
+    },
+    "assignment-margin-ambiguity/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 6,
+      "explain": 75,
+      "newFrameSync": "single-frame"
+    },
+    "assignment-margin-ambiguity/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 6,
+      "explain": 84,
+      "newFrameSync": "single-frame"
+    },
+    "stale-anchor-reacquire/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 70,
+      "newFrameSync": "single-frame"
+    },
+    "stale-anchor-reacquire/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 70,
+      "newFrameSync": "single-frame"
+    },
+    "track-lifecycle/normal": {
+      "pack": "cv",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 176,
+      "newFrameSync": "single-frame",
+      "shotFrame": "6 / 6 ink=920"
+    },
+    "track-lifecycle/edge": {
+      "pack": "cv",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 106,
+      "newFrameSync": "single-frame"
+    },
+    "hsv-lab-descriptor/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 99,
+      "newFrameSync": "single-frame"
+    },
+    "hsv-lab-descriptor/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 122,
+      "newFrameSync": "single-frame"
+    },
+    "tracklet-gallery-match/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 117,
+      "newFrameSync": "single-frame"
+    },
+    "tracklet-gallery-match/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 123,
+      "newFrameSync": "single-frame"
+    },
+    "slot-roi-precompute/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 129,
+      "newFrameSync": "single-frame"
+    },
+    "slot-roi-precompute/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 161,
+      "newFrameSync": "single-frame"
+    },
+    "ensemble-threshold-voting/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 138,
+      "newFrameSync": "single-frame"
+    },
+    "ensemble-threshold-voting/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 105,
+      "newFrameSync": "single-frame"
+    },
+    "border-line-filter/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 6,
+      "explain": 115,
+      "newFrameSync": "single-frame"
+    },
+    "border-line-filter/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 6,
+      "explain": 114,
+      "newFrameSync": "single-frame"
+    },
+    "core-rescue-vote/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 75,
+      "newFrameSync": "single-frame"
+    },
+    "core-rescue-vote/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 134,
+      "newFrameSync": "single-frame"
+    },
+    "temporal-smoothing-dwell/normal": {
+      "pack": "cv",
+      "steps": 9,
+      "counter": "9 / 9",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 6,
+      "explain": 124,
+      "newFrameSync": "single-frame"
+    },
+    "temporal-smoothing-dwell/edge": {
+      "pack": "cv",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 6,
+      "explain": 107,
+      "newFrameSync": "single-frame"
+    },
+    "temporal-smoothing-dwell/stale": {
+      "pack": "cv",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 6,
+      "explain": 97,
+      "newFrameSync": "single-frame"
+    },
+    "slot-overlap-geometry/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 6,
+      "explain": 97,
+      "newFrameSync": "single-frame"
+    },
+    "slot-overlap-geometry/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 6,
+      "explain": 89,
+      "newFrameSync": "single-frame"
+    },
+    "slot-track-batch-match/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 83,
+      "newFrameSync": "single-frame"
+    },
+    "slot-track-batch-match/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 95,
+      "newFrameSync": "single-frame"
+    },
+    "arrival-claim-qualification/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 83,
+      "newFrameSync": "single-frame"
+    },
+    "arrival-claim-qualification/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 136,
+      "newFrameSync": "single-frame"
+    },
+    "vision-primary-fusion/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 81,
+      "newFrameSync": "single-frame"
+    },
+    "vision-primary-fusion/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 4,
+      "explain": 153,
+      "newFrameSync": "single-frame"
+    },
+    "stop-dwell-detection/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 130,
+      "newFrameSync": "single-frame"
+    },
+    "stop-dwell-detection/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 133,
+      "newFrameSync": "single-frame"
+    },
+    "sticky-id-bind-release/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 202,
+      "newFrameSync": "single-frame",
+      "shotFrame": "2 / 3 ink=2135"
+    },
+    "sticky-id-bind-release/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 159,
+      "newFrameSync": "single-frame"
+    },
+    "departure-token-lifecycle/normal": {
+      "pack": "cv",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 137,
+      "newFrameSync": "single-frame"
+    },
+    "departure-token-lifecycle/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 137,
+      "newFrameSync": "single-frame"
+    },
+    "predeparture-candidate-guard/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 139,
+      "newFrameSync": "single-frame"
+    },
+    "predeparture-candidate-guard/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 139,
+      "newFrameSync": "single-frame"
+    },
+    "recovery-candidate-gates/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 8,
+      "explain": 99,
+      "newFrameSync": "single-frame"
+    },
+    "recovery-candidate-gates/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 8,
+      "explain": 112,
+      "newFrameSync": "single-frame"
+    },
+    "recovery-batch-assignment/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 95,
+      "newFrameSync": "single-frame"
+    },
+    "recovery-batch-assignment/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 90,
+      "newFrameSync": "single-frame"
+    },
+    "parking-episode-state/normal": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 137,
+      "newFrameSync": "single-frame"
+    },
+    "parking-episode-state/edge": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 135,
+      "newFrameSync": "single-frame"
+    },
+    "world-projection-anchor/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 108,
+      "newFrameSync": "single-frame"
+    },
+    "world-projection-anchor/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 94,
+      "newFrameSync": "single-frame"
+    },
+    "handoff-entry-creation/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 93,
+      "newFrameSync": "single-frame"
+    },
+    "handoff-entry-creation/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 47,
+      "newFrameSync": "single-frame"
+    },
+    "handoff-prediction-corridor/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 79,
+      "newFrameSync": "single-frame"
+    },
+    "handoff-prediction-corridor/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 61,
+      "newFrameSync": "single-frame"
+    },
+    "handoff-lapjv-matching/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 73,
+      "newFrameSync": "single-frame",
+      "shotFrame": "3 / 3 ink=1540"
+    },
+    "handoff-lapjv-matching/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 74,
+      "newFrameSync": "single-frame"
+    },
+    "overlap-simultaneous-pairing/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 129,
+      "newFrameSync": "single-frame"
+    },
+    "overlap-simultaneous-pairing/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 191,
+      "newFrameSync": "single-frame"
+    },
+    "global-id-allocation/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 64,
+      "newFrameSync": "single-frame"
+    },
+    "global-id-allocation/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 79,
+      "newFrameSync": "single-frame"
+    },
+    "dormant-identity-reid/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 97,
+      "newFrameSync": "single-frame"
+    },
+    "dormant-identity-reid/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 92,
+      "newFrameSync": "single-frame"
+    },
+    "world-trajectory-match/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 67,
+      "newFrameSync": "single-frame"
+    },
+    "world-trajectory-match/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 167,
+      "newFrameSync": "single-frame"
+    },
+    "merge-alias-resolution/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 75,
+      "newFrameSync": "single-frame"
+    },
+    "merge-alias-resolution/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 84,
+      "newFrameSync": "single-frame"
+    },
+    "global-identity-lifecycle/normal": {
+      "pack": "cv",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 175,
+      "newFrameSync": "single-frame"
+    },
+    "global-identity-lifecycle/edge": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 175,
+      "newFrameSync": "single-frame"
+    },
+    "homography-fit-distributed/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 62,
+      "newFrameSync": "single-frame"
+    },
+    "homography-fit-distributed/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 144,
+      "newFrameSync": "single-frame"
+    },
+    "rectangle-line-fit-gate/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 131,
+      "newFrameSync": "single-frame"
+    },
+    "rectangle-line-fit-gate/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 2,
+      "explain": 131,
+      "newFrameSync": "single-frame"
+    },
+    "calibration-load-validation/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 69,
+      "newFrameSync": "single-frame"
+    },
+    "calibration-load-validation/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 5,
+      "explain": 144,
+      "newFrameSync": "single-frame"
+    },
+    "matching-distance-derivation/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 68,
+      "newFrameSync": "single-frame"
+    },
+    "matching-distance-derivation/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 90,
+      "newFrameSync": "single-frame"
+    },
+    "frame-size-adaptation/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 141,
+      "newFrameSync": "single-frame"
+    },
+    "frame-size-adaptation/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 3,
+      "explain": 66,
+      "newFrameSync": "single-frame"
+    },
+    "camera-skew-synchronization/normal": {
+      "pack": "cv",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 58,
+      "newFrameSync": "single-frame"
+    },
+    "camera-skew-synchronization/edge": {
+      "pack": "cv",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 108,
+      "newFrameSync": "single-frame"
+    },
+    "latest-frame-mailbox/normal": {
+      "pack": "cv",
+      "steps": 9,
+      "counter": "9 / 9",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 4,
+      "explain": 153,
+      "newFrameSync": "single-frame"
+    },
+    "latest-frame-mailbox/edge": {
+      "pack": "cv",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 138,
+      "newFrameSync": "single-frame"
+    },
+    "stale-evidence-health-gating/normal": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 198,
+      "newFrameSync": "single-frame"
+    },
+    "stale-evidence-health-gating/edge": {
+      "pack": "cv",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "1/1",
+      "pseudo": 4,
+      "explain": 198,
+      "newFrameSync": "single-frame"
+    },
+    "snapshot-v2-build/normal": {
+      "pack": "integration",
+      "steps": 8,
+      "counter": "8 / 8",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 8,
+      "explain": 77,
+      "newFrameSync": "single-frame",
+      "shotFrame": "8 / 8 ink=3063"
+    },
+    "snapshot-v2-build/edge": {
+      "pack": "integration",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "6/6",
+      "pseudo": 8,
+      "explain": 74,
+      "newFrameSync": "single-frame"
+    },
+    "camera-age-online-derivation/normal": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 89,
+      "newFrameSync": "single-frame"
+    },
+    "camera-age-online-derivation/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 89,
+      "newFrameSync": "single-frame"
+    },
+    "live-freshness-contract/normal": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 6,
+      "explain": 129,
+      "newFrameSync": "single-frame"
+    },
+    "live-freshness-contract/edge": {
+      "pack": "integration",
+      "steps": 8,
+      "counter": "8 / 8",
+      "canvas": true,
+      "checks": "7/7",
+      "pseudo": 6,
+      "explain": 293,
+      "newFrameSync": "single-frame"
+    },
+    "source-mode-live-gating/normal": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 110,
+      "newFrameSync": "single-frame"
+    },
+    "source-mode-live-gating/edge": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 110,
+      "newFrameSync": "single-frame"
+    },
+    "frame-cursor-monotonic-poll/normal": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 9,
+      "explain": 115,
+      "newFrameSync": "single-frame"
+    },
+    "frame-cursor-monotonic-poll/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 9,
+      "explain": 115,
+      "newFrameSync": "single-frame"
+    },
+    "segment-intersection-orientation/normal": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 51,
+      "newFrameSync": "single-frame"
+    },
+    "segment-intersection-orientation/edge": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 3,
+      "explain": 56,
+      "newFrameSync": "single-frame"
+    },
+    "directed-crossing-direction/normal": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 100,
+      "newFrameSync": "single-frame",
+      "shotFrame": "2 / 3 ink=1593"
+    },
+    "directed-crossing-direction/edge": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 4,
+      "explain": 121,
+      "newFrameSync": "single-frame"
+    },
+    "observation-continuity-window/normal": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 187,
+      "newFrameSync": "single-frame"
+    },
+    "observation-continuity-window/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 197,
+      "newFrameSync": "single-frame"
+    },
+    "entry-session-creation/normal": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 49,
+      "newFrameSync": "single-frame"
+    },
+    "entry-session-creation/edge": {
+      "pack": "integration",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 49,
+      "newFrameSync": "single-frame"
+    },
+    "measured-path-entry-rescue/normal": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 7,
+      "explain": 37,
+      "newFrameSync": "single-frame"
+    },
+    "measured-path-entry-rescue/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 7,
+      "explain": 47,
+      "newFrameSync": "single-frame"
+    },
+    "exit-crossing-session-delete/normal": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 3,
+      "explain": 109,
+      "newFrameSync": "single-frame"
+    },
+    "exit-crossing-session-delete/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 3,
+      "explain": 110,
+      "newFrameSync": "single-frame"
+    },
+    "session-state-machine/normal": {
+      "pack": "integration",
+      "steps": 10,
+      "counter": "10 / 10",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 118,
+      "newFrameSync": "single-frame",
+      "shotFrame": "9 / 10 ink=3032"
+    },
+    "session-state-machine/edge": {
+      "pack": "integration",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 116,
+      "newFrameSync": "single-frame"
+    },
+    "qr-token-issuance-ttl/normal": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 100,
+      "newFrameSync": "single-frame",
+      "shotFrame": "6 / 6 ink=6427"
+    },
+    "qr-token-issuance-ttl/edge": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 4,
+      "explain": 145,
+      "newFrameSync": "single-frame"
+    },
+    "revision-optimistic-concurrency/normal": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 47,
+      "newFrameSync": "single-frame"
+    },
+    "revision-optimistic-concurrency/edge": {
+      "pack": "integration",
+      "steps": 36,
+      "counter": "36 / 36",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 51,
+      "newFrameSync": "single-frame"
+    },
+    "spot-reservation-availability/normal": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 5,
+      "explain": 135,
+      "newFrameSync": "single-frame"
+    },
+    "spot-reservation-availability/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 5,
+      "explain": 187,
+      "newFrameSync": "single-frame"
+    },
+    "live-observation-cache/normal": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 122,
+      "newFrameSync": "single-frame"
+    },
+    "live-observation-cache/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 122,
+      "newFrameSync": "single-frame"
+    },
+    "atomic-session-store/normal": {
+      "pack": "integration",
+      "steps": 3,
+      "counter": "3 / 3",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 114,
+      "newFrameSync": "single-frame",
+      "shotFrame": "2 / 3 ink=2245"
+    },
+    "atomic-session-store/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 105,
+      "newFrameSync": "single-frame"
+    },
+    "parking-episode-apply/normal": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 7,
+      "explain": 67,
+      "newFrameSync": "single-frame",
+      "shotFrame": "2 / 5 ink=3304"
+    },
+    "parking-episode-apply/edge": {
+      "pack": "integration",
+      "steps": 12,
+      "counter": "12 / 12",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 7,
+      "explain": 175,
+      "newFrameSync": "single-frame"
+    },
+    "parked-evidence-dwell-legacy/normal": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 84,
+      "newFrameSync": "single-frame"
+    },
+    "parked-evidence-dwell-legacy/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 84,
+      "newFrameSync": "single-frame"
+    },
+    "identity-alias-remap-backend/normal": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 4,
+      "explain": 171,
+      "newFrameSync": "single-frame"
+    },
+    "identity-alias-remap-backend/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "5/5",
+      "pseudo": 4,
+      "explain": 160,
+      "newFrameSync": "single-frame"
+    },
+    "canonical-runtime-id-consumer/normal": {
+      "pack": "integration",
+      "steps": 7,
+      "counter": "7 / 7",
+      "canvas": true,
+      "checks": "6/6",
+      "pseudo": 6,
+      "explain": 120,
+      "newFrameSync": "single-frame"
+    },
+    "canonical-runtime-id-consumer/edge": {
+      "pack": "integration",
+      "steps": 5,
+      "counter": "5 / 5",
+      "canvas": true,
+      "checks": "4/4",
+      "pseudo": 6,
+      "explain": 107,
+      "newFrameSync": "single-frame"
+    },
+    "replay-timestamp-pairing/normal": {
+      "pack": "integration",
+      "steps": 13,
+      "counter": "13 / 13",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 76,
+      "newFrameSync": "single-frame",
+      "shotFrame": "11 / 13 ink=3393"
+    },
+    "replay-timestamp-pairing/edge": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "3/3",
+      "pseudo": 6,
+      "explain": 77,
+      "newFrameSync": "single-frame"
+    },
+    "gate-config-validate-save/normal": {
+      "pack": "integration",
+      "steps": 6,
+      "counter": "6 / 6",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 136,
+      "newFrameSync": "single-frame",
+      "shotFrame": "5 / 6 ink=3987"
+    },
+    "gate-config-validate-save/edge": {
+      "pack": "integration",
+      "steps": 4,
+      "counter": "4 / 4",
+      "canvas": true,
+      "checks": "2/2",
+      "pseudo": 5,
+      "explain": 136,
+      "newFrameSync": "single-frame"
+    }
+  },
+  "aliases": {
+    "file": {
+      "live-runtime-validator": {
+        "target": "live-freshness-contract",
+        "landed": "ok"
+      },
+      "frame-cursor-guard": {
+        "target": "frame-cursor-monotonic-poll",
+        "landed": "ok"
+      },
+      "runtime-request-coalesce": {
+        "target": "frame-cursor-monotonic-poll",
+        "landed": "ok"
+      },
+      "qr-visibility-window": {
+        "target": "qr-token-issuance-ttl",
+        "landed": "ok"
+      },
+      "canonical-gid-chain": {
+        "target": "canonical-runtime-id-consumer",
+        "landed": "ok"
+      },
+      "replay-session-sync": {
+        "target": "replay-timestamp-pairing",
+        "landed": "ok"
+      }
+    },
+    "http": {
+      "live-runtime-validator": {
+        "target": "live-freshness-contract",
+        "landed": "ok"
+      },
+      "frame-cursor-guard": {
+        "target": "frame-cursor-monotonic-poll",
+        "landed": "ok"
+      },
+      "runtime-request-coalesce": {
+        "target": "frame-cursor-monotonic-poll",
+        "landed": "ok"
+      },
+      "qr-visibility-window": {
+        "target": "qr-token-issuance-ttl",
+        "landed": "ok"
+      },
+      "canonical-gid-chain": {
+        "target": "canonical-runtime-id-consumer",
+        "landed": "ok"
+      },
+      "replay-session-sync": {
+        "target": "replay-timestamp-pairing",
+        "landed": "ok"
+      }
+    }
+  },
+  "controls": {
+    "file": {
+      "playMoved": {
+        "before": 1,
+        "after": 2,
+        "ok": true
+      },
+      "pauseStable": {
+        "idx": 2,
+        "after400ms": 2,
+        "ariaPressed": "false",
+        "ok": true
+      },
+      "speedOptions": [
+        "0.25",
+        "0.5",
+        "1",
+        "2",
+        "4"
+      ],
+      "speedAdvance": {
+        "1": "908ms",
+        "2": "469ms",
+        "4": "339ms",
+        "0.25": "3706ms",
+        "0.5": "1840ms"
+      },
+      "speedOrdering": "ok (4 < 0.25)",
+      "scrubbed": "5 / 10",
+      "nextPrev": "6 / 10 → 5 / 10",
+      "afterFirst": "1 / 10",
+      "endAutoPause": {
+        "c": "10 / 10",
+        "playing": "false"
+      },
+      "afterScenario": {
+        "counter": "1 / 5",
+        "frame0": true,
+        "paramResetOk": true,
+        "dirtyBefore": "1"
+      },
+      "scenIds": [
+        "normal",
+        "edge"
+      ],
+      "routeChangeWhilePlaying": {
+        "counter": "1 / 6",
+        "ariaPressed": "false",
+        "ok": true
+      }
+    },
+    "http": {
+      "playMoved": {
+        "before": 1,
+        "after": 2,
+        "ok": true
+      },
+      "pauseStable": {
+        "idx": 2,
+        "after400ms": 2,
+        "ariaPressed": "false",
+        "ok": true
+      },
+      "speedOptions": [
+        "0.25",
+        "0.5",
+        "1",
+        "2",
+        "4"
+      ],
+      "speedAdvance": {
+        "1": "985ms",
+        "2": "554ms",
+        "4": "331ms",
+        "0.25": "3668ms",
+        "0.5": "1910ms"
+      },
+      "speedOrdering": "ok (4 < 0.25)",
+      "scrubbed": "5 / 10",
+      "nextPrev": "6 / 10 → 5 / 10",
+      "afterFirst": "1 / 10",
+      "endAutoPause": {
+        "c": "10 / 10",
+        "playing": "false"
+      },
+      "afterScenario": {
+        "counter": "1 / 5",
+        "frame0": true,
+        "paramResetOk": true,
+        "dirtyBefore": "1"
+      },
+      "scenIds": [
+        "normal",
+        "edge"
+      ],
+      "routeChangeWhilePlaying": {
+        "counter": "1 / 6",
+        "ariaPressed": "false",
+        "ok": true
+      }
+    }
+  },
+  "mobile": {
+    "catalogOk": true,
+    "sidebarCollapsed": true,
+    "hScroll": false,
+    "canvasNonblank": true,
+    "canvasFits": true,
+    "canvasEdgeLit": 300
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "packMeta": {
+    "index.html": {
+      "size": 1089,
+      "mtime": "2026-10-04T08:16:40.563Z",
+      "sha256_16": "76b60c3c64db2c91"
+    },
+    "shared/engine.js": {
+      "size": 10555,
+      "mtime": "2026-10-04T06:27:03.895Z",
+      "sha256_16": "fcd3f3026adf0e9b"
+    },
+    "app.js": {
+      "size": 42025,
+      "mtime": "2026-10-04T08:04:12.821Z",
+      "sha256_16": "70e6b78bd1ba3406"
+    },
+    "packs/frontend.js": {
+      "size": 285193,
+      "mtime": "2026-10-04T08:35:12.374Z",
+      "sha256_16": "ee4682454f1f8b80"
+    },
+    "packs/cv.js": {
+      "size": 402497,
+      "mtime": "2026-10-04T08:40:03.483Z",
+      "sha256_16": "27b693e84ff600d3"
+    },
+    "packs/integration.js": {
+      "size": 289652,
+      "mtime": "2026-10-04T08:47:19.962Z",
+      "sha256_16": "4092aa839ac25e8d"
+    }
+  },
+  "srcRefs": {
+    "file": {
+      "total": 253,
+      "ok": 253,
+      "fails": []
+    }
+  },
+  "paramChanges": {
+    "file": {
+      "tested": 130,
+      "changed": 130,
+      "checksPass": 130,
+      "rows": [
+        {
+          "lesson": "lane-graph-build",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "spotsPerZone",
+          "type": "number",
+          "from": 2,
+          "to": 1,
+          "uiField": "Ô mỗi zone",
+          "effectiveParams": {
+            "spotsPerZone": 1,
+            "showDist": false
+          },
+          "uiParams": {
+            "Ô mỗi zone": "1",
+            "Hiện chi phí cạnh": false
+          },
+          "frames": "7→7",
+          "traceFrames1": 7,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "5/5"
+        },
+        {
+          "lesson": "lane-graph-build",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "showDist",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Hiện chi phí cạnh",
+          "effectiveParams": {
+            "spotsPerZone": 2,
+            "showDist": true
+          },
+          "uiParams": {
+            "Ô mỗi zone": "1",
+            "Hiện chi phí cạnh": true
+          },
+          "frames": "7→7",
+          "traceFrames1": 7,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "5/5"
+        },
+        {
+          "lesson": "adjacency-directed-expand",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "node",
+          "type": "select",
+          "from": "c4",
+          "to": "r4",
+          "uiField": "Node xem hàng xóm",
+          "effectiveParams": {
+            "node": "r4"
+          },
+          "uiParams": {
+            "Node xem hàng xóm": "r4"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "astar-find-route",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "start",
+          "type": "select",
+          "from": "entrance",
+          "to": "sC05",
+          "uiField": "Start",
+          "effectiveParams": {
+            "start": "sC05",
+            "end": "sC05"
+          },
+          "uiParams": {
+            "Start": "sC05",
+            "Đích": "sC05"
+          },
+          "frames": "9→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "4/4"
+        },
+        {
+          "lesson": "astar-find-route",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "end",
+          "type": "select",
+          "from": "sC05",
+          "to": "exit",
+          "uiField": "Đích",
+          "effectiveParams": {
+            "start": "entrance",
+            "end": "exit"
+          },
+          "uiParams": {
+            "Start": "sC05",
+            "Đích": "exit"
+          },
+          "frames": "3→3",
+          "traceFrames1": 9,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "spot-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "spotId",
+          "type": "select",
+          "from": "C05",
+          "to": "ZZ9",
+          "uiField": "Ô đích",
+          "effectiveParams": {
+            "spotId": "ZZ9",
+            "patch": false
+          },
+          "uiParams": {
+            "Ô đích": "ZZ9",
+            "Vá đồ thị (thêm sC05⇒c4)": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "4/4"
+        },
+        {
+          "lesson": "spot-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "patch",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Vá đồ thị (thêm sC05⇒c4)",
+          "effectiveParams": {
+            "spotId": "C05",
+            "patch": true
+          },
+          "uiParams": {
+            "Ô đích": "ZZ9",
+            "Vá đồ thị (thêm sC05⇒c4)": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "drivable-edge-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vx",
+          "type": "number",
+          "from": 6,
+          "to": 4,
+          "uiField": "Xe X",
+          "effectiveParams": {
+            "vx": 4,
+            "vy": 4.5,
+            "maxDist": 1,
+            "allowSpot": false
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "4.5",
+            "maxDist": "1",
+            "Cho chiếu vào cạnh spot-entry": false
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "drivable-edge-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vy",
+          "type": "number",
+          "from": 4.5,
+          "to": 3.5,
+          "uiField": "Xe Y",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 3.5,
+            "maxDist": 1,
+            "allowSpot": false
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "3.5",
+            "maxDist": "1",
+            "Cho chiếu vào cạnh spot-entry": false
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "drivable-edge-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "maxDist",
+          "type": "number",
+          "from": 1,
+          "to": 0.3,
+          "uiField": "maxDist",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 4.5,
+            "maxDist": 0.3,
+            "allowSpot": false
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "3.5",
+            "maxDist": "0.3",
+            "Cho chiếu vào cạnh spot-entry": false
+          },
+          "frames": "4→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "drivable-edge-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "allowSpot",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Cho chiếu vào cạnh spot-entry",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 4.5,
+            "maxDist": 1,
+            "allowSpot": true
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "3.5",
+            "maxDist": "0.3",
+            "Cho chiếu vào cạnh spot-entry": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "pos-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vx",
+          "type": "number",
+          "from": 6,
+          "to": 0,
+          "uiField": "Xe X",
+          "effectiveParams": {
+            "vx": 0,
+            "vy": 4.5,
+            "mode": "exit",
+            "maxDist": 1
+          },
+          "uiParams": {
+            "Xe X": "0",
+            "Xe Y": "4.5",
+            "Chế độ": "exit",
+            "maxDist": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "pos-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vy",
+          "type": "number",
+          "from": 4.5,
+          "to": 0,
+          "uiField": "Xe Y",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 0,
+            "mode": "exit",
+            "maxDist": 1
+          },
+          "uiParams": {
+            "Xe X": "0",
+            "Xe Y": "0",
+            "Chế độ": "exit",
+            "maxDist": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "pos-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "mode",
+          "type": "select",
+          "from": "exit",
+          "to": "inbound",
+          "uiField": "Chế độ",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 4.5,
+            "mode": "inbound",
+            "maxDist": 1
+          },
+          "uiParams": {
+            "Xe X": "0",
+            "Xe Y": "0",
+            "Chế độ": "inbound",
+            "maxDist": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "pos-route-wrappers",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "maxDist",
+          "type": "number",
+          "from": 1,
+          "to": 0.3,
+          "uiField": "maxDist",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 4.5,
+            "mode": "exit",
+            "maxDist": 0.3
+          },
+          "uiParams": {
+            "Xe X": "0",
+            "Xe Y": "0",
+            "Chế độ": "inbound",
+            "maxDist": "0.3"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "route-edge-validator",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "valid",
+          "to": "revOneWay",
+          "uiField": "Biến thể route",
+          "effectiveParams": {
+            "variant": "revOneWay"
+          },
+          "uiParams": {
+            "Biến thể route": "revOneWay"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "gate-node-mutate",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "gateY",
+          "type": "number",
+          "from": 7,
+          "to": 9.5,
+          "uiField": "Y midpoint cổng vào",
+          "effectiveParams": {
+            "gateY": 9.5,
+            "recompute": false
+          },
+          "uiParams": {
+            "Y midpoint cổng vào": "9.5",
+            "Vá: recompute edge.distance": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "4/4"
+        },
+        {
+          "lesson": "gate-node-mutate",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "recompute",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Vá: recompute edge.distance",
+          "effectiveParams": {
+            "gateY": 7,
+            "recompute": true
+          },
+          "uiParams": {
+            "Y midpoint cổng vào": "9.5",
+            "Vá: recompute edge.distance": true
+          },
+          "frames": "3→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "4/4"
+        },
+        {
+          "lesson": "spot-rank-score",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "need",
+          "type": "select",
+          "from": "shopping",
+          "to": "services",
+          "uiField": "Nhu cầu",
+          "effectiveParams": {
+            "need": "services",
+            "driveWeight": 0.35
+          },
+          "uiParams": {
+            "Nhu cầu": "services",
+            "Trọng số lái [demo]": "0.35"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "spot-rank-score",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "driveWeight",
+          "type": "number",
+          "from": 0.35,
+          "to": 0,
+          "uiField": "Trọng số lái [demo]",
+          "effectiveParams": {
+            "need": "shopping",
+            "driveWeight": 0
+          },
+          "uiParams": {
+            "Nhu cầu": "services",
+            "Trọng số lái [demo]": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "recommendation-promote",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "spotId",
+          "type": "select",
+          "from": "B02",
+          "to": "C05",
+          "uiField": "Ô user chọn",
+          "effectiveParams": {
+            "spotId": "C05"
+          },
+          "uiParams": {
+            "Ô user chọn": "C05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "5/5"
+        },
+        {
+          "lesson": "point-segment-dist",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "px",
+          "type": "number",
+          "from": 6,
+          "to": 4,
+          "uiField": "Xe X",
+          "effectiveParams": {
+            "px": 4,
+            "py": 4.5,
+            "degenerate": false
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "4.5",
+            "Đoạn suy biến (a=b)": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "point-segment-dist",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "py",
+          "type": "number",
+          "from": 4.5,
+          "to": 3,
+          "uiField": "Xe Y",
+          "effectiveParams": {
+            "px": 6,
+            "py": 3,
+            "degenerate": false
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "3",
+            "Đoạn suy biến (a=b)": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "point-segment-dist",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "degenerate",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Đoạn suy biến (a=b)",
+          "effectiveParams": {
+            "px": 6,
+            "py": 4.5,
+            "degenerate": true
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "3",
+            "Đoạn suy biến (a=b)": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "off-route-detect",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vx",
+          "type": "number",
+          "from": 6,
+          "to": 4,
+          "uiField": "Xe X",
+          "effectiveParams": {
+            "vx": 4,
+            "vy": 4.2,
+            "threshold": 1
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "4.2",
+            "Ngưỡng (đơn vị demo)": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "off-route-detect",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vy",
+          "type": "number",
+          "from": 4.2,
+          "to": 2,
+          "uiField": "Xe Y",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 2,
+            "threshold": 1
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "2",
+            "Ngưỡng (đơn vị demo)": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "off-route-detect",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "threshold",
+          "type": "number",
+          "from": 1,
+          "to": 0.3,
+          "uiField": "Ngưỡng (đơn vị demo)",
+          "effectiveParams": {
+            "vx": 6,
+            "vy": 4.2,
+            "threshold": 0.3
+          },
+          "uiParams": {
+            "Xe X": "4",
+            "Xe Y": "2",
+            "Ngưỡng (đơn vị demo)": "0.3"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "turn-instruction",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "pos",
+          "type": "select",
+          "from": "turn",
+          "to": "approach",
+          "uiField": "Vị trí xe",
+          "effectiveParams": {
+            "pos": "approach",
+            "isExit": false
+          },
+          "uiParams": {
+            "Vị trí xe": "approach",
+            "Route ra cổng": false
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "turn-instruction",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "isExit",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Route ra cổng",
+          "effectiveParams": {
+            "pos": "turn",
+            "isExit": true
+          },
+          "uiParams": {
+            "Vị trí xe": "approach",
+            "Route ra cổng": true
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "voice-speak-throttle",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "cooldown",
+          "type": "number",
+          "from": 5,
+          "to": 2,
+          "uiField": "Cooldown cùng-câu (s)",
+          "effectiveParams": {
+            "cooldown": 2,
+            "muted": false
+          },
+          "uiParams": {
+            "Cooldown cùng-câu (s)": "2",
+            "Mute": false
+          },
+          "frames": "8→8",
+          "traceFrames1": 8,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "voice-speak-throttle",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "muted",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Mute",
+          "effectiveParams": {
+            "cooldown": 5,
+            "muted": true
+          },
+          "uiParams": {
+            "Cooldown cùng-câu (s)": "2",
+            "Mute": true
+          },
+          "frames": "8→8",
+          "traceFrames1": 8,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "session-commit-guard",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "full",
+          "to": "revision",
+          "uiField": "Chuỗi payload",
+          "effectiveParams": {
+            "variant": "revision"
+          },
+          "uiParams": {
+            "Chuỗi payload": "revision"
+          },
+          "frames": "9→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "session-action-serialize",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "postResult",
+          "type": "select",
+          "from": "accept",
+          "to": "error",
+          "uiField": "Kết quả POST",
+          "effectiveParams": {
+            "postResult": "error",
+            "doubleClick": false
+          },
+          "uiParams": {
+            "Kết quả POST": "error",
+            "Gọi action trùng lúc đang khóa": false
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "session-action-serialize",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "doubleClick",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Gọi action trùng lúc đang khóa",
+          "effectiveParams": {
+            "postResult": "accept",
+            "doubleClick": true
+          },
+          "uiParams": {
+            "Kết quả POST": "error",
+            "Gọi action trùng lúc đang khóa": true
+          },
+          "frames": "4→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "session-refresh-dedupe",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "callers",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "Số caller cùng lúc",
+          "effectiveParams": {
+            "callers": 1,
+            "slowFetch": false
+          },
+          "uiParams": {
+            "Số caller cùng lúc": "1",
+            "Fetch chậm (>2s)": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "session-refresh-dedupe",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "slowFetch",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Fetch chậm (>2s)",
+          "effectiveParams": {
+            "callers": 3,
+            "slowFetch": true
+          },
+          "uiParams": {
+            "Số caller cùng lúc": "1",
+            "Fetch chậm (>2s)": true
+          },
+          "frames": "3→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "action-id-gen",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "secure",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "crypto.randomUUID khả dụng",
+          "effectiveParams": {
+            "secure": false,
+            "seed": 42
+          },
+          "uiParams": {
+            "crypto.randomUUID khả dụng": false,
+            "Seed RNG fallback [demo]": "42"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "action-id-gen",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "seed",
+          "type": "number",
+          "from": 42,
+          "to": 1,
+          "uiField": "Seed RNG fallback [demo]",
+          "effectiveParams": {
+            "secure": true,
+            "seed": 1
+          },
+          "uiParams": {
+            "crypto.randomUUID khả dụng": false,
+            "Seed RNG fallback [demo]": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "completion-key-build",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "withEpisode",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "Có parkingEpisodeId",
+          "effectiveParams": {
+            "withEpisode": false,
+            "missingParkedAt": false
+          },
+          "uiParams": {
+            "Có parkingEpisodeId": false,
+            "Thiếu parkedAt": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "completion-key-build",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "missingParkedAt",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Thiếu parkedAt",
+          "effectiveParams": {
+            "withEpisode": true,
+            "missingParkedAt": true
+          },
+          "uiParams": {
+            "Có parkingEpisodeId": false,
+            "Thiếu parkedAt": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "occupancy-classify",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "status",
+          "type": "select",
+          "from": "occupied",
+          "to": "empty",
+          "uiField": "status ô",
+          "effectiveParams": {
+            "status": "empty",
+            "vehicleId": "7",
+            "selfSpot": false
+          },
+          "uiParams": {
+            "status ô": "empty",
+            "vehicleId ô (null=chưa gán)": "7",
+            "Đây là ô mình park": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "occupancy-classify",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "vehicleId",
+          "type": "select",
+          "from": "7",
+          "to": "3",
+          "uiField": "vehicleId ô (null=chưa gán)",
+          "effectiveParams": {
+            "status": "occupied",
+            "vehicleId": "3",
+            "selfSpot": false
+          },
+          "uiParams": {
+            "status ô": "empty",
+            "vehicleId ô (null=chưa gán)": "3",
+            "Đây là ô mình park": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "occupancy-classify",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "selfSpot",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Đây là ô mình park",
+          "effectiveParams": {
+            "status": "occupied",
+            "vehicleId": "7",
+            "selfSpot": true
+          },
+          "uiParams": {
+            "status ô": "empty",
+            "vehicleId ô (null=chưa gán)": "3",
+            "Đây là ô mình park": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "spot-event-reducer",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "full",
+          "to": "applied",
+          "uiField": "Chuỗi sự kiện",
+          "effectiveParams": {
+            "variant": "applied"
+          },
+          "uiParams": {
+            "Chuỗi sự kiện": "applied"
+          },
+          "frames": "6→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "affine-fit-transform",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "3",
+          "to": "4",
+          "uiField": "Tập anchor",
+          "effectiveParams": {
+            "variant": "4"
+          },
+          "uiParams": {
+            "Tập anchor": "4"
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "world-svg-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "qx",
+          "type": "number",
+          "from": 50,
+          "to": 0,
+          "uiField": "world x",
+          "effectiveParams": {
+            "qx": 0,
+            "qy": 25,
+            "hasT": true
+          },
+          "uiParams": {
+            "world x": "0",
+            "world y": "25",
+            "Có transform T": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "world-svg-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "qy",
+          "type": "number",
+          "from": 25,
+          "to": 0,
+          "uiField": "world y",
+          "effectiveParams": {
+            "qx": 50,
+            "qy": 0,
+            "hasT": true
+          },
+          "uiParams": {
+            "world x": "0",
+            "world y": "0",
+            "Có transform T": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "world-svg-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "hasT",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "Có transform T",
+          "effectiveParams": {
+            "qx": 50,
+            "qy": 25,
+            "hasT": false
+          },
+          "uiParams": {
+            "world x": "0",
+            "world y": "0",
+            "Có transform T": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "vehicle-svg-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "gid",
+          "type": "select",
+          "from": "9",
+          "to": "7",
+          "uiField": "Session gid",
+          "effectiveParams": {
+            "gid": "7",
+            "variant": "chain"
+          },
+          "uiParams": {
+            "Session gid": "7",
+            "Alias map": "chain"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "vehicle-svg-project",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "chain",
+          "to": "cycle",
+          "uiField": "Alias map",
+          "effectiveParams": {
+            "gid": "9",
+            "variant": "cycle"
+          },
+          "uiParams": {
+            "Session gid": "7",
+            "Alias map": "cycle"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "route-polyline-simplify",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "mixed",
+          "to": "collinear",
+          "uiField": "Polyline",
+          "effectiveParams": {
+            "variant": "collinear"
+          },
+          "uiParams": {
+            "Polyline": "collinear"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "route-arrow-place",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "routeLen",
+          "type": "number",
+          "from": 600,
+          "to": 100,
+          "uiField": "Độ dài route (px)",
+          "effectiveParams": {
+            "routeLen": 100
+          },
+          "uiParams": {
+            "Độ dài route (px)": "100"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "viewbox-pan-zoom",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "factor",
+          "type": "number",
+          "from": 0.5,
+          "to": 0.3,
+          "uiField": "Factor",
+          "effectiveParams": {
+            "factor": 0.3,
+            "rx": 0.5,
+            "ry": 0.5
+          },
+          "uiParams": {
+            "Factor": "0.3",
+            "Tâm zoom X (0..1)": "0.5",
+            "Tâm zoom Y (0..1)": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "viewbox-pan-zoom",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "rx",
+          "type": "number",
+          "from": 0.5,
+          "to": 0,
+          "uiField": "Tâm zoom X (0..1)",
+          "effectiveParams": {
+            "factor": 0.5,
+            "rx": 0,
+            "ry": 0.5
+          },
+          "uiParams": {
+            "Factor": "0.3",
+            "Tâm zoom X (0..1)": "0",
+            "Tâm zoom Y (0..1)": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "viewbox-pan-zoom",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "ry",
+          "type": "number",
+          "from": 0.5,
+          "to": 0,
+          "uiField": "Tâm zoom Y (0..1)",
+          "effectiveParams": {
+            "factor": 0.5,
+            "rx": 0.5,
+            "ry": 0
+          },
+          "uiParams": {
+            "Factor": "0.3",
+            "Tâm zoom X (0..1)": "0",
+            "Tâm zoom Y (0..1)": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "parking-geometry-gen",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "perZone",
+          "type": "number",
+          "from": 2,
+          "to": 1,
+          "uiField": "Ô mỗi zone",
+          "effectiveParams": {
+            "perZone": 1,
+            "zones": "FB"
+          },
+          "uiParams": {
+            "Ô mỗi zone": "1",
+            "Zones": "FB"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "parking-geometry-gen",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "zones",
+          "type": "select",
+          "from": "FB",
+          "to": "AB",
+          "uiField": "Zones",
+          "effectiveParams": {
+            "perZone": 2,
+            "zones": "AB"
+          },
+          "uiParams": {
+            "Ô mỗi zone": "1",
+            "Zones": "AB"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "spot-ownership-map",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "spotId",
+          "type": "select",
+          "from": "C05",
+          "to": "D03",
+          "uiField": "spotId",
+          "effectiveParams": {
+            "spotId": "D03"
+          },
+          "uiParams": {
+            "spotId": "D03"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "parking-counts-derive",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "preset",
+          "type": "select",
+          "from": "mixed",
+          "to": "allEmpty",
+          "uiField": "Tập ô",
+          "effectiveParams": {
+            "preset": "allEmpty"
+          },
+          "uiParams": {
+            "Tập ô": "allEmpty"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "driver-flow-machine",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "step",
+          "type": "select",
+          "from": "nav",
+          "to": "select",
+          "uiField": "Input",
+          "effectiveParams": {
+            "step": "select"
+          },
+          "uiParams": {
+            "Input": "select"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "nav-goal-resolve",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "inbound",
+          "to": "inboundNoVeh",
+          "uiField": "Tình huống",
+          "effectiveParams": {
+            "variant": "inboundNoVeh"
+          },
+          "uiParams": {
+            "Tình huống": "inboundNoVeh"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "invalid-spot-recovery",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "outcome",
+          "type": "select",
+          "from": "secondOk",
+          "to": "firstOk",
+          "uiField": "Kết quả các alt",
+          "effectiveParams": {
+            "outcome": "firstOk"
+          },
+          "uiParams": {
+            "Kết quả các alt": "firstOk"
+          },
+          "frames": "4→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "parked-marker-fallback",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "fabricate",
+          "to": "observed",
+          "uiField": "Tình huống",
+          "effectiveParams": {
+            "variant": "observed"
+          },
+          "uiParams": {
+            "Tình huống": "observed"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "gate-line-derive",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "accY",
+          "type": "number",
+          "from": 6,
+          "to": -8,
+          "uiField": "acc.y (hướng xe tới)",
+          "effectiveParams": {
+            "accY": -8,
+            "degenerate": false
+          },
+          "uiParams": {
+            "acc.y (hướng xe tới)": "-8",
+            "Acc nằm trên vạch (accY=0)": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "gate-line-derive",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "degenerate",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Acc nằm trên vạch (accY=0)",
+          "effectiveParams": {
+            "accY": 6,
+            "degenerate": true
+          },
+          "uiParams": {
+            "acc.y (hướng xe tới)": "-8",
+            "Acc nằm trên vạch (accY=0)": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "parking-decision-resolve",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "variant",
+          "type": "select",
+          "from": "guiding",
+          "to": "occupiedOther",
+          "uiField": "Tình huống",
+          "effectiveParams": {
+            "variant": "occupiedOther"
+          },
+          "uiParams": {
+            "Tình huống": "occupiedOther"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "mock-scenario-emitter",
+          "pack": "frontend",
+          "scenario": "default",
+          "param": "scenario",
+          "type": "select",
+          "from": "normal",
+          "to": "stale",
+          "uiField": "Kịch bản",
+          "effectiveParams": {
+            "scenario": "stale"
+          },
+          "uiParams": {
+            "Kịch bản": "stale"
+          },
+          "frames": "5→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "mog2-foreground-mask",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "threshold",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "Ngưỡng |frame−bg|",
+          "effectiveParams": {
+            "threshold": 1,
+            "alpha": 0.2,
+            "reject_cast_shadows": true
+          },
+          "uiParams": {
+            "Ngưỡng |frame−bg|": "1",
+            "Learning rate nền": "0.2",
+            "Gộp marker 127 (cờ production)": true
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "mog2-foreground-mask",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "alpha",
+          "type": "number",
+          "from": 0.2,
+          "to": 0,
+          "uiField": "Learning rate nền",
+          "effectiveParams": {
+            "threshold": 3,
+            "alpha": 0,
+            "reject_cast_shadows": true
+          },
+          "uiParams": {
+            "Ngưỡng |frame−bg|": "1",
+            "Learning rate nền": "0",
+            "Gộp marker 127 (cờ production)": true
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "mog2-foreground-mask",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "reject_cast_shadows",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "Gộp marker 127 (cờ production)",
+          "effectiveParams": {
+            "threshold": 3,
+            "alpha": 0.2,
+            "reject_cast_shadows": false
+          },
+          "uiParams": {
+            "Ngưỡng |frame−bg|": "1",
+            "Learning rate nền": "0",
+            "Gộp marker 127 (cờ production)": false
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "temporal-motion-gate",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "T",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "Ngưỡng diff (motion_threshold)",
+          "effectiveParams": {
+            "T": 1
+          },
+          "uiParams": {
+            "Ngưỡng diff (motion_threshold)": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "roi-strict-context-mask",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "context_pad",
+          "type": "number",
+          "from": 1,
+          "to": 0,
+          "uiField": "Độ rộng dải context",
+          "effectiveParams": {
+            "context_pad": 0,
+            "required_scaled": 3
+          },
+          "uiParams": {
+            "Độ rộng dải context": "0",
+            "required px": "3"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "roi-strict-context-mask",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "required_scaled",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "required px",
+          "effectiveParams": {
+            "context_pad": 1,
+            "required_scaled": 1
+          },
+          "uiParams": {
+            "Độ rộng dải context": "0",
+            "required px": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "foreground-morphology",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "close_k",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "CLOSE kernel",
+          "effectiveParams": {
+            "close_k": 1
+          },
+          "uiParams": {
+            "CLOSE kernel": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "contour-geometry-filter",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "min_ratio",
+          "type": "number",
+          "from": 0.08,
+          "to": 0.01,
+          "uiField": "min fill ratio",
+          "effectiveParams": {
+            "min_ratio": 0.01
+          },
+          "uiParams": {
+            "min fill ratio": "0.01"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "cast-shadow-discriminator",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "att_lo",
+          "type": "number",
+          "from": 0.32,
+          "to": 0.05,
+          "uiField": "Attenuation min",
+          "effectiveParams": {
+            "att_lo": 0.05,
+            "att_hi": 0.62
+          },
+          "uiParams": {
+            "Attenuation min": "0.05",
+            "Attenuation max": "0.62"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "cast-shadow-discriminator",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "att_hi",
+          "type": "number",
+          "from": 0.62,
+          "to": 0.05,
+          "uiField": "Attenuation max",
+          "effectiveParams": {
+            "att_lo": 0.32,
+            "att_hi": 0.05
+          },
+          "uiParams": {
+            "Attenuation min": "0.05",
+            "Attenuation max": "0.05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "dark-foreground-rescue",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "marker_frac_min",
+          "type": "number",
+          "from": 0.08,
+          "to": 0,
+          "uiField": "marker frac min",
+          "effectiveParams": {
+            "marker_frac_min": 0
+          },
+          "uiParams": {
+            "marker frac min": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "motion-echo-suppression",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "iou_drop",
+          "type": "number",
+          "from": 0.25,
+          "to": 0,
+          "uiField": "IoU drop threshold",
+          "effectiveParams": {
+            "iou_drop": 0,
+            "hist_drop": 0.12
+          },
+          "uiParams": {
+            "IoU drop threshold": "0",
+            "hist drop threshold": "0.12"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "motion-echo-suppression",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "hist_drop",
+          "type": "number",
+          "from": 0.12,
+          "to": 0,
+          "uiField": "hist drop threshold",
+          "effectiveParams": {
+            "iou_drop": 0.25,
+            "hist_drop": 0
+          },
+          "uiParams": {
+            "IoU drop threshold": "0",
+            "hist drop threshold": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "occlusion-group-guard",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "area_mult",
+          "type": "number",
+          "from": 1.6,
+          "to": 1,
+          "uiField": "area ≥ k·median(refs)",
+          "effectiveParams": {
+            "area_mult": 1
+          },
+          "uiParams": {
+            "area ≥ k·median(refs)": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "watershed-blob-partition",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "ratio_max",
+          "type": "number",
+          "from": 1.8,
+          "to": 1,
+          "uiField": "ratio max",
+          "effectiveParams": {
+            "ratio_max": 1
+          },
+          "uiParams": {
+            "ratio max": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "merged-blob-assignment-guard",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "span",
+          "type": "number",
+          "from": 1.75,
+          "to": 0.5,
+          "uiField": "motion_trail_elongation_frames",
+          "effectiveParams": {
+            "span": 0.5
+          },
+          "uiParams": {
+            "motion_trail_elongation_frames": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "kalman-constant-velocity",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "beta",
+          "type": "number",
+          "from": 0.5,
+          "to": 0,
+          "uiField": "Gain β (demo)",
+          "effectiveParams": {
+            "beta": 0
+          },
+          "uiParams": {
+            "Gain β (demo)": "0"
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "prediction-age-decay",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "tau",
+          "type": "number",
+          "from": 0.25,
+          "to": 0.05,
+          "uiField": "τ decay",
+          "effectiveParams": {
+            "tau": 0.05
+          },
+          "uiParams": {
+            "τ decay": "0.05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "association-distance-gate",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "scale",
+          "type": "number",
+          "from": 2,
+          "to": 0.5,
+          "uiField": "velocity_gate_scale",
+          "effectiveParams": {
+            "scale": 0.5
+          },
+          "uiParams": {
+            "velocity_gate_scale": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "lapjv-assignment",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "cost_limit",
+          "type": "number",
+          "from": 0.9,
+          "to": 0.1,
+          "uiField": "cost_limit",
+          "effectiveParams": {
+            "cost_limit": 0.1
+          },
+          "uiParams": {
+            "cost_limit": "0.1"
+          },
+          "frames": "16→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "assignment-margin-ambiguity",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "margin_base",
+          "type": "number",
+          "from": 0.08,
+          "to": 0.01,
+          "uiField": "split_assignment_margin",
+          "effectiveParams": {
+            "margin_base": 0.01
+          },
+          "uiParams": {
+            "split_assignment_margin": "0.01"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "stale-anchor-reacquire",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "window",
+          "type": "number",
+          "from": 1.5,
+          "to": 0.5,
+          "uiField": "reacquire_max_seconds",
+          "effectiveParams": {
+            "window": 0.5
+          },
+          "uiParams": {
+            "reacquire_max_seconds": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "track-lifecycle",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "ttl",
+          "type": "number",
+          "from": 3,
+          "to": 1,
+          "uiField": "lost_ttl (frames)",
+          "effectiveParams": {
+            "ttl": 1
+          },
+          "uiParams": {
+            "lost_ttl (frames)": "1"
+          },
+          "frames": "6→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "hsv-lab-descriptor",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "q_min",
+          "type": "number",
+          "from": 0.5,
+          "to": 0,
+          "uiField": "quality ngưỡng giữ",
+          "effectiveParams": {
+            "q_min": 0
+          },
+          "uiParams": {
+            "quality ngưỡng giữ": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "tracklet-gallery-match",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "match_max",
+          "type": "number",
+          "from": 0.5,
+          "to": 0.1,
+          "uiField": "match threshold",
+          "effectiveParams": {
+            "match_max": 0.1
+          },
+          "uiParams": {
+            "match threshold": "0.1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "slot-roi-precompute",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "border",
+          "type": "number",
+          "from": 0.12,
+          "to": 0,
+          "uiField": "border_ignore_ratio",
+          "effectiveParams": {
+            "border": 0
+          },
+          "uiParams": {
+            "border_ignore_ratio": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "ensemble-threshold-voting",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "ratio_thr",
+          "type": "number",
+          "from": 0.2,
+          "to": 0.05,
+          "uiField": "ratio_thr",
+          "effectiveParams": {
+            "ratio_thr": 0.05
+          },
+          "uiParams": {
+            "ratio_thr": "0.05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "border-line-filter",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "span_min",
+          "type": "number",
+          "from": 0.45,
+          "to": 0.2,
+          "uiField": "line_min_span_ratio",
+          "effectiveParams": {
+            "span_min": 0.2
+          },
+          "uiParams": {
+            "line_min_span_ratio": "0.2"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "temporal-smoothing-dwell",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "gap_max",
+          "type": "number",
+          "from": 1.5,
+          "to": 0.5,
+          "uiField": "gap reset (s)",
+          "effectiveParams": {
+            "gap_max": 0.5
+          },
+          "uiParams": {
+            "gap reset (s)": "0.5"
+          },
+          "frames": "9→9",
+          "traceFrames1": 9,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "slot-overlap-geometry",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "vo_min",
+          "type": "number",
+          "from": 0.35,
+          "to": 0.1,
+          "uiField": "min_vehicle_overlap",
+          "effectiveParams": {
+            "vo_min": 0.1
+          },
+          "uiParams": {
+            "min_vehicle_overlap": "0.1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "slot-track-batch-match",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "bonus",
+          "type": "number",
+          "from": 0.15,
+          "to": 0,
+          "uiField": "incumbent bonus",
+          "effectiveParams": {
+            "bonus": 0
+          },
+          "uiParams": {
+            "incumbent bonus": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "arrival-claim-qualification",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "ovl_min",
+          "type": "number",
+          "from": 0.35,
+          "to": 0.1,
+          "uiField": "overlap ngưỡng",
+          "effectiveParams": {
+            "ovl_min": 0.1
+          },
+          "uiParams": {
+            "overlap ngưỡng": "0.1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "stop-dwell-detection",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "r95_max",
+          "type": "number",
+          "from": 1,
+          "to": 0.2,
+          "uiField": "r95 ngưỡng (demo)",
+          "effectiveParams": {
+            "r95_max": 0.2
+          },
+          "uiParams": {
+            "r95 ngưỡng (demo)": "0.2"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "departure-token-lifecycle",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "expand_s",
+          "type": "number",
+          "from": 1,
+          "to": 0.2,
+          "uiField": "expand_seconds",
+          "effectiveParams": {
+            "expand_s": 0.2
+          },
+          "uiParams": {
+            "expand_seconds": "0.2"
+          },
+          "frames": "7→7",
+          "traceFrames1": 7,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "predeparture-candidate-guard",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "margin",
+          "type": "number",
+          "from": 0.15,
+          "to": 0.05,
+          "uiField": "ambiguity margin",
+          "effectiveParams": {
+            "margin": 0.05
+          },
+          "uiParams": {
+            "ambiguity margin": "0.05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "recovery-batch-assignment",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "margin",
+          "type": "number",
+          "from": 0.15,
+          "to": 0.05,
+          "uiField": "recovery_ambiguity_margin",
+          "effectiveParams": {
+            "margin": 0.05
+          },
+          "uiParams": {
+            "recovery_ambiguity_margin": "0.05"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "handoff-entry-creation",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "lookahead",
+          "type": "number",
+          "from": 16,
+          "to": 4,
+          "uiField": "lookahead_frames",
+          "effectiveParams": {
+            "lookahead": 4
+          },
+          "uiParams": {
+            "lookahead_frames": "4"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "handoff-lapjv-matching",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "radius",
+          "type": "number",
+          "from": 10,
+          "to": 3,
+          "uiField": "prediction_radius",
+          "effectiveParams": {
+            "radius": 3
+          },
+          "uiParams": {
+            "prediction_radius": "3"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "overlap-simultaneous-pairing",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "radius",
+          "type": "number",
+          "from": 10,
+          "to": 2,
+          "uiField": "match radius",
+          "effectiveParams": {
+            "radius": 2
+          },
+          "uiParams": {
+            "match radius": "2"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "global-id-allocation",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "obs_min",
+          "type": "number",
+          "from": 5,
+          "to": 1,
+          "uiField": "fragment_obs_min",
+          "effectiveParams": {
+            "obs_min": 1
+          },
+          "uiParams": {
+            "fragment_obs_min": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "dormant-identity-reid",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "app_max",
+          "type": "number",
+          "from": 0.62,
+          "to": 0.1,
+          "uiField": "appearance max",
+          "effectiveParams": {
+            "app_max": 0.1
+          },
+          "uiParams": {
+            "appearance max": "0.1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "world-trajectory-match",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "score_min",
+          "type": "number",
+          "from": 0.5,
+          "to": 0.1,
+          "uiField": "score_min",
+          "effectiveParams": {
+            "score_min": 0.1
+          },
+          "uiParams": {
+            "score_min": "0.1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "camera-skew-synchronization",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "max_skew",
+          "type": "number",
+          "from": 120,
+          "to": 30,
+          "uiField": "max_skew_ms",
+          "effectiveParams": {
+            "max_skew": 30
+          },
+          "uiParams": {
+            "max_skew_ms": "30"
+          },
+          "frames": "5→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "latest-frame-mailbox",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "interval",
+          "type": "number",
+          "from": 0.15,
+          "to": 0.05,
+          "uiField": "stream_interval_s",
+          "effectiveParams": {
+            "interval": 0.05
+          },
+          "uiParams": {
+            "stream_interval_s": "0.05"
+          },
+          "frames": "9→9",
+          "traceFrames1": 9,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "1/1"
+        },
+        {
+          "lesson": "stale-evidence-health-gating",
+          "pack": "cv",
+          "scenario": "normal",
+          "param": "max_age",
+          "type": "number",
+          "from": 2,
+          "to": 0.5,
+          "uiField": "max_result_age_s",
+          "effectiveParams": {
+            "max_age": 0.5
+          },
+          "uiParams": {
+            "max_result_age_s": "0.5"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "camera-age-online-derivation",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "online_window_ms",
+          "type": "number",
+          "from": 5000,
+          "to": 500,
+          "uiField": "Cửa sổ online (ms)",
+          "effectiveParams": {
+            "online_window_ms": 500
+          },
+          "uiParams": {
+            "Cửa sổ online (ms)": "500"
+          },
+          "frames": "5→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "live-freshness-contract",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "max_age_s",
+          "type": "number",
+          "from": 5,
+          "to": 1,
+          "uiField": "Tuổi tối đa published (s)",
+          "effectiveParams": {
+            "max_age_s": 1,
+            "future_tol_s": 1
+          },
+          "uiParams": {
+            "Tuổi tối đa published (s)": "1",
+            "Dung sai tương lai (s)": "1"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "live-freshness-contract",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "future_tol_s",
+          "type": "number",
+          "from": 1,
+          "to": 0,
+          "uiField": "Dung sai tương lai (s)",
+          "effectiveParams": {
+            "max_age_s": 5,
+            "future_tol_s": 0
+          },
+          "uiParams": {
+            "Tuổi tối đa published (s)": "1",
+            "Dung sai tương lai (s)": "0"
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "source-mode-live-gating",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "live_mode",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "--live-mode",
+          "effectiveParams": {
+            "live_mode": true,
+            "replay_realtime": true
+          },
+          "uiParams": {
+            "--live-mode": true,
+            "--replay-realtime": true
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "source-mode-live-gating",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "replay_realtime",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "--replay-realtime",
+          "effectiveParams": {
+            "live_mode": false,
+            "replay_realtime": false
+          },
+          "uiParams": {
+            "--live-mode": true,
+            "--replay-realtime": false
+          },
+          "frames": "3→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "frame-cursor-monotonic-poll",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "poll_s",
+          "type": "number",
+          "from": 0.25,
+          "to": 0.1,
+          "uiField": "Poll interval (s)",
+          "effectiveParams": {
+            "poll_s": 0.1,
+            "stall_s": 5
+          },
+          "uiParams": {
+            "Poll interval (s)": "0.1",
+            "Ngưỡng \"không frame mới\" (s)": "5"
+          },
+          "frames": "6→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "frame-cursor-monotonic-poll",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "stall_s",
+          "type": "number",
+          "from": 5,
+          "to": 1,
+          "uiField": "Ngưỡng \"không frame mới\" (s)",
+          "effectiveParams": {
+            "poll_s": 0.25,
+            "stall_s": 1
+          },
+          "uiParams": {
+            "Poll interval (s)": "0.1",
+            "Ngưỡng \"không frame mới\" (s)": "1"
+          },
+          "frames": "6→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "observation-continuity-window",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "max_gap_s",
+          "type": "number",
+          "from": 1,
+          "to": 0.25,
+          "uiField": "Cửa sổ liên tục (s)",
+          "effectiveParams": {
+            "max_gap_s": 0.25
+          },
+          "uiParams": {
+            "Cửa sổ liên tục (s)": "0.25"
+          },
+          "frames": "6→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "measured-path-entry-rescue",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "max_gap_s",
+          "type": "number",
+          "from": 1,
+          "to": 0.25,
+          "uiField": "Gap tối đa giữa mẫu (s)",
+          "effectiveParams": {
+            "max_gap_s": 0.25,
+            "recency_s": 1
+          },
+          "uiParams": {
+            "Gap tối đa giữa mẫu (s)": "0.25",
+            "Recency so với source_time (s)": "1"
+          },
+          "frames": "5→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "measured-path-entry-rescue",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "recency_s",
+          "type": "number",
+          "from": 1,
+          "to": 0.25,
+          "uiField": "Recency so với source_time (s)",
+          "effectiveParams": {
+            "max_gap_s": 1,
+            "recency_s": 0.25
+          },
+          "uiParams": {
+            "Gap tối đa giữa mẫu (s)": "0.25",
+            "Recency so với source_time (s)": "0.25"
+          },
+          "frames": "5→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "qr-token-issuance-ttl",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "now_offset_s",
+          "type": "number",
+          "from": 100,
+          "to": 0,
+          "uiField": "now offset (s, từ base 10:00:00Z)",
+          "effectiveParams": {
+            "now_offset_s": 0,
+            "ttl_s": 120
+          },
+          "uiParams": {
+            "now offset (s, từ base 10:00:00Z)": "0",
+            "QR TTL (s)": "120"
+          },
+          "frames": "6→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "qr-token-issuance-ttl",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "ttl_s",
+          "type": "number",
+          "from": 120,
+          "to": 10,
+          "uiField": "QR TTL (s)",
+          "effectiveParams": {
+            "now_offset_s": 100,
+            "ttl_s": 10
+          },
+          "uiParams": {
+            "now offset (s, từ base 10:00:00Z)": "0",
+            "QR TTL (s)": "10"
+          },
+          "frames": "6→6",
+          "traceFrames1": 6,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "spot-reservation-availability",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "now_mono",
+          "type": "number",
+          "from": 102,
+          "to": 100,
+          "uiField": "now monotonic (s)",
+          "effectiveParams": {
+            "now_mono": 100,
+            "spot": "B02"
+          },
+          "uiParams": {
+            "now monotonic (s)": "100",
+            "Spot chọn": "B02"
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": false,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "spot-reservation-availability",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "spot",
+          "type": "select",
+          "from": "B02",
+          "to": "A01",
+          "uiField": "Spot chọn",
+          "effectiveParams": {
+            "now_mono": 102,
+            "spot": "A01"
+          },
+          "uiParams": {
+            "now monotonic (s)": "100",
+            "Spot chọn": "A01"
+          },
+          "frames": "4→4",
+          "traceFrames1": 4,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "3/3"
+        },
+        {
+          "lesson": "parked-evidence-dwell-legacy",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "confirm_s",
+          "type": "number",
+          "from": 2,
+          "to": 0.5,
+          "uiField": "Dwell xác nhận (s)",
+          "effectiveParams": {
+            "confirm_s": 0.5,
+            "v2_mode": false
+          },
+          "uiParams": {
+            "Dwell xác nhận (s)": "0.5",
+            "Snapshot là v2 (dead-path demo)": false
+          },
+          "frames": "5→5",
+          "traceFrames1": 5,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "parked-evidence-dwell-legacy",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "v2_mode",
+          "type": "boolean",
+          "from": false,
+          "to": true,
+          "uiField": "Snapshot là v2 (dead-path demo)",
+          "effectiveParams": {
+            "confirm_s": 2,
+            "v2_mode": true
+          },
+          "uiParams": {
+            "Dwell xác nhận (s)": "0.5",
+            "Snapshot là v2 (dead-path demo)": true
+          },
+          "frames": "5→3",
+          "traceFrames1": 3,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "2/2"
+        },
+        {
+          "lesson": "replay-timestamp-pairing",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "fault",
+          "type": "select",
+          "from": "none",
+          "to": "idx-gap",
+          "uiField": "Inject lỗi",
+          "effectiveParams": {
+            "fault": "idx-gap",
+            "realtime": true
+          },
+          "uiParams": {
+            "Inject lỗi": "idx-gap",
+            "--replay-realtime pacing": true
+          },
+          "frames": "13→13",
+          "traceFrames1": 13,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "6/6"
+        },
+        {
+          "lesson": "replay-timestamp-pairing",
+          "pack": "integration",
+          "scenario": "normal",
+          "param": "realtime",
+          "type": "boolean",
+          "from": true,
+          "to": false,
+          "uiField": "--replay-realtime pacing",
+          "effectiveParams": {
+            "fault": "none",
+            "realtime": false
+          },
+          "uiParams": {
+            "Inject lỗi": "idx-gap",
+            "--replay-realtime pacing": false
+          },
+          "frames": "13→12",
+          "traceFrames1": 12,
+          "traceDiff": true,
+          "traceThrow": null,
+          "uiChanged": true,
+          "checks": "6/6"
+        }
+      ],
+      "packVersions": {
+        "frontend": {
+          "mtime": "2026-10-04T08:35:12.374Z",
+          "sha256_16": "ee4682454f1f8b80"
+        },
+        "cv": {
+          "mtime": "2026-10-04T08:40:03.483Z",
+          "sha256_16": "27b693e84ff600d3"
+        },
+        "integration": {
+          "mtime": "2026-10-04T08:47:19.962Z",
+          "sha256_16": "4092aa839ac25e8d"
+        }
+      }
+    }
+  },
+  "paramDomEvidence": {
+    "file": {
+      "lesson": "vehicle-svg-project",
+      "scenario": "default",
+      "fields": [
+        {
+          "label": "Session gid",
+          "tag": "SELECT",
+          "optionCount": 3,
+          "options": [
+            {
+              "value": "9",
+              "text": "9"
+            },
+            {
+              "value": "7",
+              "text": "7"
+            },
+            {
+              "value": "5",
+              "text": "5"
+            }
+          ],
+          "selected": "9"
+        },
+        {
+          "label": "Alias map",
+          "tag": "SELECT",
+          "optionCount": 2,
+          "options": [
+            {
+              "value": "chain",
+              "text": "5→7→9 (chuỗi)"
+            },
+            {
+              "value": "cycle",
+              "text": "5→7→5 (chu trình)"
+            }
+          ],
+          "selected": "chain"
+        }
+      ],
+      "selects": [
+        "Session gid",
+        "Alias map"
+      ],
+      "fails": [],
+      "uiChanges": [
+        {
+          "field": "Session gid",
+          "from": "9",
+          "to": "7",
+          "changed": true
+        },
+        {
+          "field": "Alias map",
+          "from": "chain",
+          "to": "cycle",
+          "changed": true
+        }
+      ],
+      "ok": true
+    }
+  }
+}

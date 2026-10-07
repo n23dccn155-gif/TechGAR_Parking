@@ -1,0 +1,13 @@
+{
+  "id": "slot-binder-recovery-hiep3-f440",
+  "session": "session_hiep3",
+  "cam": 1,
+  "frame": 440,
+  "source": "raw",
+  "draw": [
+    {"type": "polygon", "pts": [[905,220],[958,222],[977,296],[920,296]], "color": "#eab308", "label": "D01 token gid1"},
+    {"type": "box", "xyxy": [883,145,967,227], "color": "#16a34a", "label": "lid8 recovered gid1"},
+    {"type": "box", "xyxy": [907,216,957,249], "color": "#dc2626", "label": "lid9 shadow khong gid"}
+  ],
+  "max_kb": 220
+}

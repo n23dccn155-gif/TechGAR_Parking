@@ -1,0 +1,424 @@
+## session_hiep1  (1049 frames, fps=6.529)
+  event line-counts [dòng]: {"local_track_lost": 10, "local_track_expired": 4}
+  member-sets [set]: 0 (opened=0, terminal-only=0, open-no-terminal=0) | last-terminal: exp=0 rec=0 | terminal rows=0 (repeat=0)
+  episodes [ep, proxy]: 0 (member-sets: 0, kind={}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {} | theo kind: {}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 0 ev / 0 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+
+## session_hiep2  (642 frames, fps=4.291)
+  event line-counts [dòng]: {"association_recovery_pending": 2, "merged_detection_frozen": 2, "local_track_lost": 16, "local_track_expired": 8}
+  member-sets [set]: 0 (opened=0, terminal-only=0, open-no-terminal=0) | last-terminal: exp=0 rec=0 | terminal rows=0 (repeat=0)
+  episodes [ep, proxy]: 0 (member-sets: 0, kind={}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {} | theo kind: {}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 2 ev / 1 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+
+## session_hiep3  (826 frames, fps=5.259)
+  event line-counts [dòng]: {"occlusion_group_expired": 4, "association_recovery_pending": 11, "merged_detection_frozen": 34, "local_track_lost": 18, "local_track_expired": 11}
+  member-sets [set]: 4 (opened=0, terminal-only=4, open-no-terminal=0) | last-terminal: exp=4 rec=0 | terminal rows=4 (repeat=0)
+  episodes [ep, proxy]: 3 (member-sets: 4, kind={"implicit-2": 3}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 3} | theo kind: {"implicit-2": {"occlusion_group_expired": 3}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 11 ev / 4 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [2, 4, 5] [implicit-2] f254→254 (0f/0.0s) open=0 exp=2 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [10, 12] [implicit-2] f265→265 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [4, 5] [implicit-2] f268→268 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_hiep_sang7  (817 frames, fps=6.115)
+  event line-counts [dòng]: {"occlusion_group_opened": 3, "occlusion_group_expired": 3, "association_recovery_pending": 15, "merged_detection_frozen": 13, "local_track_lost": 9, "local_track_expired": 2}
+  member-sets [set]: 3 (opened=3, terminal-only=0, open-no-terminal=0) | last-terminal: exp=3 rec=0 | terminal rows=3 (repeat=0)
+  episodes [ep, proxy]: 3 (member-sets: 3, kind={"active-2": 2, "implicit-2": 1}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"none": 1, "occlusion_group_expired": 2} | theo kind: {"active-2": {"none": 1, "occlusion_group_expired": 1}, "implicit-2": {"occlusion_group_expired": 1}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 15 ev / 8 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [46, 47, 48] [active-2] f614→617 (3f/0.5s) open=2 exp=2 rec=0 →occlusion_group_expired newid45=0
+    ep [46, 47] [active-2] f594→594 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=1
+    ep [46, 47] [implicit-2] f608→608 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_hiep_sang8  (929 frames, fps=6.375)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "association_recovery_pending": 12, "merged_detection_frozen": 9, "local_track_lost": 14, "local_track_expired": 8}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 12 ev / 4 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [37, 38] [implicit-2] f266→266 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [25, 28] [implicit-2] f642→642 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+
+## session_hiep_sang9  (727 frames, fps=5.914)
+  event line-counts [dòng]: {"occlusion_group_expired": 1, "split_assignment_deferred": 4, "association_recovery_pending": 20, "merged_detection_frozen": 8, "local_track_lost": 16, "local_track_expired": 6}
+  member-sets [set]: 1 (opened=0, terminal-only=1, open-no-terminal=0) | last-terminal: exp=1 rec=0 | terminal rows=1 (repeat=0)
+  episodes [ep, proxy]: 1 (member-sets: 1, kind={"implicit-2": 1}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 1} | theo kind: {"implicit-2": {"occlusion_group_expired": 1}}
+  split_deferred: 4 ev / 3 tracks (cost med=0.578, margin med=0.115)
+  recovery_pending: 20 ev / 9 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [61, 63] [implicit-2] f497→497 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+
+## session_hiep_thai1  (6050 frames, fps=6.97)
+  event line-counts [dòng]: {"occlusion_group_opened": 1, "occlusion_group_expired": 4, "split_assignment_deferred": 3, "association_recovery_pending": 26, "merged_detection_frozen": 71, "watershed_partition_provisional": 1, "local_track_lost": 51, "local_track_expired": 12}
+  member-sets [set]: 4 (opened=1, terminal-only=3, open-no-terminal=0) | last-terminal: exp=4 rec=0 | terminal rows=4 (repeat=0)
+  episodes [ep, proxy]: 5 (member-sets: 4, kind={"implicit-2": 4, "active-2": 1}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {"occlusion_group_expired": 4, "none": 1} | theo kind: {"implicit-2": {"occlusion_group_expired": 4}, "active-2": {"none": 1}}
+  split_deferred: 3 ev / 2 tracks (cost med=0.418, margin med=0.139)
+  recovery_pending: 26 ev / 13 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [4, 5] [implicit-2] f204→204 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [12, 13] [active-2] f536→536 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=0
+    ep [12, 13] [implicit-2] f549→549 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [9, 10] [implicit-2] f1047→1047 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [50, 53] [implicit-2] f5007→5007 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_hiep_thai2  (1 frames, fps=None)
+  event line-counts [dòng]: {}
+  member-sets [set]: 0 (opened=0, terminal-only=0, open-no-terminal=0) | last-terminal: exp=0 rec=0 | terminal rows=0 (repeat=0)
+  episodes [ep, proxy]: 0 (member-sets: 0, kind={}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {} | theo kind: {}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 0 ev / 0 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+
+## session_hiep_thai3  (5965 frames, fps=7.698)
+  event line-counts [dòng]: {"occlusion_group_opened": 7, "occlusion_group_recovered": 2, "occlusion_group_expired": 11, "split_assignment_deferred": 1, "association_recovery_pending": 81, "merged_detection_frozen": 140, "watershed_partition_provisional": 1, "local_track_lost": 70, "local_track_expired": 22}
+  member-sets [set]: 10 (opened=6, terminal-only=4, open-no-terminal=0) | last-terminal: exp=10 rec=0 | terminal rows=13 (repeat=2)
+  episodes [ep, proxy]: 19 (member-sets: 10, kind={"active-2": 7, "implicit-2": 12}, member-lost-during: 3, new-id≤45f-after: 6)
+  outcome [ep]: {"none": 6, "occlusion_group_recovered": 2, "occlusion_group_expired": 11} | theo kind: {"active-2": {"none": 6, "occlusion_group_recovered": 1}, "implicit-2": {"occlusion_group_recovered": 1, "occlusion_group_expired": 11}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.161, margin med=0.125)
+  recovery_pending: 81 ev / 28 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [47, 48] [active-2] f1119→1120 (1f/0.1s) open=1 exp=0 rec=1 →occlusion_group_recovered newid45=0
+    ep [18, 21] [active-2] f166→166 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=0 lost:[18, 21]
+    ep [18, 21] [implicit-2] f171→171 (0f/0.0s) open=0 exp=0 rec=1 →occlusion_group_recovered IMPLICIT newid45=0
+    ep [18, 21] [implicit-2] f252→252 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [18, 28] [implicit-2] f259→259 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [37, 38] [implicit-2] f950→950 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [47, 48] [active-2] f1114→1114 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=0
+    ep [47, 48] [implicit-2] f1146→1146 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [50, 51] [active-2] f1355→1355 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=0 lost:[50]
+    ep [50, 51] [implicit-2] f1368→1368 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_hiep_thai4  (5764 frames, fps=6.828)
+  event line-counts [dòng]: {"occlusion_group_opened": 1, "occlusion_group_expired": 8, "split_assignment_deferred": 3, "association_recovery_pending": 53, "merged_detection_frozen": 117, "watershed_partition_provisional": 4, "local_track_lost": 80, "local_track_expired": 29}
+  member-sets [set]: 8 (opened=1, terminal-only=7, open-no-terminal=0) | last-terminal: exp=8 rec=0 | terminal rows=8 (repeat=0)
+  episodes [ep, proxy]: 9 (member-sets: 8, kind={"active-2": 1, "implicit-2": 8}, member-lost-during: 1, new-id≤45f-after: 4)
+  outcome [ep]: {"none": 1, "occlusion_group_expired": 8} | theo kind: {"active-2": {"none": 1}, "implicit-2": {"occlusion_group_expired": 8}}
+  split_deferred: 3 ev / 1 tracks (cost med=0.298, margin med=0.144)
+  recovery_pending: 53 ev / 25 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [7, 8] [active-2] f573→573 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=1
+    ep [6, 7] [implicit-2] f577→577 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [7, 8] [implicit-2] f588→588 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [34, 37] [implicit-2] f1337→1337 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [38, 41] [implicit-2] f1590→1590 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [35, 36] [implicit-2] f1746→1746 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=3
+    ep [107, 109] [implicit-2] f3693→3693 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [102, 103] [implicit-2] f3916→3916 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [106, 108] [implicit-2] f4270→4270 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0 lost:[106]
+
+## session_hiep_thai5  (3977 frames, fps=6.208)
+  event line-counts [dòng]: {"occlusion_group_opened": 1, "occlusion_group_expired": 5, "split_assignment_deferred": 1, "association_recovery_pending": 36, "merged_detection_frozen": 50, "local_track_lost": 60, "local_track_expired": 15}
+  member-sets [set]: 5 (opened=1, terminal-only=4, open-no-terminal=0) | last-terminal: exp=5 rec=0 | terminal rows=5 (repeat=0)
+  episodes [ep, proxy]: 6 (member-sets: 5, kind={"implicit-2": 5, "active-2": 1}, member-lost-during: 0, new-id≤45f-after: 5)
+  outcome [ep]: {"occlusion_group_expired": 5, "none": 1} | theo kind: {"implicit-2": {"occlusion_group_expired": 5}, "active-2": {"none": 1}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.309, margin med=0.139)
+  recovery_pending: 36 ev / 17 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [20, 49] [implicit-2] f434→434 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=8
+    ep [52, 53] [implicit-2] f480→480 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [58, 67] [implicit-2] f1003→1003 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=3
+    ep [67, 77] [implicit-2] f1018→1018 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [117, 122] [active-2] f1771→1771 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=5
+    ep [117, 122] [implicit-2] f1785→1785 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_hiep_toi4  (620 frames, fps=4.679)
+  event line-counts [dòng]: {"association_recovery_pending": 5, "merged_detection_frozen": 3, "local_track_lost": 11, "local_track_expired": 4}
+  member-sets [set]: 0 (opened=0, terminal-only=0, open-no-terminal=0) | last-terminal: exp=0 rec=0 | terminal rows=0 (repeat=0)
+  episodes [ep, proxy]: 0 (member-sets: 0, kind={}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {} | theo kind: {}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 5 ev / 3 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+
+## session_hiep_toi5  (806 frames, fps=5.31)
+  event line-counts [dòng]: {"association_recovery_pending": 6, "merged_detection_frozen": 14, "local_track_lost": 14, "local_track_expired": 4}
+  member-sets [set]: 0 (opened=0, terminal-only=0, open-no-terminal=0) | last-terminal: exp=0 rec=0 | terminal rows=0 (repeat=0)
+  episodes [ep, proxy]: 0 (member-sets: 0, kind={}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {} | theo kind: {}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 6 ev / 3 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+
+## session_hiep_toi6  (865 frames, fps=5.691)
+  event line-counts [dòng]: {"occlusion_group_expired": 1, "association_recovery_pending": 6, "merged_detection_frozen": 7, "local_track_lost": 12, "local_track_expired": 4}
+  member-sets [set]: 1 (opened=0, terminal-only=1, open-no-terminal=0) | last-terminal: exp=1 rec=0 | terminal rows=1 (repeat=0)
+  episodes [ep, proxy]: 1 (member-sets: 1, kind={"implicit-2": 1}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {"occlusion_group_expired": 1} | theo kind: {"implicit-2": {"occlusion_group_expired": 1}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 6 ev / 2 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [81, 82] [implicit-2] f153→153 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_test1  (298 frames, fps=4.725)
+  event line-counts [dòng]: {"occlusion_group_opened": 16, "occlusion_group_expired": 100, "split_assignment_deferred": 19, "association_recovery_pending": 131, "merged_detection_frozen": 83, "watershed_partition_provisional": 1, "local_track_lost": 34, "local_track_expired": 19}
+  member-sets [set]: 100 (opened=16, terminal-only=84, open-no-terminal=0) | last-terminal: exp=100 rec=0 | terminal rows=100 (repeat=0)
+  episodes [ep, proxy]: 62 (member-sets: 100, kind={"active-2": 13, "implicit-2": 47, "ge3-covering": 2}, member-lost-during: 9, new-id≤45f-after: 60)
+  outcome [ep]: {"none": 8, "occlusion_group_expired": 54} | theo kind: {"active-2": {"none": 8, "occlusion_group_expired": 5}, "implicit-2": {"occlusion_group_expired": 47}, "ge3-covering": {"occlusion_group_expired": 2}}
+  split_deferred: 19 ev / 16 tracks (cost med=0.484, margin med=0.123)
+  recovery_pending: 131 ev / 54 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [59, 111, 116] [active-2] f97→100 (3f/0.6s) open=2 exp=2 rec=0 →occlusion_group_expired newid45=72 lost:[59]
+    ep [59, 108, 116, 136] [ge3-covering] f105→108 (3f/0.6s) open=2 exp=5 rec=0 →occlusion_group_expired newid45=66 lost:[108]
+    ep [53, 59, 65, 69, 76, 80, 82, 99, 111] [active-2] f89→90 (1f/0.2s) open=1 exp=7 rec=0 →occlusion_group_expired newid45=71 lost:[59]
+    ep [59, 69, 108, 109] [active-2] f92→93 (1f/0.2s) open=1 exp=2 rec=0 →occlusion_group_expired newid45=71 lost:[108]
+    ep [108, 109, 110, 111, 114, 118] [ge3-covering] f102→103 (1f/0.2s) open=0 exp=6 rec=0 →occlusion_group_expired newid45=66
+    ep [161, 163, 164, 187, 189] [implicit-2] f143→144 (1f/0.2s) open=0 exp=5 rec=0 →occlusion_group_expired IMPLICIT newid45=37 lost:[164]
+    ep [198, 206] [active-2] f168→169 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=14
+    ep [259, 260] [active-2] f241→242 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=42 lost:[260]
+    ep [33, 36] [active-2] f39→39 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=76
+    ep [33, 36] [implicit-2] f60→60 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=75
+
+## session_thai6  (5937 frames, fps=7.922)
+  event line-counts [dòng]: {"occlusion_group_opened": 25, "occlusion_group_recovered": 1, "occlusion_group_expired": 62, "split_assignment_deferred": 13, "association_recovery_pending": 219, "new_local_id_deferred_unresolved_merge": 3, "merged_detection_frozen": 198, "watershed_partition_provisional": 3, "local_track_lost": 101, "local_track_expired": 41}
+  member-sets [set]: 57 (opened=24, terminal-only=33, open-no-terminal=1) | last-terminal: exp=56 rec=0 | terminal rows=63 (repeat=2)
+  episodes [ep, proxy]: 67 (member-sets: 57, kind={"implicit-2": 37, "active-2": 25, "ge3-covering": 5}, member-lost-during: 12, new-id≤45f-after: 46)
+  outcome [ep]: {"occlusion_group_expired": 44, "none": 22, "occlusion_group_recovered": 1} | theo kind: {"implicit-2": {"occlusion_group_expired": 37}, "active-2": {"none": 22, "occlusion_group_expired": 3}, "ge3-covering": {"occlusion_group_recovered": 1, "occlusion_group_expired": 4}}
+  split_deferred: 13 ev / 11 tracks (cost med=0.592, margin med=0.141)
+  recovery_pending: 219 ev / 87 tracks | birth_veto: 3 ev / 2 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [13, 14, 15] [ge3-covering] f659→664 (5f/0.6s) open=0 exp=8 rec=0 →occlusion_group_expired newid45=5
+    ep [44, 49] [active-2] f2190→2191 (1f/0.1s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=4
+    ep [90, 91] [active-2] f2461→2462 (1f/0.1s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=26
+    ep [197, 200, 201, 202] [ge3-covering] f3086→3087 (1f/0.1s) open=0 exp=4 rec=0 →occlusion_group_expired newid45=4
+    ep [203, 210] [active-2] f3163→3164 (1f/0.1s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=7 lost:[203]
+    ep [1, 2] [implicit-2] f289→289 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [13, 15] [active-2] f641→641 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=4
+    ep [13, 14, 15] [ge3-covering] f648→648 (0f/0.0s) open=0 exp=1 rec=1 →occlusion_group_recovered newid45=4
+    ep [13, 15] [active-2] f652→652 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=4
+    ep [13, 15] [implicit-2] f681→681 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=3
+
+## session_thai7  (2872 frames, fps=7.732)
+  event line-counts [dòng]: {"occlusion_group_opened": 8, "occlusion_group_expired": 14, "split_assignment_deferred": 1, "association_recovery_pending": 71, "merged_detection_frozen": 194, "watershed_partition_provisional": 1, "local_track_lost": 59, "local_track_expired": 16}
+  member-sets [set]: 15 (opened=8, terminal-only=7, open-no-terminal=1) | last-terminal: exp=14 rec=0 | terminal rows=14 (repeat=0)
+  episodes [ep, proxy]: 21 (member-sets: 15, kind={"implicit-2": 13, "active-2": 8}, member-lost-during: 2, new-id≤45f-after: 11)
+  outcome [ep]: {"occlusion_group_expired": 14, "none": 7} | theo kind: {"implicit-2": {"occlusion_group_expired": 13}, "active-2": {"occlusion_group_expired": 1, "none": 7}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.183, margin med=0.132)
+  recovery_pending: 71 ev / 27 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [13, 14] [active-2] f118→119 (1f/0.1s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=1 lost:[14]
+    ep [12, 14] [implicit-2] f109→109 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [3, 5] [implicit-2] f187→187 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [12, 13] [active-2] f458→458 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=0
+    ep [12, 13] [implicit-2] f476→476 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [35, 38] [implicit-2] f503→503 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [26, 31] [implicit-2] f825→825 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [47, 48] [implicit-2] f875→875 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [35, 36] [active-2] f898→898 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=2
+    ep [35, 36] [implicit-2] f906→906 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## session_thai8  (1952 frames, fps=8.321)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 5, "association_recovery_pending": 11, "merged_detection_frozen": 65, "local_track_lost": 23, "local_track_expired": 9}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 5 ev / 4 tracks (cost med=0.524, margin med=0.135)
+  recovery_pending: 11 ev / 8 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [68, 69] [implicit-2] f1549→1549 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [23, 25] [implicit-2] f1815→1815 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+
+## reidfix_r0_session_hiep_thai5  (3977 frames, fps=2.244)
+  event line-counts [dòng]: {"occlusion_group_opened": 2, "occlusion_group_expired": 7, "split_assignment_deferred": 2, "association_recovery_pending": 40, "merged_detection_frozen": 106, "local_track_lost": 61, "local_track_expired": 14}
+  member-sets [set]: 7 (opened=2, terminal-only=5, open-no-terminal=0) | last-terminal: exp=7 rec=0 | terminal rows=7 (repeat=0)
+  episodes [ep, proxy]: 9 (member-sets: 7, kind={"implicit-2": 7, "active-2": 2}, member-lost-during: 0, new-id≤45f-after: 5)
+  outcome [ep]: {"occlusion_group_expired": 7, "none": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 7}, "active-2": {"none": 2}}
+  split_deferred: 2 ev / 2 tracks (cost med=0.649, margin med=0.141)
+  recovery_pending: 40 ev / 21 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [59, 61] [implicit-2] f439→439 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=10
+    ep [67, 78] [active-2] f996→996 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=8
+    ep [67, 78] [implicit-2] f1007→1007 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [135, 139] [active-2] f1771→1771 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=4
+    ep [135, 139] [implicit-2] f1785→1785 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [139, 143] [implicit-2] f1796→1796 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [217, 219] [implicit-2] f3781→3781 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [158, 159] [implicit-2] f3921→3921 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=17
+    ep [161, 169] [implicit-2] f3966→3966 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## reidfix_r0_session_thai6  (5937 frames, fps=2.711)
+  event line-counts [dòng]: {"occlusion_group_opened": 22, "occlusion_group_recovered": 3, "occlusion_group_expired": 90, "split_assignment_deferred": 23, "association_recovery_pending": 195, "new_local_id_deferred_unresolved_merge": 1, "merged_detection_frozen": 116, "watershed_partition_provisional": 3, "local_track_lost": 104, "local_track_expired": 42}
+  member-sets [set]: 64 (opened=20, terminal-only=44, open-no-terminal=0) | last-terminal: exp=64 rec=0 | terminal rows=93 (repeat=8)
+  episodes [ep, proxy]: 63 (member-sets: 64, kind={"implicit-2": 36, "active-2": 19, "ge3-covering": 8}, member-lost-during: 5, new-id≤45f-after: 37)
+  outcome [ep]: {"occlusion_group_expired": 44, "none": 16, "occlusion_group_recovered": 3} | theo kind: {"implicit-2": {"occlusion_group_expired": 33, "occlusion_group_recovered": 3}, "active-2": {"none": 16, "occlusion_group_expired": 3}, "ge3-covering": {"occlusion_group_expired": 8}}
+  split_deferred: 23 ev / 16 tracks (cost med=0.491, margin med=0.135)
+  recovery_pending: 195 ev / 80 tracks | birth_veto: 1 ev / 1 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [15, 16, 17, 18, 21, 22] [ge3-covering] f716→727 (11f/4.1s) open=1 exp=16 rec=0 →occlusion_group_expired newid45=1
+    ep [11, 12, 15, 16, 17, 18] [ge3-covering] f686→696 (10f/3.7s) open=0 exp=13 rec=0 →occlusion_group_expired newid45=5
+    ep [11, 12, 13] [ge3-covering] f669→676 (7f/2.6s) open=0 exp=8 rec=0 →occlusion_group_expired newid45=7
+    ep [42, 43, 48] [active-2] f2189→2191 (2f/0.7s) open=2 exp=2 rec=0 →occlusion_group_expired newid45=5
+    ep [174, 176, 178] [ge3-covering] f2848→2849 (1f/0.4s) open=1 exp=2 rec=0 →occlusion_group_expired newid45=23
+    ep [216, 217] [active-2] f3082→3083 (1f/0.4s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=0
+    ep [295, 298] [active-2] f5639→5640 (1f/0.4s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=2
+    ep [358, 359, 364] [implicit-2] f5925→5926 (1f/0.4s) open=0 exp=2 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [1, 2] [implicit-2] f286→286 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [11, 12] [active-2] f603→603 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=2
+
+## reidfix_r0_session_thai7  (2872 frames, fps=4.681)
+  event line-counts [dòng]: {"occlusion_group_opened": 9, "occlusion_group_expired": 17, "association_recovery_pending": 77, "merged_detection_frozen": 117, "watershed_partition_provisional": 1, "local_track_lost": 51, "local_track_expired": 17}
+  member-sets [set]: 17 (opened=9, terminal-only=8, open-no-terminal=0) | last-terminal: exp=17 rec=0 | terminal rows=17 (repeat=0)
+  episodes [ep, proxy]: 20 (member-sets: 17, kind={"implicit-2": 11, "active-2": 9}, member-lost-during: 4, new-id≤45f-after: 13)
+  outcome [ep]: {"occlusion_group_expired": 15, "none": 5} | theo kind: {"implicit-2": {"occlusion_group_expired": 11}, "active-2": {"occlusion_group_expired": 4, "none": 5}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 77 ev / 29 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [32, 35] [active-2] f426→427 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=4
+    ep [61, 62] [active-2] f1379→1380 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=0 lost:[61]
+    ep [95, 99] [active-2] f2530→2531 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=5
+    ep [46, 47] [active-2] f2586→2587 (1f/0.2s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=1
+    ep [103, 105, 106] [implicit-2] f2616→2617 (1f/0.2s) open=0 exp=3 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [15, 19] [implicit-2] f111→111 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [9, 10] [implicit-2] f488→488 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [28, 29] [active-2] f903→903 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=1 lost:[28]
+    ep [28, 29] [implicit-2] f920→920 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [28, 33] [implicit-2] f977→977 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## reidfix_r0_session_thai8  (1952 frames, fps=4.516)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 1, "association_recovery_pending": 17, "merged_detection_frozen": 41, "local_track_lost": 23, "local_track_expired": 9}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.257, margin med=0.139)
+  recovery_pending: 17 ev / 6 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [70, 71] [implicit-2] f1548→1548 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [24, 26] [implicit-2] f1815→1815 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+
+## reidfix_r0b_session_thai8  (1952 frames, fps=2.644)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 1, "association_recovery_pending": 17, "merged_detection_frozen": 41, "local_track_lost": 23, "local_track_expired": 9}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.257, margin med=0.139)
+  recovery_pending: 17 ev / 6 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [70, 71] [implicit-2] f1548→1548 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [24, 26] [implicit-2] f1815→1815 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+
+## reidfix_r1_session_hiep_thai5  (3977 frames, fps=2.411)
+  event line-counts [dòng]: {"occlusion_group_opened": 2, "occlusion_group_expired": 7, "split_assignment_deferred": 2, "association_recovery_pending": 40, "merged_detection_frozen": 106, "local_track_lost": 61, "local_track_expired": 14}
+  member-sets [set]: 7 (opened=2, terminal-only=5, open-no-terminal=0) | last-terminal: exp=7 rec=0 | terminal rows=7 (repeat=0)
+  episodes [ep, proxy]: 9 (member-sets: 7, kind={"implicit-2": 7, "active-2": 2}, member-lost-during: 0, new-id≤45f-after: 5)
+  outcome [ep]: {"occlusion_group_expired": 7, "none": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 7}, "active-2": {"none": 2}}
+  split_deferred: 2 ev / 2 tracks (cost med=0.649, margin med=0.141)
+  recovery_pending: 40 ev / 21 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [59, 61] [implicit-2] f439→439 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=10
+    ep [67, 78] [active-2] f996→996 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=8
+    ep [67, 78] [implicit-2] f1007→1007 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [135, 139] [active-2] f1771→1771 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=4
+    ep [135, 139] [implicit-2] f1785→1785 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [139, 143] [implicit-2] f1796→1796 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [217, 219] [implicit-2] f3781→3781 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [158, 159] [implicit-2] f3921→3921 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=17
+    ep [161, 169] [implicit-2] f3966→3966 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+## reidfix_r1_session_hiep_thai5.log  (0 frames, fps=None)
+  ERROR: no predictions.jsonl
+
+## reidfix_r1_session_thai6  (5937 frames, fps=2.913)
+  event line-counts [dòng]: {"occlusion_group_opened": 22, "occlusion_group_recovered": 2, "occlusion_group_expired": 84, "split_assignment_deferred": 23, "association_recovery_pending": 186, "new_local_id_deferred_unresolved_merge": 1, "merged_detection_frozen": 116, "watershed_partition_provisional": 3, "local_track_lost": 106, "local_track_expired": 42}
+  member-sets [set]: 58 (opened=20, terminal-only=38, open-no-terminal=0) | last-terminal: exp=58 rec=0 | terminal rows=86 (repeat=7)
+  episodes [ep, proxy]: 57 (member-sets: 58, kind={"implicit-2": 32, "active-2": 20, "ge3-covering": 5}, member-lost-during: 8, new-id≤45f-after: 34)
+  outcome [ep]: {"occlusion_group_expired": 38, "none": 17, "occlusion_group_recovered": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 30, "occlusion_group_recovered": 2}, "active-2": {"none": 17, "occlusion_group_expired": 3}, "ge3-covering": {"occlusion_group_expired": 5}}
+  split_deferred: 23 ev / 17 tracks (cost med=0.491, margin med=0.135)
+  recovery_pending: 186 ev / 76 tracks | birth_veto: 1 ev / 1 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [15, 16, 17, 18, 21, 22] [ge3-covering] f716→727 (11f/3.8s) open=1 exp=16 rec=0 →occlusion_group_expired newid45=1
+    ep [11, 12, 15, 16, 17, 18] [ge3-covering] f686→696 (10f/3.4s) open=0 exp=13 rec=0 →occlusion_group_expired newid45=5
+    ep [11, 12, 13] [ge3-covering] f669→676 (7f/2.4s) open=0 exp=8 rec=0 →occlusion_group_expired newid45=7
+    ep [42, 43, 48] [active-2] f2189→2191 (2f/0.7s) open=2 exp=2 rec=0 →occlusion_group_expired newid45=3
+    ep [214, 215] [active-2] f3082→3083 (1f/0.3s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=0
+    ep [231, 235, 236] [active-2] f4029→4030 (1f/0.3s) open=1 exp=2 rec=0 →occlusion_group_expired newid45=0
+    ep [356, 357, 362] [implicit-2] f5925→5926 (1f/0.3s) open=0 exp=2 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [1, 2] [implicit-2] f286→286 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [11, 12] [active-2] f603→603 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=2
+    ep [11, 12] [implicit-2] f609→609 (0f/0.0s) open=0 exp=0 rec=1 →occlusion_group_recovered IMPLICIT newid45=2
+
+## reidfix_r1_session_thai6.log  (0 frames, fps=None)
+  ERROR: no predictions.jsonl
+
+## reidfix_r1_session_thai7  (2872 frames, fps=2.6)
+  event line-counts [dòng]: {"occlusion_group_opened": 7, "occlusion_group_expired": 13, "association_recovery_pending": 65, "merged_detection_frozen": 115, "watershed_partition_provisional": 1, "local_track_lost": 57, "local_track_expired": 16}
+  member-sets [set]: 13 (opened=7, terminal-only=6, open-no-terminal=0) | last-terminal: exp=13 rec=0 | terminal rows=13 (repeat=0)
+  episodes [ep, proxy]: 17 (member-sets: 13, kind={"implicit-2": 10, "active-2": 7}, member-lost-during: 3, new-id≤45f-after: 11)
+  outcome [ep]: {"occlusion_group_expired": 13, "none": 4} | theo kind: {"implicit-2": {"occlusion_group_expired": 10}, "active-2": {"occlusion_group_expired": 3, "none": 4}}
+  split_deferred: 0 ev / 0 tracks (cost med=None, margin med=None)
+  recovery_pending: 65 ev / 26 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [32, 35] [active-2] f426→427 (1f/0.4s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=4
+    ep [61, 62] [active-2] f1379→1380 (1f/0.4s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=0 lost:[61]
+    ep [46, 47] [active-2] f2586→2587 (1f/0.4s) open=1 exp=1 rec=0 →occlusion_group_expired newid45=1
+    ep [15, 19] [implicit-2] f111→111 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=2
+    ep [9, 10] [implicit-2] f488→488 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [28, 29] [active-2] f903→903 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=1 lost:[28]
+    ep [28, 29] [implicit-2] f920→920 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [28, 33] [implicit-2] f977→977 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [60, 61] [implicit-2] f1447→1447 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+    ep [36, 37] [active-2] f1851→1851 (0f/0.0s) open=1 exp=0 rec=0 →none newid45=1
+
+## reidfix_r1_session_thai7.log  (0 frames, fps=None)
+  ERROR: no predictions.jsonl
+
+## reidfix_r1_session_thai8  (1952 frames, fps=2.487)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 1, "association_recovery_pending": 13, "merged_detection_frozen": 47, "local_track_lost": 29, "local_track_expired": 11}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.257, margin med=0.139)
+  recovery_pending: 13 ev / 6 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [70, 71] [implicit-2] f1548→1548 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [24, 26] [implicit-2] f1815→1815 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+
+## reidfix_r1_session_thai8.log  (0 frames, fps=None)
+  ERROR: no predictions.jsonl
+
+## reidfix_r1b_session_thai8  (1952 frames, fps=2.885)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 1, "association_recovery_pending": 13, "merged_detection_frozen": 47, "local_track_lost": 29, "local_track_expired": 11}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 1)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.257, margin med=0.139)
+  recovery_pending: 13 ev / 6 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [70, 71] [implicit-2] f1548→1548 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [24, 26] [implicit-2] f1815→1815 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=1
+
+## reidfix_r1b_session_thai8.log  (0 frames, fps=None)
+  ERROR: no predictions.jsonl
+
+## runtime_session_bt  (1529 frames, fps=4.052)
+  event line-counts [dòng]: {"occlusion_group_expired": 2, "split_assignment_deferred": 1, "association_recovery_pending": 10, "merged_detection_frozen": 45, "local_track_lost": 20, "local_track_expired": 7}
+  member-sets [set]: 2 (opened=0, terminal-only=2, open-no-terminal=0) | last-terminal: exp=2 rec=0 | terminal rows=2 (repeat=0)
+  episodes [ep, proxy]: 2 (member-sets: 2, kind={"implicit-2": 2}, member-lost-during: 0, new-id≤45f-after: 0)
+  outcome [ep]: {"occlusion_group_expired": 2} | theo kind: {"implicit-2": {"occlusion_group_expired": 2}}
+  split_deferred: 1 ev / 1 tracks (cost med=0.75, margin med=0.124)
+  recovery_pending: 10 ev / 7 tracks | birth_veto: 0 ev / 0 pairs
+  [GT] N/A — csv header-only, 0 rows
+    ep [55, 56] [implicit-2] f943→943 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+    ep [55, 57] [implicit-2] f947→947 (0f/0.0s) open=0 exp=1 rec=0 →occlusion_group_expired IMPLICIT newid45=0
+
+== TỔNG (mọi session-dir) ==
+episodes: 386 | outcome: {'occlusion_group_expired': 285, 'none': 93, 'occlusion_group_recovered': 8}
+== TỔNG dedup nguồn-video (1 dir đầu mỗi source) ==
+sources: 20 | episodes: 203 | outcome: {'occlusion_group_expired': 153, 'none': 47, 'occlusion_group_recovered': 3}
+kinds: {'implicit-2': 138, 'active-2': 58, 'ge3-covering': 7}
+  implicit-2: {'occlusion_group_expired': 137, 'occlusion_group_recovered': 1}
+  active-2: {'none': 47, 'occlusion_group_expired': 10, 'occlusion_group_recovered': 1}
+  ge3-covering: {'occlusion_group_expired': 6, 'occlusion_group_recovered': 1}

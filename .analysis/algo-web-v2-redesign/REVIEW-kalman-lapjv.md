@@ -1,0 +1,5 @@
+# REVIEW kalman-lapjv (builder-a, Task 6)
+
+- Verify OK: KF(4,2) CV + noise diag[2,2,12,12] (v=6×pos — đúng câu "gấp sáu lần") (:440-448), max_prediction_age 0.40 → pin last_measured + events (:77,1654-1684), reacquire 1.5/3.0 + `association_rejected_stale_track` (:68-69,1644), gate=speed·(invis+1)·2+extent floor max(24,ext) (:1214-30), stale-anchor gate riêng 0.30·hypot(clean) (:1701), appearance min(hist,tracklet) + 0.30/0.22 stale (:1715-37), area [0.35,2.80] clean size (:1749-55), cost 0.45/0.25/0.20/0.10 + ô 10.0 (:1615,1761-66), lapjv cost_limit 0.90 (:1908), merged ±12px + ≥1.60×median + motion-trail exemption (:1830-89), margin 0.08×(2−lineage) + split_deferred/recovery_pending (:1914-85), clear run 3 (:81).
+- **Figure verified thật**: predictions.jsonl thai1 f1407 — lid18 `frozen_ambiguous` vel [0,−14.16] ≈ caption "14 px/f" chính-xác; lid20 frozen_ambiguous; box vẽ khớp.
+- Nit (không-sai): ceiling thực `180·min(1.25,1+min(invis,15)/60)` — trang bỏ clamp min(invis,15); post-margin có fast-path `clear_evidence` đóng sớm interval — trang chỉ nói "cần 3 frame sạch". Cả hai là rút-gọn chấp-nhận được.

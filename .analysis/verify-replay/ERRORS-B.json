@@ -1,0 +1,426 @@
+{
+ "owner": "builder-b",
+ "spec": "ERRORS Â§5: typeâˆˆ19-enum, severity S1/S2/S3, confidence HIGH/MED/LOW, status CONFIRMED/UNSURE; OBSERVED/PASS/EXPECTED = observations khong tinh error; churn != identity loss",
+ "coverage": {
+  "verify_cur_session_hiep_toi6": {
+   "sheets": "30/30 + 8/8 events",
+   "union_unique_cam_frame": 316,
+   "total_frames": 865
+  },
+  "verify_cur_session_hiep1": {
+   "sheets": "20/20 + 16/16 events",
+   "union_unique_cam_frame": 250,
+   "total_frames": 1049
+  },
+  "sampling": "uniform 1f/2s/cam + flagged windows Â±15 + events dense step5",
+  "windows_skipped": 0,
+  "thai4": {
+   "sheets": 237,
+   "sheets_viewed": 237,
+   "cells": 2132,
+   "cam1_frames": 1066,
+   "cam2_frames": 1066,
+   "skipped": 0
+  }
+ },
+ "errors": [
+  {
+   "id": "E-B-001",
+   "type": "ID_FRAGMENT/NEW_ID",
+   "status": "CONFIRMED",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "both (burst cam2)",
+   "frame_idx": "97-130",
+   "t_sec": "3.9-5.2 @25fps",
+   "desc": "Stale-association purge mass: 53 tentative spawn (cam2:29-48+) + 9 lost (cam1:9; cam2:47,57,58,60,62,76,77,81); nobs 7->46 @f110. Slots occupied ~29-30 latch â€” final occupancy output khong hong. identity_impact UNVERIFIED (GT rong).",
+   "data": "assoc_rejected_stale_track x439, assoc_rejected_stale_prediction x365, stale_prediction_replaced_by_measurement x75, track_frozen_stationary x75, provisional_trajectory_forgotten x46, global_id_created x1",
+   "repro": {
+    "cmd": ".\\.venv\\Scripts\\python.exe experiment_test\\verify\\make_sheets.py --session experiment_test\\output\\verify_cur_session_hiep_toi6 --video-dir experiment_test\\output\\session_hiep_toi6 --cam both --grid 3x3 --frames \"97-130\"",
+    "cells": "sheets_cur/verify_cur_session_hiep_toi6_events/sheet_0002.jpg cells (cam1 f97,102,107,112; cam2 f97,102,107,112) + sheet_0003.jpg cells f122,127 cam1"
+   },
+   "cause_suspect": "tracking/assignment",
+   "config_era_suspected": false,
+   "cause_note": "association-layer stale sweep -> respawn; V2 ALIGNED"
+  },
+  {
+   "id": "E-B-002",
+   "type": "ID_FRAGMENT/NEW_ID",
+   "status": "CONFIRMED",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "cam1 burst + cam2 lost",
+   "frame_idx": "596-612",
+   "t_sec": "23.8-24.5",
+   "desc": "Burst thu-2 cung signature: 7 tentative spawn (cam1:25-31) + 1 lost (cam2:85); events rejected_stale_track x78, frozen_stationary x15, handoff_rejected x2, dormant_reid_rejected x3. identity_impact UNVERIFIED.",
+   "repro": {
+    "cmd": "make_sheets.py --session experiment_test\\output\\verify_cur_session_hiep_toi6 --video-dir experiment_test\\output\\session_hiep_toi6 --cam both --frames \"596-612\"",
+    "cells": "sheets_cur/verify_cur_session_hiep_toi6_events/sheet_0005.jpg cells cam1/cam2 f601,606,611"
+   },
+   "cause_suspect": "tracking/assignment",
+   "config_era_suspected": false,
+   "cause_note": "cung purge-respawn signature E-B-001"
+  },
+  {
+   "id": "E-B-003",
+   "type": "GHOST_TRACK",
+   "status": "UNSURE",
+   "severity": "S3",
+   "confidence": "MED",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "cam1",
+   "frame_idx": "~611-751",
+   "t_sec": "~24-30 sustained",
+   "desc": "G48 coasting ~140f lien-tuc tren xe nua-ngoai-ROI (boundary). Khong phan theo mau â€” semantics: coasting=prediction giu khong re-match. Can A phan coast/occlusion TTL truoc khi ket luan ghost.",
+   "repro": {
+    "cmd": "make_sheets.py --session experiment_test\\output\\verify_cur_session_hiep_toi6 --video-dir experiment_test\\output\\session_hiep_toi6 --cam 1 --frames \"611-751\"",
+    "cells": "sheets_cur/verify_cur_session_hiep_toi6/sheet_0024.jpg..sheet_0030.jpg cam1 cells f611-751"
+   },
+   "cause_suspect": "local-lifecycle",
+   "config_era_suspected": false,
+   "cause_note": "boundary half-visible car -> coasting sustained; hoac thieu coast-TTL (cho A verdict)"
+  },
+  {
+   "id": "E-B-004",
+   "type": "DUPLICATE_TRACK",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "status": "CONFIRMED",
+   "session": "session_hiep_thai4",
+   "camera": "cam1",
+   "frame_range": "317-343, 769-796, 1392-1418, 2349-2375, 2537-2565, 4046-4082, 5736-5761",
+   "time_s": "~12-230",
+   "ids": "lid1+2 (27f); lid9+10+11 triple (f769-796); lid84+86 (22f); lid114+117 (26f) — 59 pairs total both cams",
+   "image_vs_prediction": "2-3 track boxes overlap same physical car (IoU .24-.61), coasting/frozen_ambiguous coexisting — lineage split not merged",
+   "measurement": "IoU>0.4 coexisting lids, data-scanned full 5764f",
+   "repro": "sheets_cur/verify_cur_session_hiep_thai4/sheet_0102.jpg (f2349-2375) + sheet_0028-29 (f769-796); make_sheets.py --windows-file flags/verify_cur_session_hiep_thai4.allwindows.txt --window-step 5",
+   "cause_suspect": "tracking/association",
+   "config_era_suspected": false,
+   "identity_impact": "UNVERIFIED (0 slot conflicts)",
+   "patch_recommendation": null
+  },
+  {
+   "id": "E-B-005",
+   "type": "DUPLICATE_TRACK",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "status": "CONFIRMED",
+   "session": "session_hiep_thai4",
+   "camera": "cam2",
+   "frame_range": "878-898,1208-1231,1342-1369,3101-3138,4601-4628,4998-5019,5449-5481",
+   "time_s": "~35-230",
+   "ids": "lid97+99 (33f); lid36+37 (28f); lid97+98 (25f); lid28+31 (24f); lid117+118 (24f); lid123+125 (22f); lid15+17 (21f)",
+   "image_vs_prediction": "duplicate coasting/frozen boxes on same physical cars, 368 dup-frames cam2",
+   "measurement": "IoU>0.4 pairs persistent 21-33f",
+   "repro": "sheets sheet_0132-134, sheet_0199-200, sheet_0236-237",
+   "cause_suspect": "tracking/association",
+   "config_era_suspected": false,
+   "identity_impact": "UNVERIFIED",
+   "patch_recommendation": null
+  },
+  {
+   "id": "E-B-006",
+   "type": "GHOST_TRACK",
+   "severity": "S3",
+   "confidence": "MED",
+   "status": "UNSURE",
+   "session": "session_hiep_thai4",
+   "camera": "cam2",
+   "frame_range": "5736-5761 + scattered boundary",
+   "time_s": "~230",
+   "ids": "frozen_ambiguous boxes on empty walkway right-edge",
+   "image_vs_prediction": "stacked magenta labels on empty wood/floor area (no visible object)",
+   "measurement": "visual stacked labels; obs suspended so labels may be episode markers — needs A semantics",
+   "repro": "sheet_0236 cells f5736-5761",
+   "cause_suspect": "local-lifecycle",
+   "config_era_suspected": false,
+   "identity_impact": "UNVERIFIED",
+   "patch_recommendation": null
+  },
+  {
+   "id": "E-B-007",
+   "type": "ID_FRAGMENT/NEW_ID (UNSURE-type: pattern confirmed, same-vehicle claim unresolved)",
+   "severity": "S2",
+   "confidence": "LOW-MED",
+   "status": "UNSURE",
+   "session": "session_hiep_thai4",
+   "camera": "cam1+cam2",
+   "frame_range": "whole session",
+   "time_s": "0-230",
+   "ids": "light-blue colored car(s): lids {10,11,19,23,...} sequential across stop/move cycles",
+   "image_vs_prediction": "new-ID pattern CONFIRMED (successive lids on light-blue vehicles), but same-physical-car linkage UNSURE: lid19/lid23 anchors differ from lid10/11 positions; raw pixel proximity alone does not establish identity across cycles",
+   "measurement": "228 ID_FRAGMENT flags + visual lid succession; no world-space/appearance continuity proof",
+   "repro": "sheets 26-29 (lid10), 62 (lid19), 132-134 (lid23)",
+   "cause_suspect": "reid/lifecycle",
+   "config_era_suspected": false,
+   "identity_impact": "UNVERIFIED - fragmentation pattern true; physical identity harm not proven (needs world-space + appearance/timeline)",
+   "patch_recommendation": null,
+   "note_a_audit": "A/V5-A.md: lid19 & lid23 anchors differ -> downgrade same-car claim to UNSURE; only new-ID pattern is confirmed"
+  },
+  {
+   "id": "E-B-008",
+   "type": "DUPLICATE_TRACK",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "status": "CONFIRMED",
+   "session": "session_hiep_thai3",
+   "camera": "cam1",
+   "frame_range": "1296-1314, 2024-2041, 2290-2435, 2709-2783, 2881-2906",
+   "ids": "lid4+5 (.99), lid18+21+22 triple (.91-.97), lid23+24+25+27 (.65-.92), lid28+31 (.77), lid13+14+15, lid40+43 / lid44+48 / lid41+57 (.48-.76 in burst), lid59+61 (.44), lid68+69 (.84)",
+   "image_vs_prediction": "2-3 overlapping boxes on one physical car; sheets 0093/0096 black diagonal car, 0114 coasting cluster, 0078",
+   "measurement": "IoU>0.4 same-frame pairs on predictions.jsonl observations (bbox xywh); 14+ distinct pair-clusters",
+   "repro": "sheets_cur/verify_cur_session_hiep_thai3/ sheet_0093, sheet_0096, sheet_0114, sheet_0078",
+   "cause_suspect": "tracker lifecycle / respawn",
+   "identity_impact": "UNVERIFIED - all dup pairs share same canonical_gid; no GT",
+   "patch_recommendation": null
+  },
+  {
+   "id": "E-B-009",
+   "type": "DUPLICATE_TRACK",
+   "severity": "S2",
+   "confidence": "HIGH",
+   "status": "CONFIRMED",
+   "session": "session_hiep_thai3",
+   "camera": "cam2",
+   "frame_range": "219-235, 969-989, 1120-1153, 2296-2336, 2384-2407, 2841-2905, 3688-3704, 4899-4919",
+   "ids": "lid16+19 (.96), lid34+38 (.57), lid43+44 (.65), lid61+62 (.70 same black diagonal car as cam1 cluster), lid70+72 (.79), lid79+81 (.82), lid80+84 (.74), lid86+95 (.53), lid104+105 (.89), lid116+118 (.87)",
+   "image_vs_prediction": "overlapping boxes on one physical car / left-edge boundary band; sheets 0118-0120, 0093",
+   "measurement": "IoU>0.4 same-frame pairs, cam2; coincides with cam1 f2296+ dup (same physical car seen by both cams)",
+   "repro": "sheets_cur/verify_cur_session_hiep_thai3/ sheet_0118, sheet_0119, sheet_0120, sheet_0093",
+   "cause_suspect": "tracker lifecycle / respawn",
+   "identity_impact": "UNVERIFIED - all same canonical_gid; no GT",
+   "patch_recommendation": null
+  }
+ ],
+ "observations": [
+  {
+   "id": "O-B-001",
+   "type": "EVENT_INCONSISTENT-na",
+   "frames": "648-653",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "both",
+   "verdict": "OBSERVED_OK",
+   "repro": "toi6_events/sheet_0007.jpg",
+   "note": "magenta=frozen_ambiguous/frozen_vp heuristic code-verified (render_gid_frames.py:46-54); hoi parked f658+",
+   "kind": "observation"
+  },
+  {
+   "id": "O-B-002",
+   "type": "ROI_MISMATCH",
+   "frames": "269-433",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "both",
+   "verdict": "OBSERVED_SCOPE",
+   "repro": "toi6/sheet_0012-0019.jpg",
+   "note": "G41/42/44/46/52/53 cycle boundary cars; suppressed_roi_edge_twin active f400,f700",
+   "kind": "observation"
+  },
+  {
+   "id": "O-B-003",
+   "type": "HANDOFF_ERROR-na",
+   "frames": "719-827",
+   "session": "verify_cur_session_hiep1",
+   "cam": "both",
+   "verdict": "PASS",
+   "repro": "hiep1_events/sheet_0007-0016.jpg",
+   "note": "G9 gid nhat-quan qua overlap zone 2 cam; G7/G8 tracked->parked sach",
+   "kind": "observation"
+  },
+  {
+   "id": "O-B-004",
+   "type": "SLOT_BINDING_ERROR",
+   "frames": "7-67",
+   "session": "all",
+   "cam": "both",
+   "verdict": "EXPECTED",
+   "note": "parked-at-start warmup; occupancy latch ngay; khong tu patch tool",
+   "kind": "observation"
+  },
+  {
+   "id": "O-B-005",
+   "type": "FALSE_DETECTION-na",
+   "frames": "46+",
+   "session": "verify_cur_session_hiep_toi6",
+   "cam": "cam1",
+   "verdict": "OBSERVED",
+   "note": "dien-thoai de-ban mep ROI sinh tentative nho",
+   "kind": "observation"
+  },
+  {
+   "id": "O-B-006",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "boundary ghost boxes (coasting/frozen) trên lối-gỗ trống — góc phải-trên cam1/cam2, mép-trái, bottom-left",
+   "verdict": "OBSERVED/scope: ngoài ô-quản-lý, không slot-impact"
+  },
+  {
+   "id": "O-B-007",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "xe xanh-nhạt lid23 đỗ mép-trên (ngoài grid) — nhãn dao-động matched/frozen_ambiguous/new_tentative",
+   "verdict": "OBSERVED/scope: xe thật vị-trí ổn, churn trạng-thái ở biên"
+  },
+  {
+   "id": "O-B-008",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "xe máy lid16 mép-phải cam1 — matched liên-tục >100f, states matched/frozen/coasting",
+   "verdict": "PASS: đứng-yên→freeze đúng cơ-chế"
+  },
+  {
+   "id": "O-B-009",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "tentative churn lid13/14 góc-trái-dưới cam1 ~f40-90 (xe-đen mép-khung)",
+   "verdict": "OBSERVED/scope: biên-entry"
+  },
+  {
+   "id": "O-B-010",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "lid19+? new_tentative thoáng hàng-dưới (~sheet 49)",
+   "verdict": "OBSERVED: transient 1-2 frames"
+  },
+  {
+   "id": "O-B-011",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "lid51+lid52 cùng coasting overlap IoU .33 cam1 @f2850 — 1 frame",
+   "verdict": "OBSERVED/transient: không lặp"
+  },
+  {
+   "id": "O-B-012",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "stacked magenta frozen_ambiguous quanh xe-máy mép ~f2720-2765 cam1 (sheets 114-115)",
+   "verdict": "GIẢI-THÍCH: cam1 obs=0 @f2745 — stack nhãn = parking_episodes/slot labels, không phải duplicate tracks"
+  },
+  {
+   "id": "O-B-013",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "SUV đen cam2 ~f1521-1541 trông-như 2-box (sheet 63-64)",
+   "verdict": "GIẢI-THÍCH: không pair IoU>0.25 — không duplicate"
+  },
+  {
+   "id": "O-B-014",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "slot conflicts: 0 slot-2gid đồng-thời, 0 gid-2slot cùng-frame (scan 2872f)",
+   "verdict": "PASS"
+  },
+  {
+   "id": "O-B-015",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "parking_episodes tích-lũy: gid2->6 slots, gid1->3, gid7->2 — sequential released->parked",
+   "verdict": "OBSERVED: lịch-sử hợp-lệ"
+  },
+  {
+   "id": "O-B-016",
+   "session": "session_thai7",
+   "kind": "qa_observation",
+   "detail": "handoff/gid events: handoff_opened x14, global_id_created x6, recovered x10, occlusion_group x7/x13 — không visual-anomaly",
+   "verdict": "OBSERVED"
+  },
+  {
+   "id": "O-B-017",
+   "kind": "observation",
+   "session": "session_hiep_thai4",
+   "type": "DATA_INTEGRITY",
+   "verdict": "EXPECTED",
+   "detail": "capture gap f2442-43 (1 flag) - capture-side, khong tracker-defect"
+  },
+  {
+   "id": "O-B-018",
+   "kind": "observation",
+   "session": "session_hiep_thai4",
+   "type": "MERGED_GEOMETRY",
+   "verdict": "OBSERVED",
+   "detail": "xe do-cheo qua 2 o (sheet_0223 f5449-5481 cam2) frozen_ambiguous - geometry merge-prone dung co-che"
+  },
+  {
+   "id": "O-B-019",
+   "kind": "observation",
+   "session": "session_hiep_thai4",
+   "type": "BOUNDARY_GHOST",
+   "verdict": "OBSERVED_SCOPE",
+   "detail": "coasting/frozen_ambiguous tren nen-trong ngoai o (sheets 087,156-157,236) - khong slot-impact"
+  },
+  {
+   "id": "O-B-020",
+   "kind": "observation",
+   "session": "session_hiep_thai4",
+   "type": "TRACK_LOST",
+   "verdict": "OBSERVED",
+   "detail": "local_track_lost x57 - phan-lon parked-suspend/edge"
+  },
+  {
+   "id": "O-B-021",
+   "kind": "observation",
+   "session": "session_hiep_thai4",
+   "type": "SLOT_INTEGRITY",
+   "verdict": "PASS",
+   "detail": "0 slot-2-gid dong-thoi, 0 gid-2-slot dong-thoi tren 5764f"
+  },
+  {
+   "id": "O-B-022",
+   "session": "session_hiep_thai3",
+   "kind": "mass_coasting_burst",
+   "detail": "cam1 bursts: f2707-2742 peak 22 simultaneous coasting obs (all parked cars) + f4878-4907 peak 18; detection-loss/prediction-resume pattern; no slot-conflict attached",
+   "repro": "sheets 0114, 0190, 0191"
+  },
+  {
+   "id": "O-B-023",
+   "session": "session_hiep_thai3",
+   "kind": "boundary_ghost_band",
+   "detail": "cam2 left-edge x<140 band: dozens of transient coasting lids on empty wood strip (~f2841-2905, sheets 0118-0120); frozen_ambiguous pair lid119/120 @f5154-5184 IoU .053 = ADJACENT, not same-car dup",
+   "repro": "sheets 0118, 0119, 0120, 0201"
+  },
+  {
+   "id": "O-B-024",
+   "session": "session_hiep_thai3",
+   "kind": "render_episode_labels",
+   "detail": "E:-prefixed episode/reservation labels stacked on boundary diagonal car (sheets 0115-0116, 0180-0189, 0201-0204) — render of parked_identity_reservations, not duplicate observations",
+   "repro": "sheets 0180, 0189, 0201, 0204"
+  },
+  {
+   "id": "O-B-025",
+   "session": "session_hiep_thai3",
+   "kind": "slot_integrity",
+   "detail": "0 slot->2gid simultaneous, 0 gid->2slot simultaneous across 5965f (parking_episodes + parked_identity_reservations scan); all 41 dup pairs share canonical_gid",
+   "repro": "predictions.jsonl full scan"
+  }
+ ],
+ "summary": {
+  "errors_confirmed": 2,
+  "errors_unsure": 1,
+  "by_type": {
+   "ID_FRAGMENT/NEW_ID": 2,
+   "GHOST_TRACK": 1
+  },
+  "by_severity": {
+   "S2": 2,
+   "S3": 1
+  },
+  "observations": 5,
+  "identity_impact": "UNVERIFIED cho moi entry (GT header-only; churn lids khong bang mat xe)"
+ },
+ "open_flags": {
+  "verify_cur_session_hiep_toi6": {
+   "ROI_MISMATCH": 50,
+   "SLOT_BINDING_ERROR": 30,
+   "TRACK_JUMP": 5,
+   "BBOX_JUMP": 1,
+   "ID_FRAGMENT/NEW_ID": 83,
+   "TRACK_LOST_EARLY": 115
+  },
+  "verify_cur_session_hiep1": {
+   "SLOT_BINDING_ERROR": 30,
+   "ID_FRAGMENT/NEW_ID": 6,
+   "TRACK_LOST_EARLY": 8
+  }
+ }
+}

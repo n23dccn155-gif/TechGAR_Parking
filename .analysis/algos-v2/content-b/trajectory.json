@@ -1,0 +1,58 @@
+{
+  "id": "trajectory",
+  "title": "Bộ nhớ quỹ đạo — corridor/hướng/tốc-độ theo thời gian",
+  "tier": "T2",
+  "nodes": ["N9", "N10"],
+  "problem": "Hai xe cùng màu cùng đi qua vùng chuyển — appearance gần như bằng nhau. Thứ tách chúng: 'xe này đi đâu và đi như thế nào'.",
+  "does": "Mỗi track/GID tích trajectory world (≤16 điểm, cách ≥2.0cm). match() chấm 6 thành phần (corridor/appearance/direction/speed/time·topo/size) thành score 0-1; caller gate score≥0.78 rồi LAPJV trên cost=(1−score).",
+  "role": "Trước: observe_trajectories gọi sau world-handoff pass mỗi frame (chỉ detection đo-thật). Sau: trajectory_score trong _match_world_trajectory_identities; match_departure phục vụ token-recovery khi xe rời ô. Mất nó: two-vehicle-same-color còn phân biệt nhờ world+appearance.",
+  "where": "trajectory_memory.py — ctor TrajectoryMemory :56-68, match :306-426 (corridor :351-355, scores :362-385, hard rejects :387-393, score :395-402, components :412-421), match_departure :428-516 (radial-gain rejects ~:503-509). Caller: ctor wiring ccm:379-384, observe_trajectories ccm:1442-1510, _match_world_trajectory_identities ccm:5748-6141 (reject :6024, cost=1−score :6093-6096, lapjv :6115-6117, margin :6131).",
+  "why": "Chuyển-động là bằng chứng độc lập màu sắc — đúng đặc trưng bãi đỗ (quẹo ô, ra vào cầu) [suy luận]. Score 6 thành phần LÀ model scoring của match() — KHÔNG có blend riêng về sau: caller chỉ lấy cost=1−score cho LAPJV [code tm:395-402 vs ccm:6093-6096].",
+  "steps": [
+    "observe_trajectories: chỉ track detections_fresh=True; lưu {world, velocity, bbox, source_time}; thêm điểm khi cách ≥2cm; ≤16 điểm (ccm:1442-1510)",
+    "match(): corridor = point-segment từ candidate_origin tới đoạn (source.position → predicted) (tm:351-355); distance_score=1−d/radius, time_score=1−gap/window (tm:362-363)",
+    "direction_score = (cos+1)/2 × clip(1−curv/π, 0.5, 1) khi đủ tốc (tm:366-377); speed_score = 1−|log(ratio)|/log4 (tm:379-385); thiếu dữ liệu → 0.5",
+    "Hard rejects: corridor>radius → 'teleport'; topology≤0 → 'camera_topology'; stable(obs≥3) && cos<min_dir → 'stable_wrong_direction' (tm:387-393)",
+    "score = 0.35·dist + 0.25·app + 0.15·dir + 0.10·speed + 0.10·min(time,topo) + 0.05·size (tm:395-402)",
+    "Caller _match_world_trajectory_identities: score<0.78 → reject 'trajectory_score' (ccm:6024); cost=1−score (ccm:6093-6096); lapjv cost_limit=0.22 (ccm:6115-6117); margin=ambiguity_margin 0.12 (ccm:6131)",
+    "match_departure(): gốc = parked_origin; cần radial_gain>0 → 'stable_not_leaving_slot'; cos<0 → 'stable_wrong_direction' (tm:503-509)"
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/trajectory_memory.py", "line": "56-68", "symbol": "ctor", "note": "history 3.0s sig / 2.0s runtime, 16 pts, spacing 2.0cm"},
+    {"file": "backend/main_detect/src/techgar/trajectory_memory.py", "line": "306-426", "symbol": "match", "note": "score 0.35/0.25/0.15/0.10/0.10/0.05 tại :395-402"},
+    {"file": "backend/main_detect/src/techgar/trajectory_memory.py", "line": "387-393", "symbol": "match hard rejects", "note": "teleport / camera_topology / stable_wrong_direction"},
+    {"file": "backend/main_detect/src/techgar/trajectory_memory.py", "line": "428-516", "symbol": "match_departure", "note": "radial_gain; rejects ~:503-509"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "379-384", "symbol": "trajectory ctor wiring", "note": "min_obs=3, threshold 0.78, margin 0.12"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "1442-1510", "symbol": "observe_trajectories", "note": "chỉ detections_fresh"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "6024,6093-6096,6115-6117,6131", "symbol": "caller gate + lapjv", "note": "score<0.78 reject; cost=1−score; cap 0.22; margin 0.12"}
+  ],
+  "realParams": [
+    {"name": "trajectory_history", "value": "3.0 (sig) → 2.0 (runtime)", "unit": "s", "scope": "class-default vs runtime CLI", "ref": "tm:56-68 + tc:1969-1971"},
+    {"name": "min_observations / spacing / max_points", "value": "3 / 2.0 / 16", "unit": "obs / cm / pts", "scope": "class-default (min_obs ccm:380)", "ref": "tm:56-68 + ccm:379-384"},
+    {"name": "score components", "value": "corridor/appearance/direction/speed/time·topo/size", "unit": "6 components", "scope": "class-default", "ref": "tm:412-421"},
+    {"name": "score weights", "value": "0.35/0.25/0.15/0.10/0.10/0.05", "unit": "weight (dist/app/dir/speed/time_topo/size)", "scope": "class-default — ĐÂY LÀ model scoring, không blend riêng", "ref": "tm:395-402"},
+    {"name": "caller gate", "value": "score ≥ 0.78 → cost = 1−score", "unit": "score", "scope": "runtime ctor", "ref": "ccm:381-382 + ccm:6024"},
+    {"name": "LAPJV cap / margin", "value": "0.22 (=1−0.78) / 0.12", "unit": "cost", "scope": "class-default", "ref": "ccm:6115-6117 + ccm:6131 (ambiguity_margin ccm:382)"},
+    {"name": "match hard rejects", "value": "teleport / camera_topology / stable_wrong_direction", "unit": "3 loại", "scope": "class-default", "ref": "tm:387-393"},
+    {"name": "match_departure rejects", "value": "+ stable_not_leaving_slot (radial_gain≤0)", "unit": "4 loại", "scope": "class-default", "ref": "tm:503-509"},
+    {"name": "min_direction_cosine input", "value": "0.25", "unit": "cosine", "scope": "runtime CLI (chung handoff)", "ref": "tc:1951"},
+    {"name": "score ví dụ (cảnh)", "value": "0.83", "unit": "score", "scope": "illustration", "ref": "minh họa deterministic"}
+  ],
+  "storyboard": {
+    "scene": "Hai xe đỏ cam1 cùng vào vùng chuyển: A rẽ trái, B đi thẳng; cam2 thấy 1 mảnh đỏ — cùng màu.",
+    "seed": "trajectory-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Chỉ vị trí hiện tại: mảnh cam2 gần hơn B nhưng đó là A — gán sai.", "on": "Trail A cong / trail B thẳng — 16 điểm world trên map (chỉ mẫu đo thật)."},
+      {"k": 2, "off": "—", "on": "match(): corridor từ gốc-tới-dự-đoán; distance_score=1−d/25cm; direction cos 0.8→score 0.9 ×cong-discount; speed log-ratio ≈1."},
+      {"k": 3, "off": "—", "on": "6 thanh component → score 0.83 ≥ 0.78 → vào LAPJV cost=1−0.83=0.17 ≤0.22 → vote A."},
+      {"k": 4, "off": "—", "on": "Xe đậu: trail phẳng, match_departure radial_gain≈0 → reject 'stable_not_leaving_slot' — không phải xe rời ô."}
+    ],
+    "visual": "Map: 2 polyline (A cong / B thẳng), corridor segment source→predicted, 6 component bars → score gauge 0.78, chip 'fresh-only', reject tag 'stable_not_leaving_slot'."
+  },
+  "qa": [
+    {"q": "0.35/0.25/… là blend về sau hay score của match()?", "a": "Là model scoring BÊN TRONG match() (tm:395-402); caller chỉ lấy cost=1−score cho LAPJV — không blend riêng [code]."},
+    {"q": "Nếu điểm cuối trail là Kalman predict?", "a": "Không được ghi — observe_trajectories bỏ non-fresh; predict không vào trail [code ccm:1442-1510]."},
+    {"q": "Xe mới chỉ 2 điểm trail?", "a": "stable = obs ≥ min_observations=3 (ccm:380) — chưa stable thì hard-reject hướng không áp [code tm:387-393]."}
+  ],
+  "certainty": "Cao [code] cho ctor/match/match_departure/caller-gates; mục đích chọn component [suy luận]."
+}

@@ -1,0 +1,47 @@
+{
+  "id": "roi",
+  "title": "ROI masking + vùng ưu tiên",
+  "tier": "T1",
+  "nodes": ["N1", "N5"],
+  "problem": "Camera nhìn cả vỉa hè lẫn bãi xe — cỏ lay, người đi bộ, vũng nước lấp lánh đều 'động' như xe. Không có vùng quan sát (ROI), motion ngoài bãi sinh track rác.",
+  "does": "Rasterize đa giác ROI thành mask nhị phân; motion mask chỉ giữ pixel trong ROI. Vành đệm context 48px quanh ROI giúp contour xe sát mép được đo trọn nhưng không tự sinh blob. Vùng ưu tiên (từ binder — ô xe vừa rời) được nới ngưỡng để khôi phục track nhanh.",
+  "role": {"before": "Đọc mask từ file config hai camera", "after": "N5 nhận mask đã lọc; mọi blob/bbox/track đều bắt đầu sau ROI", "missing": "Nhiễu ngoài bãi tràn vào → track ảo → LAPJV gán rác → ID nhảy; xe rời ô mất ưu tiên → re-ID chậm"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "590-631", "symbol": "_priority_mask/_box_is_priority"}, {"file": "backend/main_detect/two_camera.py", "line": "2401-2420", "symbol": "mask load"}, {"file": "backend/main_detect/two_camera.py", "line": "2683", "symbol": "priority_regions callsite"}],
+  "why": "Mask nhị phân rẻ hơn clip từng contour [suy luận]; vành context tránh cắt bbox xe đi mép ROI [code help tc:1821]. Vùng ưu tiên: xe rời ô thường bị che/ngắt một nhịp, ngưỡng mềm hơn giúp bắt lại trước khi ID cũ hết hạn.",
+  "steps": [
+    "Load mask ROI từ file config (fallback: union polygon ô đỗ).",
+    "Mở rộng mask ra vành context 48px cho việc hoàn thiện contour.",
+    "Áp motion mask ∩ ROI-strict để sinh blob.",
+    "Blob hoàn toàn trong vành (không chạm ROI) → loại.",
+    "priority_regions → _priority_mask; blob chạm vùng ưu tiên dùng ngưỡng riêng mềm hơn."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "577-631", "symbol": "_priority_mask/_box_is_priority", "note": "anchor trong mask HOẶC overlap ≥10% box"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "845", "symbol": "min_area floor", "note": "min(650,350)=350 áp trước tách priority"},
+    {"file": "backend/main_detect/src/techgar/slot_vehicle_binder.py", "line": "2653-2668", "symbol": "_expanded_polygon", "note": "polygon giãn 1+2·radius/diag = wakeup mask, KHÔNG phải gate"},
+    {"file": "backend/main_detect/src/techgar/slot_vehicle_binder.py", "line": "506-510", "symbol": "signed-distance gate", "note": "gate thật: signed < −initial_radius; cap ≤diag·ratio :2875-2876"}
+  ],
+  "realParams": [
+    {"name": "roi_context_padding_px", "value": 48, "unit": "px", "scope": "runtime", "ref": "two_camera.py:1817-1819 (class 0, mt:34-96)"},
+    {"name": "priority_min_area", "value": 350, "unit": "px²", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "priority_motion_min_ratio", "value": 0.03, "unit": "tỉ lệ", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "priority_min_visible_count", "value": 2, "unit": "obs trong vùng", "scope": "runtime", "ref": "motion_tracker.py:2081 + 2167-2169"},
+    {"name": "priority_min_confirm_displacement", "value": 3.0, "unit": "px", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "recovery radius", "value": "0.05→0.85", "unit": "×diag ô", "scope": "runtime", "ref": "two_camera.py:1888-1897→2330-2331 (class svb:227-228 0.05/0.45)"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Xe trong ROI + nhiễu ngoài", "seed": 7}, {"id": "priority", "label": "Xe rời ô → vùng ưu tiên", "seed": 7}],
+    "keyframes": [
+      {"id": "k1", "caption": "TẮT-ROI: mask=toàn ảnh → vũng nước/người bộ tạo 3 blob nhiễu → 3 track rác", "mode": "off", "state": {"blobs": 3, "tracks": 3}},
+      {"id": "k2", "caption": "BẬT-ROI: chỉ blob A trong polygon sống; vành 48px cho contour lấn mép đo trọn; blob thuần-vành bị loại", "mode": "on", "state": {"blobs": 1, "contextRing_px": 48}},
+      {"id": "k3", "caption": "Bật priority: B rời ô → wakeup polygon giãn [minh họa ~1.5×] → blob B chỉ cần ratio 0.03; confirm sau ≥2 obs TRONG vùng", "mode": "on", "state": {"priority_obs": 2, "motion_min_ratio": 0.03}},
+      {"id": "k4", "caption": "So sánh: A ngưỡng chuẩn, B đường ưu tiên — cùng pixel motion, khác ngưỡng", "mode": "both", "state": {}}
+    ]
+  },
+  "qa": [
+    {"q": "Xe chạy dọc mép ROI — contour nửa-trong có sống?", "a": "Có nhờ vành 48px; nếu vành=0 (class default) xe mép bị cắt bbox → sai kích thước."},
+    {"q": "File ROI thiếu thì sao?", "a": "Fallback union-mask ô đỗ — vùng giữa các ô có thể bị cắt mất [ý nghĩa: suy luận]."},
+    {"q": "Polygon giãn = ngưỡng chấp nhận?", "a": "Không — chỉ là wakeup mask; gate thật là signed distance (svb:506-510)."}
+  ],
+  "certainty": "Cao [code]: mask load, strict-vs-context, ngưỡng priority, nguồn token. Ý nghĩa vành = suy luận từ help-string."
+}

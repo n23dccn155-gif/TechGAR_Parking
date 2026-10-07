@@ -1,0 +1,81 @@
+{
+  "id": "bad-src",
+  "group": "setup",
+  "title": "Fixture nguồn sai",
+  "order": 93,
+  "prev": null,
+  "next": null,
+  "fn": {
+    "text": "Câu bình thường."
+  },
+  "why": {
+    "paras": [
+      "Đoạn bình thường đủ dài để qua luật câu."
+    ]
+  },
+  "how": [
+    {
+      "id": "3.1",
+      "name": "Bước",
+      "paras": [
+        "Đoạn bình thường đủ dài."
+      ]
+    }
+  ],
+  "formulas": [],
+  "params": [
+    {
+      "name": "no_src",
+      "value": "0.78",
+      "kind": "runtime",
+      "role": "thiếu nguồn"
+    },
+    {
+      "name": "ghost_file",
+      "value": "1",
+      "kind": "config",
+      "role": "file không tồn tại",
+      "src": "backend/khong_co_file_nay_zz.py:10"
+    },
+    {
+      "name": "over_line",
+      "value": "1",
+      "kind": "config",
+      "role": "dòng quá file",
+      "src": "algo-web-v2/js/core/tg.js:99999"
+    },
+    {
+      "name": "no_illustrative_mark",
+      "value": "5",
+      "kind": "illustrative",
+      "role": "quên đánh dấu minh họa"
+    }
+  ],
+  "figures": [
+    {
+      "src": "assets/real/khong-ton-tai.jpg",
+      "alt": "x",
+      "caption": "x",
+      "origin": "none"
+    }
+  ],
+  "interactive": null,
+  "limits": [
+    {
+      "text": "x"
+    },
+    {
+      "text": "y"
+    },
+    {
+      "text": "z"
+    }
+  ],
+  "sources": [
+    {
+      "ref": "algo-web-v2/js/core/tg.js",
+      "kind": "runtime",
+      "note": "x"
+    }
+  ]
+}

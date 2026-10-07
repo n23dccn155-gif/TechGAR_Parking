@@ -1,0 +1,16 @@
+{
+  "id": "gid-conflict-detached-thai3-f2869-cam2",
+  "session": "session_hiep_thai3",
+  "cam": 2,
+  "frame": 2869,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [46, 245, 138, 346],
+      "color": "#188038",
+      "label": "lid88 giu GID8 - member hop le"
+    }
+  ],
+  "max_kb": 200
+}

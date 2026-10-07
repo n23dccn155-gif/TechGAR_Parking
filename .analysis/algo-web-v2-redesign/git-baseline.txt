@@ -1,0 +1,36 @@
+5f581311e34cb7c588197c6f01d2b9686d28df8d
+--- git status --short ---
+ M backend/main_detect/src/techgar/cross_camera_manager.py
+ M backend/main_detect/src/techgar/slot_vehicle_binder.py
+ M backend/main_detect/src/techgar/trajectory_memory.py
+ M backend/main_detect/tests/test_gid_departure_token.py
+ M backend/main_detect/tests/test_gid_reserved_competition.py
+ M backend/main_detect/two_camera.py
+?? .agents/
+?? .analysis/
+?? .claude/
+?? .publish/
+?? algo-web-v2/
+?? algo-web/
+?? backend/.analysis/
+?? backend/main_detect/experiment_test/merge_split_report.py
+?? backend/main_detect/experiment_test/reid_fix/
+?? backend/main_detect/experiment_test/verify/
+?? backend/main_detect/tests/test_merge_split_scenarios.py
+?? backend/main_detect/tests/test_stationary_reacquire.py
+?? docs/Bao_cao_NCKH_TechGAR_hoan_chinh.docx
+?? docs/_bao_cao_dump.txt
+?? nul
+?? skills-lock.json
+--- git diff --stat backend frontend docs ---
+warning: in the working copy of 'backend/main_detect/src/techgar/cross_camera_manager.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/main_detect/src/techgar/trajectory_memory.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/main_detect/tests/test_gid_departure_token.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/main_detect/tests/test_gid_reserved_competition.py', LF will be replaced by CRLF the next time Git touches it
+ .../src/techgar/cross_camera_manager.py            | 1073 +++++++++++++++++++-
+ .../main_detect/src/techgar/slot_vehicle_binder.py |   94 +-
+ .../main_detect/src/techgar/trajectory_memory.py   |   19 +
+ .../main_detect/tests/test_gid_departure_token.py  |   56 +
+ .../tests/test_gid_reserved_competition.py         |   59 ++
+ backend/main_detect/two_camera.py                  |    8 +
+ 6 files changed, 1296 insertions(+), 13 deletions(-)

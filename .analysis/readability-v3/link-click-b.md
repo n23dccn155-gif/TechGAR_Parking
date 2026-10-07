@@ -1,0 +1,234 @@
+# link-click-b.md — actual-click navigation QA (owner B)
+
+**Script:** `.analysis/readability-v3/_click_links_b.mjs` · **file:// ONLY · viewport 1440×900** · Chromium headless — phạm vi actual-click chỉ file://; coverage HTTP nằm ở C full-smoke (46-run file+HTTP), probe này KHÔNG claim HTTP.
+**Scope click:** NAV anchors (position strip + related, 23 routes) · Map nodes→panel→card-links · Journey canvas chips. **Static-refs:** `.tg-v3-stepref` là SPAN tham-chiếu theo CONTRACT — validate index hợp-lệ + captions/stepTexts tồn-tại + scrub→caption/stepLabel khớp (không click, không seek-feature).
+**Kết quả:** 215 cases · **0 FAIL** · console/page errors: 0
+**Steprefs:** 79 refs validated + scrub-assert
+
+| section | cases | fails |
+|---|---|---|
+| route | 75 | 0 |
+| stepref | 79 | 0 |
+| map | 41 | 0 |
+| journey | 15 | 0 |
+| glossary | 5 | 0 |
+
+## Chi tiết
+- [PASS] (route) roi → #/algo/occlusion (Chuẩn bị chống che khuất) — id=occlusion hash=#/algo/occlusion title=Giữ đúng mã khi che nhau mapNodes=0
+- [PASS] (route) roi → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) roi → #/algo/motion (Phát hiện chuyển động — ) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (stepref) roi "bước 2,3" — valid=true scrub=ok
+- [PASS] (stepref) roi "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) roi "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) roi "bước 5" — valid=true scrub=ok
+- [PASS] (route) motion → #/algo/occlusion (Chuẩn bị chống che khuất) — id=occlusion hash=#/algo/occlusion title=Giữ đúng mã khi che nhau mapNodes=0
+- [PASS] (route) motion → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) motion → #/algo/roi (Khoanh vùng quan sát — n) — id=roi hash=#/algo/roi title=Vùng quan sát và ưu tiên mapNodes=0
+- [PASS] (stepref) motion "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) motion "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) motion "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) motion "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) motion "bước 5" — valid=true scrub=ok
+- [PASS] (route) kalman → #/ (Bản đồ pipeline · nguồn ) — id=null hash=#/ title= mapNodes=17
+- [PASS] (route) kalman → #/algo/occlusion (Chuẩn bị chống che khuất) — id=occlusion hash=#/algo/occlusion title=Giữ đúng mã khi che nhau mapNodes=0
+- [PASS] (route) kalman → #/algo/assignment (Ghép vệt — dùng vị trí d) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (stepref) kalman "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) kalman "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) kalman "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) kalman "bước 4,5" — valid=true scrub=ok
+- [PASS] (route) coasting → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) coasting → #/algo/dormant (Báo mất dấu & hết hạn) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) coasting → #/algo/track-lifecycle (Vòng đời vết — cùng chặn) — id=track-lifecycle hash=#/algo/track-lifecycle title=Vòng đời vết theo dõi mapNodes=0
+- [PASS] (stepref) coasting "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) coasting "bước 2,3" — valid=true scrub=ok
+- [PASS] (stepref) coasting "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) coasting "bước 4,5" — valid=true scrub=ok
+- [PASS] (route) assignment → #/algo/motion (Phát hiện chuyển động) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (route) assignment → #/algo/track-lifecycle (Giữ / suy đoán / kết thú) — id=track-lifecycle hash=#/algo/track-lifecycle title=Vòng đời vết theo dõi mapNodes=0
+- [PASS] (route) assignment → #/algo/echo (Lọc vệt trùng & vệt mép ) — id=echo hash=#/algo/echo title=Chặn vệt bóng ma mapNodes=0
+- [PASS] (stepref) assignment "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) assignment "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) assignment "bước 3,5" — valid=true scrub=ok
+- [PASS] (stepref) assignment "bước 4" — valid=true scrub=ok
+- [PASS] (route) brightness → #/algo/occlusion (Chuẩn bị chống che khuất) — id=occlusion hash=#/algo/occlusion title=Giữ đúng mã khi che nhau mapNodes=0
+- [PASS] (route) brightness → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) brightness → #/algo/motion (Phát hiện chuyển động — ) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (route) brightness → #/algo/shadow (Lọc bóng đổ — cùng chặng) — id=shadow hash=#/algo/shadow title=Lọc bóng đổ mapNodes=0
+- [PASS] (stepref) brightness "bước 2,4" — valid=true scrub=ok
+- [PASS] (stepref) brightness "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) brightness "bước 4,5" — valid=true scrub=ok
+- [PASS] (stepref) brightness "bước 5" — valid=true scrub=ok
+- [PASS] (route) shadow → #/algo/occlusion (Chuẩn bị chống che khuất) — id=occlusion hash=#/algo/occlusion title=Giữ đúng mã khi che nhau mapNodes=0
+- [PASS] (route) shadow → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) shadow → #/algo/motion (Phát hiện chuyển động — ) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (route) shadow → #/algo/brightness (Bù sáng toàn cục — cùng ) — id=brightness hash=#/algo/brightness title=Bù sáng toàn cục mapNodes=0
+- [PASS] (stepref) shadow "bước 2,4" — valid=true scrub=ok
+- [PASS] (stepref) shadow "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) shadow "bước 3,4" — valid=true scrub=ok
+- [PASS] (stepref) shadow "bước 4,5" — valid=true scrub=ok
+- [PASS] (route) echo → #/algo/motion (Phát hiện chuyển động) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (route) echo → #/algo/track-lifecycle (Vòng đời vết theo dõi) — id=track-lifecycle hash=#/algo/track-lifecycle title=Vòng đời vết theo dõi mapNodes=0
+- [PASS] (route) echo → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) echo → #/algo/roi (Vùng quan sát và ưu tiên) — id=roi hash=#/algo/roi title=Vùng quan sát và ưu tiên mapNodes=0
+- [PASS] (stepref) echo "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) echo "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) echo "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) echo "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) echo "bước 5" — valid=true scrub=ok
+- [PASS] (route) track-lifecycle → #/algo/assignment (Ghép vệt với xe theo dõi) — id=assignment hash=#/algo/assignment title=Ghép vệt với xe theo dõi mapNodes=0
+- [PASS] (route) track-lifecycle → #/algo/dormant (Báo mất dấu và hết hạn) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) track-lifecycle → #/algo/coasting (Giữ vết khi mất đo — cùn) — id=coasting hash=#/algo/coasting title=Giữ vết khi mất đo mapNodes=0
+- [PASS] (stepref) track-lifecycle "bước 1,2" — valid=true scrub=ok
+- [PASS] (stepref) track-lifecycle "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) track-lifecycle "bước 4,6" — valid=true scrub=ok
+- [PASS] (stepref) track-lifecycle "bước 5" — valid=true scrub=ok
+- [PASS] (route) occlusion → #/algo/kalman (Dự đoán vị trí xe) — id=kalman hash=#/algo/kalman title=Dự đoán vị trí xe mapNodes=0
+- [PASS] (route) occlusion → #/algo/track-lifecycle (Giữ / suy đoán / kết thú) — id=track-lifecycle hash=#/algo/track-lifecycle title=Vòng đời vết theo dõi mapNodes=0
+- [PASS] (route) occlusion → #/algo/motion (Phát hiện chuyển động — ) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (stepref) occlusion "bước 2,3" — valid=true scrub=ok
+- [PASS] (stepref) occlusion "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) occlusion "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) occlusion "bước 5" — valid=true scrub=ok
+- [PASS] (route) reid → #/algo/dormant (Chuẩn bị khôi phục xe rờ) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) reid → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) reid → #/algo/handoff (Bàn giao qua hai camera ) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (route) reid → #/algo/gid-conflict (Dàn xếp khi tranh một mã) — id=gid-conflict hash=#/algo/gid-conflict title=Gỡ xung đột mã xe mapNodes=0
+- [PASS] (route) handoff → #/algo/dormant (Chuẩn bị khôi phục xe rờ) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) handoff → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) handoff → #/algo/reid (Nhận dạng lại bằng bề ng) — id=reid hash=#/algo/reid title=Nhận ra xe bằng mẫu màu mapNodes=0
+- [PASS] (route) handoff → #/algo/gid-conflict (Dàn xếp khi tranh một mã) — id=gid-conflict hash=#/algo/gid-conflict title=Gỡ xung đột mã xe mapNodes=0
+- [PASS] (route) homography → #/algo/trajectory (Gom chứng cứ quỹ đạo & n) — id=trajectory hash=#/algo/trajectory title=Bộ nhớ quỹ đạo mapNodes=0
+- [PASS] (route) homography → #/algo/handoff (Bàn giao qua hai camera ) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (route) homography → #/algo/reid (Nhận dạng lại bằng bề ng) — id=reid hash=#/algo/reid title=Nhận ra xe bằng mẫu màu mapNodes=0
+- [PASS] (stepref) homography "bước 2,3" — valid=true scrub=ok
+- [PASS] (stepref) homography "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) homography "bước 5" — valid=true scrub=ok
+- [PASS] (stepref) homography "bước 1,6" — valid=true scrub=ok
+- [PASS] (route) trajectory → #/algo/dormant (Báo mất dấu & hết hạn) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) trajectory → #/algo/handoff (Bàn giao 2 camera & cấp ) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (stepref) trajectory "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) trajectory "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) trajectory "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) trajectory "bước 5,6" — valid=true scrub=ok
+- [PASS] (route) dormant → #/algo/track-lifecycle (Giữ / suy đoán / kết thú) — id=track-lifecycle hash=#/algo/track-lifecycle title=Vòng đời vết theo dõi mapNodes=0
+- [PASS] (route) dormant → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) dormant → #/algo/handoff (Bàn giao — nơi danh tính) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (stepref) dormant "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) dormant "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) dormant "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) dormant "bước 5,6" — valid=true scrub=ok
+- [PASS] (route) gid-conflict → #/algo/dormant (Chuẩn bị khôi phục xe rờ) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) gid-conflict → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) gid-conflict → #/algo/reid (Nhận dạng lại bằng bề ng) — id=reid hash=#/algo/reid title=Nhận ra xe bằng mẫu màu mapNodes=0
+- [PASS] (route) gid-conflict → #/algo/handoff (Bàn giao qua hai camera ) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (stepref) gid-conflict "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) gid-conflict "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) gid-conflict "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) gid-conflict "bước 5,6" — valid=true scrub=ok
+- [PASS] (route) ensemble → #/ (Nhận ảnh & đồng bộ 2 cam) — id=null hash=#/ title= mapNodes=17
+- [PASS] (route) ensemble → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) ensemble → #/algo/motion (Phát hiện chuyển động — ) — id=motion hash=#/algo/motion title=Phát hiện chuyển động mapNodes=0
+- [PASS] (stepref) ensemble "bước 2,3" — valid=true scrub=ok
+- [PASS] (stepref) ensemble "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) ensemble "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) ensemble "bước 5" — valid=true scrub=ok
+- [PASS] (route) binder → #/algo/handoff (Bàn giao hai camera và c) — id=handoff hash=#/algo/handoff title=Bàn giao xe qua hai camera mapNodes=0
+- [PASS] (route) binder → #/algo/snapshot (Đồng bộ và phát bản tin) — id=snapshot hash=#/algo/snapshot title=Bản tin mới nhất thắng mapNodes=0
+- [PASS] (route) binder → #/algo/ensemble (Bỏ phiếu trạng thái ô đỗ) — id=ensemble hash=#/algo/ensemble title=Bỏ phiếu trạng thái ô đỗ mapNodes=0
+- [PASS] (route) binder → #/algo/roi (Vùng quan sát và ưu tiên) — id=roi hash=#/algo/roi title=Vùng quan sát và ưu tiên mapNodes=0
+- [PASS] (stepref) binder "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) binder "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) binder "bước 3" — valid=true scrub=ok
+- [PASS] (stepref) binder "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) binder "bước 5" — valid=true scrub=ok
+- [PASS] (route) polygon → #/algo/dormant (Chuẩn bị khôi phục xe rờ) — id=dormant hash=#/algo/dormant title=Danh tính ngủ mapNodes=0
+- [PASS] (route) polygon → #/algo/snapshot (Đồng bộ và phát bản tin) — id=snapshot hash=#/algo/snapshot title=Bản tin mới nhất thắng mapNodes=0
+- [PASS] (route) polygon → #/algo/roi (Vùng quan sát và ưu tiên) — id=roi hash=#/algo/roi title=Vùng quan sát và ưu tiên mapNodes=0
+- [PASS] (route) polygon → #/algo/binder (Gắn xe vào ô đỗ) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (stepref) polygon "bước 1" — valid=true scrub=ok
+- [PASS] (stepref) polygon "bước 3,4" — valid=true scrub=ok
+- [PASS] (stepref) polygon "bước 5" — valid=true scrub=ok
+- [PASS] (stepref) polygon "bước 5,6" — valid=true scrub=ok
+- [PASS] (route) gate → #/algo/snapshot (Đồng bộ & phát bản tin) — id=snapshot hash=#/algo/snapshot title=Bản tin mới nhất thắng mapNodes=0
+- [PASS] (route) gate → #/algo/session (Phiên QR) — id=session hash=#/algo/session title=Phiên QR sống qua hạn mã mapNodes=0
+- [PASS] (route) session → #/algo/gate (Phát hiện xe qua vạch cổ) — id=gate hash=#/algo/gate title=Xe qua vạch cổng mapNodes=0
+- [PASS] (route) session → #/algo/routing (Điều hướng trên bản đồ) — id=routing hash=#/algo/routing title=Dẫn tuyến men theo làn xe mapNodes=0
+- [PASS] (stepref) session "bước 1,3" — valid=true scrub=ok
+- [PASS] (stepref) session "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) session "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) session "bước 5" — valid=true scrub=ok
+- [PASS] (route) snapshot → #/algo/binder (Cập nhật ô đỗ và xe đang) — id=binder hash=#/algo/binder title=Gắn xe vào ô đỗ mapNodes=0
+- [PASS] (route) snapshot → #/algo/gate (Phát hiện xe qua vạch cổ) — id=gate hash=#/algo/gate title=Xe qua vạch cổng mapNodes=0
+- [PASS] (route) snapshot → #/algo/session (Phiên QR cho xe) — id=session hash=#/algo/session title=Phiên QR sống qua hạn mã mapNodes=0
+- [PASS] (route) snapshot → #/algo/routing (Điều hướng trên bản đồ) — id=routing hash=#/algo/routing title=Dẫn tuyến men theo làn xe mapNodes=0
+- [PASS] (stepref) snapshot "bước 1,3" — valid=true scrub=ok
+- [PASS] (stepref) snapshot "bước 2" — valid=true scrub=ok
+- [PASS] (stepref) snapshot "bước 4" — valid=true scrub=ok
+- [PASS] (stepref) snapshot "bước 5" — valid=true scrub=ok
+- [PASS] (route) routing → #/algo/snapshot (Đồng bộ và phát bản tin) — id=snapshot hash=#/algo/snapshot title=Bản tin mới nhất thắng mapNodes=0
+- [PASS] (route) routing → #/algo/session (Phiên QR cho xe — đích đ) — id=session hash=#/algo/session title=Phiên QR sống qua hạn mã mapNodes=0
+- [PASS] (route) nav coverage — 74 anchor clicks, 23 routes
+- [PASS] (map) node count — 17 nodes: SETUP,N2,N0,N3,N4,N5,N1,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15
+- [PASS] (map) node SETUP panel — links=1 "Cài đặt ban đầu"
+- [PASS] (map) node N2 panel — links=1 "Quan sát ô đỗ bằng ảnh · luồng"
+- [PASS] (map) node N0 panel — links=0 "Nhận ảnh 2 camera · chặng 1/12"
+- [PASS] (map) node N3 panel — links=1 "Dự đoán vị trí xe · chặng 2/12"
+- [PASS] (map) node N4 panel — links=1 "Chống che khuất · chặng 3/12"
+- [PASS] (map) node N5 panel — links=6 "Phát hiện chuyển động · chặng "
+- [PASS] (map) node N1 panel — links=2 "Vùng quan sát (ROI)"
+- [PASS] (map) node N6 panel — links=3 "Ghép vệt · chặng 5/12"
+- [PASS] (map) node N7 panel — links=2 "Giữ & kết thúc vết · chặng 6/1"
+- [PASS] (map) node N8 panel — links=1 "Báo mất dấu · chặng 7/12"
+- [PASS] (map) node N9 panel — links=2 "Gom chứng cứ · chặng 8/12"
+- [PASS] (map) node N10 panel — links=3 "Chuẩn bị khôi phục · chặng 9/1"
+- [PASS] (map) node N11 panel — links=6 "Bàn giao & mã chung · chặng 10"
+- [PASS] (map) node N12 panel — links=2 "Cập nhật ô đỗ · chặng 11/12"
+- [PASS] (map) node N13 panel — links=1 "Đồng bộ & phát tin · chặng 12/"
+- [PASS] (map) node N14 panel — links=4 "Cổng & phiên QR · nhánh bất đồ"
+- [PASS] (map) node N15 panel — links=2 "Điều hướng · nhánh bất đồng bộ"
+- [PASS] (map) card-link #/algo/homography — id=homography
+- [PASS] (map) card-link #/algo/ensemble — id=ensemble
+- [PASS] (map) card-link #/algo/kalman — id=kalman
+- [PASS] (map) card-link #/algo/occlusion — id=occlusion
+- [PASS] (map) card-link #/algo/roi — id=roi
+- [PASS] (map) card-link #/algo/motion — id=motion
+- [PASS] (map) card-link #/algo/brightness — id=brightness
+- [PASS] (map) card-link #/algo/shadow — id=shadow
+- [PASS] (map) card-link #/algo/echo — id=echo
+- [PASS] (map) card-link #/algo/polygon — id=polygon
+- [PASS] (map) card-link #/algo/assignment — id=assignment
+- [PASS] (map) card-link #/algo/coasting — id=coasting
+- [PASS] (map) card-link #/algo/track-lifecycle — id=track-lifecycle
+- [PASS] (map) card-link #/algo/dormant — id=dormant
+- [PASS] (map) card-link #/algo/trajectory — id=trajectory
+- [PASS] (map) card-link #/algo/reid — id=reid
+- [PASS] (map) card-link #/algo/handoff — id=handoff
+- [PASS] (map) card-link #/algo/gid-conflict — id=gid-conflict
+- [PASS] (map) card-link #/algo/binder — id=binder
+- [PASS] (map) card-link #/algo/snapshot — id=snapshot
+- [PASS] (map) card-link #/algo/gate — id=gate
+- [PASS] (map) card-link #/algo/session — id=session
+- [PASS] (map) card-link #/algo/routing — id=routing
+- [PASS] (journey) chip count — 14 chips
+- [PASS] (journey) chip → kalman — id=kalman
+- [PASS] (journey) chip → occlusion — id=occlusion
+- [PASS] (journey) chip → motion — id=motion
+- [PASS] (journey) chip → assignment — id=assignment
+- [PASS] (journey) chip → coasting — id=coasting
+- [PASS] (journey) chip → track-lifecycle — id=track-lifecycle
+- [PASS] (journey) chip → trajectory — id=trajectory
+- [PASS] (journey) chip → dormant — id=dormant
+- [PASS] (journey) chip → handoff — id=handoff
+- [PASS] (journey) chip → binder — id=binder
+- [PASS] (journey) chip → snapshot — id=snapshot
+- [PASS] (journey) chip → ensemble — id=ensemble
+- [PASS] (journey) chip → session — id=session
+- [PASS] (journey) chip → routing — id=routing
+- [PASS] (glossary) filter thu hẹp — 56→3
+- [PASS] (glossary) filter empty-msg — 0 rows, msg=true
+- [PASS] (glossary) filter restore — 56
+- [PASS] (glossary) deep mở + nội dung — 56 deep, "khóa nội bộ: Shared-map / không-gian cm "
+- [PASS] (glossary) route links (info) — 0 algo-links trong glossary (0 = không có, không fail)
+
+## Console/page errors
+(sạch)

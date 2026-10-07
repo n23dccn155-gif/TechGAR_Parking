@@ -1,0 +1,49 @@
+{
+  "id": "coasting",
+  "title": "Coasting / stale / TTL",
+  "tier": "T1",
+  "nodes": ["N7"],
+  "problem": "Xe chạy sau cột hoặc bị xe khác che vài frame — detection mất nhưng xe vẫn tồn tại. Xóa track ngay → ID mới → hành trình đứt; giữ mãi → bãi đầy 'ma'.",
+  "does": "Track unmatched không chết ngay: điểm hiển thị trượt dần từ dự đoán Kalman về điểm đo cuối theo exp(−age/0.25s) — không phải vận tốc bị nhân; velocity_confidence giảm tuyến tính. Quá 0.40s → stale (neo hẳn điểm đo). Reacquire xảy ra TRONG _assign (window 1.5s / merged 3.0s + appearance ≤0.30 + area 0.35–2.8). Hết TTL ~4.5s → expire, báo N8. Suspend thì pop khỏi pool hẳn.",
+  "role": {"before": "Kết quả gán N6 (unmatched tracks)", "after": "Track sống sót cho frame sau + newly_lost/expired cho N8", "missing": "Mỗi lần che = mất ID; ReID phải khâu lại toàn bộ"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "270-320", "symbol": "decay/stale"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2257-2334", "symbol": "unmatched/coasting/expire"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1631-1702", "symbol": "reacquire gates trong _assign"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2175-2187", "symbol": "suspend_track"}],
+  "why": "Trượt về điểm đo cuối thay vì bay theo v mãi: dự đoán cũ càng ngày càng ít tin, neo về chỗ đo chắc cuối cùng tránh ghost trôi vô hạn [code mt:278]. Reacquire trong _assign (không phải birth) vì ID cũ còn sống; _create_or_reid luôn mint ID MỚI — phục hồi GID là việc của cross-camera manager.",
+  "steps": [
+    "Unmatched track → prediction_age_s tăng.",
+    "age ≤0.40s: point = measured + (kalman−measured)·exp(−age/0.25); confidence = 1−age/limit.",
+    "age >0.40s: prediction_source='stale_prediction', neo về measured, confidence=0.",
+    "Detection mới qua cổng reacquire (window + appearance + area) → track sống lại trong _assign.",
+    "age > TTL (~4.5s timestamp / 90 frame) → expired → N8 notify.",
+    "suspend_track (binder gọi) → pop khỏi _tracks, thoát vòng predict/TTL."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "278-287", "symbol": "decay point + confidence", "note": "interpolate về measured; merged_freeze không decay :270-276"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1631-1651", "symbol": "reacquire window", "note": "1.5s normal / 3.0s merged"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1696-1702", "symbol": "stale-anchor gate", "note": "min(max_distance, max(3.0, 0.30·diag))"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2012-2016", "symbol": "_create_or_reid", "note": "fresh local ID; GID recovery thuộc CrossCameraManager"}
+  ],
+  "realParams": [
+    {"name": "motion_prediction_decay_seconds", "value": 0.25, "unit": "s", "scope": "runtime", "ref": "motion_tracker.py:34-96/two_camera"},
+    {"name": "motion_max_prediction_age_seconds", "value": 0.40, "unit": "s", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "motion_reacquire_seconds / merged", "value": "1.5 / 3.0", "unit": "s", "scope": "runtime", "ref": "motion_tracker.py:1631-1651"},
+    {"name": "lost_track_ttl", "value": 90, "unit": "frames", "scope": "runtime", "ref": "two_camera arg"},
+    {"name": "lost_track_ttl_seconds", "value": "max(1.0,1.5)·3.0 = 4.5", "unit": "s", "scope": "runtime", "ref": "motion_tracker.py:149-154"},
+    {"name": "appearance gate", "value": "≤0.30 (stale ≤0.22)", "unit": "Bhattacharyya", "scope": "runtime", "ref": "motion_tracker.py:1732-1736"},
+    {"name": "area ratio reacquire", "value": "0.35–2.8", "unit": "×", "scope": "runtime", "ref": "motion_tracker.py:1750-1755"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Mất đo ngắn → reacquire", "seed": 5}, {"id": "edge", "label": "Mất đo dài → stale → expire", "seed": 5}],
+    "keyframes": [
+      {"id": "k1", "caption": "f1: match cuối tại điểm đo ●. f2-f4 mất đo: ghost trượt từ predict về measured theo exp(−age/0.25) — thanh age chạy", "mode": "both", "state": {"age_s": 0.2, "prediction_source": "kalman_prediction"}},
+      {"id": "k2", "caption": "age 0.41s → stale: ghost neo hẳn điểm đo, confidence=0, nhãn 'stale_prediction'", "mode": "both", "state": {"age_s": 0.41, "prediction_source": "stale_prediction"}},
+      {"id": "k3", "caption": "Nhánh A: blob mới trong window 1.5s + appearance 0.28≤0.30 → REACQUIRE trong _assign, ID giữ nguyên", "mode": "on", "state": {"result": "reacquired"}},
+      {"id": "k4", "caption": "Nhánh B: quá 4.5s không ai khớp → expired → notify N8; nếu blob sau đó tới → _create_or_reid mint ID MỚI", "mode": "off", "state": {"result": "expired→new local ID"}}
+    ]
+  },
+  "qa": [
+    {"q": "Coasting có phải 'v *= exp'?", "a": "Không — ĐIỂM hiển thị nội suy về measured theo exp(−age/0.25); merged_freeze giữ full predict đến 3.0s."},
+    {"q": "Reacquire ở đâu?", "a": "Trong _assign với window+appearance+area gates; birth (_create_or_reid) luôn là ID mới — 2 cơ chế khác nhau."},
+    {"q": "Suspend khác expire?", "a": "Suspend pop khỏi pool ngay (binder quyết, dormant recovery); expire là hết TTL tự nhiên."}
+  ],
+  "certainty": "Cao [code] decay/stale/window/TTL/gates; 'đẹp hơn khi trượt' là mô tả cơ chế không phải lý do thiết kế."
+}

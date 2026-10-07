@@ -1,0 +1,44 @@
+{
+  "id": "echo",
+  "title": "Chặn echo / ROI-edge twin",
+  "tier": "T2",
+  "nodes": ["N5", "N6"],
+  "problem": "Một xe vật lý sinh hai chứng cứ gần-giống nhau: detection kép (vệt motion nổ 2 blob lồng nhau) và twin mép-ROI (track bị 'bỏ đói' ở mép bật lại thành ID thứ hai). Không dẹp: 1 xe 2 ID, LAPJV tranh cướp, handoff rối.",
+  "does": "Hai cơ chế: (1) _suppress_duplicate_detections — so cặp detection (hist + size + dist + gap bbox); gần-trùng → giữ 1, TRỪ khi mỗi blob có 'chủ sạch' riêng (tránh xóa 2 xe thật sát nhau). (2) _suppress_roi_edge_twins trong _assign — chỉ xét cặp CẢ HAI roi_clipped: IoU≥0.90 + tâm ≤max(12px, 0.15·extent) + ≥1 bên tentative/invisible → giữ lineage mạnh hơn; twin thua vẫn sống trong _tracks nhưng không được claim detection.",
+  "role": {"before": "contour/track hiện hữu", "after": "detection/track sạch cho LAPJV", "missing": "Xe mép ROI nhân đôi ID; blob echo làm track cướp nhầm nhau"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1088-1134", "symbol": "_same_motion_echo/_suppress_duplicate_detections"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1501-1595", "symbol": "_suppress_roi_edge_twins"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1491-1499", "symbol": "_roi_edge_twin_strength"}],
+  "why": "Gate cố tình hẹp (IoU 0.90, cả hai roi_clipped, một bên non-confirmed) — chỉ bắt twin gần-nhất-trí, không đụng 2 xe thật đỗ sát [suy luận từ điều kiện]. Winner = confirmed > first-obs cũ > nhiều obs > ID nhỏ — lineage đã 'sống lâu' đáng tin hơn [code].",
+  "steps": [
+    "So từng cặp detection mới bằng _same_motion_echo (hist/size/dist/gap).",
+    "Echo + không có chủ sạch riêng → suppress bớt.",
+    "Trong _assign: cặp BOTH roi_clipped + IoU≥0.90 + tâm≤max(12,0.15·extent) + ≥1 tentative/invisible → twin.",
+    "Winner theo _roi_edge_twin_strength; loser: cost vô-hiệu (không claim) nhưng vẫn age/expire.",
+    "Trạng thái nhìn thấy: association_state ∈ {suppressed_roi_edge_twin, frozen_ambiguous, coasting} — hiện lên HUD/debug."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1523-1560", "symbol": "twin gate", "note": "both roi_clipped + IoU + max(12,0.15·extent), extent=min(hypot hai bbox)"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1488-1489", "symbol": "constants", "note": "IoU=0.90, CENTER_PX=12.0"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2268-2280", "symbol": "association_state labels", "note": "suppressed_roi_edge_twin / frozen_ambiguous / coasting"}
+  ],
+  "realParams": [
+    {"name": "_ROI_EDGE_TWIN_IOU", "value": 0.90, "unit": "IoU", "scope": "default", "ref": "motion_tracker.py:1488"},
+    {"name": "center gate", "value": "max(12.0, 0.15·extent)", "unit": "px", "scope": "default", "ref": "motion_tracker.py:1489 + :1556-1559"},
+    {"name": "winner order", "value": "CONFIRMED > first_obs cũ > visible nhiều > ID nhỏ", "unit": "tuple", "scope": "default", "ref": "motion_tracker.py:1491-1499"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Twin ở mép ROI", "seed": 4}, {"id": "edge", "label": "Hai xe thật đỗ sát", "seed": 4}],
+    "keyframes": [
+      {"id": "k1", "caption": "A chạy dọc mép ROI: T7 confirmed theo A; mép cắt contour → T7 invisible", "mode": "both", "state": {"T7": "invisible"}},
+      {"id": "k2", "caption": "Blob A vào lại → birth T9 tentative — cùng xe, IoU 0.93 với T7 [minh họa]", "mode": "both", "state": {"IoU": 0.93}},
+      {"id": "k3", "caption": "OFF-suppress: T7,T9 cùng claim detection mỗi frame → LAPJV tranh, 1 xe 2 ID song song", "mode": "off", "state": {"ids": 2}},
+      {"id": "k4", "caption": "ON: both roi_clipped + IoU .93≥.90 + tâm 8≤max(12,0.15·extent) + T9 tentative → T9 suppressed, T7 giữ → 1 ID", "mode": "on", "state": {"association_state": "suppressed_roi_edge_twin"}},
+      {"id": "k5", "caption": "Phản-ví: 2 xe thật sát IoU .91 nhưng CẢ HAI confirmed → điều kiện '≥1 tentative/invisible' chặn → không suppress", "mode": "on", "state": {"ids": "2 xe thật giữ nguyên"}}
+    ]
+  },
+  "qa": [
+    {"q": "IoU 0.90 cao vậy có bắt nhầm 2 xe thật?", "a": "Hiếm — cộng thêm '≥1 bên tentative/invisible' chặn triệt để; thiết kế cố tình hẹp [suy luận]."},
+    {"q": "Twin thua bị xóa?", "a": "Không — vẫn ở _tracks, age/expire bình thường; chỉ không được claim detection (audit qua association_state)."},
+    {"q": "Blob echo của xe CÓ chủ?", "a": "Được bảo vệ — mỗi blob có 'clean owner' riêng thì không suppress, tránh nuốt xe hàng xóm."}
+  ],
+  "certainty": "Cao [code] 2 cơ chế + hằng + điều kiện + winner; 'twin giữ-an-toàn' = strong inference từ thiết kế."
+}

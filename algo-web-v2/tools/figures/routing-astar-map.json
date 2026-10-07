@@ -1,0 +1,20 @@
+{
+  "id": "routing-astar-map",
+  "session": "frontend_artifacts",
+  "cam": 0,
+  "frame": 0,
+  "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, route C10)",
+  "image_path": "D:/TechGar2/frontend/artifacts/screenshots/1440x900-c10-navigation.png",
+  "out": "routing-astar-map.jpg",
+  "max_kb": 260,
+  "draw": [
+    {"type": "circle", "xy": [1007, 858], "r": 14, "color": "#ff3b30",
+     "label": "nút entrance = trung điểm cổng vào", "label_at": [620, 862]},
+    {"type": "circle", "xy": [1007, 275], "r": 14, "color": "#ff3b30",
+     "label": "nút exit = trung điểm cổng ra", "label_at": [1035, 252]},
+    {"type": "box", "xyxy": [726, 550, 1022, 574], "color": "#ffd600",
+     "label": "tuyến A* bám theo cạnh lane-graph", "label_at": [640, 652]},
+    {"type": "circle", "xy": [735, 558], "r": 13, "color": "#ffd600",
+     "label": "đích: nút spot-entry C10", "label_at": [765, 505]}
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "kalman-coast",
+  "session": "session_hiep_thai1",
+  "cam": 1,
+  "frame": 1407,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [415, 204, 453, 248],
+      "color": "#00c8ff",
+      "label": "lid18 coasting"
+    },
+    {
+      "type": "box",
+      "xyxy": [385, 192, 428, 230],
+      "color": "#ffd23f",
+      "label": "lid19"
+    },
+    {
+      "type": "box",
+      "xyxy": [372, 171, 428, 215],
+      "color": "#ffd23f",
+      "label": "lid20"
+    },
+    {
+      "type": "arrow",
+      "from": [434, 246],
+      "to": [434, 196],
+      "color": "#00c8ff",
+      "label": "v ~ -14 px/f"
+    }
+  ],
+  "max_kb": 220
+}

@@ -1,0 +1,46 @@
+{
+  "id": "routing",
+  "title": "A* routing + off-route + voice",
+  "tier": "T3",
+  "nodes": ["N15"],
+  "problem": "Sau khi chọn ô, tài xế cần tuyến ĐI ĐƯỢC (theo làn một chiều, không xuyên ô đỗ), cảnh báo khi lệch tuyến, chỉ dẫn giọng nói tiếng Việt — tất cả tính lại liên tục theo vị trí runtime trên điện thoại.",
+  "does": "findRoute = A* trên LaneGraph: cạnh 'two-way' được thêm cả chiều ngược, 'one-way' chỉ from→to. Heuristic = euclidean × min(edge.distance/euclid) toàn graph → admissible theo cấu trúc. Route được tính LẠI MỖI TICK từ vị trí hiện tại (freshRoute vô điều kiện); ngưỡng 80px chỉ gate CẢNH BÁO (đỏ + voice 7s cooldown), không gate reroute. routeFromPos neo trên cạnh gần nhất, không đảo cạnh 1 chiều.",
+  "role": {"before": "vị trí GID từ snapshot N13 + session goal", "after": "polyline tuyến + câu lệnh voice cho tài xế", "missing": "Session có QR nhưng tài xế tự dò đường; mất direction → route ngược làn"},
+  "where": [{"file": "frontend/src/routing/routeEngine.ts", "line": "31-119", "symbol": "findRoute"}, {"file": "frontend/src/routing/routeEngine.ts", "line": "132-163", "symbol": "routeFromPos"}, {"file": "frontend/src/routing/voiceGuidance.ts", "line": "95-111", "symbol": "checkIsOffRoute"}, {"file": "frontend/src/app/App.tsx", "line": "746-762", "symbol": "off-route callsite + reroute + speak"}],
+  "why": "h = euclid × min(edge.distance/euclid): mọi edge.distance ≥ scale×euclid → h ≤ cost thật (admissible theo cấu trúc, kể cả scale>1; graph rỗng → scale=0 → thoái hóa Dijkstra) [suy luận từ công thức — code không ghi lý do]. routeFromPos neo cạnh gần nhất thay node gần nhất tránh vẽ đường nối xuyên ô đỗ (comment :133-134 [code]). Tie-break nodeOrder deterministic (:64-69).",
+  "steps": [
+    "findVehicleRoute(graph,'A12') → A* entrance → spotEntry[A12].",
+    "Adjacency: two-way đẩy step ngược; one-way không.",
+    "Mở rộng f=g+h, h=euclid×min_cost_ratio; tie-break g nhỏ hơn → nodeOrder sớm.",
+    "Mỗi tick: freshRoute = *RouteFromPos(pos) — VÔ ĐIỀU KIỆN (cả khi đúng tuyến).",
+    "checkIsOffRoute(pos, route, 80): min dist-to-segment >80px → isOffRoute → speak('sai tuyến!', 7000ms, force).",
+    "<80px: reroute lặng lẽ (đã tính sẵn); <35px tới đích: câu đến ô/lối ra."
+  ],
+  "sourceRefs": [
+    {"file": "frontend/src/routing/routeEngine.ts", "line": "38-50", "symbol": "heuristic scale", "note": "min(edge.distance/euclid), không clip"},
+    {"file": "frontend/src/app/App.tsx", "line": "746-762", "symbol": "callsite", "note": "80px callsite (không phải default 75); freshRoute :753-758 mọi tick; speak :760-762"},
+    {"file": "frontend/src/routing/voiceGuidance.ts", "line": "98", "symbol": "default 75px", "note": "chỉ fallback — production truyền 80"},
+    {"file": "frontend/src/routing/routeEngine.ts", "line": "22-27", "symbol": "direction adjacency", "note": "laneGraph.ts:19,:43 one-way default; two-way cụm dọc :117-130"}
+  ],
+  "realParams": [
+    {"name": "off-route threshold", "value": 80, "unit": "px", "scope": "runtime", "ref": "App.tsx:746-750 (lib default 75 voiceGuidance.ts:98)"},
+    {"name": "arrival radius", "value": "<35", "unit": "px", "scope": "runtime", "ref": "voiceGuidance.ts:126-130"},
+    {"name": "voice cooldown", "value": 7000, "unit": "ms", "scope": "runtime", "ref": "App.tsx:762"},
+    {"name": "heuristic scale", "value": "min(edge.distance/euclid)", "unit": "-", "scope": "default", "ref": "routeEngine.ts:38-47"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Cổng → ô A12, làn giữa 1 chiều", "seed": 12}, {"id": "edge", "label": "Lệch tuyến → cảnh báo/reroute", "seed": 12}],
+    "keyframes": [
+      {"id": "k1", "caption": "OFF direction-guard (giả lập mọi cạnh 2 chiều): A* cắt ngắn đi NGƯỢC làn giữa → tuyến 'ngắn' nhưng đâm đầu xe khác", "mode": "off", "state": {"route": "wrong-way"}},
+      {"id": "k2", "caption": "ON: cạnh làn giữa chỉ from→to → A* buộc vòng qua đầu làn — dài hơn nhưng hợp lệ giao thông", "mode": "on", "state": {"route": "legal"}},
+      {"id": "k3", "caption": "Xe lệch 90px >80: off-route → viền đỏ + voice 'đi sai tuyến!' (cooldown 7s); lệch 60px <80: chỉ reroute lặng lẽ", "mode": "on", "state": {"offset_px": 90, "off_route": true}},
+      {"id": "k4", "caption": "Reroute: route mới bắt đầu đúng điểm-chiếu trên cạnh đang đứng — không nối thẳng tới node gần nhất", "mode": "on", "state": {"anchor": "edge-projection"}}
+    ]
+  },
+  "qa": [
+    {"q": "Xe teleport 200px do GID swap — kêu oan?", "a": "Kêu — và đúng vai trò: reroute mỗi tick từ vị trí mới xử lý jump."},
+    {"q": "Ngưỡng 75 hay 80?", "a": "Callsite production 80px (App.tsx:749); 75 chỉ là default trong lib — hai số đều đúng, khác lớp."},
+    {"q": "Ô đích bị chiếm giữa chừng — route tự đổi?", "a": "Đó là logic session/alternative ở App, không phải A* — A* chỉ trả tuyến."}
+  ],
+  "certainty": "Cao [code] — dossier C T3-4 đã peer-PASS; khác biệt đáng ghi: engine default 75px nhưng production caller 80px."
+}

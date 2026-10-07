@@ -1,0 +1,58 @@
+{
+  "id": "dormant",
+  "title": "Định danh ngủ đông + token rời bãi — giữ ID qua mất dấu dài",
+  "tier": "T2",
+  "nodes": ["N8", "N10", "N11"],
+  "problem": "Xe chạy vào ô đỗ → tracker mất vết theo thiết kế; xe mới lùi ra 30 giây sau nhận ID mới. Nếu không nối lại, một xe thành hai 'khách' trong sổ sách.",
+  "does": "Mất vết không xoá ngay: identity đi vào dormant (ngủ đông) cùng gallery + quỹ đạo. Binder ghi token 'rời bãi' khi ô có xe rồi trống. Fragment mới quanh vùng đó được đấu giá với identity ngủ — khớp thì sống lại cùng GID.",
+  "role": "Trước: local track chết (N8), binder mở/đóng episode (N12). Sau: dormant-match trả GID; token-recovery khôi phục cho gate/session (N13-N14). Mất nó: mỗi lần đỗ = tách ID, session không bao giờ biết xe ra là xe nãy.",
+  "where": "Dormant: cross_camera_manager.py — _set_identity_dormant + notify_track_lost, _match_dormant_identities (LAPJV ≤0.95), _reconcile_dormant_identities :6854, gate 'confirmed+mature ≥3 obs' :2419-2445. Token: slot_vehicle_binder.py — retention :225 (5.0s), _token_radius :603-609, prepare_predeparture_tokens + recover_departing_vehicle_ids (signed gate :2875-2876, :2980-2992), wakeup expand :2653-2668. Callsite: two_camera.py:2690-2716 → :2728 → :2759 → :2764 → :2779.",
+  "why": "Đỗ xe = mất vết có chủ đích, không phải biến mất [suy luận]. Alternative [suy luận]: giữ track sống mãi → Kalman trôi ảo trong ô; dormant + token rẻ hơn và đúng mô hình 'xe đứng im'. Ranh giới dormant/token: dormant là trí-nhớ identity (manager), token là manh-mối ô (binder) — hai lớp khác nhau dẫn chứng callsite binder cho C đối chiếu.",
+  "steps": [
+    "Track chết → identity chỉ được ngủ đông nếu đã confirmed + mature ≥3 frame/quan-sát (ccm:2419-2445).",
+    "Retention 60s base; identity 'established' ×4 = 240s; mất-vết gần mép ROI ×2.",
+    "Fragment mới quanh vùng dormant → _match_dormant_identities: gates (16.218cm, appearance, direction) → cost → LAPJV ≤0.95 → re-bind GID.",
+    "Cùng-camera: dormant đang chuyển-động chỉ giữ ≤12s tương-đương-frame; dormant đứng yên thọ hơn.",
+    "Binder: ô có xe → trống → tạo departure-token; token sống 5.0s; vùng gợi ý nở dần 0.05→0.85·diag trong 1.0s.",
+    "Fragment mới = candidate nếu ≥3 evidence frame, size trong (0.40, 2.50), relaxed overlap ≥0.25, min vehicle overlap 0.35.",
+    "Candidate gate thật: signed-distance > −0.85·diag (ngoài quá xa) + overlap=0 + no-evidence → reject — KHÁC wakeup polygon (xem note)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2419-2445", "symbol": "dormant gate", "note": "confirmed + mature ≥3 obs"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "6854+", "symbol": "_reconcile_dormant_identities", "note": "dọn dormant trùng"},
+    {"file": "backend/main_detect/src/techgar/slot_vehicle_binder.py", "line": "225", "symbol": "token retention", "note": "5.0s"},
+    {"file": "backend/main_detect/src/techgar/slot_vehicle_binder.py", "line": "2653-2668", "symbol": "wakeup expand", "note": "scale 1+2·radius/diag → 1.10-2.70, CHỈ đánh thức detector"},
+    {"file": "backend/main_detect/src/techgar/slot_vehicle_binder.py", "line": "2875-2876, 2980-2992", "symbol": "candidate signed gate", "note": "signed_distance < −0.85·diag + overlap=0 + no-evidence → reject"},
+    {"file": "backend/main_detect/two_camera.py", "line": "1883-1897, 2331", "symbol": "token CLI → ctor", "note": "retention 5.0s; max_expand 0.85 runtime"},
+    {"file": "backend/main_detect/two_camera.py", "line": "2690-2779", "symbol": "dormant/token callsites", "note": "cho C đối chiếu pipeline-order"}
+  ],
+  "realParams": [
+    {"name": "dormant_match_distance", "value": "16.218", "unit": "cm (resolved)", "scope": "resolved = derived", "ref": "two_camera.py:2177-2183"},
+    {"name": "dormant LAPJV cap", "value": "0.95", "unit": "cost", "scope": "class default", "ref": "ccm _match_dormant_identities"},
+    {"name": "retention base / established / roi-edge", "value": "60s / ×4 / ×2", "unit": "s / × / ×", "scope": "class default", "ref": "ccm dormant-retention"},
+    {"name": "same-camera moving limit", "value": "12", "unit": "s (tương đương frame)", "scope": "class default", "ref": "ccm"},
+    {"name": "mature gate", "value": "3", "unit": "obs/frames", "scope": "class default", "ref": "ccm:2419-2445"},
+    {"name": "token retention", "value": "5.0", "unit": "s", "scope": "runtime CLI", "ref": "svb:225 + tc:1883-1887"},
+    {"name": "token expand initial / max / duration", "value": "0.05 / 0.85 / 1.0", "unit": "×diag / ×diag / s", "scope": "runtime CLI (class fallback 0.45 tại svb:228)", "ref": "tc:1890-1897 → tc:2331"},
+    {"name": "token evidence / size / overlaps", "value": "3 / (0.40, 2.50) / 0.25 / 0.35", "unit": "frames / ratio / IoU / IoU", "scope": "class default", "ref": "svb recover_departing"},
+    {"name": "new-identity params", "value": "5 / 12 / 0.15", "unit": "obs / obs / displacement-ratio", "scope": "runtime CLI", "ref": "ccm:163-165 + tc:1980-1995"}
+  ],
+  "storyboard": {
+    "scene": "Xe G#5 đỗ vào ô A12 → mất vết; 8s sau fragment đỏ lùi ra — CÙNG cảnh hai nhánh.",
+    "seed": "dormant-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Track chết → ID xoá luôn; fragment lùi ra = GID mới G#9, session không biết xe ra.", "on": "G#5 → dormant với đồng-hồ 60s (established → 240s); ô A12 mở token 5s, vòng gợi ý nở 0.05→0.85·diag."},
+      {"k": 2, "off": "—", "on": "Vùng wakeup mờ-vàng nở quanh ô (scale 1.10→2.70) — CHỈ đánh thức detector, không phải cổng khớp."},
+      {"k": 3, "off": "—", "on": "Fragment #7: signed-distance vs −0.85·diag → trong vùng; size 1.1 ∈(0.40,2.50), evidence 3f → candidate hợp lệ."},
+      {"k": 4, "off": "—", "on": "Dormant-match: dist 9cm<16.218, appearance qua → LAPJV chọn G#5; token trả G#5 về cho fragment."},
+      {"k": 5, "off": "Kết: episode G#5 'mất' + episode G#9 mới — 1 xe 2 sổ.", "on": "Kết: fragment #7 = G#5; episode tiếp tục, gate/exit nhận đúng xe."}
+    ],
+    "visual": "Map ô A12: đồng-hồ dormant 60s/240s, vòng token nở dần có số scale, candidate-checklist (signed-gate/size/evidence/overlap), phân biệt màu: vùng VÀNG=wakeup-only vs vùng ĐỎ=signed-gate. Label rõ 'wakeup polygon ≠ cổng khớp'."
+  },
+  "qa": [
+    {"q": "Vùng vàng nở lớn có nghĩa xe ở xa cũng khớp?", "a": "Không — đó là wakeup polygon (đánh thức detector, svb:2653-2668); cổng khớp thật là signed-distance vs −0.85·diag (svb:2980-2992) [code]."},
+    {"q": "Xe khác trúng ô đó trong 5s thì sao?", "a": "Candidate vẫn phải qua signed-gate + size + evidence + overlap; token là manh-mối, không phải quyết-định [code]."},
+    {"q": "Runtime expand thật là 0.45 hay 0.85?", "a": "0.85 — CLI tc:1890-1897 → ctor tc:2331; 0.45 chỉ là class-fallback svb:228 [code, đã arbitrate]."}
+  ],
+  "certainty": "Cao [code] cho dormant-gates/retention/token-params/wakeup-vs-gate; 'tại sao hai lớp' [suy luận]."
+}

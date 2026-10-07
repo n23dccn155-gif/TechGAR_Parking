@@ -1,0 +1,16 @@
+{
+  "id": "contour-giant-blob",
+  "session": "runtime_session_bt",
+  "cam": 2,
+  "frame": 1422,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [46, 63, 269, 310],
+      "color": "#d64545",
+      "label": "blob 223x247 px - qua moi gate"
+    }
+  ],
+  "max_kb": 220
+}

@@ -1,0 +1,16 @@
+{
+  "id": "replay-ground-truth-sheet",
+  "session": "verify_replay",
+  "cam": 2,
+  "frame": 0,
+  "source": ".analysis/verify-replay/sheets/verify_cur_session_thai8/sheet_0040.jpg (contact sheet replay thật)",
+  "image_path": "D:/TechGar2/.analysis/verify-replay/sheets/verify_cur_session_thai8/sheet_0040.jpg",
+  "out": "replay-ground-truth-sheet.jpg",
+  "max_kb": 250,
+  "draw": [
+    {"type": "circle", "xy": [150, 860], "r": 55, "color": "#ffd600",
+     "label": "track replay: lid40 gid2", "label_at": [230, 880]},
+    {"type": "box", "xyxy": [640, 2, 1278, 358], "color": "#1c7ed6",
+     "label": "mỗi ô sheet = một frame replay", "label_at": [950, 335]}
+  ]
+}

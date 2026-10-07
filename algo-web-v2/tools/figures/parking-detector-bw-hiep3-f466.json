@@ -1,0 +1,11 @@
+{
+  "id": "parking-detector-bw-hiep3-f466",
+  "session": "session_hiep3",
+  "cam": 2,
+  "frame": 466,
+  "source": "debug",
+  "draw": [
+    {"type": "box", "xyxy": [640, 660, 1272, 700], "color": "#0b57d0", "label": "xanh=trong, do=co xe"}
+  ],
+  "max_kb": 220
+}

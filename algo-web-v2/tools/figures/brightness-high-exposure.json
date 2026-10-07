@@ -1,0 +1,12 @@
+{
+  "id": "brightness-high-exposure",
+  "session": "session_hiep_sang8",
+  "cam": 2,
+  "frame": 600,
+  "source": "raw",
+  "draw": [
+    {"type": "box", "xyxy": [340, 95, 445, 170], "color": "#ffd23f", "label": "xe toi tren nen sang"},
+    {"type": "box", "xyxy": [290, 378, 710, 430], "color": "#d64545", "label": "vung watermark nam trong ROI"}
+  ],
+  "max_kb": 200
+}

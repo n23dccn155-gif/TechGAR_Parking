@@ -1,0 +1,20 @@
+﻿schema_version,event_id,physical_vehicle_id,event_type,start_frame,end_frame,source_camera,target_camera,source_slot_id,target_slot_id,preferred_delay_frames,max_delay_frames,required,critical,notes
+3,E001,xe_xanh,enter_lot,53,,cam2,,,,,,true,true,auto-prefill: verify
+3,E002,xe_xanh,camera_handoff,1856,135,cam2,cam1,,,,,true,true,auto-prefill: verify
+3,E003,xe_xanh,park,1856,,cam2,,,A01,,,true,true,auto-prefill: verify slot+frame
+3,E004,xe_xanh,exit_lot_or_final,1856,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E005,xe_den,enter_lot,122,,cam2,,,,,,true,true,auto-prefill: verify
+3,E006,xe_den,camera_handoff,1289,908,cam2,cam1,,,,,true,true,auto-prefill: verify
+3,E007,xe_den,park,1350,,cam1,,,F01,,,true,true,auto-prefill: verify slot+frame
+3,E008,xe_den,exit_lot_or_final,1350,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E009,,enter_lot,242,,cam2,,,,,,true,true,auto-prefill: verify
+3,E010,,exit_lot_or_final,242,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E011,,enter_lot,1378,,cam2,,,,,,true,true,auto-prefill: verify
+3,E012,,exit_lot_or_final,1520,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E013,,enter_lot,1389,,cam1,,,,,,true,true,auto-prefill: verify
+3,E014,,exit_lot_or_final,1524,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E015,xe_den,enter_lot,1838,,cam1,,,,,,true,true,auto-prefill: verify
+3,E016,xe_den,park,1859,,cam1,,,F05,,,true,true,auto-prefill: verify slot+frame
+3,E017,xe_den,exit_lot_or_final,1859,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E018,,enter_lot,1945,,cam1,,,,,,true,true,auto-prefill: verify
+3,E019,,exit_lot_or_final,1950,,cam1,,,,,,true,false,auto-prefill: last seen frame

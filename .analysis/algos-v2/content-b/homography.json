@@ -1,0 +1,55 @@
+{
+  "id": "homography",
+  "title": "Homography / bản đồ chung — 2 camera nói cùng một đơn vị cm",
+  "tier": "T2",
+  "nodes": ["N9", "N10", "N11"],
+  "problem": "Hai camera nhìn cùng bãi ở hai góc — 'gần trên ảnh' không phải gần thật. Mọi cổng khoảng cách xuyên camera cần một bản đồ chung đo bằng cm.",
+  "does": "Calibration offline tạo homography 3×3 mỗi cam (ảnh-px → map-cm). Runtime chiếu mọi vị trí/vận tốc/khoảng cách qua _world(); ngưỡng matching resolve từ median cạnh-dài ô đỗ thực đo.",
+  "role": "Trước: calibrate_map.py UI + rectangle_line_calibration fit + load_calibration gate file. Sau: mọi ngưỡng N9/N10/N11 là cm trên map này; token/binder cũng chiếu qua transforms (build_recovery_track_payload tc:622-663). Mất nó: fallback crop-offset (ccm _local:1424-1427) méo mọi distance gate.",
+  "where": "Tạo: calibrate_map.py (8 cặp; preview findHomography:284). Fit: tools/rectangle_line_calibration.py:41-109, fit_gate:112. Nạp: two_camera.py:284-341 (load_calibration). Dùng: cross_camera_manager.py — _world:1370, _local:1422, _bbox_anchor:1399-1402, _track_world:1407, _world_velocity:2458-2468.",
+  "why": "Map chung biến direction/depth/residual thành số đo vật lý. Alternative [suy luận]: match thuần ảnh chỉ đúng khi cam cùng crop — chính là fallback _local. Vai trò điểm đo ghi trong code: A–D 'metric_anchor', V1–V4 'line_correction' (rl_calib:108).",
+  "steps": [
+    "Click 8 cặp tương ứng: A–D góc chữ-nhật đo cm A(0,0)B(AB,0)C(AB,AD)D(0,AD); V1–V4 cùng một vạch dọc.",
+    "Validate: tứ-giác lồi ≥100px², cách ≥4px@1280, V-span ≥max(80px,0.75·rộng), lệch-đường ≤8px (rl_calib:58-78).",
+    "compute_distributed_shared_homographies: min_inliers=8, ratio=1.0 — dùng cả 8 cặp; 'before' = A–D-only (:87-95).",
+    "fit_gate: max_error_cm≤2.0, p95≤8.5px, max≤12px (:112); load_calibration chặn: rectangle_line_v1 cần status=reviewed_fit + visual_review.accepted + fit_ready + 8 điểm + đủ 2 cam (tc:287-300); schema≥5 → 'passed' hoặc reviewed (:301-304); ma trận 3×3 finite det≥1e-12 (:308-313); adjacency ĐÚNG cam1:right→cam2 & cam2:left→cam1 (:315-320); overlap polygon ≥3 điểm (:330-331).",
+    "Runtime: _track_world = _world(_bbox_anchor) — bbox_center runtime → (cx, cy−h/2) (ccm:1399-1407); perspectiveTransform qua camera_transforms (:1370-1377).",
+    "Vận tốc: _world_velocity per-frame từ 5 điểm history cuối (:2458-2468); velocity_world_per_second EMA 0.65 cũ + 0.35 đo khi có timestamp (:590-608).",
+    "Ngưỡng: median_slot_length (tc:395-412, minAreaRect→long-edge→median) × SLOT_MATCHING_MULTIPLES {1.75/2.75/1.75/0.50} → derived; resolve_matching_distance: CLI > min(configured, derived) (tc:426-447)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/tools/rectangle_line_calibration.py", "line": "41-112", "symbol": "fit + fit_gate", "note": "8 cặp, min_inliers=8, gates 2.0cm/8.5px/12px"},
+    {"file": "backend/main_detect/two_camera.py", "line": "284-341", "symbol": "load_calibration", "note": "status/adjacency/overlap/transform gates"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "1370-1407", "symbol": "_world/_track_world", "note": "perspectiveTransform + anchor"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2458-2468", "symbol": "_world_velocity", "note": "per-frame từ 5 history cuối"},
+    {"file": "backend/main_detect/two_camera.py", "line": "387-447", "symbol": "median_slot_length + resolve", "note": "derived = round(median×multiple, 3); min(config, derived)"},
+    {"file": "backend/main_detect/config/two_camera.shared_cm_01.json", "line": "7,134+,1461-1468", "symbol": "unit cm + anchor + matching_defaults", "note": "bbox_center, 15/25/35/9 cm"}
+  ],
+  "realParams": [
+    {"name": "correspondence points", "value": "8 cặp (4 metric + 4 line)", "unit": "points", "scope": "config", "ref": "rl_calib:41-108"},
+    {"name": "fit gates", "value": "2.0 / 8.5 / 12", "unit": "cm / px / px", "scope": "class default", "ref": "rl_calib:112"},
+    {"name": "shared_map_anchor class → runtime", "value": "bottom_center → bbox_center", "unit": "anchor", "scope": "class default vs config override", "ref": "ccm:168 vs cfg:1461 → tc:2160-2161"},
+    {"name": "median_slot_length (đo thật)", "value": "9.267515", "unit": "cm", "scope": "config measured (60 ô, minAreaRect long edge)", "ref": "tc:395-412 + cfg:134+"},
+    {"name": "slot multiples", "value": "1.75 / 2.75 / 1.75 / 0.50", "unit": "× median", "scope": "class default", "ref": "tc:387-392"},
+    {"name": "derived (round·,3)", "value": "16.218 / 25.486 / 16.218 / 4.634", "unit": "cm", "scope": "derived", "ref": "tc:415-423"},
+    {"name": "resolved runtime", "value": "15.0 / 25.0 / 16.218 / 4.634", "unit": "cm", "scope": "runtime resolved min(cfg,derived)", "ref": "tc:2163-2190"},
+    {"name": "world unit", "value": "cm", "unit": "unit", "scope": "config", "ref": "cfg:7"}
+  ],
+  "storyboard": {
+    "scene": "Xe nằm trong vùng overlap, cam1 thấy tâm-ảnh (812,340)px, cam2 thấy (220,365)px — CÙNG một xe.",
+    "seed": "homography-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Fallback crop-offset: hai điểm 'xa' ~590px — cổng 15cm không có nghĩa vật lý; handoff không bao giờ khớp được.", "on": "perspectiveTransform: cam1→world (35.2,41.8)cm, cam2→world (34.9,41.5)cm — hai chấm gần-trùng trên map."},
+      {"k": 2, "off": "—", "on": "Residual 0.4cm ≪ 15cm → cổng mở; hai điểm vẽ trên cùng một lưới map."},
+      {"k": 3, "off": "—", "on": "Map hiển thị footprint 2 cam + polygon overlap; anchor tick 'bbox_center' (vì cam đối diện thấy 2 đầu xe, tc:602-606)."},
+      {"k": 4, "off": "—", "on": "v=−12cm/s → _predicted_world đặt điểm hẹn phía trước hướng đi; mũi tên vận tốc có unit cm/s."}
+    ],
+    "visual": "Map top-down lưới cm + 2 polygon footprint cam + 2 điểm projection (màu cam1/cam2). Panel side: 'px → cm qua homography 3×3', anchor dropdown class-vs-runtime. Mini-bảng resolved 15/25/16.218/4.634."
+  },
+  "qa": [
+    {"q": "Calibration lệch 3cm ảnh hưởng gì?", "a": "Ăn vào bound 9.268cm của conflict-resolver và mọi distance gate [code+suy luận hệ quả]."},
+    {"q": "Vì sao bbox_center không phải chân-xe?", "a": "Code ghi: cam đối diện thấy 2 đầu xe khác nhau, tâm bbox khớp map hơn (tc:602-606) [code]."},
+    {"q": "Đủ 4 góc không?", "a": "Cố ý thêm V1–V4 line-correction [code]; giúp nắn cong map dọc theo vạch [suy luận]."}
+  ],
+  "certainty": "Cao [code] cho pipeline calibrate→gate→runtime + anchor-override + resolved distances."
+}

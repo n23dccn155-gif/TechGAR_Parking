@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TechGAR Pipeline — minh họa giáo dục</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<header class="topbar">
+  <button id="nav-toggle" type="button" aria-label="Mở mục lục trang" aria-expanded="false">☰</button>
+  <div class="brand">TechGAR Pipeline<small>minh họa giáo dục · bám mã nguồn thật</small></div>
+  <nav class="toplinks">
+    <a href="#/" data-top="overview">Tổng quan</a>
+    <a href="#/journey" data-top="journey">Hành trình</a>
+    <a href="#/glossary" data-top="glossary">Thuật ngữ</a>
+    <a href="#/values" data-top="values">Số liệu</a>
+  </nav>
+  <div class="search-box">
+    <input id="top-search" type="search" placeholder="Tìm kiếm…" aria-label="Tìm kiếm">
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="nav" id="nav" aria-label="Danh sách trang"></nav>
+  <main class="main" id="view"></main>
+  <aside class="toc" id="toc" aria-label="Mục lục trong trang"></aside>
+</div>
+<div class="nav-backdrop" id="nav-backdrop"></div>
+<footer class="foot">TechGAR2 · minh họa giáo dục — số liệu kèm dẫn chứng trong mục ⑦ của từng trang</footer>
+
+<!-- core: namespace → terms → render → search (không module, không fetch) -->
+<script src="js/core/tg.js"></script>
+<script src="js/core/terms.js"></script>
+<script src="js/core/render.js"></script>
+<script src="js/core/search.js"></script>
+<script src="js/core/interactive/roi.js"></script>
+<script src="js/core/interactive/homography.js"></script>
+<script src="js/core/interactive/occlusion.js"></script>
+<script src="js/core/interactive/assignment.js"></script>
+<!-- data -->
+<script src="js/manifest.js"></script>
+<script src="js/glossary-data.js"></script>
+<script src="js/quickvalues-data.js"></script>
+<!-- pages: mỗi file tự TG.definePage(...) — chỉ nạp file tồn tại -->
+<script src="js/pages/overview.js"></script>
+<script src="js/pages/journey.js"></script>
+<script src="js/pages/homography.js"></script>
+<script src="js/pages/tracklet-descriptor.js"></script>
+<script src="js/pages/trajectory-reid.js"></script>
+<script src="js/pages/handoff-dormant.js"></script>
+<script src="js/pages/gid-conflict.js"></script>
+<script src="js/pages/parking-detector.js"></script>
+<script src="js/pages/slot-binder.js"></script>
+<script src="js/pages/roi-mask.js"></script>
+<script src="js/pages/parking-slots.js"></script>
+<script src="js/pages/brightness.js"></script>
+<script src="js/pages/motion-detection.js"></script>
+<script src="js/pages/contour-filtering.js"></script>
+<script src="js/pages/kalman-lapjv.js"></script>
+<script src="js/pages/track-lifecycle.js"></script>
+<script src="js/pages/occlusion-watershed.js"></script>
+<script src="js/pages/snapshot-api.js"></script>
+<script src="js/pages/gate-session.js"></script>
+<script src="js/pages/frontend-dataflow.js"></script>
+<script src="js/pages/routing-astar.js"></script>
+<script src="js/pages/voice-guidance.js"></script>
+<script src="js/pages/predictions-jsonl.js"></script>
+<script src="js/pages/replay-ground-truth.js"></script>
+<script src="js/pages/failure-gallery.js"></script>
+<!-- router + boot cuối -->
+<script src="js/core/router.js"></script>
+<script>
+(function () {
+  TG.router.init({
+    view: document.getElementById("view"),
+    toc: document.getElementById("toc"),
+    nav: document.getElementById("nav"),
+    backdrop: document.getElementById("nav-backdrop"),
+    toggle: document.getElementById("nav-toggle")
+  });
+  TG.bindTermTips(document);
+  var ts = document.getElementById("top-search");
+  ts.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && ts.value.trim()) {
+      TG.router.go("#/search?q=" + encodeURIComponent(ts.value.trim()));
+      ts.blur();
+    }
+  });
+})();
+</script>
+</body>
+</html>

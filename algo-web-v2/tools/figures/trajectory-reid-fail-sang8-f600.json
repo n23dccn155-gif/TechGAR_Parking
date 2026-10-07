@@ -1,0 +1,22 @@
+{
+  "id": "trajectory-reid-fail-sang8-f600",
+  "session": "session_hiep_sang8",
+  "cam": 2,
+  "frame": 600,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [349, 64, 423, 137],
+      "color": "#b3261e",
+      "label": "lid40 -> GID 3 moi"
+    },
+    {
+      "type": "box",
+      "xyxy": [367, 61, 428, 118],
+      "color": "#0b57d0",
+      "label": "vi tri cuoi lid35/GID1 @f295"
+    }
+  ],
+  "max_kb": 200
+}

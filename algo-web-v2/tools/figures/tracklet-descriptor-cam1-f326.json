@@ -1,0 +1,16 @@
+{
+  "id": "tracklet-descriptor-cam1-f326",
+  "session": "session_hiep_sang8",
+  "cam": 1,
+  "frame": 326,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [940, 96, 1007, 164],
+      "color": "#0b57d0",
+      "label": "lid26 -> GID 2"
+    }
+  ],
+  "max_kb": 200
+}

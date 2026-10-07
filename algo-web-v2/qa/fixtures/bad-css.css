@@ -1,0 +1,4 @@
+/* fixture CSS xấu — lint phải bắt 3 lỗi */
+.x { border-radius: 6px; }
+.y { font-style: italic; }
+.z { background: #f5f0e1; }

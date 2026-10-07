@@ -1,0 +1,42 @@
+[
+ {
+  "sheet": "sheet_0001.jpg",
+  "cells": [
+   {
+    "frame_idx": 4060,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4120,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4200,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4280,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4340,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4390,
+    "cam": "cam1",
+    "has_record": true
+   },
+   {
+    "frame_idx": 4418,
+    "cam": "cam1",
+    "has_record": true
+   }
+  ]
+ }
+]

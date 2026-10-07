@@ -1,0 +1,40 @@
+{
+  "id": "brightness",
+  "title": "Bù sáng toàn cục",
+  "tier": "T2",
+  "nodes": ["N5"],
+  "problem": "Mây che nắng → toàn ảnh tối đi đồng loạt. Frame-diff thuần thấy 'động khắp nơi' → hàng trăm blob giả dù không một xe nào nhúc nhích.",
+  "does": "Trước absdiff, đo độ lệch sáng toàn cục giữa frame hiện tại và reference bằng MEDIAN của hiệu mức xám trên lưới mẫu thô (~128 điểm mỗi chiều — bước nhảy strided, không phải '128 mẫu'), rồi cộng bù vào reference, clip [0,255]. Diff sau đó chỉ còn khác biệt cục bộ thật.",
+  "role": {"before": "gray + blur", "after": "diff đã bù → threshold → temporal mask", "missing": "Mỗi lần đổi sáng = một đợt detection rác toàn cảnh"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "470-484", "symbol": "_brightness_shift"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "451-461", "symbol": "_motion_between (áp dụng)"}],
+  "why": "Median bền với vùng đổi thật (xe chạy) — mean bị kéo bởi chính đối tượng [suy luận từ chọn median]. Lưới strided thay median toàn ảnh vì ~17ms quá chậm cho 2 lần/frame [code mt:463-469]. Chỉ bù 1 hằng số toàn cục — không xử lý gradient sáng cục bộ.",
+  "steps": [
+    "Lưới đều: step = max(1, min(H//128, W//128)) → frame[::step,::step] (1280×720 → 256×144 điểm).",
+    "shift = median(gray_now − gray_ref).",
+    "ref_bù = clip(ref + shift, 0, 255).",
+    "diff = absdiff(now, ref_bù); mask = diff > motion_threshold (20 runtime)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "470-484", "symbol": "_brightness_shift + _BRIGHTNESS_SAMPLE_TARGET", "note": "lưới mỗi chiều; comment perf :463-469"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "451-461", "symbol": "_motion_between", "note": "add→clip→absdiff→THRESH_BINARY"}
+  ],
+  "realParams": [
+    {"name": "_BRIGHTNESS_SAMPLE_TARGET", "value": 128, "unit": "điểm/chiều lưới", "scope": "default", "ref": "motion_tracker.py:470"},
+    {"name": "motion_threshold", "value": 20, "unit": "mức xám", "scope": "runtime", "ref": "two_camera.py:1813 (class 25)"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Mây che nắng", "seed": 9}, {"id": "edge", "label": "Gradient cục bộ (giới hạn)", "seed": 9}],
+    "keyframes": [
+      {"id": "k1", "caption": "Frame t−0.25s sáng 120; mây đến, frame t sáng 95; xe A vẫn chạy [minh họa]", "mode": "both", "state": {"mean_prev": 120, "mean_now": 95}},
+      {"id": "k2", "caption": "OFF: diff toàn ảnh ~25 → mask nổ khắp → hàng chục blob", "mode": "off", "state": {"blobs": 40}},
+      {"id": "k3", "caption": "ON: shift=−25 → ref tối theo → diff chỉ còn vùng xe + mép cây → đúng 1 blob", "mode": "on", "state": {"shift": -25, "blobs": 1}},
+      {"id": "k4", "caption": "Giới hạn: đèn chiếu một góc (gradient) — bù toàn cục không cứu được [hiện là giới hạn]", "mode": "on", "state": {"limit": "global-only"}}
+    ]
+  },
+  "qa": [
+    {"q": "Vì sao median mà không mean?", "a": "Vùng xe đang đổi là ngoại-lệ; median bỏ qua chúng, mean bị kéo theo [suy luận]."},
+    {"q": "Bù âm/dương đều được?", "a": "Được — shift là median có dấu; sáng lên hay tối đi đều bù."},
+    {"q": "Có bù theo vùng không?", "a": "Không — chỉ 1 hằng số toàn cục; gradient cục bộ là giới hạn đã ghi."}
+  ],
+  "certainty": "Cao [code] median/lưới/clip/thứ tự; giải thích robust = suy luận."
+}

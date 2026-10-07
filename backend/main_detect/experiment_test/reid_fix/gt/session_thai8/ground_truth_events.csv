@@ -1,0 +1,25 @@
+﻿schema_version,event_id,physical_vehicle_id,event_type,start_frame,end_frame,source_camera,target_camera,source_slot_id,target_slot_id,preferred_delay_frames,max_delay_frames,required,critical,notes
+3,E001,xe_xanh,enter_lot,52,,cam2,,,,,,true,true,auto-prefill: verify
+3,E002,xe_xanh,camera_handoff,1856,135,cam2,cam1,,,,,true,true,auto-prefill: verify
+3,E003,xe_xanh,park,1856,,cam2,,,A01,,,true,true,auto-prefill: verify slot+frame
+3,E004,xe_xanh,exit_lot_or_final,1856,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E005,xe_den,enter_lot,122,,cam2,,,,,,true,true,auto-prefill: verify
+3,E006,xe_den,park,175,,cam2,,,B01,,,true,true,auto-prefill: verify slot+frame
+3,E007,xe_den,exit_lot_or_final,175,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E008,,enter_lot,242,,cam2,,,,,,true,true,auto-prefill: verify
+3,E009,,exit_lot_or_final,242,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E010,xe_den,enter_lot,1242,,cam1,,,,,,true,true,auto-prefill: verify
+3,E011,xe_den,camera_handoff,1350,1242,cam1,cam1,,,,,true,true,auto-prefill: verify
+3,E012,xe_den,park,1350,,cam1,,,F01,,,true,true,auto-prefill: verify slot+frame
+3,E013,xe_den,exit_lot_or_final,1350,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E014,,enter_lot,1378,,cam2,,,,,,true,true,auto-prefill: verify
+3,E015,,exit_lot_or_final,1522,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E016,,enter_lot,1388,,cam1,,,,,,true,true,auto-prefill: verify
+3,E017,,exit_lot_or_final,1416,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E018,xe_den,enter_lot,1842,,cam1,,,,,,true,true,auto-prefill: verify
+3,E019,xe_den,park,1859,,cam1,,,F05,,,true,true,auto-prefill: verify slot+frame
+3,E020,xe_den,exit_lot_or_final,1859,,cam1,,,,,,true,false,auto-prefill: last seen frame
+3,E021,,enter_lot,1942,,cam2,,,,,,true,true,auto-prefill: verify
+3,E022,,exit_lot_or_final,1944,,cam2,,,,,,true,false,auto-prefill: last seen frame
+3,E023,,enter_lot,1948,,cam1,,,,,,true,true,auto-prefill: verify
+3,E024,,exit_lot_or_final,1950,,cam1,,,,,,true,false,auto-prefill: last seen frame

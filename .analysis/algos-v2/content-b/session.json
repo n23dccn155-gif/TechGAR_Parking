@@ -1,0 +1,51 @@
+{
+  "id": "session",
+  "title": "Session FSM + QR 120s — quirk 'hết QR ≠ chết session'",
+  "tier": "T3",
+  "nodes": ["N14"],
+  "problem": "Mỗi xe vào cổng cần một phiên (session) gắn GID → QR cho tài-xế claim → chọn ô → điều-hướng → đỗ → ra. Trạng-thái phải nhất-quán giữa nhiều consumer poll bất-đồng-bộ, và QR không được treo mãi trên kiosk.",
+  "does": "session_manager là store JSON có revision tăng đơn-điệu + _STORE_LOCK; mọi mutation qua _mutate_session atomic. QR có qrExpiresAt=created+120s nhưng CHỈ lọc hiển-thị kiosk — không auto-xoá session. Exit = crossing vạch ra → xoá hẳn record.",
+  "role": "Lớp nghiệp-vụ trên N13 snapshot: gate-coordinator (N14) dịch parking_episodes/crossing thành mutation; frontend đọc REST 8000. Mất nó → không trạng-thái xe nào sống qua 2 poll. QUIRK phải giữ rõ: 'CLOSED' tồn-tại trong code nhưng chỉ ở read-side filter — không assignment nào ghi nó; cũng không state 'CLAIMED' (claim ghi cờ claimed).",
+  "where": "backend/session_manager.py — QR_DISPLAY_SECONDS :29, _qr_expires_at :81-88, list_waiting_sessions :200-217 (filter :206-215), claim_session :355-368 (không check expiry :355-360), select_spot :371-389, set_parked :392-419 (idempotent :395-401), apply_departure_episode :439-446 (chỉ PARKED→SELECTING_SPOT :444-445), set_exit_navigation :449-464, delete :574-600, CLOSED filters :190,:277,:531,:542,:556, _NAVIGATION_RESERVATION_STATES :33.",
+  "why": "[code] Docstring parking_episodes (svb:330-332): session consume theo parking_episode_id — nguồn sự-thật duy-nhất. [code] set_parked idempotent theo episode id — restore false-empty không hủy intent relocation/exit. [suy luận] QR TTL chỉ lọc kiosk vì session còn cần sống để xe hoàn-tất hành-trình kể-cả claim muộn.",
+  "steps": [
+    "Entry crossing → create_session → WAITING_FOR_SCAN + qrExpiresAt=+120s (:291-302).",
+    "Kiosk list_waiting_sessions: WAITING_FOR_SCAN ∧ ¬claimed ∧ now<expiry (:206-215) — hết 120s QR ẨN khỏi màn-hình, session VẪN sống.",
+    "claim_session: WAITING_FOR_SCAN → SELECTING_SPOT + claimed (:355-360); đã-claim → noop; state khác → InvalidSessionState (:362-366). [quirk,code] không kiểm qrExpiresAt → QR hết-hạn vẫn claim được qua sessionId trực-tiếp.",
+    "select_spot → NAVIGATING_TO_SPOT (hoặc RELOCATING nếu đã có actualParkedSpotId) + reservation (:373-384).",
+    "Episode parked → set_parked → PARKED + gắn parkingEpisodeId (:392-436); episode departing → apply_departure_episode → PARKED→SELECTING_SPOT (:439-446, chỉ khi state==PARKED).",
+    "set_exit_navigation → EXIT_NAVIGATION (:449-464); cắt EXIT → delete_session_by_global_id — đóng-runtime = XOÁ, không state mới (:574-600)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/session_manager.py", "line": "29,81-88,206-215", "symbol": "QR 120s", "note": "visibility-only, không phải TTL"},
+    {"file": "backend/session_manager.py", "line": "355-368", "symbol": "claim_session", "note": "quirk: không check expiry"},
+    {"file": "backend/session_manager.py", "line": "392-446", "symbol": "parked/departing", "note": "idempotent theo episode; departing chỉ từ PARKED"},
+    {"file": "backend/session_manager.py", "line": "190,277,531,542,556", "symbol": "CLOSED filters", "note": "read-side only — không hàm ghi"},
+    {"file": "backend/session_manager.py", "line": "33,220-252", "symbol": "reservation states", "note": "NAVIGATING_TO_SPOT + RELOCATING"}
+  ],
+  "realParams": [
+    {"name": "QR_DISPLAY_SECONDS", "value": "120.0 — chỉ visibility kiosk", "unit": "s", "scope": "class default", "ref": "session_manager.py:29,:81-88,:213-214"},
+    {"name": "runtime states ghi được", "value": "6 (WAITING/SELECTING/NAVIGATING/RELOCATING/PARKED/EXIT_NAV)", "unit": "states", "scope": "runtime", "ref": "assign session_manager.py:358-463"},
+    {"name": "reservation states", "value": "NAVIGATING_TO_SPOT + RELOCATING", "unit": "states", "scope": "class default", "ref": "session_manager.py:33"},
+    {"name": "gate poll / retry", "value": "0.25 / ≥1.0", "unit": "s", "scope": "runtime CLI", "ref": "gate_session_controller.py:865,:904-906"},
+    {"name": "atomicity", "value": "_STORE_LOCK + revision + _mutate_session", "unit": "mechanism", "scope": "class default", "ref": "session_manager.py"}
+  ],
+  "storyboard": {
+    "scene": "Timeline một session S1 từ entry tới exit — đồng-hồ tường chạy ngang, QR badge và state-pill đổi độc-lập.",
+    "seed": "session-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Nếu QR-120s là TTL thật: hết 120s → session huỷ, xe chưa claim mất hành-trình.", "on": "12:00:00 entry → S1 WAITING_FOR_SCAN, QR hạn 12:02:00; đồng-hồ QR đếm."},
+      {"k": 2, "off": "—", "on": "12:02:01 QR biến-mất khỏi kiosk (filter now<expiry) NHƯNG S1 vẫn WAITING_FOR_SCAN trong store — hai đối-tượng độc-lập."},
+      {"k": 3, "off": "—", "on": "12:03:10 claim qua deep-link → SELECTING_SPOT — claim KHÔNG bị từ-chối dù QR quá-hạn [quirk code :355-368]."},
+      {"k": 4, "off": "—", "on": "Chọn A12 → NAVIGATING_TO_SPOT + reservation; episode parked → PARKED; rời ô → departing → SELECTING_SPOT lại (chỉ từ PARKED)."},
+      {"k": 5, "off": "—", "on": "EXIT_NAVIGATION → cắt vạch ra → session XOÁ HẲN (không qua CLOSED — 'CLOSED' chỉ là chuỗi trong read-filter)."}
+    ],
+    "visual": "Timeline ngang + FSM 6 state (pill), QR-badge đếm 120s tách khỏi session-life, callout 'CLOSED: chỉ đọc — không ai ghi', panel 'xoá khi exit'."
+  },
+  "qa": [
+    {"q": "QR hết 120s session chết chưa?", "a": "Không — chỉ ẩn kiosk; claim không check expiry (:355-368) [code quirk]."},
+    {"q": "Hai tab claim cùng session?", "a": "_STORE_LOCK + revision + _mutate_session atomic; claim idempotent (:368) [code]."},
+    {"q": "Episode 'departing' tới khi đang EXIT_NAVIGATION?", "a": "Không kéo về SELECTING_SPOT — chỉ flip khi state==PARKED (:444-445) [code]."}
+  ],
+  "certainty": "Cao [code] FSM/QR/episode. Quirk truyền-miệng-dễ-nhầm: QR120s=visibility, session-delete=xoá, CLOSED=filter-only."
+}

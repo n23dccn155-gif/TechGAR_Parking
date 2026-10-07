@@ -1,0 +1,47 @@
+{
+  "id": "gate",
+  "title": "Hướng cắt vạch cổng — entry tạo session, exit xoá session",
+  "tier": "T3",
+  "nodes": ["N14"],
+  "problem": "Xe đi ngang vạch cổng theo hai chiều: chỉ chiều 'vào' mới được tạo session/QR, chiều 'ra' mới được xoá. Phải phân biệt hướng vượt vạch từ 2 vị trí liên tiếp — không có camera riêng cho việc này.",
+  "does": "Mỗi lần snapshot đến, gate-controller kiểm tra đoạn di chuyển (vị trí cũ→mới) có cắt đoạn vạch không; dấu của tích có-hướng cross(vec_xe, vec_vạch) cho biết xe sang phía nào; so với cờ gate.direction để quyết entry hay exit.",
+  "role": "Consumer N14 — process gate riêng, chạy trên mỗi snapshot poll. Entry → create_session; exit → delete_session_by_global_id. Mất nó → không phân biệt vào/ra: session nhân đôi hoặc mất sớm. QUAN TRỌNG: crossing vật lý ≠ xuất-bản GID — xe nhanh có thể cắt vạch trước khi GID publish, code có nhánh 'recovered' riêng.",
+  "where": "backend/gate_session_controller.py — _normalize_gate :196-207, check_line_intersection :229-239, get_crossing_direction :242-247, _crossed_in_valid_direction :250-256, _recent_measured_entry_crossing :259-309 (recovered :296-307), continuity :483-493, entry :514-521, exit :523-534.",
+  "why": "[suy luận] Một vạch + một cờ hướng rẻ hơn hai vùng polygon trước/sau cổng; tích có-hướng là 1 phép nhân-trừ ổn-định số-học và tự-nhiên với tọa-độ world đã chuẩn-hoá. Guard abs(cross)<1e-9 loại cú cắt song-song vạch [code].",
+  "steps": [
+    "Cần observation_is_continuous: observed + có vị-trí trước + obs wall-clock ≤1.0s + source_time gap ≤1.0s (:483-493) — snapshot cũ không được tái-kích-hoạt crossing.",
+    "check_line_intersection(old,new,p1,p2): hai cặp orientation đổi dấu (:229-239).",
+    "direction = cross(vec_xe, vec_vạch); gate.direction=='positive' đòi >0, 'negative' đòi <0 (:250-256); |cross|<1e-9 → invalid.",
+    "Xe nhanh cắt vạch trước khi GID publish → recovered_entry_crossing duyệt recent_observed_path: ≥2 mẫu ĐO liên-tiếp cùng camera + cùng local_track_id, gap ≤1.0s, mẫu-sau cách current_source_time ≤1.0s (:296-307); Kalman predict/jump không đủ điều-kiện (comment :266-274).",
+    "Đúng hướng + chưa có session → create_session(gid) (:514-521); exit tương-tự → delete_session_by_global_id (:523-534)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/gate_session_controller.py", "line": "229-256", "symbol": "intersection + direction", "note": "orientation + cross-sign + 1e-9 guard"},
+    {"file": "backend/gate_session_controller.py", "line": "259-309", "symbol": "_recent_measured_entry_crossing", "note": "recovered path: raw_path[-12:], cùng cam+local"},
+    {"file": "backend/gate_session_controller.py", "line": "483-534", "symbol": "continuity + entry/exit", "note": "≤1.0s wall+source; create/delete session"},
+    {"file": "backend/main_detect/config/gate_zones.json", "line": "", "symbol": "gate.direction", "note": "positive/negative per gate"}
+  ],
+  "realParams": [
+    {"name": "direction guard", "value": "1e-9", "unit": "|cross|", "scope": "class default", "ref": "gate_session_controller.py:254-255"},
+    {"name": "obs continuity", "value": "1.0 / 1.0", "unit": "s wall / s source", "scope": "class default", "ref": "gate_session_controller.py:483-493"},
+    {"name": "recovered path window", "value": "12 mẫu, gap≤1.0s", "unit": "samples / s", "scope": "class default", "ref": "gate_session_controller.py:275-307"},
+    {"name": "gate poll", "value": "0.25 (retry ≥1.0)", "unit": "s", "scope": "runtime CLI", "ref": "gate_session_controller.py:865,:904-906"}
+  ],
+  "storyboard": {
+    "scene": "Vạch ENTRY nằm ngang trên map; xe G#7 tiến từ phía ngoài vào trong — CÙNG cảnh, biến thể hướng.",
+    "seed": "gate-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Không kiểm hướng: mọi cú cắt đều 'entry' → xe RA cũng tạo session QR mới.", "on": "Đoạn old→new cắt vạch; cross(vec_xe, vec_vạch)>0 khớp cờ 'positive' → ENTRY hợp-lệ → create_session."},
+      {"k": 2, "off": "—", "on": "Variant ngược chiều: cross<0 → sai hướng cờ → không tạo; chỉ exit-gate mới xử-lý chiều này."},
+      {"k": 3, "off": "—", "on": "Xe nhanh: frame poll thấy xe đã qua vạch nhưng GID chưa publish → recovered-path cứu bằng 2 mẫu đo cùng cam/local trong 1.0s; vẽ 2 chấm path + đồng-hồ 1.0s."},
+      {"k": 4, "off": "Jitter xuyên vạch tạo session ảo [giới-hạn: code không chặn cú cắt-thật].", "on": "Jitter 1-phía không cắt segment → an-toàn; crossing cũ >1.0s source-time → mất, không hồi-sinh."}
+    ],
+    "visual": "Map cổng: vạch vàng + mũi-tên hướng cờ, đoạn di-chuyển old→new với cross-sign hiển-thị, panel guards (continuity/segment/direction), chip 'recovered ≤1.0s' khi dùng path-history."
+  },
+  "qa": [
+    {"q": "Xe đỗ sượt mép vạch có tạo session ảo?", "a": "Nếu 2 vị-trí liên-tiếp thật-sự cắt đúng hướng → VẪN tạo [giới-hạn code]; jitter 1-phía không cắt segment → an-toàn [code]."},
+    {"q": "Crossing đã xảy-ra mà poll tới trễ?", "a": "Recovered-path cứu trong cửa-sổ ~1.0s source-time của xe — không phải độ-trễ HTTP; quá cửa-sổ hoặc thiếu 2 mẫu cùng cam/track → mất [code]."},
+    {"q": "GID 'nhảy-cóc' cross-camera qua vạch?", "a": "Không được session — recovered cần 2 mẫu đo liền cùng local track (:300-301) [code]."}
+  ],
+  "certainty": "Cao [code] toàn bộ; hằng-số trong file gate, chỉ phụ-thuộc gate_zones.json."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "frontend-dataflow-map",
+  "session": "frontend_artifacts",
+  "cam": 0,
+  "frame": 0,
+  "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, navigation mode)",
+  "image_path": "D:/TechGar2/frontend/artifacts/screenshots/1440x900-c10-navigation.png",
+  "out": "frontend-dataflow-map.jpg",
+  "max_kb": 260,
+  "draw": [
+    {"type": "box", "xyxy": [10, 88, 1428, 152], "color": "#0b57d0",
+     "label": "trạng thái ô đỗ — suy từ snapshot", "label_at": [480, 58]},
+    {"type": "box", "xyxy": [960, 815, 1085, 898], "color": "#2f9e44",
+     "label": "LỐI VÀO — entry_gate chiếu world→SVG", "label_at": [640, 845]},
+    {"type": "box", "xyxy": [950, 250, 1070, 320], "color": "#d6336c",
+     "label": "LỐI RA — exit_gate", "label_at": [700, 285]},
+    {"type": "circle", "xy": [740, 430], "r": 20, "color": "#f59f00",
+     "label": "C10 = targetSpotId", "label_at": [778, 415]},
+    {"type": "arrow", "from": [870, 505], "to": [870, 558], "color": "#1c7ed6",
+     "label": "route A* trên LANE_GRAPH", "label_at": [900, 510]}
+  ]
+}

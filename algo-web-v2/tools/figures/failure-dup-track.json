@@ -1,0 +1,16 @@
+{
+  "id": "failure-dup-track",
+  "session": "verify_replay",
+  "cam": 1,
+  "frame": 1350,
+  "source": ".analysis/verify-replay/sheets/session_hiep_thai3_events/sheet_0021.jpg (thai3 cam1 ~f1350)",
+  "image_path": "D:/TechGar2/.analysis/verify-replay/sheets/session_hiep_thai3_events/sheet_0021.jpg",
+  "out": "failure-dup-track.jpg",
+  "max_kb": 250,
+  "draw": [
+    {"type": "circle", "xy": [485, 470], "r": 55, "color": "#ff3b30",
+     "label": "xe bị 2 track: lid9 + lid10", "label_at": [550, 430]},
+    {"type": "circle", "xy": [1115, 810], "r": 50, "color": "#ff3b30",
+     "label": "lid10 sống tiếp 20 frame sau", "label_at": [700, 975]}
+  ]
+}

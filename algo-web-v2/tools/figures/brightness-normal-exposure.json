@@ -1,0 +1,12 @@
+{
+  "id": "brightness-normal-exposure",
+  "session": "session_hiep_thai1",
+  "cam": 1,
+  "frame": 1500,
+  "source": "raw",
+  "draw": [
+    {"type": "box", "xyxy": [655, 140, 765, 205], "color": "#ffd23f", "label": "xe dang chay trong lan"},
+    {"type": "box", "xyxy": [325, 290, 790, 345], "color": "#d64545", "label": "vung watermark"}
+  ],
+  "max_kb": 200
+}

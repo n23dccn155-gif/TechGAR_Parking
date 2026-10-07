@@ -123,6 +123,13 @@ class RecoveryCandidateEvidence:
     # toy car can disappear after one frame and reappear well outside the ROI
     # before the 2 Hz vision detector confirms that the slot is empty.
     originated_in_slot: bool = False
+    # Closest radial distance to the slot centre seen so far.  Outward
+    # evidence measures escape from this minimum instead of from
+    # ``first_center`` alone: after a detector gap the re-latched origin can
+    # sit sideways of the real departure direction, which makes a dot
+    # product against ``first_vector`` read "inward" forever while the car
+    # is clearly outside the polygon.
+    min_radial_distance: Optional[float] = None
 
 
 @dataclass
@@ -3329,12 +3336,46 @@ class SlotVehicleBinder:
                     if trajectory_evidence is not None
                     else None
                 )
+                if evidence.min_radial_distance is None:
+                    evidence.min_radial_distance = radial_first
+                evidence.min_radial_distance = min(
+                    evidence.min_radial_distance, radial_now
+                )
+                # A strict world-trajectory match already proves this
+                # fragment is the departing vehicle (match_departure has its
+                # own teleport/wrong-direction vetoes).  For the owner camera
+                # that proof is sufficient outward evidence on its own;
+                # cross-camera recovery keeps the explicit outward-direction
+                # requirement because the transform adds uncertainty.
                 world_outward_ready = bool(
-                    is_cross_camera
-                    and trajectory_ready
-                    and world_direction_cosine is not None
-                    and float(world_direction_cosine) >= 0.25
-                    and int(trajectory_evidence.get("observations", 0)) >= 3
+                    trajectory_ready
+                    and (
+                        not is_cross_camera
+                        or (
+                            world_direction_cosine is not None
+                            and float(world_direction_cosine) >= 0.25
+                            and int(trajectory_evidence.get("observations", 0))
+                            >= 3
+                        )
+                    )
+                )
+                # Pixel escape fallback: the fragment was first seen inside
+                # (or overlapping) the slot polygon and has since moved to a
+                # point clearly outside it while gaining radial distance from
+                # its closest approach.  Unlike the ``first_vector`` dot
+                # product this stays correct when the evidence origin was
+                # latched sideways of the true departure direction after a
+                # detector gap.
+                escape_outward_ready = bool(
+                    evidence.originated_in_slot
+                    and signed_distance
+                    <= -max(
+                        self.recovery_min_outward_px,
+                        0.05 * token.slot_diagonal,
+                    )
+                    and moved_px >= self.recovery_min_movement_px
+                    and radial_now - evidence.min_radial_distance
+                    >= self.recovery_min_radial_gain_px
                 )
                 legacy_outward_ready = bool(
                     moved_px >= self.recovery_min_movement_px
@@ -3343,7 +3384,11 @@ class SlotVehicleBinder:
                 )
                 if (
                     evidence.observations < self.recovery_evidence_frames
-                    or not (legacy_outward_ready or world_outward_ready)
+                    or not (
+                        legacy_outward_ready
+                        or world_outward_ready
+                        or escape_outward_ready
+                    )
                 ):
                     result.diagnostics[key] = {
                         "reason": "insufficient_outward_evidence",
@@ -3351,6 +3396,15 @@ class SlotVehicleBinder:
                         "moved_px": round(moved_px, 3),
                         "outward_px": round(outward_px, 3),
                         "radial_gain_px": round(radial_gain, 3),
+                        "radial_gain_from_min_px": round(
+                            radial_now - evidence.min_radial_distance, 3
+                        ),
+                        "signed_distance_px": round(signed_distance, 3),
+                        "originated_in_slot": bool(evidence.originated_in_slot),
+                        "escape_outward_ready": bool(escape_outward_ready),
+                        "world_trajectory_qualified": bool(
+                            evidence.world_trajectory_qualified
+                        ),
                         "world_direction_cosine": (
                             round(float(world_direction_cosine), 4)
                             if world_direction_cosine is not None
@@ -3373,10 +3427,32 @@ class SlotVehicleBinder:
                 )
                 size_cost = min(1.0, abs(float(np.log(max(size_ratio, 1e-6)))) / np.log(2.5))
                 if world_outward_ready:
-                    direction_cost = 1.0 - float(
-                        np.clip(float(world_direction_cosine), 0.0, 1.0)
-                    )
+                    if world_direction_cosine is not None:
+                        direction_cost = 1.0 - float(
+                            np.clip(float(world_direction_cosine), 0.0, 1.0)
+                        )
+                    else:
+                        direction_cost = float(
+                            np.clip(
+                                1.0
+                                - (radial_now - evidence.min_radial_distance)
+                                / max(3.0, token.slot_diagonal * 0.10),
+                                0.0,
+                                1.0,
+                            )
+                        )
                     outward_evidence_source = "world_trajectory"
+                elif escape_outward_ready:
+                    direction_cost = float(
+                        np.clip(
+                            1.0
+                            - (radial_now - evidence.min_radial_distance)
+                            / max(3.0, token.slot_diagonal * 0.10),
+                            0.0,
+                            1.0,
+                        )
+                    )
+                    outward_evidence_source = "polygon_escape"
                 else:
                     direction_cost = float(
                         np.clip(

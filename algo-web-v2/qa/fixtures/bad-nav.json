@@ -1,0 +1,97 @@
+{
+  "id": "bad-nav",
+  "group": "setup",
+  "title": "Fixture xấu: prev/next trỏ id không tồn tại",
+  "order": 0,
+  "prev": "trang-khong-co-that",
+  "next": "cung-khong-co",
+  "fn": {
+    "text": "Trang thử dùng để kiểm chứng schema và renderer — mô phỏng một bước pipeline bất kỳ."
+  },
+  "why": {
+    "paras": [
+      "Đoạn thứ nhất giải thích vì sao pipeline cần bước này, bằng tiếng Việt đầy đủ câu.",
+      "Đoạn thứ hai nêu hệ quả nếu thiếu bước này trong chuỗi xử lý tổng thể."
+    ]
+  },
+  "how": [
+    {
+      "id": "3.1",
+      "name": "Bước cơ chế thứ nhất",
+      "paras": [
+        "Cơ chế hoạt động được mô tả bằng câu đầy đủ, có thể gắn [[Kalman filter]] để tra glossary."
+      ],
+      "values": [
+        {
+          "k": "threshold",
+          "v": "0.78",
+          "kind": "config",
+          "src": "algo-web-v2/qa/schema.test.mjs:10"
+        }
+      ]
+    },
+    {
+      "id": "3.2",
+      "name": "Bước cơ chế thứ hai",
+      "paras": [
+        "Bước tiếp theo của cùng cơ chế, đủ chi tiết để người đọc tự lập trình lại."
+      ]
+    }
+  ],
+  "formulas": [
+    {
+      "name": "Ngưỡng suy ra minh họa",
+      "expr": "thr = base × factor",
+      "subst": "10 × 1.5",
+      "result": "= 15",
+      "note": "con số minh họa cho fixture",
+      "src": "algo-web-v2/qa/schema.test.mjs:1"
+    }
+  ],
+  "params": [
+    {
+      "name": "example_param",
+      "value": "15",
+      "kind": "derived",
+      "role": "tham số minh họa",
+      "src": "algo-web-v2/js/core/tg.js:30"
+    }
+  ],
+  "figures": [
+    {
+      "src": "assets/real/fixture-demo.jpg",
+      "alt": "Khung hình minh họa cho trang thử",
+      "caption": "Caption giải thích ngữ cảnh ảnh và chú thích trên ảnh.",
+      "origin": "session_fixture/f100/cam1"
+    }
+  ],
+  "noFigureReason": null,
+  "interactive": null,
+  "limits": [
+    {
+      "text": "Giới hạn minh họa: cơ chế này suy giảm khi ánh sáng thay đổi đột ngột.",
+      "evidence": {
+        "session": "verify_fixture",
+        "frame": 100,
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "text": "Một giới hạn khác chưa được kiểm chứng trên footage thật.",
+      "evidence": null
+    }
+  ],
+  "sources": [
+    {
+      "ref": "algo-web-v2/js/core/tg.js:59-160",
+      "kind": "runtime",
+      "note": "đoạn code chính của cơ chế"
+    },
+    {
+      "ref": "algo-web-v2/css/tokens.css",
+      "kind": "config",
+      "note": "cấu hình đi kèm"
+    }
+  ],
+  "pseudocode": "FOR mỗi frame:\n  trích ROI\n  so khớp với trạng thái hiện tại\n  cập nhật output"
+}

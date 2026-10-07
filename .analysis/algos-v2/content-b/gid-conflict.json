@@ -1,0 +1,55 @@
+{
+  "id": "gid-conflict",
+  "title": "Xung đột Global ID — probation, merge-collision, hai bộ giải",
+  "tier": "T3",
+  "nodes": ["N11"],
+  "problem": "Một GID bị gán cho hai track sống cùng lúc (merge ảo), hoặc hai GID thực ra là một xe (duplicate). Không gỡ: episode gộp/xẻ sai hết về sau.",
+  "does": "GID mới sinh ở trạng thái probation 5 frame. Resolver same-camera phát hiện '1 GID — 2 vị trí' qua độ phân kỳ trên map; resolver cross-camera phát hiện duplicate. Canonical luôn = GID nhỏ hơn; member yếu bị detach về local-only.",
+  "role": "Trước: handoff/dormant/new-identity đã bind GID. Sau: episode/session nhận GID sạch. Mất nó: merge ảo làm một session ôm hai xe; duplicate làm một xe hai session.",
+  "where": "cross_camera_manager.py — _resolve_same_camera_global_conflicts + _resolve_cross_camera_global_conflicts (callsites :7485-7486), _merge_global_ids, _cross_merge_would_conflict :3088, _bound_handoff_merge_allowed :3376-3440, probation ~5f; new-identity gates ccm:163-165 + tc:1980-1995. Reachability: margin=duplicate 4.634cm, speed_scale 1.5 (:4707-4711).",
+  "why": "Probation 5f = 'chờ bằng chứng trước khi tin ID mới' [code có, mục đích suy luận]. Canonical=min: [suy luận] quy tắc tầm-thường nhưng deterministic — bắt buộc để hai resolver độc-lập hội tụ cùng một kết quả. Divergence bounds 2×/3× duplicate: [code] ngưỡng khoảng-cách; [suy luận] vùng giữa = 'chưa đủ bằng chứng tách, cũng không đủ xa để chặt' → 2-frame evidence.",
+  "steps": [
+    "GID mới mint → probation 5 frame: chưa đủ tuổi không được vào merge.",
+    "Same-camera resolver: một GID có 2 member sống → đo khoảng cách hai vị trí trên map chung.",
+    "d < 2·duplicate (9.268cm): coi như jitter — giữ merge, không detach.",
+    "9.268 ≤ d < 13.902 (2×–3×): vùng mơ-hồ → đếm evidence ≥2 frame liên-tiếp mới detach member yếu.",
+    "d ≥ 3·duplicate (13.902cm): detach ngay — hai vị trí đã quá xa không thể cùng một xe.",
+    "Detach → member thua về local-only; canonical (GID nhỏ) giữ identity + gallery + episode.",
+    "Cross-camera resolver: reachability check — hai GID có thể là một xe nếu khoảng cách ≤ duplicate+margin·speed·Δt (margin 4.634cm, speed_scale 1.5)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "7485-7486", "symbol": "resolver callsites", "note": "same-camera + cross-camera mỗi frame"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "3088+", "symbol": "_cross_merge_would_conflict", "note": "chặn merge gây xung đột"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "3376-3440", "symbol": "_bound_handoff_merge_allowed", "note": "target≤3f / source≤3f rules"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "4707-4711", "symbol": "reachability", "note": "margin=duplicate 4.634cm, speed_scale 1.5"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "163-165", "symbol": "new-identity params", "note": "5 obs / 12 unusual / 0.15 displacement"},
+    {"file": "backend/main_detect/two_camera.py", "line": "1980-1995", "symbol": "new-identity CLI", "note": "runtime wiring"}
+  ],
+  "realParams": [
+    {"name": "probation", "value": "5", "unit": "frames", "scope": "class default", "ref": "ccm"},
+    {"name": "duplicate_distance (bound unit)", "value": "4.634", "unit": "cm (resolved)", "scope": "resolved", "ref": "two_camera.py:2184-2190"},
+    {"name": "detach evidence bound", "value": "9.268 (=2×4.634)", "unit": "cm", "scope": "derived bound", "ref": "ccm same-camera resolver"},
+    {"name": "immediate detach bound", "value": "13.902 (=3×4.634)", "unit": "cm", "scope": "derived bound", "ref": "ccm same-camera resolver"},
+    {"name": "evidence frames trong vùng mơ-hồ", "value": "2", "unit": "frames liên-tiếp", "scope": "class default", "ref": "ccm"},
+    {"name": "reachability margin / speed_scale", "value": "4.634 / 1.5", "unit": "cm / ×", "scope": "class default", "ref": "ccm:4707-4711"},
+    {"name": "canonical rule", "value": "min(GID)", "unit": "rule", "scope": "class default", "ref": "ccm _merge_global_ids"}
+  ],
+  "storyboard": {
+    "scene": "Handoff nhầm gán G#5 cho cả fragment cam1 (vị trí x) và mảnh cam2 (vị trí y) — CÙNG cảnh hai nhánh.",
+    "seed": "gid-conflict-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Không resolver: G#5 vẽ ở 2 chỗ — một 'siêu-xe' ôm 2 vết; episode đếm sai slot.", "on": "Resolver phát hiện 1 GID — 2 member; đo |x−y| trên map."},
+      {"k": 2, "off": "—", "on": "|x−y| = 11cm: nằm trong vùng mơ-hồ (9.268–13.902) → chưa detach; chip 'evidence 1/2'."},
+      {"k": 3, "off": "—", "on": "Frame sau vẫn 11cm → evidence 2/2 → detach member yếu về local#7; G#5 (canonical, min) giữ phần còn lại."},
+      {"k": 4, "off": "Kết: 2 xe = 1 GID vĩnh-viễn → session/episode gộp sai.", "on": "Kết: 2 identity sạch; nếu detach sớm ở <9.268cm sẽ là lỗi — vùng jitter được tha."},
+      {"k": 5, "off": "—", "on": "Variant khoảng-cách: 8cm→giữ merge / 11cm→detach sau 2f / 15cm→detach ngay; slider d di chuyển qua 3 vùng màu."}
+    ],
+    "visual": "Map 2 member cùng nhãn G#5, thước cm với 3 vùng (xanh <9.268 / vàng 9.268-13.902 / đỏ ≥13.902), evidence counter 0-2, panel 'canonical=min'. OFF/ON cùng seed."
+  },
+  "qa": [
+    {"q": "Vì sao 11cm không detach ngay?", "a": "Nằm giữa 2×=9.268 và 3×=13.902 — vùng 'chưa đủ chắc'; code đòi 2 frame evidence liên-tiếp [code]."},
+    {"q": "Ai là canonical — vì sao min?", "a": "GID nhỏ hơn [code]; deterministic để hai resolver hội tụ độc lập [suy luận]."},
+    {"q": "Probation ngăn gì?", "a": "Merge quá sớm khi ID mới chưa đủ quan-sát — 5 frame [code]."}
+  ],
+  "certainty": "Cao [code] cho bounds/probation/canonical/reachability; 'vùng mơ-hồ = chờ bằng chứng' [suy luận]."
+}

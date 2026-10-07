@@ -1,0 +1,22 @@
+{
+  "id": "motion-moving-car",
+  "session": "session_hiep_thai1",
+  "cam": 1,
+  "frame": 1500,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [648, 147, 752, 207],
+      "color": "#00c8ff",
+      "label": "co temporal motion"
+    },
+    {
+      "type": "box",
+      "xyxy": [335, 495, 485, 600],
+      "color": "#d64545",
+      "label": "xe do: foreground nhung motion = 0"
+    }
+  ],
+  "max_kb": 220
+}

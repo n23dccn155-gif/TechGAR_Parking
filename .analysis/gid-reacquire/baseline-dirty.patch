@@ -1,0 +1,377 @@
+diff --git a/backend/main_detect/src/techgar/cross_camera_manager.py b/backend/main_detect/src/techgar/cross_camera_manager.py
+index 5782d5b9..d7898625 100644
+--- a/backend/main_detect/src/techgar/cross_camera_manager.py
++++ b/backend/main_detect/src/techgar/cross_camera_manager.py
+@@ -1877,6 +1877,15 @@ class CrossCameraManager:
+         )
+         if len(samples) < self.trajectory.min_observations:
+             return False
++        # The rolling trail only keeps ``history_seconds`` of samples, so
++        # samples[0] is where the fragment was moments ago -- not where it
++        # began.  Origin membership must be judged against the epoch start;
++        # a departing car prunes its own in-slot samples as it drives away.
++        origin_sample = self.trajectory.provisional_origin(
++            (str(cam_id), int(local_track_id))
++        )
++        if origin_sample is None:
++            return False
+         origin = self.trajectory.parked_origin(int(global_id))
+         if origin is None:
+             reservation_camera = reservation.get("camera_id")
+@@ -1897,7 +1906,7 @@ class CrossCameraManager:
+             ):
+                 return False
+         earliest_distance = float(
+-            np.linalg.norm(np.subtract(samples[0].world, origin))
++            np.linalg.norm(np.subtract(origin_sample.world, origin))
+         )
+         return earliest_distance > self.dormant_match_distance
+ 
+@@ -1949,6 +1958,11 @@ class CrossCameraManager:
+         )
+         if len(samples) < self.trajectory.min_observations:
+             return False
++        origin_sample = self.trajectory.provisional_origin(
++            (str(cam_id), int(local_track_id))
++        )
++        if origin_sample is None:
++            return False
+         origin = self.trajectory.parked_origin(int(global_id))
+         if origin is None:
+             reservation_camera = reservation.get("camera_id")
+@@ -1969,7 +1983,7 @@ class CrossCameraManager:
+             ):
+                 return False
+         earliest_distance = float(
+-            np.linalg.norm(np.subtract(samples[0].world, origin))
++            np.linalg.norm(np.subtract(origin_sample.world, origin))
+         )
+         return earliest_distance <= self.dormant_match_distance
+ 
+diff --git a/backend/main_detect/src/techgar/slot_vehicle_binder.py b/backend/main_detect/src/techgar/slot_vehicle_binder.py
+index c61a2579..471ee51c 100644
+--- a/backend/main_detect/src/techgar/slot_vehicle_binder.py
++++ b/backend/main_detect/src/techgar/slot_vehicle_binder.py
+@@ -123,6 +123,13 @@ class RecoveryCandidateEvidence:
+     # toy car can disappear after one frame and reappear well outside the ROI
+     # before the 2 Hz vision detector confirms that the slot is empty.
+     originated_in_slot: bool = False
++    # Closest radial distance to the slot centre seen so far.  Outward
++    # evidence measures escape from this minimum instead of from
++    # ``first_center`` alone: after a detector gap the re-latched origin can
++    # sit sideways of the real departure direction, which makes a dot
++    # product against ``first_vector`` read "inward" forever while the car
++    # is clearly outside the polygon.
++    min_radial_distance: Optional[float] = None
+ 
+ 
+ @dataclass
+@@ -3329,12 +3336,46 @@ class SlotVehicleBinder:
+                     if trajectory_evidence is not None
+                     else None
+                 )
++                if evidence.min_radial_distance is None:
++                    evidence.min_radial_distance = radial_first
++                evidence.min_radial_distance = min(
++                    evidence.min_radial_distance, radial_now
++                )
++                # A strict world-trajectory match already proves this
++                # fragment is the departing vehicle (match_departure has its
++                # own teleport/wrong-direction vetoes).  For the owner camera
++                # that proof is sufficient outward evidence on its own;
++                # cross-camera recovery keeps the explicit outward-direction
++                # requirement because the transform adds uncertainty.
+                 world_outward_ready = bool(
+-                    is_cross_camera
+-                    and trajectory_ready
+-                    and world_direction_cosine is not None
+-                    and float(world_direction_cosine) >= 0.25
+-                    and int(trajectory_evidence.get("observations", 0)) >= 3
++                    trajectory_ready
++                    and (
++                        not is_cross_camera
++                        or (
++                            world_direction_cosine is not None
++                            and float(world_direction_cosine) >= 0.25
++                            and int(trajectory_evidence.get("observations", 0))
++                            >= 3
++                        )
++                    )
++                )
++                # Pixel escape fallback: the fragment was first seen inside
++                # (or overlapping) the slot polygon and has since moved to a
++                # point clearly outside it while gaining radial distance from
++                # its closest approach.  Unlike the ``first_vector`` dot
++                # product this stays correct when the evidence origin was
++                # latched sideways of the true departure direction after a
++                # detector gap.
++                escape_outward_ready = bool(
++                    evidence.originated_in_slot
++                    and signed_distance
++                    <= -max(
++                        self.recovery_min_outward_px,
++                        0.05 * token.slot_diagonal,
++                    )
++                    and moved_px >= self.recovery_min_movement_px
++                    and radial_now - evidence.min_radial_distance
++                    >= self.recovery_min_radial_gain_px
+                 )
+                 legacy_outward_ready = bool(
+                     moved_px >= self.recovery_min_movement_px
+@@ -3343,7 +3384,11 @@ class SlotVehicleBinder:
+                 )
+                 if (
+                     evidence.observations < self.recovery_evidence_frames
+-                    or not (legacy_outward_ready or world_outward_ready)
++                    or not (
++                        legacy_outward_ready
++                        or world_outward_ready
++                        or escape_outward_ready
++                    )
+                 ):
+                     result.diagnostics[key] = {
+                         "reason": "insufficient_outward_evidence",
+@@ -3351,6 +3396,15 @@ class SlotVehicleBinder:
+                         "moved_px": round(moved_px, 3),
+                         "outward_px": round(outward_px, 3),
+                         "radial_gain_px": round(radial_gain, 3),
++                        "radial_gain_from_min_px": round(
++                            radial_now - evidence.min_radial_distance, 3
++                        ),
++                        "signed_distance_px": round(signed_distance, 3),
++                        "originated_in_slot": bool(evidence.originated_in_slot),
++                        "escape_outward_ready": bool(escape_outward_ready),
++                        "world_trajectory_qualified": bool(
++                            evidence.world_trajectory_qualified
++                        ),
+                         "world_direction_cosine": (
+                             round(float(world_direction_cosine), 4)
+                             if world_direction_cosine is not None
+@@ -3373,10 +3427,32 @@ class SlotVehicleBinder:
+                 )
+                 size_cost = min(1.0, abs(float(np.log(max(size_ratio, 1e-6)))) / np.log(2.5))
+                 if world_outward_ready:
+-                    direction_cost = 1.0 - float(
+-                        np.clip(float(world_direction_cosine), 0.0, 1.0)
+-                    )
++                    if world_direction_cosine is not None:
++                        direction_cost = 1.0 - float(
++                            np.clip(float(world_direction_cosine), 0.0, 1.0)
++                        )
++                    else:
++                        direction_cost = float(
++                            np.clip(
++                                1.0
++                                - (radial_now - evidence.min_radial_distance)
++                                / max(3.0, token.slot_diagonal * 0.10),
++                                0.0,
++                                1.0,
++                            )
++                        )
+                     outward_evidence_source = "world_trajectory"
++                elif escape_outward_ready:
++                    direction_cost = float(
++                        np.clip(
++                            1.0
++                            - (radial_now - evidence.min_radial_distance)
++                            / max(3.0, token.slot_diagonal * 0.10),
++                            0.0,
++                            1.0,
++                        )
++                    )
++                    outward_evidence_source = "polygon_escape"
+                 else:
+                     direction_cost = float(
+                         np.clip(
+diff --git a/backend/main_detect/src/techgar/trajectory_memory.py b/backend/main_detect/src/techgar/trajectory_memory.py
+index f0219248..b66f6da3 100644
+--- a/backend/main_detect/src/techgar/trajectory_memory.py
++++ b/backend/main_detect/src/techgar/trajectory_memory.py
+@@ -68,6 +68,11 @@ class WorldTrajectoryMemory:
+         self.max_samples = max(16, int(max_samples))
+         self._global: Dict[int, List[TrajectorySample]] = {}
+         self._provisional: Dict[Hashable, List[TrajectorySample]] = {}
++        # First sample of each fragment's current trail epoch, kept outside
++        # the rolling ``history_seconds`` window.  ``provisional_samples``[0]
++        # is "where the fragment was two seconds ago", not where it began --
++        # origin-membership checks need the true epoch start.
++        self._provisional_origins: Dict[Hashable, TrajectorySample] = {}
+         self._parked: set[int] = set()
+         self._parked_origins: Dict[int, Point] = {}
+ 
+@@ -92,6 +97,8 @@ class WorldTrajectoryMemory:
+             del samples[:-self.max_samples]
+ 
+     def append_provisional(self, key: Hashable, sample: TrajectorySample) -> None:
++        if key not in self._provisional or not self._provisional[key]:
++            self._provisional_origins[key] = sample
+         self._append(self._provisional, key, sample)
+ 
+     def append_global(self, global_id: int, sample: TrajectorySample) -> None:
+@@ -102,6 +109,7 @@ class WorldTrajectoryMemory:
+ 
+     def promote(self, key: Hashable, global_id: int) -> None:
+         incoming = self._provisional.pop(key, [])
++        self._provisional_origins.pop(key, None)
+         if not incoming:
+             return
+         global_id = int(global_id)
+@@ -203,6 +211,8 @@ class WorldTrajectoryMemory:
+             else:
+                 forgotten.append(key)
+         self._provisional = retained
++        for key in forgotten:
++            self._provisional_origins.pop(key, None)
+         return forgotten
+ 
+     @staticmethod
+@@ -531,3 +541,12 @@ class WorldTrajectoryMemory:
+ 
+     def provisional_samples(self, key: Hashable) -> Tuple[TrajectorySample, ...]:
+         return tuple(self._provisional.get(key, ()))
++
++    def provisional_origin(self, key: Hashable) -> Optional[TrajectorySample]:
++        """First sample of the fragment's current trail epoch.
++
++        Unlike ``provisional_samples()[0]`` this is not affected by the
++        rolling ``history_seconds`` window, so origin-membership checks stay
++        valid for fragments older than that window.
++        """
++        return self._provisional_origins.get(key)
+diff --git a/backend/main_detect/tests/test_gid_departure_token.py b/backend/main_detect/tests/test_gid_departure_token.py
+index 9db9f927..8fd8e5b5 100644
+--- a/backend/main_detect/tests/test_gid_departure_token.py
++++ b/backend/main_detect/tests/test_gid_departure_token.py
+@@ -390,6 +390,62 @@ def test_tied_dead_fragments_keep_conservative_no_migration():
+     assert not _events(binder, "departure_candidate_fragment_continued")
+ 
+ 
++def test_departure_recovers_when_first_vector_is_perpendicular():
++    """session_thai8/F01: after a detection gap the evidence origin is
++    re-latched at the slot's edge, so ``first_vector`` points sideways and
++    ``outward_px`` reads ~0/negative forever even though the car visibly
++    escapes the polygon.  A fragment that demonstrably moved from inside the
++    slot polygon to clearly outside it must still qualify and consume the
++    token -- direction of the latched origin must not be load-bearing.
++    """
++    binder, result, frame, timestamp, descriptor = parked_binder()
++    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
++
++    # Polygon is [[0,0],[100,0],[100,100],[0,100]], center (50,50).
++    # bottom_center(x-30, y-60, 60, 60) == (x, y).  First observation sits on
++    # the left edge: first_vector=(-50,0) so outward_unit=(-1,0); the car
++    # then leaves *upward* -- the dot product can never turn positive.
++    t, f = timestamp, frame
++    recovered = {}
++    for px, py in ((0.0, 50.0), (0.0, 30.0), (0.0, 10.0), (0.0, -20.0), (0.0, -45.0)):
++        t += 0.1
++        f += 3
++        batch = binder.batch_recover_ids(
++            {58: track(x=px - 30, y=py - 60, appearance=descriptor)},
++            f,
++            t,
++            camera_id="cam1",
++        )
++        recovered.update(batch.recovered_ids)
++
++    assert recovered == {58: 30}
++    assert _events(binder, "parked_id_recovered")
++
++
++def test_fragment_staying_inside_slot_never_consumes_token():
++    """Negative control for the escape path: a fragment that originates
++    inside the polygon but never leaves it must not recover the parked ID.
++    """
++    binder, result, frame, timestamp, descriptor = parked_binder()
++    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
++
++    t, f = timestamp, frame
++    batch = None
++    for px, py in ((0.0, 50.0), (10.0, 50.0), (20.0, 50.0), (30.0, 50.0), (30.0, 60.0)):
++        t += 0.1
++        f += 3
++        batch = binder.batch_recover_ids(
++            {58: track(x=px - 30, y=py - 60, appearance=descriptor)},
++            f,
++            t,
++            camera_id="cam1",
++        )
++
++    assert batch is not None
++    assert batch.recovered_ids == {}
++    assert not _events(binder, "parked_id_recovered")
++
++
+ def test_expiry_with_pending_candidate_emits_diagnostic():
+     """A token that dies with retained mid-qualification evidence reports the
+     candidate key and blocker for the registry."""
+diff --git a/backend/main_detect/tests/test_gid_reserved_competition.py b/backend/main_detect/tests/test_gid_reserved_competition.py
+index 6f9e76a7..45286156 100644
+--- a/backend/main_detect/tests/test_gid_reserved_competition.py
++++ b/backend/main_detect/tests/test_gid_reserved_competition.py
+@@ -302,6 +302,65 @@ def test_group_allocation_defers_pair_leaving_reserved_slot():
+     )
+ 
+ 
++def test_fragment_origin_survives_rolling_history_window():
++    """session_thai8/F01: ``provisional_samples`` only retains the last
++    ``history_seconds`` of trail, so for a fragment older than that window
++    ``samples[0]`` is *not* where the fragment began -- it is where the car
++    happened to be two seconds ago.  A departing car that began inside the
++    reserved slot must not be judged "started outside" just because its
++    retained tail already left.
++    """
++    manager = make_manager()
++    histogram = one_hot_histogram(0)
++    gid = _seed_parked_identity(manager, histogram)
++
++    # The fragment is first observed inside the reserved slot, then drives
++    # far enough that the 2 s rolling window prunes every in-slot sample.
++    for frame_idx, x, t in (
++        (1, 300, 0.0),
++        (6, 330, 0.6),
++        (11, 480, 2.2),
++        (14, 500, 2.8),
++        (16, 520, 3.0),
++    ):
++        fragment = attach_tracklet(
++            DummyTrack(x, 260, appearance=histogram),
++            histogram,
++            histogram,
++        )
++        manager.observe_trajectories(
++            {"cam1": {9: fragment}}, frame_idx, {"cam1": t}
++        )
++
++    samples = manager.trajectory.provisional_samples(("cam1", 9))
++    assert samples and samples[0].world[0] >= 480.0  # rolling window moved on
++    assert not manager._fragment_starts_outside_reservation("cam1", 9, gid)
++
++
++def test_fragment_that_truly_began_outside_stays_rejected():
++    """The same check must still veto a fragment whose trail genuinely
++    began far from the reserved slot."""
++    manager = make_manager()
++    histogram = one_hot_histogram(0)
++    gid = _seed_parked_identity(manager, histogram)
++
++    for frame_idx, x, t in (
++        (1, 30, 0.0),
++        (6, 45, 0.6),
++        (11, 60, 1.0),
++    ):
++        fragment = attach_tracklet(
++            DummyTrack(x, 260, appearance=histogram),
++            histogram,
++            histogram,
++        )
++        manager.observe_trajectories(
++            {"cam1": {9: fragment}}, frame_idx, {"cam1": t}
++        )
++
++    assert manager._fragment_starts_outside_reservation("cam1", 9, gid)
++
++
+ def test_group_allocation_still_pairs_unrelated_fragments():
+     # The guard must not starve genuinely new vehicles: a pair whose trails
+     # do not start inside any reservation groups normally.

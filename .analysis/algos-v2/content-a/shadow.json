@@ -1,0 +1,44 @@
+{
+  "id": "shadow",
+  "title": "Loại bóng đổ (cast shadow)",
+  "tier": "T2",
+  "nodes": ["N5"],
+  "problem": "Bóng xe đổ trên đường 'động' y như xe — MOG2 gán marker 127 (nghi-bóng). Xóa sỉ marker thì mất luôn xe đen bị phân nhầm; giữ nguyên thì blob bóng dính theo xe làm sai bbox.",
+  "does": "reject_cast_shadows=True (runtime): marker 127 được admit vào mask tạm rồi rọi TỪNG contour bằng 4 metric so-với-nền (attenuation 0.32–0.62, chromaticity ≤0.10, scaled residual ≤0.08, explained ≥0.75, ≥120px). Đạt hết → bóng thật → xóa; fail/thiếu-nền → fail-open giữ lại → cứu xe tối-màu (dark_foreground_rescued). Flag False: 127 bị threshold >200 loại sỉ như mọi pixel khác.",
+  "role": {"before": "MOG2 mask trong _detect", "after": "Contour sạch-bóng cho cascade/blob", "missing": "OFF: bóng dính → bbox phình sai + xe đen mất; không có cơ chế: chọn một trong hai lỗi đó"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "633-703", "symbol": "_cast_shadow_metrics"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "705-726", "symbol": "_is_cast_shadow"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "769-789", "symbol": "127 admission"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "728-757", "symbol": "background snapshot (10 frames)"}],
+  "why": "Marker 127 của MOG2 chỉ là 'nghi ngờ' — quyết định thật cần so với nền tĩnh: bóng = nền bị giảm sáng nhưng GIỮ màu (chromaticity gần như nền) [code metrics]. Fail-open khi thiếu nền vì xóa nhầm xe còn hại hơn giữ bóng [suy luận từ code path].",
+  "steps": [
+    "MOG2 detectShadows=True → pixel 255 (fg chắc) / 127 (nghi-bóng).",
+    "Flag OFF: threshold >200 → 127 loại sỉ (xe đen trúng 127 cũng mất).",
+    "Flag ON [runtime]: 127 admit → từng contour tính 4 metric vs background snapshot.",
+    "Đủ cổng → vẽ đen contour khỏi mask; fail → giữ, đánh dark_foreground_rescued.",
+    "Background snapshot làm mới mỗi 10 frame."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "705-726", "symbol": "_is_cast_shadow", "note": "4 gate AND + fail-open khi thiếu nền"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "769-789", "symbol": "127 admission", "note": "chỉ khi reject_cast_shadows=True; comment lý-do-flag :772-779"}
+  ],
+  "realParams": [
+    {"name": "reject_cast_shadows", "value": true, "unit": "flag", "scope": "runtime", "ref": "two_camera.py:2366-2397 (class False)"},
+    {"name": "shadow_attenuation_range", "value": "(0.32, 0.62)", "unit": "tỉ lệ sáng", "scope": "default", "ref": "motion_tracker.py:34-96"},
+    {"name": "shadow_max_chromaticity_distance", "value": 0.10, "unit": "-", "scope": "default", "ref": "motion_tracker.py:34-96"},
+    {"name": "shadow_max_scaled_residual / min_explained", "value": "0.08 / 0.75", "unit": "-", "scope": "default", "ref": "motion_tracker.py:34-96"},
+    {"name": "shadow_min_pixels / snapshot refresh", "value": "120 / 10", "unit": "px / frames", "scope": "default", "ref": "motion_tracker.py:34-96 + :728-757"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Xe + bóng đổ kề", "seed": 6}, {"id": "edge", "label": "Xe đen trúng marker 127", "seed": 6}],
+    "keyframes": [
+      {"id": "k1", "caption": "MOG2: xe 255, bóng 127, nền 0 — mask 3 màu", "mode": "both", "state": {"markers": "0/127/255"}},
+      {"id": "k2", "caption": "OFF (flag False): >200 loại 127 → bóng sạch NHƯNG thân xe đen trúng 127 cũng biến mất", "mode": "off", "state": {"result": "bóng sạch, xe mất phần thân"}},
+      {"id": "k3", "caption": "ON: contour bóng — att 0.45∈[.32,.62], chrom/residual/explained đạt → XÓA; contour thân xe — att 0.20<.32 → fail band → giữ → rescued", "mode": "on", "state": {"dark_foreground_rescued": true}},
+      {"id": "k4", "caption": "Thiếu background snapshot: test fail-open → giữ candidate (không xóa mò)", "mode": "on", "state": {"bg": "missing→keep"}}
+    ]
+  },
+  "qa": [
+    {"q": "127 = bóng?", "a": "Chỉ là 'nghi' — quyết định thật do 4 metric so-với-nền; nhiều xe tối-màu cũng bị 127."},
+    {"q": "Vì sao flag mặc định class lại False?", "a": "Cơ chế advanced cần background snapshot ổn định; comment :772-779 ghi rõ sợ mất xe tối — production bật True."},
+    {"q": "Metric fail vì thiếu nền → xóa?", "a": "Không — fail-open giữ lại; xóa nhầm xe hại hơn giữ bóng [suy luận]."}
+  ],
+  "certainty": "Cao [code] cả hai nhánh flag + 4 metric + fail-open; đã trace _cast_shadow_metrics/_is_cast_shadow/admission đầy đủ."
+}

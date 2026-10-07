@@ -1,0 +1,50 @@
+{
+  "id": "bad-term",
+  "group": "setup",
+  "title": "Fixture term lạ",
+  "order": 92,
+  "prev": null,
+  "next": null,
+  "fn": {
+    "text": "Dùng [[Term Hoàn Toàn Không Tồn Tại]] trong prose."
+  },
+  "why": {
+    "paras": [
+      "Đoạn bình thường."
+    ]
+  },
+  "how": [
+    {
+      "id": "3.1",
+      "name": "Bước",
+      "paras": [
+        "Đoạn bình thường đủ dài."
+      ]
+    }
+  ],
+  "formulas": [],
+  "params": [
+    {
+      "name": "p",
+      "value": "1",
+      "kind": "runtime",
+      "role": "x",
+      "src": "algo-web-v2/js/core/tg.js:1"
+    }
+  ],
+  "figures": [],
+  "noFigureReason": "fixture",
+  "interactive": null,
+  "limits": [
+    {
+      "text": "x"
+    }
+  ],
+  "sources": [
+    {
+      "ref": "algo-web-v2/js/core/tg.js:1",
+      "kind": "config",
+      "note": "x"
+    }
+  ]
+}

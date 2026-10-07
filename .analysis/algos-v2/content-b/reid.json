@@ -1,0 +1,54 @@
+{
+  "id": "reid",
+  "title": "Nhận dạng ngoại hình — histogram HSV+LAB, gallery tracklet",
+  "tier": "T1",
+  "nodes": ["N11"],
+  "problem": "Hai camera nhìn cùng xe ở góc khác nhau, tông màu lệch. Track địa phương mất dấu vài frame rồi có mảnh mới — hệ phải trả lời 'đây có phải chiếc xe lúc nãy không' mà không có mạng neural nào.",
+  "does": "Mỗi local track giữ một gallery nhiều mẫu histogram (không phải 1 vector duy nhất). So khớp = so cặp mẫu giữa hai gallery; mẫu rác bị chặn ngay từ cổng chất lượng.",
+  "role": "Trước: tracker gom mẫu mỗi lần detection khớp. Sau: distance/support của compare_tracklets là nhánh 0.30 trong handoff cost, cổng appearance trong dormant/token và tiêu chí giữ member trong conflict-resolver. Mất nó: chỉ còn hình học — hai xe cùng vùng chuyển dễ gán nhầm.",
+  "where": "tracklet_descriptor.py — hsv_histogram:18, compute_sample_quality:81, AppearanceTracklet:183, aggregate_appearance:266, merge_appearance_samples:277, compare_tracklets:308. Callsite: quality gate motion_tracker.py:420-430; tạo tracklet :2029-2033; update :2157-2163; gallery GID cross_camera_manager.py:547-587.",
+  "why": "Histogram rẻ, không cần weight/model ngoài — khớp triết lý backend motion. Alternative [suy luận]: deep-ReID embedding chính xác hơn nhưng cần model + crop pipeline; code chặn hẳn: use_deep_reid=True → raise ValueError (cross_camera_manager.py:391-397, comment 'no trained model'). Điểm hay nhầm: flag tồn tại nhưng BỊ CẤM — ReID thật = histogram.",
+  "steps": [
+    "Quality gate: crop quá nhỏ/nền → bỏ (motion_tracker.py:427-429; ngưỡng tracklet_descriptor.py:85-91).",
+    "BGR→HSV + BGR→LAB; chỉ đếm pixel foreground trong motion mask.",
+    "Descriptor 416-D: HS 16×16=256 ·w0.70 + ab 12×12=144 ·w1.20 + L 16 ·w0.60 → cv2.normalize; crop rỗng → zeros(416) (tracklet_descriptor.py:18-78).",
+    "AppearanceTracklet.update mỗi match: ≤12 mẫu, cách 3 frame.",
+    "Bind/observe → merge_appearance_samples vào gallery GID ≤24 mẫu, bỏ gần-trùng (≤0.015), giữ mẫu rải np.linspace.",
+    "compare_tracklets: distance = 0.50·nearest + 0.20·coverage + 0.20·aggregate + 0.10·best-pairs (Bhattacharyya) → {distance, support, pair_count}."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/tracklet_descriptor.py", "line": "18-78", "symbol": "hsv_histogram / descriptor", "note": "416-D, trọng số 0.70/1.20/0.60"},
+    {"file": "backend/main_detect/src/techgar/tracklet_descriptor.py", "line": "81-91", "symbol": "compute_sample_quality", "note": "min_area=200, min_fg_ratio=0.15, reject<0.5"},
+    {"file": "backend/main_detect/src/techgar/tracklet_descriptor.py", "line": "308+", "symbol": "compare_tracklets", "note": "weights 0.50/0.20/0.20/0.10, Bhattacharyya"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "420-430", "symbol": "quality gate callsite", "note": "reject<0.5"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "547-587", "symbol": "camera_appearance_samples", "note": "gallery GID per-camera"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "388-397", "symbol": "use_deep_reid flag", "note": "raise ValueError nếu bật — flag bị cấm"}
+  ],
+  "realParams": [
+    {"name": "descriptor dims", "value": "416", "unit": "dims (256 HS + 144 ab + 16 L)", "scope": "class default", "ref": "tracklet_descriptor.py:18-78"},
+    {"name": "component weights", "value": "0.70 / 1.20 / 0.60", "unit": "weight (HS / ab / L)", "scope": "class default", "ref": "tracklet_descriptor.py:18-78"},
+    {"name": "quality min_area / min_fg / reject", "value": "200 / 0.15 / 0.5", "unit": "px² / ratio / score", "scope": "class default", "ref": "tracklet_descriptor.py:85-91 + motion_tracker.py:427"},
+    {"name": "tracklet gallery local", "value": "12 / 3", "unit": "samples / frame-interval", "scope": "runtime CLI", "ref": "two_camera.py:1965-1966 → mt:2387"},
+    {"name": "global gallery", "value": "24", "unit": "samples", "scope": "runtime CLI", "ref": "two_camera.py:1967 → ctor :2248"},
+    {"name": "dedupe distance", "value": "0.015", "unit": "Bhattacharyya", "scope": "class default", "ref": "tracklet_descriptor.py:277+"},
+    {"name": "compare weights", "value": "0.50/0.20/0.20/0.10", "unit": "weight", "scope": "class default", "ref": "tracklet_descriptor.py:308+"},
+    {"name": "use_deep_reid", "value": "False → cấm", "unit": "flag", "scope": "runtime (không truyền) + ctor raise", "ref": "cross_camera_manager.py:388-397, tc:2227-2261"}
+  ],
+  "storyboard": {
+    "scene": "Xe đỏ cam1 mất dấu 8 frame rồi mảnh đỏ-sẫm xuất hiện cam2 — CÙNG cảnh hai nhánh.",
+    "seed": "reid-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Gallery trống — handoff/dormant chỉ còn hình học: 2 mảnh cùng lúc → coin-flip, 2 GID cho 1 xe.", "on": "12 ô histogram tích luỹ mỗi-3f trên cam1 (strip 12 mẫu hiện dưới canvas)."},
+      {"k": 2, "off": "Không có tiêu chí màu — mảnh cam2 khớp theo vị trí gần nhất.", "on": "Lost → merge_appearance_samples trộn gallery GID#5 (≤24, dedupe 0.015); mẫu rải đều thời gian."},
+      {"k": 3, "off": "Xe tương tự màu khác (đỏ-sẫm vs đỏ) — không gì ngăn gán nhầm.", "on": "compare_tracklets: distance ≈0.21 < 0.45 hard cap → vote 'cùng xe'; chip hiển thị 4 thành phần 0.50/0.20/0.20/0.10 cộng dồn."},
+      {"k": 4, "off": "Kết quả: 2 GID song song cho 1 xe.", "on": "Gallery strip 12→24 mẫu sáng lên: 'nhiều quan sát theo thời gian' thắng gán-học 1-mẫu."}
+    ],
+    "visual": "Histogram bar 3 kênh (HSV/LAB/L), gallery strip tick 12→24, distance gauge 0→0.45, support badge. KHÔNG vẽ 'deep embedding' — label rõ histogram."
+  },
+  "qa": [
+    {"q": "Có deep ReID không?", "a": "Không — flag tồn tại nhưng bị raise ValueError (cross_camera_manager.py:391-397); ReID thật là histogram [code]."},
+    {"q": "Đổi sáng mạnh có sống?", "a": "Kênh L chỉ w0.60 + gallery nhiều mẫu giúp hấp thụ nhiễu; quality gate + support≥2 vẫn là lưới chính [code cấu trúc, suy luận mục đích]."},
+    {"q": "Vì sao gallery per-camera?", "a": "Code có camera_appearance_samples (ccm:548); giảm lệch tông giữa hai view [suy luận]."}
+  ],
+  "certainty": "Cao cho descriptor/gallery/so-khớp/flag-cấm [code]; 'tại sao histogram' [suy luận]."
+}

@@ -390,6 +390,62 @@ def test_tied_dead_fragments_keep_conservative_no_migration():
     assert not _events(binder, "departure_candidate_fragment_continued")
 
 
+def test_departure_recovers_when_first_vector_is_perpendicular():
+    """session_thai8/F01: after a detection gap the evidence origin is
+    re-latched at the slot's edge, so ``first_vector`` points sideways and
+    ``outward_px`` reads ~0/negative forever even though the car visibly
+    escapes the polygon.  A fragment that demonstrably moved from inside the
+    slot polygon to clearly outside it must still qualify and consume the
+    token -- direction of the latched origin must not be load-bearing.
+    """
+    binder, result, frame, timestamp, descriptor = parked_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+
+    # Polygon is [[0,0],[100,0],[100,100],[0,100]], center (50,50).
+    # bottom_center(x-30, y-60, 60, 60) == (x, y).  First observation sits on
+    # the left edge: first_vector=(-50,0) so outward_unit=(-1,0); the car
+    # then leaves *upward* -- the dot product can never turn positive.
+    t, f = timestamp, frame
+    recovered = {}
+    for px, py in ((0.0, 50.0), (0.0, 30.0), (0.0, 10.0), (0.0, -20.0), (0.0, -45.0)):
+        t += 0.1
+        f += 3
+        batch = binder.batch_recover_ids(
+            {58: track(x=px - 30, y=py - 60, appearance=descriptor)},
+            f,
+            t,
+            camera_id="cam1",
+        )
+        recovered.update(batch.recovered_ids)
+
+    assert recovered == {58: 30}
+    assert _events(binder, "parked_id_recovered")
+
+
+def test_fragment_staying_inside_slot_never_consumes_token():
+    """Negative control for the escape path: a fragment that originates
+    inside the polygon but never leaves it must not recover the parked ID.
+    """
+    binder, result, frame, timestamp, descriptor = parked_binder()
+    frame, timestamp = confirm_departure(binder, result, frame, timestamp)
+
+    t, f = timestamp, frame
+    batch = None
+    for px, py in ((0.0, 50.0), (10.0, 50.0), (20.0, 50.0), (30.0, 50.0), (30.0, 60.0)):
+        t += 0.1
+        f += 3
+        batch = binder.batch_recover_ids(
+            {58: track(x=px - 30, y=py - 60, appearance=descriptor)},
+            f,
+            t,
+            camera_id="cam1",
+        )
+
+    assert batch is not None
+    assert batch.recovered_ids == {}
+    assert not _events(binder, "parked_id_recovered")
+
+
 def test_expiry_with_pending_candidate_emits_diagnostic():
     """A token that dies with retained mid-qualification evidence reports the
     candidate key and blocker for the registry."""

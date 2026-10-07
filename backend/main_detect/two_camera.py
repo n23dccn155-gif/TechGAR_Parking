@@ -1951,6 +1951,11 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--handoff-min-direction-cosine", type=float, default=0.25)
     parser.add_argument("--identity-retention-seconds", type=float, default=60.0)
     parser.add_argument(
+        "--enable-stationary-reacquire",
+        action="store_true",
+        help="Bat nhanh re-acquire cuoi cho xe do yen mat track (tranh mint GID trung cho cung mot xe)",
+    )
+    parser.add_argument(
         "--identity-retention-moving-seconds",
         type=float,
         default=12.0,
@@ -2258,6 +2263,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             shared_map_anchor=shared_map_anchor,
             camera_fps=initial_camera_fps,
             trajectory_history_seconds=args.trajectory_history_seconds,
+            enable_stationary_reacquire=getattr(
+                args, "enable_stationary_reacquire", False
+            ),
         )
         slot_files = {"cam1": args.slots_cam1, "cam2": args.slots_cam2}
         detectors = {

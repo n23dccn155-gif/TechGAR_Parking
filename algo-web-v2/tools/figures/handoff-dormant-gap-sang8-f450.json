@@ -1,0 +1,23 @@
+{
+  "id": "handoff-dormant-gap-sang8-f450",
+  "session": "session_hiep_sang8",
+  "cam": 2,
+  "frame": 450,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [367, 61, 428, 118],
+      "color": "#b3261e",
+      "label": "xe cua GID1 van do - khong co track tu f296"
+    },
+    {
+      "type": "circle",
+      "xy": [397, 118],
+      "r": 8,
+      "color": "#0b57d0",
+      "label": "anchor cuoi lid35 (397,118)"
+    }
+  ],
+  "max_kb": 200
+}

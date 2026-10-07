@@ -1,0 +1,56 @@
+{
+  "id": "snapshot-api-debug-cam1-f600",
+  "session": "session_hiep_sang8",
+  "cam": 1,
+  "frame": 600,
+  "source": "debug",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [
+        8,
+        15,
+        215,
+        78
+      ],
+      "color": "#33a3ff",
+      "label": "HUD: frame + 15/30 free"
+    },
+    {
+      "type": "box",
+      "xyxy": [
+        398,
+        283,
+        462,
+        383
+      ],
+      "color": "#2fbf71",
+      "label": "ô trống"
+    },
+    {
+      "type": "box",
+      "xyxy": [
+        346,
+        494,
+        432,
+        579
+      ],
+      "color": "#ff5252",
+      "label": "ô có xe"
+    },
+    {
+      "type": "arrow",
+      "from": [
+        1080,
+        175
+      ],
+      "to": [
+        1230,
+        232
+      ],
+      "color": "#ffd23f",
+      "label": "xe đang tracked"
+    }
+  ],
+  "max_kb": 240
+}

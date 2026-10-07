@@ -1,0 +1,12 @@
+{
+  "id": "slot-binder-parked-hiep3-f155",
+  "session": "session_hiep3",
+  "cam": 1,
+  "frame": 155,
+  "source": "raw",
+  "draw": [
+    {"type": "polygon", "pts": [[905,220],[958,222],[977,296],[920,296]], "color": "#dc2626", "label": "D01 occupied"},
+    {"type": "box", "xyxy": [911,200,968,296], "color": "#16a34a", "label": "lid1 GID1 matched"}
+  ],
+  "max_kb": 220
+}

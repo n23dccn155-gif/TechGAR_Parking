@@ -1,0 +1,520 @@
+{
+ "builder": "a",
+ "review": "V4 own-review (not V5 crosscheck)",
+ "registry": "v1-replay-results.json PASS only",
+ "fps": 25,
+ "frame_idx_base": "verify_cur 1-based; t_s = frame_idx/25",
+ "coverage": {
+  "auto_scan": "100% rows: 298+620+642+727",
+  "eyeball_unique_cam_frames_exact": {
+   "test1": "162/596 (27.2%)",
+   "hiep_toi4": "148/1240 (11.9%)",
+   "hiep2": "146/1284 (11.4%)",
+   "hiep_sang9": "184/1454 (12.7%)"
+  },
+  "count_method": "index.json cells of only the sheets listed as viewed; earlier sheets/ spot pass supplemental, not counted",
+  "uniform_1f_per_2s": "ALL sheets_uniform viewed: toi4 3/3, hiep2 3/3, sang9 4/4",
+  "event_dense_step5_viewed": "ALL events viewed: toi4 14/14, hiep2 14/14, sang9 18/18; test1 e006 dense f55-155 5/5",
+  "windows_skipped": "0 in uniform/events/e006/test1 sets; older sheets/ auto-window sets skipped: toi4 17/21, hiep2 20/24, sang9 27/30 (superseded, not counted)",
+  "v2_alignment": "ALIGNED cam1+cam2 f0+mid all 4; no config_era_suspected",
+  "thai6": {
+   "unique_cam_frame": 2204,
+   "denominator": 11874,
+   "pct": 18.6,
+   "uniform": "10/10 sheets",
+   "events": "83/83 sheets",
+   "skipped": 0
+  },
+  "thai1": {
+   "unique_cam_frame": 242,
+   "denominator": 12100,
+   "pct": 2.0,
+   "uniform": "10/10 sheets",
+   "events": "62 sheets rendered — C does event-dense (17 windows), A merges union",
+   "skipped": 0
+  }
+ },
+ "findings": [
+  {
+   "id": "E-A-001",
+   "session": "test1",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "vd f100 (60-298)",
+   "t_s": [
+    2.4,
+    11.9
+   ],
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "cause": "detection/morphology",
+   "lids_gids": "fixture portion CONFIRMED (C V5); lid74 [584,180,33,64] anchor trong slot C05 occupied=True f65-92 (matched detections) -> KHONG floor-only; lid115 [204,63,78,202] in-lane gidNULL IoU=0 -> UNSURE (co the vat/nguoi that trong lan)",
+   "evidence": "sheets_e006/session_test1/sheet_0003 cell2 (cam2 f100) + sheets/session_test1/sheet_0012-0014",
+   "repro": "make_sheets.py --session output/verify_cur_session_test1 --video-dir output/session_test1 --windows \"70-140\" --window-step 5 --window-pad 15"
+  },
+  {
+   "id": "E-A-002",
+   "session": "test1",
+   "type": "GHOST_TRACK",
+   "cam": "cam2",
+   "frames": "vd f100",
+   "sev": "S2",
+   "conf": "HIGH",
+   "status": "REJECTED",
+   "cause": "tracking/assignment",
+   "lids_gids": "lid74/lid85 — box on real car/object per C V5 audit",
+   "evidence": "sheets_e006/sheet_0003 cell2 (cam2 f100)",
+   "metric": "lifespan 46f stale_prediction, gid NULL",
+   "v5_note": "C audit: not ghost — box sits on real object"
+  },
+  {
+   "id": "E-A-003",
+   "session": "test1",
+   "type": "DUPLICATE_TRACK",
+   "cam": "cam2",
+   "frames": "f100",
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "CONFIRMED",
+   "lids_gids": "lid111<->lid120, gid NULL both",
+   "metric": "IoU=0.57 > DUPLICATE_IOU 0.55; bboxes [696,265,62,80]/[683,265,57,83]",
+   "evidence": "sheets_e006/sheet_0003 cell2 (cam2 f100) + sheets/session_test1/sheet_0003,0004,0009",
+   "v5_note": "C audit: CONFIRMED"
+  },
+  {
+   "id": "E-A-004",
+   "session": "test1",
+   "type": "ROI_MISMATCH",
+   "cam": "cam2",
+   "frames": "49 flags",
+   "lids": [
+    5
+   ],
+   "sev": "S3",
+   "conf": "HIGH",
+   "status": "EXPECTED",
+   "evidence": "bbox tran mep ROI, khong phai defect",
+   "note": "reclassified from CONFIRMED -> observations"
+  },
+  {
+   "id": "E-A-005",
+   "session": "test1",
+   "type": "SLOT_BINDING_ERROR",
+   "cam": "cam1",
+   "frames": "1-61",
+   "slots": [
+    "D03",
+    "D05",
+    "D06"
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "design-inherent suspect: parked cars invisible to motion tracker",
+   "lids_gids": "slot D03/D05/... vision-occupied w/o tracking f1-61; kiem chung f70: D03 occupied=True, 0 track inside -> xe do san tu truoc session; motion tracker khong detect xe chua-he-di-chuyen (vision pipeline covers) -> design limitation, gid NULL"
+  },
+  {
+   "id": "E-A-006",
+   "session": "test1",
+   "type": "GID_NEW_LINEAGE_LOSS",
+   "cam": "cam2",
+   "frames": "f55-155 dense-reviewed",
+   "gids": [
+    4,
+    5,
+    9,
+    13,
+    14,
+    15
+   ],
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "evidence": "sheets_e006 sheet_0003 cell2 (cam2 f100) + sheet_0005 giant merge box ~3 cars; new gids bind real parked cars",
+   "repro": "make_sheets.py --session output/verify_cur_session_test1 --video-dir output/session_test1 --windows \"70-140\" --window-step 5 --window-pad 15",
+   "lids_gids": "gid5 cam2 bbox x~63-72 f69-76 (8 obs, edge) vs gid9 x~204-235 f91-93 -> vung khac nhau, object khac; khong lineage-swap; edge churn"
+  },
+  {
+   "id": "E-A-010",
+   "session": "hiep_toi4",
+   "type": "ID_FRAGMENT/NEW_ID",
+   "cam": "cam2",
+   "frames": "3-24",
+   "lids": [
+    4,
+    5,
+    11,
+    12
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "startup churn 43 flags",
+   "lids_gids": "toi4 cam2 warmup f3-46: vanished lids 1-12 ALL gid NULL; bootstrap churn, no identity harm"
+  },
+  {
+   "id": "E-A-011",
+   "session": "hiep_toi4",
+   "type": "SLOT_BINDING_ERROR",
+   "cam": "cam1",
+   "frames": "1-61",
+   "slots": [
+    "D05",
+    "D06"
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "design-inherent",
+   "lids_gids": "toi4 slots vision-occupied w/o tracking 1-61/2-62 + D03 f78-138; f150: D03 occupied=True, 0 track -> pre-parked car design limitation"
+  },
+  {
+   "id": "E-A-013",
+   "session": "hiep_toi4",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "f51 burst (24 box) + f501-601",
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "CONFIRMED",
+   "lids_gids": "lid21 bbox[83,265,99,262] gidNULL life ~14f; lid50 [1038,555,89,144] gidNULL life f407-524 (118f)",
+   "evidence": "sheets_uniform/sheet_0001 cell4 (cam2 f51); sheet_0003 cell4 (cam2 f501)",
+   "metric": "burst 24 non-meas boxes @f51; lid50 lifespan 118f"
+  },
+  {
+   "id": "E-A-014",
+   "session": "hiep_toi4",
+   "type": "NO_ERROR",
+   "cam": "both",
+   "frames": "151-229,400-425",
+   "gids": [
+    12,
+    14,
+    15
+   ],
+   "sev": "-",
+   "status": "NO-ERROR",
+   "evidence": "sheets_events s4 gid12 handoff_matched; s10 recovery pending on real car f412; s7/s13 departure+claim windows clean"
+  },
+  {
+   "id": "E-A-020",
+   "session": "hiep2",
+   "type": "ID_FRAGMENT/NEW_ID",
+   "cam": "cam2",
+   "frames": "115-153",
+   "lids": [
+    10,
+    11,
+    12
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "UNSURE",
+   "lids_gids": "hiep2 cam2 churn f115-443 non-warmup; gid continuity PARTIALLY preserved: lid9/14/18 -> gid1, lid15/20 -> gid2 (ReID recovered); lid11/12/13/19 gid NULL; harm unresolved"
+  },
+  {
+   "id": "E-A-021",
+   "session": "hiep2",
+   "type": "ROI_MISMATCH",
+   "cam": "cam1",
+   "frames": "404-405",
+   "lids": [
+    7
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "lids_gids": "lid7 [29,542,100,164]->[29,587,86,116] anchor (79,706)/(72,703) bottom-left edge; lid8 [39,488,65,99] anch(71,587); roi_support 0.03-0.31, roi_clipped=True, new_tentative gid NULL -> boundary noise"
+  },
+  {
+   "id": "E-A-022",
+   "session": "hiep2",
+   "type": "SLOT_BINDING_ERROR",
+   "cam": "cam1",
+   "frames": "1-61",
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "design-inherent",
+   "lids_gids": "hiep2 slots vision-occupied w/o tracking f1-61 -> pre-parked design limitation (same as test1/toi4)"
+  },
+  {
+   "id": "E-A-024",
+   "session": "hiep2",
+   "type": "NO_ERROR",
+   "cam": "both",
+   "frames": "263-347,430-465",
+   "gids": [
+    4,
+    5
+   ],
+   "sev": "-",
+   "status": "NO-ERROR",
+   "evidence": "events s3 gid4 parking stable both cams; s8 gid5 tentative->coasting at right edge in reject window (reasonable reject)"
+  },
+  {
+   "id": "E-A-030",
+   "session": "hiep_sang9",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2+cam1",
+   "frames": "cam2 f51 (~20 box) + cam1 f441-466 (14-15 box)",
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "cause": "detection/morphology",
+   "lids_gids": "cam2 f51 burst: FLOOR-CONFIRMED lid19->B02, lid25->B02, lid30->A03 (occupied=False, IoU=0); occupied-slot lid29->B03, lid37->C05, cam1 lid1->E05; cam1 lid2->E04 empty (confirmed); ~14 lids in-lane IoU=0 UNSURE",
+   "evidence": "uniform sheet_0001 cell4 (cam2 f51); sheet_0003 cell1 (cam1 f451); events sheet_0012 cam1 cells f440-460",
+   "repro": "make_sheets.py --session output/verify_cur_session_hiep_sang9 --video-dir output/session_hiep_sang9 --every 2.0 ; --windows \"430-470\" --window-step 5",
+   "v5_note": "C audit: mixed -> UNSURE"
+  },
+  {
+   "id": "E-A-031",
+   "session": "hiep_sang9",
+   "type": "GHOST_TRACK",
+   "cam": "cam1",
+   "frames": "f441-466",
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "lids_gids": "cam1 f441-466: FLOOR-CONFIRMED lid15 [795,219,32,87] -> E03 occupied=False; lid12->E07 occupied=True; 12 lids in-lane IoU=0 UNSURE",
+   "metric": "f445/f451: IoU=0 vs ALL same-frame measurements for every stale box (no detection underneath)",
+   "evidence": "events sheet_0012 cam1 cells + uniform sheet_0003 cell1 (cam1 f451)",
+   "note": "corrected: ghost boxes gid NULL; C V5 mixed -> UNSURE pending per-box fixture vs floor-only split"
+  },
+  {
+   "id": "E-A-032",
+   "session": "hiep_sang9",
+   "type": "TRACK_JUMP",
+   "cam": "cam2",
+   "frames": "39-41",
+   "lids": [
+    25,
+    26
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "lids_gids": "lid25 [578,163]->[506,179]->[380,245] f39-41 + lid26 [366,384]->[504,382] f39-40: warmup association bootstrap jumps; sau do coasting on dinh; gid NULL"
+  },
+  {
+   "id": "E-A-033",
+   "session": "hiep_sang9",
+   "type": "ID_FRAGMENT/NEW_ID",
+   "cam": "cam2",
+   "frames": "3-38",
+   "lids": [
+    4,
+    7,
+    19,
+    21
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "startup churn 46",
+   "lids_gids": "sang9 cam2 f3-41 warmup churn; lids<=170f: khong lid nao doi gid; vanished lids gid NULL -> bootstrap noise"
+  },
+  {
+   "id": "E-A-034",
+   "session": "hiep_sang9",
+   "type": "SLOT_BINDING_ERROR",
+   "cam": "cam1",
+   "frames": "1-61",
+   "slots": [
+    "D03",
+    "D05"
+   ],
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "EXPECTED",
+   "note": "design-inherent",
+   "lids_gids": "sang9 slots vision-occupied f1-61 -> pre-parked design limitation"
+  },
+  {
+   "id": "E-A-035",
+   "session": "thai6",
+   "type": "FALSE_DETECTION",
+   "cam": "cam1",
+   "frames": "5877-5924 (burst, alive@5901)",
+   "lids": [
+    340,
+    341,
+    342,
+    343,
+    344,
+    345,
+    346,
+    347,
+    348,
+    349,
+    350,
+    351,
+    352,
+    353,
+    354,
+    355,
+    356,
+    357,
+    358,
+    359
+   ],
+   "gid": null,
+   "sev": "S2",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "evidence": "sheets_uniform_thai6/sheet_0010 cell r3c2 (cam1 f5901); 20 coasting gidNULL, life f5877-5896→5909-5924; slot-anchor check @f5901: lids343/344/349/351/354 in EMPTY slots F05/F02/F03 (occupied=false) = floor-only CONFIRMED; lids342/346/352/356 in OCCUPIED F06/D05 = on real cars; 9 lids outside all slots UNSURE",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_thai6 --video-dir output\\session_thai6 --every 2.0 (sheet_0010)",
+   "lids_gids": "cam1 f5901 20 coasting gidNULL, ALL IoU=0 vs measurements: FLOOR-CONFIRMED 343->F05,344->F02,349->F05,351->F03,354->F05 (occupied=False); over-real-car 342->F06,346->D05,352->F06,356->F06 (occupied=True); 11 lids in-lane UNSURE"
+  },
+  {
+   "id": "E-A-036",
+   "session": "thai6",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "5882-5924",
+   "lids": [
+    313,
+    314,
+    315,
+    316,
+    317,
+    319,
+    320,
+    322
+   ],
+   "gid": null,
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "evidence": "sheets_uniform_thai6/sheet_0010 cell r3c3 (cam2 f5901) + events sheet_0083; coasting+frozen_ambiguous gidNULL top-strip y50-365; lid313 [680,97,64,31] lid314 [746,88,62,32] lid315 [1021,51,52,49] life f5882-5900+",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_thai6 --video-dir output\\session_thai6 --windows \"5880-5937\" --window-step 5 --window-pad 15",
+   "lids_gids": "cam2 f5901: lid317 [760,136,56,81] -> C08 occupied=False = floor-confirmed; lid313/314/315/321 in-lane IoU=0 UNSURE"
+  },
+  {
+   "id": "E-A-037",
+   "session": "thai6",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "2759-2791",
+   "lids": [
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    168
+   ],
+   "gid": null,
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "evidence": "sheets_events_thai6/sheet_0036 cells (f2761-2821); 10 coasting gidNULL ~30f life; lid162 [1132,113,47,102], lid166 [1184,126,50,183] right-edge; lid163 [928,153,72,87]",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_thai6 --video-dir output\\session_thai6 --windows \"2746-2836\" --window-step 5 --window-pad 15",
+   "lids_gids": "cam2 f2791: FLOOR-CONFIRMED lid160->C08 + lid161->B10 (occupied=False); lid164==lid165 IDENTICAL bbox [976,392,48,104] = true duplicate pair; f2761 lid156->C05 occupied; rest in-lane UNSURE"
+  },
+  {
+   "id": "E-A-038",
+   "session": "thai6",
+   "type": "DUPLICATE_TRACK",
+   "cam": "cam2",
+   "frames": "592-717",
+   "gid": null,
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "MIXED",
+   "evidence": "sheets_events_thai6/sheet_0008-0009 cam2 cells: ~4-6 magenta boxes overlapping real white car during right-edge entry",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_thai6 --video-dir output\\session_thai6 --windows \"577-732\" --window-step 5 --window-pad 15",
+   "lids_gids": "scan 592-717: chi 1 cap dup thuc lid9(matched,gidNULL) x lid10(coasting) IoU 0.42/0.39 f716-717; visual cluster ~4-6 box = per-frame trail_render, KHONG simultaneous -> cluster-claim partially rejected"
+  },
+  {
+   "id": "E-A-039",
+   "session": "thai6",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "recurring f500-5470",
+   "lids": [
+    14,
+    279,
+    240,
+    250,
+    223
+   ],
+   "gid": null,
+   "sev": "S3",
+   "conf": "MEDIUM",
+   "status": "CONFIRMED",
+   "evidence": "fixture region top-right wall/droidcam x~940-1130 y~50-230: lid14 gidNULL [944,229,62,120] coasting ~88f (to f1442); lid279 [1063,116,41,92] ~82f (to f5469); lid240 [1106,161,38,108] ~48f; lid250 ~47f; lid223 ~46f; sheets s5,s6,s9,s23,s29,s30,s65,s82 purple box persistent",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_thai6 --video-dir output\\session_thai6 --windows \"500-950\" --window-step 5 --window-pad 15",
+   "lids_gids": "lid14 cam2 f1355-1442 (88f): matched DETECTIONS on wall/droidcam.app watermark region bbox x905-944 y52-229, roi_support_ratio 0.08-0.15 (mostly outside ROI), gid NULL -> detector false-positive on non-vehicle region, cosmetic, no identity impact"
+  },
+  {
+   "id": "E-A-041",
+   "session": "thai6",
+   "type": "NO_ERROR",
+   "cam": "both",
+   "frames": "event windows",
+   "status": "NO-ERROR",
+   "evidence": "moving vehicles (cyan/teal/black cars, motorcycles) tracked correctly across sheets s1-83; parked slots match; handoff/entry/parking events OK",
+   "repro": "sheets_events_thai6 (83 sheets, 9 merged event windows, step5)"
+  },
+  {
+   "id": "E-A-042",
+   "session": "thai1",
+   "type": "FALSE_DETECTION",
+   "cam": "cam2",
+   "frames": "~f1900-2100 uniform cells (sheet_0004)",
+   "gid": null,
+   "sev": "S3",
+   "conf": "LOW",
+   "status": "REJECTED",
+   "evidence": "sheets_uniform_thai1/sheet_0004 r4-r5: green box on empty mid-lane floor across cells",
+   "repro": "make_sheets.py --session output\u000berify_cur_session_hiep_thai1 --video-dir output\\session_hiep_thai1 --every 2.0 (sheet_0004)",
+   "lids_gids": "box tren lan trong f1900-2100 = lid17 gid=1 MATCHED detection moving [239,164,79,95]->[298,356,62,112] f1965-2003 -> xe teal that trong lan (trung event sheets A-part), khong phai ghost"
+  }
+ ],
+ "observations_not_errors": [
+  {
+   "id": "E-A-012",
+   "session": "hiep_toi4",
+   "type": "TRACK_LOST_EARLY",
+   "note": "59 warmup lids 1-2f — expected noise"
+  },
+  {
+   "id": "E-A-023",
+   "session": "hiep2",
+   "type": "TRACK_LOST_EARLY",
+   "note": "21 warmup lids — expected noise"
+  },
+  {
+   "id": "E-A-004",
+   "session": "test1",
+   "type": "ROI_MISMATCH",
+   "note": "bbox tràn mép ROI — EXPECTED, not defect"
+  },
+  {
+   "id": "E-A-040",
+   "session": "thai6",
+   "note": "person feet/hands at frame edges -> small boxes (uniform s4; events s25-27,s39); corner yellow boxes on wood floor outside mat (s66,s76-78); s82 bottom-left 'yellow cluster' = empty-slot outlines (cam2 f5865-5880 has 0 obs) RETRACTED; s36 'giant green box' = ROI outline RETRACTED (no bbox>120k px in preds)"
+  },
+  {
+   "id": "E-A-043",
+   "session": "thai1",
+   "note": "person legs/feet at left & top edges occasionally boxed as vehicle (uniform s3, s5) — edge person-as-vehicle noise; moving cars/motorcycles tracked correctly in all uniform cells"
+  }
+ ],
+ "boundaries": [
+  "coasting outside ROI / car-exiting-frame = legitimate (toi4 gid55)",
+  "warmup 1-2f lids = expected noise",
+  "no config_era_suspected any session"
+ ],
+ "pending": [
+  "hiep_thai1",
+  "thai6 awaiting registry PASS",
+  "dense renders for UNSURE queue"
+ ]
+}

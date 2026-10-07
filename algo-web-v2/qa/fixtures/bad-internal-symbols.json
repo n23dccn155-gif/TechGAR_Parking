@@ -1,0 +1,50 @@
+{
+  "id": "bad-internal-symbols",
+  "group": "setup",
+  "title": "Fixture ký hiệu nội bộ",
+  "order": 91,
+  "prev": null,
+  "next": null,
+  "fn": {
+    "text": "N5 xử lý nhánh này trong ccm:manager."
+  },
+  "why": {
+    "paras": [
+      "tc: gọi vào đây và N12 xuất hiện trong prose."
+    ]
+  },
+  "how": [
+    {
+      "id": "3.1",
+      "name": "Bước",
+      "paras": [
+        "Đoạn này lại nhắc T2 ở ngoài mục sources."
+      ]
+    }
+  ],
+  "formulas": [],
+  "params": [
+    {
+      "name": "p",
+      "value": "1",
+      "kind": "runtime",
+      "role": "x",
+      "src": "algo-web-v2/js/core/tg.js:1"
+    }
+  ],
+  "figures": [],
+  "noFigureReason": "fixture",
+  "interactive": null,
+  "limits": [
+    {
+      "text": "x"
+    }
+  ],
+  "sources": [
+    {
+      "ref": "algo-web-v2/js/core/tg.js:1",
+      "kind": "config",
+      "note": "ccm: được phép ở đây"
+    }
+  ]
+}

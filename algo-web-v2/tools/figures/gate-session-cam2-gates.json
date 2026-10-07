@@ -1,0 +1,20 @@
+{
+  "id": "gate-session-cam2-gates",
+  "session": "shared_map_01",
+  "cam": 2,
+  "frame": 0,
+  "source": "attempt capture_cam2.png (cal-20260927-160513-decd3099); gate px = inv(camera_transforms.cam2) @ gate_zones.json world cm",
+  "image_path": "D:/TechGar2/backend/main_detect/config/shared_map_01/attempts/cal-20260927-160513-decd3099/capture_cam2.png",
+  "out": "gate-session-cam2-gates.jpg",
+  "max_kb": 260,
+  "draw": [
+    {"type": "polygon", "pts": [[362.6, 454.5], [173.8, 446.7]], "color": "#2f9e44",
+     "label": "ENTRY (Cổng vào) dir=+", "label_at": [180, 490]},
+    {"type": "circle", "xy": [362.6, 454.5], "r": 7, "color": "#2f9e44", "label": "p1", "label_at": [370, 430]},
+    {"type": "circle", "xy": [173.8, 446.7], "r": 7, "color": "#2f9e44", "label": "p2", "label_at": [140, 420]},
+    {"type": "polygon", "pts": [[1114.1, 590.5], [939.1, 571.7]], "color": "#d6336c",
+     "label": "EXIT (Cổng ra) dir=-", "label_at": [860, 610]},
+    {"type": "circle", "xy": [1114.1, 590.5], "r": 7, "color": "#d6336c", "label": "p1", "label_at": [1120, 560]},
+    {"type": "circle", "xy": [939.1, 571.7], "r": 7, "color": "#d6336c", "label": "p2", "label_at": [900, 548]}
+  ]
+}

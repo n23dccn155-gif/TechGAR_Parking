@@ -1,0 +1,23 @@
+{
+  "id": "lifecycle-confirmed",
+  "session": "session_hiep_thai1",
+  "cam": 1,
+  "frame": 1500,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [643, 144, 748, 206],
+      "color": "#3fb950",
+      "label": "lid18 confirmed - song 96f"
+    },
+    {
+      "type": "arrow",
+      "from": [700, 200],
+      "to": [770, 190],
+      "color": "#3fb950",
+      "label": "dang chay"
+    }
+  ],
+  "max_kb": 220
+}

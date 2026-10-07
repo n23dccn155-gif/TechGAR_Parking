@@ -1,0 +1,187 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\TechGar2\backend\main_detect\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\TechGar2\backend\main_detect
+configfile: pytest.ini
+collecting ... collected 5 items
+
+tests/test_stationary_reacquire.py::test_stationary_car_reacquired_after_track_death_reuses_gid FAILED [ 20%]
+tests/test_stationary_reacquire.py::test_stationary_reacquire_while_gid_live_on_other_camera_reuses_gid FAILED [ 40%]
+tests/test_stationary_reacquire.py::test_two_equally_strong_candidates_must_defer_or_mint FAILED [ 60%]
+tests/test_stationary_reacquire.py::test_distant_car_does_not_steal_stationary_gid PASSED [ 80%]
+tests/test_stationary_reacquire.py::test_same_camera_live_owner_blocks_stationary_reacquire PASSED [100%]
+
+================================== FAILURES ===================================
+_________ test_stationary_car_reacquired_after_track_death_reuses_gid _________
+
+    def test_stationary_car_reacquired_after_track_death_reuses_gid():
+        """sang8 f600 faithful replay (dormant owner, same-camera re-fire).
+    
+        cam2 lid35 parked the car -> gid1.  The stationary car produces no
+        motion so the track dies (lost -> expired).  ~334 frames / 13.7 s
+        later the detector fires again 2 world-px from the last anchor with
+        identical appearance (sang8 numbers: last cam2 sighting f266,
+        re-detection f600 @25 fps -> 13.4 s > 12 s moving-retention window).
+        Correct behaviour: reuse gid1.  Current behaviour: ``same_camera_stale``
+        vetoes the dormant pass and the trajectory score of a never-moving car
+        can never reach 0.78, so a fresh GID is minted -- the sang8 defect.
+        """
+        manager = make_manager()
+        histogram = one_hot_histogram(0)
+        _seed_dormant_gid1(manager, histogram)
+    
+        # ~13.7 s gap: past the 12 s same-camera moving-retention window, so
+        # the re-fire hits exactly the sang8 ``same_camera_stale`` rejection.
+        for step in range(5):
+            frame_idx = 400 + step
+            fragment = parked_track(62, 120, histogram)
+            _feed(manager, {"cam2": {40: fragment}}, frame_idx, 14.0 + step * 0.04)
+    
+        assigned = manager.get_global_id("cam2", 40)
+>       assert assigned == 1, (
+            "expected: reuse gid1 -- stationary car re-acquired ~2 world-px "
+            "from its dead track's anchor with matching appearance; "
+            f"got global_id={assigned}; "
+            f"rejections={_rejections_for(manager, 'cam2', 40)}"
+        )
+E       AssertionError: expected: reuse gid1 -- stationary car re-acquired ~2 world-px from its dead track's anchor with matching appearance; got global_id=2; rejections=['dormant:dormant_reid_rejected(gid=1,reason=same_camera_stale)']
+E       assert 2 == 1
+
+tests\test_stationary_reacquire.py:194: AssertionError
+---------------------------- Captured stdout call -----------------------------
+[93m  [handoff opened] global #1: cam2 -> cam1 (edge overlap)[0m
+  [new] global #1 for cam2 (local #35)
+  [local lost] global #1 at cam2; identity retained
+[93m  [handoff opened] global #2: cam2 -> cam1 (edge overlap)[0m
+  [new] global #2 for cam2 (local #40)
+_____ test_stationary_reacquire_while_gid_live_on_other_camera_reuses_gid _____
+
+    def test_stationary_reacquire_while_gid_live_on_other_camera_reuses_gid():
+        """Brief scenario: gid1 stays registered/matched on cam1 while its
+        dead cam2 view re-detects the same parked car (live-owner branch).
+    
+        cam2 lid35 parks -> gid1; a completed handoff binds cam1 lid10 to the
+        same gid1 (models the f224 handoff_opened edge transfer); lid35 dies.
+        gid1's identity stays active through the cam1 registration.  The new
+        cam2 fragment projects ~45 world-px from the cam1 anchor of the same
+        car (calibration mismatch) -- beyond the 9 px duplicate window and
+        beyond handoff reach, so the live-owner trajectory pass must decide.
+        Correct: reuse gid1.  Current: new GID (same signature: direction /
+        time_topology ~= 0 for a stationary car).
+        """
+        manager = make_manager()
+        histogram = one_hot_histogram(0)
+        last_cam2 = None
+        for frame_idx in range(1, 7):
+            last_cam2 = parked_track(60, 120, histogram)
+            gid = _feed(
+                manager, {"cam2": {35: last_cam2}}, frame_idx, frame_idx * 0.04
+            )["cam2"][35]
+        assert gid == 1
+    
+        # Completed handoff: gid1's cam1 member binds, then the cam2 view of
+        # the same parked car dies.  Feeding lid10 *after* lid35's death makes
+        # cam1 the identity's last-observed camera -- its last anchor sits at
+        # world (560,120) while the re-fire lands at world ~(605,120).
+        manager.bind_external_id("cam1", 10, 1, 7)
+        assert manager.get_global_id("cam1", 10) == 1
+        manager.notify_track_lost("cam2", 35, last_cam2, 8, 0.32)
+        manager.notify_track_expired(
+            "cam2", 35, 60, 120, 42, 24, histogram, 12, 0.48,
+            appearance_tracklet=last_cam2.appearance_tracklet,
+        )
+        for frame_idx, t_s in ((9, 0.36), (10, 0.40), (11, 0.44)):
+            _feed(
+                manager, {"cam1": {10: parked_track(560, 120, histogram)}},
+                frame_idx, t_s,
+            )
+        # lid10 stays bound but unobserved from here on, so no live-member
+        # dedup or pending handoff can short-circuit the decision.
+    
+        # Re-detection on cam2 at world ~605 px: ~45 px from the cam1 anchor,
+        # outside the 9 px duplicate window, inside the trajectory gates.
+        # ~13.7 s elapsed keeps every opened handoff (TTL 45f) expired.
+        for step in range(5):
+            frame_idx = 400 + step
+            fragment = parked_track(105, 120, histogram)
+            _feed(manager, {"cam2": {40: fragment}}, frame_idx, 14.0 + step * 0.04)
+    
+        assigned = manager.get_global_id("cam2", 40)
+>       assert assigned == 1, (
+            "expected: reuse gid1 -- gid still registered via cam1 for the "
+            "same parked car; the re-fired cam2 view must re-acquire it, not "
+            f"mint a duplicate; got global_id={assigned}; "
+            f"rejections={_rejections_for(manager, 'cam2', 40)}"
+        )
+E       AssertionError: expected: reuse gid1 -- gid still registered via cam1 for the same parked car; the re-fired cam2 view must re-acquire it, not mint a duplicate; got global_id=2; rejections=[]
+E       assert 2 == 1
+
+tests\test_stationary_reacquire.py:253: AssertionError
+---------------------------- Captured stdout call -----------------------------
+[93m  [handoff opened] global #1: cam2 -> cam1 (edge overlap)[0m
+  [new] global #1 for cam2 (local #35)
+  [local lost] global #1 at cam2; identity retained
+[93m  [handoff opened] global #1: cam1 -> cam2 (edge overlap)[0m
+[93m  [handoff opened] global #2: cam2 -> cam1 (edge overlap)[0m
+  [new] global #2 for cam2 (local #40)
+____________ test_two_equally_strong_candidates_must_defer_or_mint ____________
+
+    def test_two_equally_strong_candidates_must_defer_or_mint():
+        """Negative guard (i): two dormant identities both strong -> no steal.
+    
+        gid1 parked at cam2 (60,120), gid2 parked at cam2 (140,120), identical
+        appearance.  A new fragment at (100,120) is equidistant to both.  The
+        allocator must not hand it gid1 or gid2 -- either a new GID or a
+        deferral (None) is acceptable; a wrong steal is not.
+    
+        NOTE: currently FAILS -- the first frame defers with
+        ``dormant_reid_ambiguous`` but the next frame still resolves to a
+        steal (``dormant_global_id_recovered``).  Second signature of the
+        same defect class; must pass once the margin guard lands.
+        """
+        manager = make_manager()
+        histogram = one_hot_histogram(0)
+    
+        t = 0.0
+        lid35 = lid36 = None
+        for frame_idx in range(1, 7):
+            t += 0.04
+            lid35 = parked_track(60, 120, histogram)
+            lid36 = parked_track(140, 120, histogram)
+            ids = _feed(
+                manager, {"cam2": {35: lid35, 36: lid36}}, frame_idx, t
+            )["cam2"]
+        assert ids[35] == 1 and ids[36] == 2
+    
+        manager.notify_track_lost("cam2", 35, lid35, 8, t + 0.04)
+        manager.notify_track_lost("cam2", 36, lid36, 8, t + 0.04)
+    
+        assigned = None
+        for step in range(5):
+            frame_idx = 300 + step
+            fragment = parked_track(100, 120, histogram)
+            _feed(manager, {"cam2": {40: fragment}}, frame_idx, 12.0 + step * 0.04)
+            assigned = manager.get_global_id("cam2", 40)
+    
+        # Unbound (None, deferred) or a fresh GID are both correct; stealing
+        # gid1 or gid2 on a coin-flip margin is the forbidden outcome.
+>       assert assigned not in (1, 2), (
+            f"two equally strong candidates must defer or mint a new GID; "
+            f"fragment was bound to gid={assigned}"
+        )
+E       AssertionError: two equally strong candidates must defer or mint a new GID; fragment was bound to gid=1
+E       assert 1 not in (1, 2)
+
+tests\test_stationary_reacquire.py:300: AssertionError
+---------------------------- Captured stdout call -----------------------------
+[93m  [handoff opened] global #1: cam2 -> cam1 (edge overlap)[0m
+  [new] global #1 for cam2 (local #35)
+[93m  [handoff opened] global #2: cam2 -> cam1 (edge overlap)[0m
+  [new] global #2 for cam2 (local #36)
+  [re-id] global #1: cam2 -> cam2
+[93m  [handoff opened] global #1: cam2 -> cam1 (edge overlap)[0m
+=========================== short test summary info ===========================
+FAILED tests/test_stationary_reacquire.py::test_stationary_car_reacquired_after_track_death_reuses_gid
+FAILED tests/test_stationary_reacquire.py::test_stationary_reacquire_while_gid_live_on_other_camera_reuses_gid
+FAILED tests/test_stationary_reacquire.py::test_two_equally_strong_candidates_must_defer_or_mint
+========================= 3 failed, 2 passed in 0.19s =========================

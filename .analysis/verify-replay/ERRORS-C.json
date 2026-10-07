@@ -1,0 +1,511 @@
+{
+  "builder": "C",
+  "title": "V4 own-review findings",
+  "date": "2026-10-05",
+  "source": "verify_cur_session_* replay outputs (V1 FINISH/PASS) + original raw_cam videos; no original-overlay findings",
+  "sessions_done": [
+    "session_hiep_sang7",
+    "session_hiep_toi5",
+    "session_hiep3",
+    "session_hiep_sang8",
+    "runtime_session_bt",
+    "session_thai8",
+    "session_thai7",
+    "session_hiep_thai5"
+  ],
+  "sessions_pending": [],
+  "v4_status": "COMPLETE 8/8 — 294/294 event-windows FULL (gap<=5 rule), 0 PART, 0 SKIP; uniform-2s 8/8 both cams",
+  "errors": [
+    {
+      "id": "E-C-001",
+      "category": "ID_FRAGMENT/NEW_ID",
+      "session": "verify_cur_session_hiep_sang8",
+      "cam": "cam2",
+      "frame_range": [
+        129,
+        889
+      ],
+      "time_s": [
+        5.2,
+        35.6
+      ],
+      "ids": "new lid 33..45+ each 'near lid N that stayed vanished'; cam1 lids 31,32 f639-710",
+      "visual": "lightblue car at cam2 bottom-right ROI edge gets new lid repeatedly; sheets 0006,0013,0028-0032,0037-0038",
+      "metric": "NEW_NEAR_PX=150px (scan_frames.py)",
+      "severity": "S2",
+      "confidence": "HIGH",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_session_hiep_sang8 --video-dir experiment_test/output/session_hiep_sang8 --windows \"129-167,561-600,843-889\" --cam 2",
+      "status": "CONFIRMED",
+      "cause_category": "local-lifecycle",
+      "reason": "car at ROI/frame edge -> repeated detect/lose -> new track",
+      "harm_status": "CONFIRMED",
+      "cells": "sheets/sheet_0006 f129-143; sheet_0013 f166-184; sheet_0028-0032 f561-600; sheet_0037-0038 f843-889 (cam2 col)"
+    },
+    {
+      "id": "E-C-002",
+      "category": "GID_NEW_LINEAGE_LOSS",
+      "session": "verify_cur_session_hiep_sang8",
+      "cam": "cam2",
+      "frame_range": [
+        561,
+        600
+      ],
+      "time_s": [
+        22.4,
+        24.0
+      ],
+      "ids": "new gid 3 near gid 1 that stayed vanished (measure 15.9px < 150px)",
+      "visual": "sheets 0028-0030 cam2 f584-644; gid1 lineage not preserved on re-appear",
+      "metric": "NEW_NEAR_PX=150px",
+      "severity": "S2",
+      "confidence": "MEDIUM",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_session_hiep_sang8 --video-dir experiment_test/output/session_hiep_sang8 --windows \"546-615\" --cam 2",
+      "status": "CONFIRMED",
+      "cause_category": "cross-camera-handoff",
+      "reason": "lineage not kept when object re-appears on cam2; related to E-C-001",
+      "harm_status": "UNSURE",
+      "cells": "sheets/sheet_0028-0030 cam2 cells f561-600",
+      "v5_b_note": "B gap-density check (xcheck_c002_gap f300-550): black car continuously parked through 6 sampled marks; lid35/gid1 ends (397,118) vs lid40/gid3 appears (388,119) = 9px => same physical vehicle; lineage loss CONFIRMED; end-harm UNVERIFIED (slot occupancy unchanged)"
+    },
+    {
+      "id": "E-C-003",
+      "category": "ROI_MISMATCH",
+      "session": "verify_cur_session_hiep_toi5 (+ sang7, sang8 sparse)",
+      "cam": "cam1",
+      "frame_range": [
+        241,
+        318
+      ],
+      "time_s": [
+        9.6,
+        12.7
+      ],
+      "ids": "lid 2->3",
+      "visual": "dark SUV top-left cam1 at ROI edge: bbox on car, anchor_pixel outside polygon; sheets 0011-0014",
+      "metric": "anchor outside ROI polygon",
+      "severity": "S3",
+      "status": "UNSURE",
+      "confidence": "HIGH",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_session_hiep_toi5 --video-dir experiment_test/output/session_hiep_toi5 --windows \"241-318\" --cam 1",
+      "cause_category": "config-mask/calibration",
+      "harm_status": "UNSURE",
+      "cells": "sheets/sheet_0011-0014 cam1 f241-318; sang7 sheet_0002 cam2 f2; sang8 sheet_0001 cam1 f2-4"
+    },
+    {
+      "id": "E-C-004",
+      "category": "DATA_INTEGRITY",
+      "session": "verify_cur_session_hiep_toi5 + verify_cur_session_thai7",
+      "cam": "-",
+      "frame_range": [
+        [
+          95,
+          96
+        ],
+        [
+          2194,
+          2195
+        ]
+      ],
+      "time_s": [
+        [
+          3.8,
+          3.84
+        ],
+        [
+          87.76,
+          87.8
+        ]
+      ],
+      "ids": "-",
+      "visual": "no visual discontinuity in toi5 sheet_0005; timing/record-level capture gap",
+      "metric": "capture gap between frames",
+      "severity": "S3",
+      "confidence": "MEDIUM",
+      "config_era_suspected": false,
+      "repro": "inspect experiment_test/output/session_hiep_toi5/frame_timestamps.csv rows f95-96; session_thai7 f2194-2195",
+      "status": "CONFIRMED",
+      "cause_category": "data/replay",
+      "reason": "capture timestamp anomaly in original record",
+      "harm_status": "UNSURE",
+      "cells": "frame_timestamps.csv rows f95-96 toi5 / f2194-2195 thai7 (record-level)"
+    },
+    {
+      "id": "E-C-005",
+      "category": "HANDOFF_ERROR",
+      "session": "verify_cur_session_thai8 + verify_cur_session_thai7",
+      "cam": "cam1 (thai8 f1377-1389, thai7 f761-772), cam2 (thai7 f2084-2112)",
+      "frame_range": [
+        [
+          1377,
+          1389
+        ],
+        [
+          761,
+          772
+        ],
+        [
+          2084,
+          2112
+        ]
+      ],
+      "time_s": [
+        [
+          55.08,
+          55.56
+        ],
+        [
+          30.44,
+          30.88
+        ],
+        [
+          83.36,
+          84.48
+        ]
+      ],
+      "ids": "thai8+thai7 cam1: 'new gid 5 near gid 3 vanished from cam2' (same signature); thai7 cam2: 'new gid 7 near gid 1 vanished from cam1'",
+      "visual": "thai7 sheets 0093-0095: lightblue car cam1 top-left alternating merged_detection_frozen/new while cam2 top edge repeats new_tentative; thai8 sheet_0062 cam1 new box while gid3 cam2 gone",
+      "metric": "new gid near vanished gid (NEW_NEAR_PX=150px)",
+      "severity": "S2",
+      "confidence": "MEDIUM",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_session_thai7 --video-dir experiment_test/output/session_thai7 --windows \"746-787,2069-2127\" --cam both; thai8: --session experiment_test/output/verify_cur_session_thai8 --video-dir experiment_test/output/session_thai8 --windows \"1362-1404\"",
+      "status": "UNSURE",
+      "cause_category": "cross-camera-handoff",
+      "reason": "claim not confirmed pending B evidence: 1/3 instance rejected (thai7 f761 still-parked image), 2/3 UNSURE (thai8 97cm+46s insufficient alone; thai7 f2084 unproven either way)",
+      "harm_status": "UNSURE",
+      "cells": "thai8 sheets/sheet_0062 f1371-1391; thai7 sheets/sheet_0093-0095 f761-772 + f2084-2112",
+      "claim_history": "C originally claimed HANDOFF_ERROR (GID lineage lost at cross-camera transition) from 3 near-heuristic flags; V5-B world-space audit: 1/3 disproven with image evidence, 2/3 UNSURE",
+      "v5_b_audit": {
+        "method": "world-space homography (config/two_camera.shared_cm_01.json) + timeline + independent sheets",
+        "verdict": "pending: 1 rejected + 2 unsure — not confirmed, not fully rejected",
+        "note": "runtime dormant_reid_rejected used world-space reasons (position 31.2>25.9, same_camera_stale, trajectory_stable_wrong_direction) — engine did NOT blindly merge",
+        "pending": "B reviewing evidence strength: thai7 f761 has still-parked image (strong); thai8 97cm+46s alone insufficient to conclude different car — awaiting supplement/downgrade; claim remains not-confirmed meanwhile"
+      },
+      "instances": [
+        {
+          "session": "thai7",
+          "cam": "cam1",
+          "frames": "761-772",
+          "t_s": "30.44-30.88s",
+          "ids": "gid3(cam2)->gid5(cam1)",
+          "world_cm": "gid3 last (7.1,78.6)@f424 vs gid5 first (-4.9,-18.1)@f772 = ~97cm; gid3 car still parked cam2 sheets f766-786",
+          "verdict": "REJECTED — different car (image evidence)",
+          "cell": "sheets/sheet_0093-0095 f761-772"
+        },
+        {
+          "session": "thai8",
+          "cam": "cam1",
+          "frames": "1377-1389",
+          "t_s": "55.08-55.56s",
+          "ids": "gid3(cam2)->gid5(cam1)",
+          "world_cm": "gid3 last (20.3,77.4)@f242 vs gid5 first (-6.7,-17.2)@f1389 = ~97cm, gap ~1147f; lid41 coasting died f281; sheet_0062 resolution insufficient",
+          "verdict": "UNSURE — no proof either way",
+          "cell": "sheets/sheet_0062 f1371-1391"
+        },
+        {
+          "session": "thai7",
+          "cam": "cam2",
+          "frames": "2084-2112",
+          "t_s": "83.36-84.48s",
+          "ids": "gid1->gid7 (both cam2)",
+          "world_cm": "gid1 last (31.0,14.1)@f1414 vs gid7 first (3.3,5.9)@f2105 = ~29cm, gap ~700f; lid83 new from top edge; dormant_reid_rejected dir=0.008",
+          "verdict": "UNSURE — cannot prove same or different",
+          "cell": "sheets/sheet_0094 f2084-2112"
+        }
+      ]
+    },
+    {
+      "id": "E-C-006",
+      "category": "GHOST_TRACK",
+      "status": "CONFIRMED",
+      "confidence": "HIGH",
+      "instances": [
+        {
+          "session": "hiep_thai5",
+          "cam": "cam1",
+          "frames": "392-420",
+          "lids": "8,9,10,14,15,16",
+          "measure": ">=6 boxes, fvc<=2, inv<=21, static spread(0,0)",
+          "evidence": "sheets_dense2 sheets ~0004-0006",
+          "cell": "dense2/sheet_0004-0006 f392-420",
+          "t_s": "15.68-16.80s"
+        },
+        {
+          "session": "hiep_thai5",
+          "cam": "cam1",
+          "frames": "~985-1040",
+          "lids": "67,78-87",
+          "measure": ">=10 concurrent gidNULL coasting, fvc<=6, inv<=22",
+          "evidence": "sheets_dense2 sheet_0042 f1013-1020",
+          "cell": "dense2/sheet_0042 cells f1013-1020",
+          "t_s": "39.40-41.60s"
+        },
+        {
+          "session": "hiep_thai5",
+          "cam": "cam2",
+          "frames": "1719-1790",
+          "lids": "125,129-134,136-138",
+          "measure": "~8 gidNULL stack x=0-358 left edge floor, fvc<=10, inv<=25",
+          "evidence": "sheets_dense2 sheet_0072 f1753-1767",
+          "cell": "dense2/sheet_0072 cells f1753-1767",
+          "t_s": "68.76-71.60s"
+        },
+        {
+          "session": "hiep_sang8",
+          "cam": "cam2",
+          "frames": "882-925",
+          "lids": "43,45",
+          "measure": "30f+37f spans, fvc<=4, inv<=31, static corner",
+          "evidence": "sheets sheet_0001 + dense2",
+          "cell": "sheets/sheet_0001 + dense2 f882-925",
+          "t_s": "35.28-37.00s"
+        },
+        {
+          "session": "thai8",
+          "cam": "cam2",
+          "frames": "2-42",
+          "lids": "32,33,35",
+          "measure": "41f span, fvc=1, inv<=40, static corner",
+          "evidence": "sheets sheet_0001",
+          "cell": "sheets/sheet_0001 f2-42",
+          "t_s": "0.08-1.68s"
+        },
+        {
+          "session": "hiep_toi5",
+          "cam": "cam2",
+          "frames": "2-37",
+          "lids": "7,14",
+          "measure": "36f span, fvc=1, inv<=35",
+          "evidence": "sheets 0008-0010",
+          "cell": "sheets/sheet_0008-0010 f2-37",
+          "t_s": "0.08-1.48s"
+        },
+        {
+          "session": "thai7",
+          "cam": "cam1+cam2",
+          "frames": "2851",
+          "lids": "cam1 50-56 (6 boxes), cam2 113",
+          "measure": "gidNULL coasting burst fvc<=4, inv<=36",
+          "evidence": "sheets_uniform sheet_0013",
+          "cell": "sheets_uniform/sheet_0013 f2851",
+          "t_s": "114.04-114.04s"
+        },
+        {
+          "session": "runtime_session_bt",
+          "cam": "cam2",
+          "frames": "2-42",
+          "lids": "33 stale_prediction boxes (A E-ABT-1)",
+          "measure": "~40f concurrent phantoms, all gid NULL",
+          "evidence": "sheets_v4h_bt sheet_0001 cell2",
+          "cell": "sheets_v4h_bt/sheet_0001 cell2 f2-42",
+          "t_s": "0.08-1.68s"
+        }
+      ],
+      "excluded": "hiep3 cam2 lids 12/14 (fvc 87/106, gid1 later) = real cars -> U1; thai8 lid37 (fvc137, gid1) = real car",
+      "severity": "S2",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_session_hiep_thai5 --video-dir experiment_test/output/session_hiep_thai5 --frames \"392,1015,1757\" --cam both; thai8: --session experiment_test/output/verify_cur_session_thai8 --video-dir experiment_test/output/session_thai8 --frames \"2,21,42\"; toi5: --session experiment_test/output/verify_cur_session_hiep_toi5 --video-dir experiment_test/output/session_hiep_toi5 --frames \"2,21,37\"; sang8: --session experiment_test/output/verify_cur_session_hiep_sang8 --video-dir experiment_test/output/session_hiep_sang8 --windows \"867-940\"",
+      "cause_category": "detection/morphology",
+      "reason": "phantom births in bursts (startup + post-motion), tentative tracks never confirmed coast ~20-40f; gid NULL -> no identity harm",
+      "harm_status": "UNSURE",
+      "v5_b_note": "B audit: ghosts die in 44-238f (~1.8-9.5s), none alive@EOF — transient stale-prediction with TTL; type CONFIRMED, slot/identity harm not proven"
+    },
+    {
+      "id": "E-C-007",
+      "category": "FALSE_DETECTION",
+      "status": "CONFIRMED",
+      "confidence": "MEDIUM",
+      "note": "real object exists (non-vehicle) — distinct from E-C-006 ghost-on-empty",
+      "instances": [
+        {
+          "session": "runtime_session_bt",
+          "cam": "cam1",
+          "frames": "1500-1529 (alive@EOF)",
+          "ids": "lid21 [1183,96,53,51]",
+          "measure": "fvc 4, inv<=11, drift y 88px — wooden post top edge",
+          "evidence": "sheets_v4h_bt s27-30 (A E-ABT-2)",
+          "cell": "sheets_v4h_bt/sheet_0027-0030 f1500-1529",
+          "t_s": "60.00-61.16s"
+        },
+        {
+          "session": "runtime_session_bt",
+          "cam": "cam2",
+          "frames": "1500-1529",
+          "ids": "lid64 [64,64,116,144]",
+          "measure": "fvc 7, inv<=23 — left-edge fixture",
+          "evidence": "sheets_v4h_bt s27-30",
+          "cell": "sheets_v4h_bt/sheet_0027-0030 f1500-1529",
+          "t_s": "60.00-61.16s"
+        },
+        {
+          "session": "runtime_session_bt",
+          "cam": "cam2",
+          "frames": "1509-1529",
+          "ids": "lid66 [128,75,46,65]",
+          "measure": "fvc 1, inv<=20, static",
+          "evidence": "sheets_v4h_bt s27-30",
+          "cell": "sheets_v4h_bt/sheet_0027-0030 f1509-1529",
+          "t_s": "60.36-61.16s"
+        },
+        {
+          "session": "thai7",
+          "cam": "cam2",
+          "frames": "~2851",
+          "ids": "matched box on operator hand left edge",
+          "measure": "sustained >=1 uniform cell; gidNULL burst same frame lids 106-111,113",
+          "evidence": "sheets_uniform sheet_0013 mid-left cell",
+          "cell": "sheets_uniform/sheet_0013 f2851 cam2",
+          "t_s": "114.04-114.04s"
+        }
+      ],
+      "severity": "S2",
+      "config_era_suspected": false,
+      "repro": ".venv/Scripts/python.exe experiment_test/verify/make_sheets.py --session experiment_test/output/verify_cur_runtime_session_bt --video-dir experiment_test/output/runtime_session_bt --frames \"1500,1515,1529\" --cam both; thai7: --session experiment_test/output/verify_cur_session_thai7 --video-dir experiment_test/output/session_thai7 --frames \"2851\" --cam 2",
+      "cause_category": "detection/morphology",
+      "reason": "motion detector fires on off-mat moving fixtures (hand, post) — matches A CONFIRMED test1 tripod / E-ABT-1/2",
+      "harm_status": "CONFIRMED",
+      "v5_b_note": "B audit: fixture tracks persist (bt EOF alive 6 tracks lid21/22/64/65/66/67, 21-30 obs) — re-detection on real object, distinct mechanism from ghost decay; type CONFIRMED"
+    }
+  ],
+  "unsure": [
+    {
+      "id": "U1",
+      "category": "GHOST_TRACK (residual)",
+      "sessions": [
+        "hiep_toi5",
+        "hiep3",
+        "hiep_sang8"
+      ],
+      "note": "edge coasting-linger largely promoted to E-C-006; remaining UNSURE = per-track lifetime not measured (need visible_count/track-length to separate ghosts from legit edge tracks)."
+    },
+    {
+      "id": "U2",
+      "category": "GID_SWITCH-suspect",
+      "sessions": [
+        "hiep_sang7"
+      ],
+      "note": "~f330 G#3|L10 coasting cam2 while G#3|L8 matched cam1; verified no duplicate lid5 cam1 f570-635 in preds -> stays UNSURE pending per-frame gid check."
+    },
+    {
+      "id": "U3",
+      "category": "merged_detection_frozen persistent at frame corners",
+      "sessions": [
+        "runtime_session_bt"
+      ],
+      "note": "cam1 top-left + cam2 top-right magenta frozen/oversized boxes persist whole session on dark corner objects (sheets 0064/0068 + uniform). Could be real dark blob (rolled mat edge/object) -> machinery correct; UNSURE."
+    },
+    {
+      "id": "U4",
+      "category": "TRACK_JUMP",
+      "sessions": [
+        "runtime_session_bt cam1 f1427-28 lid19",
+        "thai7 cam2 f2-3 lid4"
+      ],
+      "note": "single-frame jumps in crowded scenes; noise-level UNSURE."
+    }
+  ],
+  "non_errors_observed": [
+    {
+      "category": "SLOT_BINDING_ERROR",
+      "note": "'vision-occupied w/o tracking' (~30/session): cars static whole session -> no motion track; slot colors match real cars -> expected design, not counted as error."
+    },
+    {
+      "category": "merged_detection_frozen / oversized_detection_frozen",
+      "note": "cam2 hiep3 f386-471: two adjacent dark cars held frozen-merged; merge machinery working per design. (bt corner-persistent case moved to U3.)"
+    },
+    {
+      "category": "TRACK_LOST_EARLY",
+      "note": "startup ~f2 lids living 1-2f = warmup noise; expected."
+    }
+  ],
+  "coverage": {
+    "hiep_sang7": {
+      "frames": 817,
+      "auto": "100%",
+      "sheets_viewed": "main 32/32 + dense 22/22 + dense2 18/18",
+      "unique_cells": 576,
+      "uniform_2s": "17/17",
+      "windows_FPS": "16/0/0",
+      "windows_skipped": 0
+    },
+    "hiep_toi5": {
+      "frames": 806,
+      "auto": "100%",
+      "sheets_viewed": "main 32/32 + dense 16/16 + dense2 18/18",
+      "unique_cells": 550,
+      "uniform_2s": "17/17",
+      "windows_FPS": "13/0/0",
+      "windows_skipped": 0
+    },
+    "hiep3": {
+      "frames": 826,
+      "auto": "100%",
+      "sheets_viewed": "main-uniform 16 + dense 21/21 + dense2 23/23 + events 3",
+      "unique_cells": 548,
+      "uniform_2s": "17/17",
+      "windows_FPS": "18/0/0",
+      "windows_skipped": "main ~14 mid-window repeats (documented)"
+    },
+    "hiep_sang8": {
+      "frames": 929,
+      "auto": "100%",
+      "sheets_viewed": "main-uniform 19 + dense 18/18 + dense2 18/18",
+      "unique_cells": 464,
+      "uniform_2s": "19/19",
+      "windows_FPS": "16/0/0",
+      "windows_skipped": "main ~20 mid-window repeats (documented)"
+    },
+    "runtime_session_bt": {
+      "frames": 1529,
+      "auto": "100%",
+      "sheets_viewed": "uniform 7/7 + A-help sheets_v4h_bt 30/30",
+      "unique_cells": 532,
+      "uniform_2s": "31/31",
+      "windows_FPS": "34/0/0",
+      "windows_skipped": "main 61/68 merge-window static (documented)"
+    },
+    "session_thai8": {
+      "frames": 1952,
+      "auto": "100%",
+      "sheets_viewed": "uniform 9/9 + dense 66/66 + dense2 29/64 + events",
+      "unique_cells": 905,
+      "uniform_2s": "40/40",
+      "windows_FPS": "48/0/0",
+      "windows_skipped": "main ~84 + dense2 35 redundant-coverage (documented)"
+    },
+    "session_thai7": {
+      "frames": 2872,
+      "auto": "100%",
+      "sheets_viewed": "uniform 13/13 + B-help sheets_cur 120/120 + gap-fix events 2",
+      "unique_cells": 1182,
+      "uniform_2s": "58/58",
+      "windows_FPS": "75/0/0",
+      "windows_skipped": "main ~123 mid-window static; B windows exclude rejection-noise event types"
+    },
+    "session_hiep_thai5": {
+      "frames": 3977,
+      "auto": "100%",
+      "sheets_viewed": "uniform 88/88 + dense 87/87 + dense2 120/120 + events 1/1",
+      "unique_cells": 2425,
+      "uniform_2s": "80/80 (160 cells)",
+      "windows_FPS": "74/0/0",
+      "windows_skipped": "63 flag-only sheets not rendered (already covered)"
+    },
+    "sampling": "uniform 1f/2s/cam (all viewed) + flags pad-15 merge step-5 + event windows pad-15 step-5 (dense sets viewed in full); helpers merged by set-union",
+    "total_unique_cells_eyeballed": 7182,
+    "total_sheets_eyeballed": "~830",
+    "event_group_windows": {
+      "source": "windows/event-groups.json (identity_events+parking_events, cluster gap30)",
+      "rule": "FULL = viewed frames cover [lo-15,hi+15] clamped to [1,max_pred_frame] on BOTH cams with max gap <=5; PART = residual gap >5; SKIP = 0 cells",
+      "total": 294,
+      "full": 294,
+      "partial": 0,
+      "skipped": 0,
+      "note": "final 2 PARTs closed by real evidence: thai8 f1945 window via dense2 sheet_0063/0064 + uniform f1951 (clamped at max-pred 1952); thai7 parking 2677 via sheets_events gap-fix f2645-2690",
+      "proxy_caveat": "entry=global_id_created and exit=expired/departure are event-stream proxies, not verified GT of all real ins/outs"
+    }
+  }
+}

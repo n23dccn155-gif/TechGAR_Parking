@@ -302,6 +302,65 @@ def test_group_allocation_defers_pair_leaving_reserved_slot():
     )
 
 
+def test_fragment_origin_survives_rolling_history_window():
+    """session_thai8/F01: ``provisional_samples`` only retains the last
+    ``history_seconds`` of trail, so for a fragment older than that window
+    ``samples[0]`` is *not* where the fragment began -- it is where the car
+    happened to be two seconds ago.  A departing car that began inside the
+    reserved slot must not be judged "started outside" just because its
+    retained tail already left.
+    """
+    manager = make_manager()
+    histogram = one_hot_histogram(0)
+    gid = _seed_parked_identity(manager, histogram)
+
+    # The fragment is first observed inside the reserved slot, then drives
+    # far enough that the 2 s rolling window prunes every in-slot sample.
+    for frame_idx, x, t in (
+        (1, 300, 0.0),
+        (6, 330, 0.6),
+        (11, 480, 2.2),
+        (14, 500, 2.8),
+        (16, 520, 3.0),
+    ):
+        fragment = attach_tracklet(
+            DummyTrack(x, 260, appearance=histogram),
+            histogram,
+            histogram,
+        )
+        manager.observe_trajectories(
+            {"cam1": {9: fragment}}, frame_idx, {"cam1": t}
+        )
+
+    samples = manager.trajectory.provisional_samples(("cam1", 9))
+    assert samples and samples[0].world[0] >= 480.0  # rolling window moved on
+    assert not manager._fragment_starts_outside_reservation("cam1", 9, gid)
+
+
+def test_fragment_that_truly_began_outside_stays_rejected():
+    """The same check must still veto a fragment whose trail genuinely
+    began far from the reserved slot."""
+    manager = make_manager()
+    histogram = one_hot_histogram(0)
+    gid = _seed_parked_identity(manager, histogram)
+
+    for frame_idx, x, t in (
+        (1, 30, 0.0),
+        (6, 45, 0.6),
+        (11, 60, 1.0),
+    ):
+        fragment = attach_tracklet(
+            DummyTrack(x, 260, appearance=histogram),
+            histogram,
+            histogram,
+        )
+        manager.observe_trajectories(
+            {"cam1": {9: fragment}}, frame_idx, {"cam1": t}
+        )
+
+    assert manager._fragment_starts_outside_reservation("cam1", 9, gid)
+
+
 def test_group_allocation_still_pairs_unrelated_fragments():
     # The guard must not starve genuinely new vehicles: a pair whose trails
     # do not start inside any reservation groups normally.

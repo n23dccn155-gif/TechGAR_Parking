@@ -1,0 +1,22 @@
+{
+  "id": "occlusion-cluster",
+  "session": "session_hiep_thai1",
+  "cam": 1,
+  "frame": 1407,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [360, 155, 470, 265],
+      "color": "#d64545",
+      "label": "2 xe gan nhau - merged ambiguous"
+    },
+    {
+      "type": "box",
+      "xyxy": [415, 204, 453, 248],
+      "color": "#00c8ff",
+      "label": "track coast (khong stretch)"
+    }
+  ],
+  "max_kb": 220
+}

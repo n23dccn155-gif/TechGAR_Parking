@@ -1,0 +1,54 @@
+{
+  "id": "snapshot",
+  "title": "Snapshot contract — mailbox 'mới-nhất-thắng' 8001 → 8000 → frontend",
+  "tier": "T3",
+  "nodes": ["N13", "N14", "N15"],
+  "problem": "Runtime CV 30fps tạo state quá lớn để mọi consumer đọc đồng-bộ; mỗi consumer có nhịp riêng (gate 0.25s, frontend 200ms, MJPEG viewer). Cần một điểm xuất-bản không hàng-đợi.",
+  "does": "Main-loop build_runtime_snapshot → publish qua runtime_publisher với throttle 1/json_fps. Publisher là latest-only mailbox: freeze deepcopy + serialize JSON NGOÀI critical-section, lock chỉ để đổi con-trỏ bytes bất-biến. HTTP 8001 trả bytes đã serialize; gate poll 8001 → REST 8000; frontend poll cả hai.",
+  "role": "Ranh-giới sync→async: trong loop mọi thứ là call trực-tiếp; sau publish mọi consumer là pull-độc-lập — không backpressure, không delivery-guarantee (bỏ-qua snapshot cũ là ĐÚNG thiết-kế). Session chỉ được tạo khi snapshot mang GID hợp-lệ + crossing hợp-lệ — hai điều-kiện tách-biệt.",
+  "where": "Publish: two_camera.py:2844-2869 (throttle :2817, --json-fps 5.0 :1802). Mailbox: runtime_server.py publish_snapshot :106-113, MJPEG :134, encode-thread :100,:141, /api/runtime/snapshot :285-289, /status :274, /events :310. Gate consumer: gate_session_controller.py DEFAULT_RUNTIME_URL :55, poll 0.25 :865, loop :899-906, port 8000 :864. Frontend: runtimeApi.ts VITE_RUNTIME_URL→8001 :11, gates :43,:58; backendApi.ts VITE_BACKEND_URL→8000 :46-79; App.tsx polls :354-360,:191,:393-404,:283,:355; useVehicleSession :27,:214. Contract: techgar/runtime_contract.py RUNTIME_SCHEMA_VERSION=2 :12-13, TERMINAL_IDENTITY_STATES :37, parked_slot_id :70,:76-77, build :95-110.",
+  "why": "[code] Comment mailbox :106-113: serialize ngoài lock, reader giữ lock chỉ để copy ref — producer không bị chặn bởi consumer chậm. [suy luận] Pull-latest thay queue vì UI/gate chỉ cần trạng-thái hiện-tại; snapshot cũ không giá-trị.",
+  "steps": [
+    "Loop kết-thúc → publish_snapshot nếu đủ 1/json_fps=200ms (tc:2815-2869).",
+    "Publisher freeze+encode → _snapshot_json bytes mới (runtime_server:106-113); frame cũ chưa-đọc bị ghi-đè — KHÔNG queue.",
+    "Gate controller _runtime_snapshot(url) mỗi 0.25s → apply_snapshot (entry/exit/episode) → REST mới-nhất :8000 (gate:899-906).",
+    "Frontend: runtime-poll 200ms (vị-trí/tuyến); session 500ms; reservations 500ms; gate_roi 1000ms; runtime stale >5s → cảnh-báo.",
+    "MJPEG viewer đọc mailbox frame khác, cũng latest-only (:134-141).",
+    "Contract: build_runtime_snapshot schema v2; TERMINAL_IDENTITY_STATES={exited,expired} lọc khỏi vehicles; parked_slot_id lấy từ episode parked; recent_observed_path đi cùng vehicle (phục-vụ recovered-crossing ở gate)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/two_camera.py", "line": "1802,2817,2844-2869", "symbol": "publish + throttle", "note": "json_fps 5.0"},
+    {"file": "backend/main_detect/runtime_server.py", "line": "106-113,285-289", "symbol": "mailbox + endpoint", "note": "freeze+bytes, no queue"},
+    {"file": "backend/gate_session_controller.py", "line": "55,865,899-906", "symbol": "poll consumer", "note": "0.25s → apply → REST 8000"},
+    {"file": "frontend/src/api/runtimeApi.ts", "line": "11,43,58", "symbol": "8001 client", "note": "snapshot + gates"},
+    {"file": "frontend/src/api/backendApi.ts", "line": "46-79", "symbol": "8000 client", "note": "session REST"},
+    {"file": "frontend/src/App.tsx", "line": "354-360,191,393-404,283,355", "symbol": "poll rhythms", "note": "200/500/1000ms, stale>5s"},
+    {"file": "backend/main_detect/src/techgar/runtime_contract.py", "line": "12-13,37,70,76-77,95-110", "symbol": "schema v2", "note": "terminal-states filter, parked_slot_id"}
+  ],
+  "realParams": [
+    {"name": "json_fps throttle", "value": "5.0", "unit": "fps (→200ms)", "scope": "runtime CLI", "ref": "two_camera.py:1802,:2817"},
+    {"name": "gate poll / retry", "value": "0.25 / ≥1.0", "unit": "s", "scope": "runtime CLI", "ref": "gate_session_controller.py:865,:904-906"},
+    {"name": "frontend rhythms", "value": "200 / 500 / 500 / 1000", "unit": "ms (runtime/session/reserv/gate-roi)", "scope": "frontend code", "ref": "App.tsx:354-360,:191,:393-404 + useVehicleSession:27,:214"},
+    {"name": "stale warning", "value": ">5", "unit": "s", "scope": "frontend code", "ref": "App.tsx:283,:355"},
+    {"name": "schema version", "value": "2", "unit": "version", "scope": "contract", "ref": "runtime_contract.py:12-13"},
+    {"name": "ports", "value": "8001 (runtime) / 8000 (gate REST)", "unit": "tcp", "scope": "runtime", "ref": "runtime_server.py:285-289 + gate:864"}
+  ],
+  "storyboard": {
+    "scene": "3 lane song-song producer/gate/frontend — frame_index minh-hoạ deterministic (không phải field 'revision' của payload).",
+    "seed": "snapshot-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Nếu mailbox là queue: consumer chậm → hàng-đợi phình, producer nghẹt, snapshot cũ-cũ vẫn bị xử-lý.", "on": "12:00:00.180 producer publish frame_index=120 — frame 119 bị ghi-đè chưa-đọc (đúng thiết-kế)."},
+      {"k": 2, "off": "—", "on": "12:00:00.200 frontend poll 8001 đọc frame 120 → vẽ G7 cắt vạch; session-poll 8000 lúc này CHƯA có S1 (gate chưa tạo) — hai miền dữ-liệu tách."},
+      {"k": 3, "off": "—", "on": "12:00:00.250 gate poll đọc frame 120 → apply entry-crossing → create_session S1 WAITING_FOR_SCAN."},
+      {"k": 4, "off": "—", "on": "12:00:00.500+ frontend session-poll 500ms mới thấy S1 → hiện QR; runtime-poll 200ms chỉ thấy vị-trí. Frontend ĐI SAU gate tối-thiểu một nhịp — lệch-pha là thiết-kế, không bug."},
+      {"k": 5, "off": "—", "on": "Runtime treo 6s → now−lastRuntimeAt>5000 → banner lỗi + gợi-ý kiểm-tra port 8001 (App.tsx:355,:946)."}
+    ],
+    "visual": "3 swim-lane thời-gian (producer 200ms / gate 250ms / frontend 200+500ms), mailbox ô-duy-nhất với frame bị ghi-đè mờ-dần, chip 'no queue', banner stale>5s. Ghi-chú rõ: frame_index là minh-hoạ, không phải revision."
+  },
+  "qa": [
+    {"q": "Consumer chậm bỏ-lỡ rev121-123 — mất event?", "a": "Có-thể — mailbox latest-wins; episode/exit đều trạng-thái duy-trì nên bản mới vẫn đủ [code+suy luận]."},
+    {"q": "Nguồn-thật cho 'ô đỏ'?", "a": "parking_episodes/bindings trong snapshot — vision đã qua binder, không phải pixel thô [code]."},
+    {"q": "Frontend đọc cả 8001 và 8000 — mâu-thuẫn tin ai?", "a": "Session/reservation → 8000; vị-trí xe → 8001; hai miền khác nhau [code]."}
+  ],
+  "certainty": "Cao [code] toàn chuỗi. Quirk: 'skew' trong snapshot là camera_skew_ms giữa 2 cam — không liên-quan độ-trễ consumer."
+}

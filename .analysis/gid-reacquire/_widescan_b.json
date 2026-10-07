@@ -1,0 +1,202 @@
+[
+ {
+  "session": "session_hiep_sang8",
+  "frame": 600,
+  "event_type": "global_id_created",
+  "gid_new": 3,
+  "cam": "cam2",
+  "lid": 40,
+  "gid_rejected": 1,
+  "reason": "trajectory_score",
+  "traj_score": 0.6683,
+  "world_distance": 0.8997,
+  "components": {
+   "appearance": 0.8330863428104425,
+   "corridor": 0.9445224034529619,
+   "direction": 0.0014598347140257484,
+   "size": 0.6436504998148834,
+   "speed": 0.9707631702341463,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_hiep_thai3",
+  "frame": 1774,
+  "event_type": "global_id_created",
+  "gid_new": 4,
+  "cam": "cam1",
+  "lid": 9,
+  "gid_rejected": 3,
+  "reason": "trajectory_stable_wrong_direction",
+  "traj_score": 0.6353,
+  "world_distance": 1.2031,
+  "components": {
+   "appearance": 0.8656592148514859,
+   "corridor": 0.9258155067710672,
+   "direction": 0.011332063494850497,
+   "size": 0.5564980793854033,
+   "speed": 0.6530905822102447,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_hiep_thai4",
+  "frame": 4633,
+  "event_type": "global_id_created",
+  "gid_new": 12,
+  "cam": "cam2",
+  "lid": 119,
+  "gid_rejected": 7,
+  "reason": "trajectory_score",
+  "traj_score": 0.6385,
+  "world_distance": 0.7292,
+  "components": {
+   "appearance": 0.8717392549594224,
+   "corridor": 0.9550403690827451,
+   "direction": 0.039921449566830025,
+   "size": 0.7707535121328225,
+   "speed": 0.4176027388896859,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frame": 1128,
+  "event_type": "global_id_created",
+  "gid_new": 3,
+  "cam": "cam2",
+  "lid": 13,
+  "gid_rejected": 2,
+  "reason": "trajectory_score",
+  "traj_score": 0.7017,
+  "world_distance": 0.8294,
+  "components": {
+   "appearance": 0.8582229340852332,
+   "corridor": 0.948859195830217,
+   "direction": 0.5,
+   "size": 0.6,
+   "speed": 0.5,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frame": 1205,
+  "event_type": "global_id_created",
+  "gid_new": 4,
+  "cam": "cam1",
+  "lid": 29,
+  "gid_rejected": 1,
+  "reason": "trajectory_score",
+  "traj_score": 0.621,
+  "world_distance": 0.4454,
+  "components": {
+   "appearance": 0.8545069052703613,
+   "corridor": 0.9725344990265044,
+   "direction": 0.018490941313449166,
+   "size": 0.828966880869995,
+   "speed": 0.22748566147146343,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frame": 1713,
+  "event_type": "global_id_created",
+  "gid_new": 6,
+  "cam": "cam2",
+  "lid": 19,
+  "gid_rejected": 5,
+  "reason": "trajectory_stable_wrong_direction",
+  "traj_score": 0.6048,
+  "world_distance": 1.6549,
+  "components": {
+   "appearance": 0.7818001401012976,
+   "corridor": 0.897960024763703,
+   "direction": 0.0032542531673959685,
+   "size": 0.735395868340417,
+   "speed": 0.5776803674498341,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frame": 4936,
+  "event_type": "global_id_created",
+  "gid_new": 16,
+  "cam": "cam2",
+  "lid": 261,
+  "gid_rejected": 6,
+  "reason": "trajectory_score",
+  "traj_score": 0.6387,
+  "world_distance": 2.7383,
+  "components": {
+   "appearance": 0.8664221446238083,
+   "corridor": 0.8311588898048424,
+   "direction": 0.21323664908689802,
+   "size": 0.594,
+   "speed": 0.6947489633707632,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frame": 5367,
+  "event_type": "global_id_created",
+  "gid_new": 19,
+  "cam": "cam2",
+  "lid": 272,
+  "gid_rejected": 18,
+  "reason": "trajectory_score",
+  "traj_score": 0.5923,
+  "world_distance": 3.9572,
+  "components": {
+   "appearance": 0.7237263608468597,
+   "corridor": 0.7560010327110709,
+   "direction": 0.73535436438367,
+   "size": 0.22857142857142854,
+   "speed": 0.2504686742547738,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai7",
+  "frame": 2112,
+  "event_type": "global_id_created",
+  "gid_new": 7,
+  "cam": "cam2",
+  "lid": 83,
+  "gid_rejected": 1,
+  "reason": "trajectory_stable_wrong_direction",
+  "traj_score": 0.5932,
+  "world_distance": 1.2253,
+  "components": {
+   "appearance": 0.8627192768234012,
+   "corridor": 0.9244478149337847,
+   "direction": 0.008114305787573273,
+   "size": 0.6195402298850575,
+   "speed": 0.21750550701221294,
+   "time_topology": 0.0
+  }
+ },
+ {
+  "session": "session_thai8",
+  "frame": 1945,
+  "event_type": "global_id_created",
+  "gid_new": 6,
+  "cam": "cam1",
+  "lid": 28,
+  "gid_rejected": 5,
+  "reason": "trajectory_score",
+  "traj_score": 0.5206,
+  "world_distance": 4.2852,
+  "components": {
+   "appearance": 0.7479276383420191,
+   "corridor": 0.735775106553618,
+   "direction": 0.45812857562975673,
+   "size": 0.14824391294979533,
+   "speed": 0.0,
+   "time_topology": 0.0
+  }
+ }
+]

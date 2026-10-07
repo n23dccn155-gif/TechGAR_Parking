@@ -1,0 +1,51 @@
+{
+  "id": "assignment",
+  "title": "Gán toàn cục LAPJV + gating",
+  "tier": "T1",
+  "nodes": ["N6"],
+  "problem": "Hai xe sát nhau, blob nào thuộc xe nào? Gán greedy 'ai đến trước lấy trước' có thể chiếm mất blob của nhau — cần nghiệm tối ưu TOÀN CỤC một-đối-một.",
+  "does": "Xây ma trận chi phí tracks×detections (khởi tạo 10.0='cấm'), chỉ điền cặp qua cổng (velocity-adaptive, fail-open trước 3 obs). Cost = 0.45·dist/180 + 0.25·(1−IoU) + 0.20·appearance + 0.10·size. Giải LAPJV (nhóm Hungarian) extend_cost, limit 0.90. Margin mơ hồ → đóng băng cặp tranh chấp; occlusion guard defer cả nhóm.",
+  "role": {"before": "Dự đoán N3 + detection N5", "after": "Cặp match cho _apply_detection N7; unmatched → coasting/birth", "missing": "Greedy nhầm cặp → track 'nhảy' giữa hai xe → mọi thứ sau (GID, binder) kế thừa lỗi"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1597-1900", "symbol": "_assign"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1193-1230", "symbol": "_association_gate"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1908", "symbol": "lapjv call"}],
+  "why": "Bài toán gán 1-1 tối ưu toàn cục = Hungarian family; source gọi literal `lapjv` (LAP/JV solver) với extend_cost — 'Hungarian' chỉ là tên nhóm bài toán trong giải thích. Cổng trước → cắt cặp vô lý khỏi ma trận, solver rẻ và ít bẫy [code].",
+  "steps": [
+    "Gate mỗi (track,det): velocity-aware sau ≥3 obs; floor max(24px, extent); fail-open tới max_distance khi chưa đủ obs.",
+    "Điền cost cho cặp qua cổng: 0.45·dist/180 + 0.25·(1−IoU) + 0.20·app + 0.10·size; còn lại =10.0.",
+    "Reacquire check trong cùng hàm (window/appearance/area) trước giải.",
+    "lapjv(extend_cost, limit=0.90) → nghiệm 1-1 tổng min.",
+    "Split margin (0.08·(2−lineage)) + ambiguity margin → freeze cặp tranh; occlusion defer.",
+    "Match → N7 update; unmatched track → coasting; unmatched det → birth ID mới."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1761-1766", "symbol": "cost weights", "note": "0.45/0.25/0.20/0.10"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1908", "symbol": "lapjv", "note": "extend_cost + cost_limit 0.90"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1921", "symbol": "split margin", "note": "adjusted = 0.08·(2−lineage_score); chỉ split_margin_track_ids :1685-1686"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "1939-1945", "symbol": "clear_evidence", "note": "0.12/0.08/0.20/0.20"}
+  ],
+  "realParams": [
+    {"name": "motion_max_distance", "value": 180.0, "unit": "px", "scope": "runtime", "ref": "two_camera.py:1811; scale ×min(1.25,1+inv/60) mt:1691-1694"},
+    {"name": "cost weights", "value": "0.45/0.25/0.20/0.10", "unit": "w", "scope": "runtime", "ref": "motion_tracker.py:1761-1766"},
+    {"name": "assignment_cost_limit", "value": 0.90, "unit": "cost", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "gate floor", "value": "max(24px, extent)", "unit": "px", "scope": "default", "ref": "motion_tracker.py:1219-1230"},
+    {"name": "velocity_gate", "value": "scale 2.0 / size 1.0 / min-obs 3", "unit": "-", "scope": "default", "ref": "motion_tracker.py:34-96"},
+    {"name": "ambiguity margin", "value": 0.08, "unit": "cost", "scope": "runtime", "ref": "two_camera.py:1871-1874"},
+    {"name": "ambiguous_recovery_frames", "value": 3, "unit": "frames", "scope": "runtime", "ref": "two_camera.py:1877-1880"},
+    {"name": "close-pred threshold", "value": "1.10×diag", "unit": "-", "scope": "default", "ref": "motion_tracker.py:1392"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "2 track × 2 detection", "seed": 2}, {"id": "edge", "label": "Cặp tranh chấp → freeze", "seed": 2}],
+    "keyframes": [
+      {"id": "k1", "caption": "Cảnh + gate: T1,T2 dự đoán; d1,d2 detection; vòng gate quanh mỗi predict", "mode": "both", "state": {"tracks": 2, "dets": 2}},
+      {"id": "k2", "caption": "Ma trận cost cố định [minh họa]: T1→d1 .30, T1→d2 .50 / T2→d1 .25, T2→d2 .85", "mode": "both", "state": {"matrix": "fixed"}},
+      {"id": "k3", "caption": "OFF-greedy: T1 lấy d1 (.30) → T2 đành d2 (.85) → tổng 1.15", "mode": "off", "state": {"total": 1.15}},
+      {"id": "k4", "caption": "ON-LAPJV cùng ma trận: T1→d2 + T2→d1 = .50+.25 = 0.75 < 1.15 → nghiệm toàn cục thắng", "mode": "on", "state": {"total": 0.75}},
+      {"id": "k5", "caption": "Edge: hai nghiệm chênh <margin 0.08 → đóng băng cặp tranh (frozen_ambiguous), không cưỡng gán", "mode": "on", "state": {"association_state": "frozen_ambiguous"}}
+    ]
+  },
+  "qa": [
+    {"q": "Greedy luôn thua?", "a": "Không — chỉ khi thứ tự duyệt làm nghẹt cặp sau; LAPJV đảm bảo min toàn cục bất kể thứ tự."},
+    {"q": "Cost 10.0 nghĩa gì?", "a": "Cặp bị cấm (không qua cổng) — solver không bao giờ chọn vì limit 0.90."},
+    {"q": "Vì sao đóng băng thay vì chọn đại?", "a": "Margin nhỏ nghĩa là chứng cứ hòa — gán sai còn hại hơn chờ thêm frame (3 frame recover) [suy luận từ cơ chế]."}
+  ],
+  "certainty": "Cao [code]: weights/limit/margin/gates đã đọc; 'Hungarian' là nhãn nhóm bài toán — solver thật là lapjv."
+}

@@ -1,0 +1,659 @@
+### A1 `mog2-foreground-mask` — Trừ nền để lấy vùng foreground
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:768` `self.bg_sub.apply(frame)` — input là **frame BGR nguyên bản**, không phải ảnh xám (ảnh xám chỉ được tạo bên trong `_temporal_motion_mask` `:533`). Mask 3 mức: `threshold(>200)→255` là definite foreground `:769-771`; marker `==127` chỉ được gộp khi `reject_cast_shadows && background_image` tồn tại `:780-789`.
+IO| - **Input**: `frame: BGR[H×W×3]`, nền học `bg_model`. **Output**: `fg_raw: uint8[H×W]` ∈ {0,127,255} — 255 = definite foreground, 127 = shadow marker do `detectShadows=True` sinh.
+CPLX| - **Độ phức tạp (code)**: O(H·W) thời gian; O(H·W·K) bộ nhớ nền (K = số Gauss/pixel). **[sim]**: O(H·W), 1 giá trị nền/px.
+STRUCT| - **Cấu trúc**: `cv2.BackgroundSubtractorMOG2`; mask `uint8`.
+LIB| - **Thư viện ngoài**: `cv2.createBackgroundSubtractorMOG2` [code] — demo là giản lược single-background đơn sắc.
+PSEUDO| 1. `raw = mog2.apply(frame)` (BGR) → mask 3 mức. ;; 2. `definite = raw > 200` (code dùng `cv2.threshold(raw,200,255)`). ;; 3. Nếu `reject_cast_shadows && bg_ref tồn tại`: `markers = raw == 127`, `mask = definite | markers`; ngược lại `mask = definite` (A8). ;; 4. MOG2 tự cập nhật nền mỗi `apply` (learning rate mặc định −1).
+SAA| **Sample A (thường)**: JSON: {"frame":[[5,5,5,5],[5,9,9,5],[5,9,9,5],[5,5,5,5]],"bg":[[5,5,5,5],[5,5,5,5],[5,5,5,5],[5,5,5,5]],"threshold":3,"alpha":0.2}   
+EXA| `fg_count=4`; ô (1,1) nền mới `bg' = 0.8·5+0.2·9 = 5.8` — nền học về phía vật cản (nguy cơ "chìm nền").
+SAB| **Sample B (biên — exposure jump)**: JSON: {"frame":[[8,8,8,8],[8,8,8,8],[8,8,8,8],[8,8,8,8]],"bg":[[5,5,5,5],[5,5,5,5],[5,5,5,5],[5,5,5,5]],"threshold":3,"alpha":0.2}   
+EXB| `|8−5|=3` không `>3` → `fg_count=0`; với `threshold:2` → `fg_count=16` — ngưỡng quyết định nhạy cảm độ sáng.
+
+### A2 `temporal-motion-gate` — Cổng chuyển động thời gian (bắt buộc)
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:522-574` `_temporal_motion_mask`; `:451-471` `_motion_between`; `:486-520` `_timestamp_references` + `_frame_gap_references`; `:473-484` `_brightness_shift`. Điểm gọi `:790-793`: motion mask AND với `background_mask` và dilate support kernel **17×17**.
+IO| - **Input**: `frame` (xám hoá nội bộ), `fg_mask`, lịch sử frame+timestamp; config `temporal_short_seconds`/`temporal_long_seconds`/`motion_frame_gap`/`motion_threshold` [literal `:44-55`: gap 3, T=25, short 0.25s, long 0.80s]. **Output**: `motion_mask` uint8.
+CPLX| - **Độ phức tạp (code)**: O(H·W·R) R = số mốc (≤2) + O(H·W·k²) morph; O(H·W·S) bộ nhớ lịch sử. **[sim]**: R=1, S=2.
+STRUCT| - **Cấu trúc**: deque `_gray_history` `(timestamp_s, frame_idx, gray)`; hai mask uint8.
+LIB| - **Thư viện ngoài**: `cv2.absdiff`, `cv2.dilate`, `cv2.morphologyEx`, `numpy` [code] — demo tương đương.
+PSEUDO| 1. Chọn mốc: `references = _timestamp_references` nếu có timestamp, ngược lại `_frame_gap_references` (mặc định non-multiscale → **1 mốc** `motion_frame_gap=3` frame trước `:489-493`; multiscale → thêm mốc `motion_long_frame_gap=9`). ;; 2. **`references` rỗng → return mask toàn 0** `:548-549` (chưa đủ lịch sử → gate ĐÓNG hoàn toàn, không phải fail-open). ;; 3. `motion = OR(_motion_between(gray, ref, T) ∀ref)` — `_motion_between` trừ `_brightness_shift` (median offset) trước khi ngưỡng `:451-471`. ;; 4. Chuỗi morph: `OPEN(3×3)` → `dilate(5×5, iterations=2)` → `CLOSE(join_kernel=5×5, ×motion_join_iterations)` `:559-573` — không phải "dilate lớn" đơn lẻ. ;; 5. `fg_final = fg_mask & dilate(motion, 17×17)` tại `:792-793`.
+SAA| **Sample A (thường)** — đếm từ chính lưới: JSON: {"gray":[[5,5,5,5],[5,5,9,9],[5,5,9,9],[5,5,5,5]],    "short_ref":[[5,5,5,5],[5,9,9,5],[5,9,9,5],[5,5,5,5]],    "long_ref":[[5,5,5,5],[5,5,5,5],[5,5,5,5],[5,5,5,5]],    "T":3,"dilate_kernel":1}   
+EXA| `count_short=4` (ô (1,1),(3,1),(1,2),(3,2)), `count_long=4` (ô (2,1),(3,1),(2,2),(3,2)), `union=6` → gate mở ở vùng 3×2 — bao cả vị trí cũ lẫn mới của xe.
+SAB| **Sample B (biên)**: JSON: {"gray":[[5,5,5,5],[5,5,5,5],[5,5,5,5],[5,5,5,5]],    "short_ref":[[5,5,5,5],[5,9,9,5],[5,9,9,5],[5,5,5,5]],    "long_ref":[[5,5,5,5],[5,5,5,5],[5,5,5,5],[5,5,5,5]],"T":3}   
+EXB| `count_short=4`, `count_long=0`, `union=4` → **gate vẫn mở** dù `gray==long_ref` — xe vừa rời vị trí cũ. (Case đỗ hẳn: cả ba bằng nhau → `union=0`; case `references=[]` → mask toàn 0.)
+
+### A3 `roi-strict-context-mask` — Lọc ROI nghiêm + cứu qua dải context
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:869-921` (khối ROI trong `_detect`: đếm `strictPx`, `contextPx`, ngưỡng `required`, ratio clip, rescue band).
+IO| - **Input**: `component_mask`, `strict_mask` (ROI lõi), `context_mask` (ROI+dilate ~`pad`). **Output**: `accept | roi_context_rescued | reject`.
+CPLX| - **Độ phức tạp (code)**: O(compPx) đếm; O(H·W) tiền xử lý mask context (cache theo ROI). **space** O(1) ngoài cache mask O(H·W); **[sim]**: O(compPx).
+STRUCT| - **Cấu trúc**: hai mask bool; counter pixel.
+LIB| - **Thư viện ngoài**: `cv2.bitwise_and`, `countNonZero`, `dilate` cho context [code] — demo đếm trên lưới.
+PSEUDO| 1. `compPx = count(component)`, `strictPx = count(component & strict)`. ;; 2. `required = max(min_abs_scaled, min(max_abs_scaled, round(ratio_frac·compPx)))`. ;; 3. Nếu `strictPx ≥ required` → accept. ;; 4. Ngược lại nếu `strictPx/compPx < clip_ratio` (đủ "ngoài lề") và `strictPx > 0` và `contextPx = count(component & context) ≥ required` và anchor ∈ context → `roi_context_rescued`. ;; 5. Ngược lại reject `insufficient_strict_roi_support`.
+SAA| **Sample A (thường — cứu được)**: JSON: {"grid":"8x8","strict":[1,6],"context_pad":1,"comp":[0,2,2,2],"required_scaled":3,"clip_ratio":0.98,"min_required_scaled":3}   
+EXA| `compPx=4`, `strictPx=2` (cột x=1), `ratio=0.5<0.98`, `contextPx=4≥3`, anchor (1,4) ∈ context → **`roi_context_rescued`**.
+SAB| **Sample B (biên — không cứu)**: JSON: {"grid":"8x8","strict":[1,6],"context_pad":0,"comp":[0,2,2,2],"required_scaled":3,"clip_ratio":0.98}   
+EXB| `contextPx=2<3` → **`reject:insufficient_strict_roi_support`** — pad=0 làm context vô dụng.
+
+### A4 `foreground-morphology` — Morphology mở (tẩy nhiễu) rồi đóng (nối mảnh)
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:759-1086` `_detect` — `OPEN` kernel 3×3 (tẩy chấm), rồi `CLOSE` kernel `join_kernel`×n iter (nối mảnh cùng xe); vị trí trong khối sau temporal-gate, trước contour.
+IO| - **Input**: `fg_mask` uint8. **Output**: `clean_mask` uint8.
+CPLX| - **Độ phức tạp (code)**: O(H·W·k²) mỗi pass (k = cạnh kernel). **space** O(H·W) mask trung gian; **[sim]**: O(H·W·9) hai pass.
+STRUCT| - **Cấu trúc**: 2 kernel cv2; mask trung gian.
+LIB| - **Thư viện ngoài**: `cv2.morphologyEx` MORPH_OPEN/CLOSE [code] — demo tự cài erode/dilate.
+PSEUDO| 1. `mask1 = open(mask, k3)` = erode rồi dilate → xóa blob < kernel. ;; 2. `mask2 = close(mask1, kj, iters)` = dilate rồi erode → nối mảnh cách nhau < kernel.
+SAA| **Sample A (thường)** — lưới 8×12: 2 chấm 1×1 nhiễu + 2 khối 3×3 cách nhau 1 ô (x=1..3 và x=5..7, khe ở x=4): JSON: {"grid":"8x12","speckles":[[0,0],[11,0]],"blocks":[[1,3,3,3],[5,3,3,3]],"open_k":3,"close_k":3}   
+EXA| trước `20px/4 contour`; sau OPEN `18px/2 contour` (hai chấm 1×1 biến mất; mỗi khối 3×3 erode còn tâm rồi dilate phục hồi = 9px → 2×9=18); sau CLOSE `21px/1 contour` (dilate nối hai khối qua khe x=4 → 1 contour duy nhất, 21px sau erode).
+SAB| **Sample B (biên — blob nhỏ hơn kernel)**: JSON: {"grid":"8x12","blocks":[[3,3,2,2]],"open_k":3}   
+EXB| `before=4px`, `afterOpen=0` → **blob 2×2 biến mất hoàn toàn** sau OPEN 3×3 — contour không còn gì để A5 duyệt.
+
+### A5 `contour-geometry-filter` — Lọc contour theo kích thước/tỉ lệ/support
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:836-1085` (vòng `findContours` trong `_detect`). **Thứ tự gate thật** — quan trọng vì lý do reject phụ thuộc thứ tự:
+IO| - **Input**: `clean_mask`, `temporal_motion`, ROI masks, `tracks`/`predictions` (cho occlusion); ngưỡng literal `:36-41,46-47,56-60,87-89`. **Output**: `detections: list` + `_last_detection_rejections: list{reason}`.
+CPLX| - **Độ phức tạp (code)**: O(N·P), N contour × P px/contour. **space** O(N·P); **[sim]**: O(N·P) trên lưới nhỏ.
+STRUCT| - **Cấu trúc**: `list[dict]`; `component_pixels`, `roi_support_ratio`; `_last_detection_rejections`.
+LIB| - **Thư viện ngoài**: `cv2.findContours`, `boundingRect`, `countNonZero` [code] — demo duyệt comp trên lưới.
+PSEUDO| 1. floor `area < min(min_area, priority_min_area) || w < min_w || h < min_h` `:844-849`; ;; 2. **ROI strict/context (A3)** `:855-921`; ;; 3. **occlusion-group + watershed (A10/A11)** `:922-954` — chạy TRƯỚC mọi size-cap; ;; 4. whole-scene `area > 0.22·image_area` `:955-956`; ;; 5. oversized `w>max_bbox_w || h>max_bbox_h || w·h>max_bbox_area` `:959-972`; ;; 6. aspect `w/h ∉ [0.25, 5.0]` `:973-975`; ;; 7. anchor-outside-ROI `:980-1010` (tolerated nếu trong context band); ;; 8. priority → `min_area` đổi thành `priority_min_area` `:1011-1014`; ;; 9. motion **`motion_px < min_pixels || motion_px/(w·h) < min_ratio`** — CẢ HAI điều kiện `:1015-1019`; ;; 10. marker count + `dark_foreground_rescued` `:1033-1045`; shadow (A7) `:1046-1063`; ;; 11. histogram + append `:1065-1085`; cuối cùng `_suppress_duplicate_detections` (A9) `:1086`. ;; 1. `contours = findContours(mask, EXTERNAL)`; với mỗi contour `area`, `box = boundingRect`. ;; 2. Gate floor (min(min_area,priority_min_area)/min_w/min_h) → skip. ;; 3. ROI strict → required = `max(20, min(motion_min_pixels, 0.08·compPx))`; fail → rescue nếu clipped + anchor ∈ context + contextPx ≥ required. ;; 4. `covering_group(box)` → nhánh occlusion: watershed được → children; không → `ambiguous_merged` detection. `continue`. ;; 5. `area > 0.22·image_area` → reject whole-scene. ;; 6. `w > max_w || h > max_h || w·h > max_area` → reject oversized. ;; 7. `w/h ∉ [0.25, 5]` → reject aspect. ;; 8. anchor ngoài ROI (không tolerated) → reject anchor. ;; 9.
+SAA| **Sample A (thường)** — grid 8×12, `min_area=4, min_w=2, min_h=2, max_area_frac=0.22(→21.12px), aspect=[0.25,5], min_mot JSON: {"comps":[{"box":[0,0,4,3],"px":12,"motion":8},{"box":[4,4,4,3],"px":12,"motion":2},{"box":[0,6,10,2],"px":20,"motion":18},{"box":[4,6,2,2],"px":4,"motion":4}]}   
+EXA| verdicts theo thứ tự gate — comp0 `accept`; comp1 `reject:motion` (`motion_px=2 < 3`); comp2 `reject:oversized` (`w=10 > 9`; `px=20 ≤ 21.12` qua whole-scene); comp3 `accept`.
+SAB| **Sample B (biên — fill-ratio fail dù px đạt)**: JSON: {"comp":{"box":[0,0,4,10],"px":20,"motion":3},"max_area_frac":0.22,"frame_px":96,"min_motion_px":3,"min_ratio":0.08}   
+EXB| `px=20 ≤ 21.12` qua whole-scene; `motion_px=3 ≥ 3` đạt sàn px — nhưng `3/(4·10)=0.075 < 0.08` → **`reject:motion`** — gate yêu cầu CẢ pixel lẫn tỉ lệ phủ. (Case cap: comp `{"box":[0,0,11,2],"px":22}` → `22 > 21.12` → `reject:whole-scene`.)
+
+### A6 `bottom-center-anchor` — Điểm neo bbox
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:392-395` `_bottom_center`; `:432-438` `_ground_point`; `cross_camera_manager.py:1379-1403` `_bbox_anchor` (anchor theo camera config: `bottom_center`/`center`).
+IO| - **Input**: `bbox=[x,y,w,h]`, `anchor_mode`. **Output**: `(ax, ay)` — bottom-center mặc định `(x+w/2, y+h)`.
+CPLX| - **Độ phức tạp**: O(1). **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: tuple float.
+LIB| - **Thư viện ngoài**: không.
+PSEUDO| 1. Nếu `bottom_center`: `(x + w/2, y + h)`. ;; 2. Nếu `center`: `(x + w/2, y + h/2)`. ;; 3. Nếu camera config định kiểu khác (vd `feet`), dùng offset tương ứng.
+SAA| **Sample A**: `{"bbox":[2,3,4,2],"modes":["bottom_center","bbox_center"]}` → **Expected**: `(4,5)` và `(4,4)`. JSON: NONE
+EXA| `bottom_center=(12,2)` → nằm ngoài lưới → `anchor_outside` → A3 xử lý.
+SAB| **Sample B (biên)**: `{"bbox":[10,0,4,2],"grid_w":12}` → **Expected**: `bottom_center=(12,2)` → nằm ngoài lưới → `anchor JSON: NONE
+
+### A7 `cast-shadow-discriminator` — Phân biệt vật thật vs bóng đổ
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:633-703` `_cast_shadow_metrics`; `:705-726` `_is_cast_shadow`; `:736-757` `_background_reference`; defaults `:63-67` — `attenuation_range (0.32,0.62)`, `chroma_max 0.10`, `res_max 0.08`, `explained_min 0.75`, `min_pixels 120`; gate flag `reject_cast_shadows` `:62`.
+IO| - **Input**: `frame BGR`, `background BGR` (ảnh nền học từ MOG2 `getBackgroundImage`), `box`, `selection mask`. **Output**: `is_shadow: bool` + `metrics{attenuation, chromaticity_distance, scaled_residual, explained_fraction, pixel_count}` hoặc `None`.
+CPLX| - **Độ phức tạp (code)**: O(compPx). **space** O(compPx); **[sim]**: O(compPx).
+STRUCT| - **Cấu trúc**: mảng per-pixel float; metrics dict.
+LIB| - **Thư viện ngoài**: `numpy` median/stats [code] — demo giản lược đơn sắc (chroma=0).
+PSEUDO| 1. `bg=None` hoặc `selected < shadow_min_pixels` hoặc `valid < max(min_px, 60%·selected)` → `None` (fail-open) `:649-667`; `luminance = BGR·[0.114,0.587,0.299]` `:661-663`; `valid = bg_lum ≥ 20 && cur_lum ≥ 3` `:664`. ;; 2. `att_i = cur_lum_i / bg_lum_i`; `attenuation = median(att)` `:673-674`. ;; 3. `chroma_i = ‖BGR/ΣBGR (cur) − BGR/ΣBGR (bg)‖₁` — khoảng cách **chromaticity L1** `:676-684`; `med_chroma = median(chroma)`. ;; 4. `res_i = |cur_lum_i − attenuation·bg_lum_i| / bg_lum_i` — **scaled residual** `:685-687`; `med_res = median(res)`. ;; 5. `explained = mean(|att_i−att| ≤ 0.18 && chroma_i ≤ 1.2·chroma_max && res_i ≤ 1.5·res_max)` — ba điều kiện liên hợp `:691-696`. ;; 6. `is_shadow = att ∈ [0.32,0.62] && med_chroma ≤ 0.10 && med_res ≤ 0.08 && explained ≥ 0.75` `:717-725`.
+SAA| **Sample A (thường — là bóng)**: px hiện tại `[50,50,45,180]`, `bg=100`, `att∈[0.32,0.62]`, `explained_min=0.75`, `res_m JSON: {"cur":[50,50,45,180],"bg":100,"att_range":[0.32,0.62],"explained_min":0.75,"res_max":0.08,"chroma_max":0.10,"att_tol":0.18}   
+EXA| `att=[0.5,0.5,0.45,1.8]` → `med=0.5` ∈ dải; `res_scaled=[0,0,0.05,1.30]` → `med_res=0.025 ≤ 0.08`; explained: px4 loại (`|1.8−0.5|=1.3>0.18` và `res 1.30>0.12`) → `3/4=0.75 ≥ 0.75`; `chroma=0 ≤ 0.10` → **`is_shadow=true`** (px 180 là nhiễu lẻ được median hấp thụ).
+SAB| **Sample B (biên — vật tối/sáng thật)**: JSON: [{"cur":[70,70,70,70],"bg":100},{"cur":[20,20,20,20],"bg":100}]   
+EXB| `med_att=0.7 > 0.62` → **không phải bóng** (vật sáng hơn nền); `med_att=0.2 < 0.32` → **không phải bóng** (vật đen thật, giữ lại).
+
+### A8 `dark-foreground-rescue` — Cứu vùng tối qua marker 127
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:759-1086` `_detect` — nhánh gộp `raw==127` vào mask + cờ `dark_fg_rescued` khi đủ marker px; `_box_is_priority` `:614-631` cho vùng ưu tiên.
+IO| - **Input**: `fg_raw` {0,127,255}, `bg_ref` tồn tại (gate fail-early). **Output**: mask mở rộng + `rescued: bool`.
+CPLX| - **Độ phức tạp**: O(H·W). **space** O(H·W) 2 mask; **[sim]**: O(H·W).
+STRUCT| - **Cấu trúc**: 2 mask; counter.
+LIB| - **Thư viện ngoài**: `cv2` mask ops [code].
+PSEUDO| 1. `markers = raw == 127` (chỉ khi có `bg_ref`; không có nền → bỏ marker). ;; 2. `mask = definite | markers`. ;; 3. `rescued = marker_px_in_comp ≥ marker_min && marker_px/comp_px ≥ marker_frac_min`.
+SAA| **Sample A**: JSON: {"raw":[[0,0,0,0],[0,127,127,0],[0,127,255,0],[0,0,0,0]],"has_bg":true,"marker_min_scaled":2,"marker_frac_min":0.08}   
+EXA| `definite=1px`, `markers=3px`, comp `=4px`, `marker_frac=0.75` → **`rescued=true`**, diện tích giữ 4 thay vì 1.
+SAB| **Sample B (biên — chưa học nền)**: JSON: {"raw":[[0,0,0,0],[0,127,127,0],[0,127,255,0],[0,0,0,0]],"has_bg":false,"marker_min_scaled":2,"marker_frac_min":0.08}   
+EXB| `comp = 1px` (chỉ definite, marker 127 không được cộng khi chưa có nền) → marker bị bỏ → `rescued=false` → detection teo/mất.
+
+### A9 `motion-echo-suppression` — Gộp detection trùng lặp do di chuyển
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1088-1110` `_same_motion_echo`; `:1112-1134` `_suppress_duplicate_detections`; `:1136-1145` `_different_clean_owners`; `:1147-1160` `_is_echo_of_matched_track`; spawn-side `:2322-2334` (lọc unmatched-detection là echo của track đã match).
+IO| - **Input**: `detections[]` {box, point, hist, occlusion_members}; owner = các track có `clean_observations ≥ 3` và tâm nằm trong box `:1139-1144`. **Output**: `detections'` đã lọc duplicate (và unmatched-detection đã lọc echo ở `:2322-2334`).
+CPLX| - **Độ phức tạp (code)**: O(N²) cặp + O(N·T) owner. **space** O(N); **[sim]**: O(N²), N≤10.
+STRUCT| - **Cấu trúc**: đồ thị cặp; `hist` numpy; `clean_observations`.
+LIB| - **Thư viện ngoài**: `cv2.compareHist`, `numpy` [code].
+PSEUDO| 1. `_same_motion_echo(a,b)`: cả hai có `hist` và không có `occlusion_members`; `size_ratio = min(wh)/max(wh) ≥ 0.45`; `hist_d ≤ 0.22`; `dist(points) ≤ max(24, 1.10·max(min_w_a, min_w_b))`; `box_gap ≤ 14` — bốn điều kiện liên hợp, **không dùng IoU** `:1102-1110`. ;; 2. `_different_clean_owners(a,b)`: tập owner-sạch hai bên đều không rỗng và rời nhau → "hai xe thật" → không phải echo `:1136-1145`. ;; 3. `_suppress_duplicate_detections`: duyệt theo `area` giảm dần; xoá det khỏi kept chỉ khi `!different_clean_owners && same_echo && IoU ≥ 0.25 && hist_d ≤ 0.12` `:1120-1132`. ;; 4. `_is_echo_of_matched_track`: `len(track.history) ≥ 4`, `dist(det.point, history[-4]) ≤ max(22, 0.70·max(w,h))` và `same_echo` với track-reference `:1147-1160` — loại unmatched-detection là vệt của xe đã gán `:2322-2334`.
+SAA| **Sample A (thường — xoá duplicate)**: JSON: {"a":{"box":[0,0,4,4],"point":[2,4],"hist":[1,0],"owner":1,"area":16},    "b":{"box":[2,0,4,4],"point":[4,4],"hist":[1,0],"owner":1,"area":16},    "c":{"box":[8,0,3,3],"point":[9.5,3],"hist":[0,1],"owner":2,"area":9}}   
+EXA| `same_echo(a,b)=true` (size 1.0≥0.45, hist 0≤0.22, dist 2≤24, gap 0≤14); `IoU(a,b)=8/24≈0.333 ≥ 0.25`, `hist_d=0 ≤ 0.12`, cùng owner → **drop b → kept {a,c}**.
+SAB| **Sample B (biên — echo không chồng → KHÔNG xoá)**: JSON: {"a":{"box":[0,0,4,4],"point":[2,4],"hist":[1,0],"owner":1,"area":16},    "d":{"box":[5,0,4,4],"point":[7,4],"hist":[1,0],"owner":1,"area":16}}   
+EXB| `same_echo(a,d)=true` (dist 5≤24, gap 1≤14) nhưng `IoU=0 < 0.25` → **giữ cả hai** — vệt không chồng được để assignment/B7 phân xử, suppression không xoá sớm. (Case owner khác sạch: `b.owner=2` → `different_clean_owners` → giữ cả hai dù đủ điều kiện echo.)
+
+### A10 `occlusion-group-guard` — Nhận diện blob chứa nhiều xe
+CODE| - **Code**: `backend/main_detect/src/techgar/occlusion_guard.py:25-149` `OcclusionGuard` (`prepare` :55-100 tạo group theo proximity; `covering_group` :102-121; `activate` :123-138); `OcclusionGroup` :14-22; gọi trong `_detect` `motion_tracker.py:922-954`.
+IO| - **Input**: `tracks[]` (clean_observations, predictions), `blob bbox`. **Output**: `group` kích hoạt (hoặc `None`).
+CPLX| - **Độ phức tạp (code)**: O(T²) cặp eligible + O(G·members) covering. **space** O(G+T); **[sim]**: O(T²).
+STRUCT| - **Cấu trúc**: `OcclusionGroup{members, references, created_at, active, recovering, expires_at}`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `prepare`: eligible = track có `clean_observations ≥ 3` và `now − last_seen ≤ timeout(3.0s)` `:66-72`. ;; 2. Mỗi cặp eligible (i,j): bỏ nếu `inter(last_box_i, last_box_j) / min(area_i, area_j) > 0.20` (đã chồng — không chứng minh được 2 xe độc lập) `:84-86`; bỏ nếu `gap(center_i, center_j) > 0.4·max(diag_i, diag_j)` `:87-89`; còn lại → `group` mới `:90`. ;; 3. Prune group cũ: `dist(center_i, center_j) > 3·max_diag` → xoá `:94-100`. ;; 4. `covering_group(box)`: với mỗi group — `all(cx_i,cy_i ∈ box + pad 0.15·min(ref_i))` **và** `w·h ≥ 1.6·median(ref_area_i)` `:109-112` → trả group. ;; 5. `activate`: `active=true`, `expires = last_clean + timeout`, members `frozen`, `last_ambiguous_kind='merged'` `:123-138`.
+SAA| **Sample A (thường — group phủ)**: `{"blob":[0,0,8,3],"groups":[{"members":[1,2],"refs":{"1":[3,3],"2":[3,3]},"centers": JSON: {"blob":[0,0,8,3],"groups":[{"members":[1,2,3],"refs":{"1":[3,3],"2":[3,3],"3":[3,3]},"centers":{"1":[2,1],"2":[6,1],"3":[11,1]}}]}   
+EXA| member 3 tâm (11,1) ngoài box → `all(contained)=false` → **không covering** — blob có 2/3 center không đủ, group 3 xe phải thấy đủ 3. (Case đơn: `{"members":[1]}` không phải group hợp lệ — cặp mới là đơn vị.)
+SAB| **Sample B (biên — member lạc)**: JSON: {"blob":[0,0,8,3],"groups":[{"members":[1,2,3],"refs":{"1":[3,3],"2":[3,3],"3":[3,3]},"centers":{"1":[2,1],"2":[6,1],"3":[11,1]}}]}   
+EXB| member 3 tâm (11,1) ngoài box → `all(contained)=false` → **không covering** — blob có 2/3 center không đủ, group 3 xe phải thấy đủ 3. (Case đơn: `{"members":[1]}` không phải group hợp lệ — cặp mới là đơn vị.)
+
+### A11 `watershed-blob-partition` — Tách blob occlusion theo seed
+CODE| - **Code**: `backend/main_detect/src/techgar/occlusion_guard.py:150-190` `partition` (markers = vị trí track, `cv2.watershed` trên ảnh/mask, rồi kiểm tra tỉ lệ diện tích con).
+IO| - **Input**: `frame/mask`, `blob`, `seeds[]` (tâm track dự đoán). **Output**: `children[]` {bbox, seed_id} hoặc `merged` nếu tách méo.
+CPLX| - **Độ phức tạp (code)**: O(blobPx·k) gần đúng. **space** O(blobPx) label map; **[sim]**: O(blobPx·S), S seed.
+STRUCT| - **Cấu trúc**: label map int32; children dict.
+LIB| - **Thư viện ngoài**: `cv2.watershed` [code] — demo Voronoi giản lược.
+PSEUDO| 1. `markers`: mỗi seed 1 nhãn, nền 0. ;; 2. `labels = watershed(img, markers)` — ranh giới chảy theo gradient. ;; 3. `[sim]`: Voronoi — mỗi px về seed gần nhất. ;; 4. Với mỗi vùng con: `ratio = area_i / expected_i`; nếu `ratio ∉ [ratio_min, ratio_max]` → bỏ tách, giữ `merged`.
+SAA| **Sample A (thường — tách được)**: `{"blob_x":[1,6],"blob_y":[1,3],"seeds":[[2,2],[5,2]],"expected_area":6,"ratio_range" JSON: NONE
+EXA| `x≤2 → seed1 (6px)`; `x≥3 → seed2 (12px, tie x=3 gán về seed gần-tọa-độ-phải)` → ratios `[1.0, 2.0]`; `2.0 > 1.8` → **fallback `merged`** — seed quá gần → không tách.
+SAB| **Sample B (biên — seed sát nhau)**: `{"blob_x":[1,6],"blob_y":[1,3],"seeds":[[2,2],[3,2]],"expected_area":6,"ratio_rang JSON: NONE
+
+### A12 `merged-blob-assignment-guard` — Veto gán khi blob không giải thích được
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1246-1276` `_elongation_explained_by_motion` (span `motion_trail_elongation_frames=1.75` `:73`); `:364-391` `_unresolved_merged_birth`; `occlusion_guard.py:191-232` `gate_assignments`; freeze/cost=10 tại `motion_tracker.py:1793-1807`.
+IO| - **Input**: `assignments`, `costs`, `tracks`, `detections`, `margin` (`split_assignment_margin=0.08` `:82`). **Output**: `assignments'` + `deferred_tracks` + `deferred_detections`.
+CPLX| - **Độ phức tạp (code)**: O(G·members) + O(members·D) suppress. **space** O(G+T); **[sim]**: O(G·D).
+STRUCT| - **Cấu trúc**: `OcclusionGroup.recovering`; `deferred_tracks/detections`; cờ `ambiguous_merged`, `ambiguous_assignment`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `_elongation_explained_by_motion(track, box)`: `excess_w = blob_w − track.w`, `excess_h = blob_h − track.h`; nếu cả hai ≤ 0 → `True`; ngược lại `excess_w ≤ |vx|·1.75 + 0.30·track.w && excess_h ≤ |vy|·1.75 + 0.30·track.h` `:1263-1275` — **không** phải `cos(trục, vel)` hay `elong ≥ k`. ;; 2. `gate_assignments`: với mỗi group active — `valid = len(members)==2 && cả 2 member có cặp && swapped−direct ≥ 2·margin && direct < 1.2` `:200-206`. ;; 3. `valid` tích luỹ `recovering` mỗi frame; `recovering ≥ 3` → đóng group, `watershed_provisional→validated` `:207-221`; không valid → `recovering=0`, defer members + suppress mọi cột det có `cost<1.0` của members `:222-230`. ;; 4. `_unresolved_merged_birth` → unmatched-detection merged không được `_create_or_reid` `:2336-2340`; cột `ambiguous_*` → `costs[:,col]=10` `:1793-1807`.
+SAA| **Sample A (thường — explained)**: `{"track":{"w":4,"h":3},"blob":{"w":8,"h":3},"vel":[4,0],"span":1.75}` → **Expected** JSON: NONE
+EXA| xe chạy dọc trục y nhưng blob phình ngang: `excess_w=4 > 0·1.75+0.3·4=1.2` → **`explained=false`** → veto gán + `birth_blocked`. (Phụ: `blob [4,4]` vel `[4,0]` → `excess_h=1 > 0.9` → cũng veto — dư theo trục vuông góc.)
+SAB| **Sample B (biên — veto)**: `{"track":{"w":4,"h":3},"blob":{"w":8,"h":3},"vel":[0,4],"span":1.75}` → **Expected** (verif JSON: NONE
+
+### B1 `kalman-constant-velocity` — Dự đoán vị trí theo vận tốc không đổi
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:440-449` `_new_kalman` (state `[x,y,vx,vy]`, 2 đo `[x,y]`); `:239-295` `_predict_tracks`.
+IO| - **Input**: state `[x,y,vx,vy]`, meas `(mx,my)|None`. **Output**: predicted `(x̂,ŷ)` + corrected state.
+CPLX| - **Độ phức tạp (code)**: O(1)/track. **space** O(1) state+P; **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `cv2.KalmanFilter(4,2)`; statePre/statePost.
+LIB| - **Thư viện ngoài**: `cv2.KalmanFilter` [code] — demo α-β giản lược.
+PSEUDO| 1. `predict`: `x += vx`, `y += vy` (F constant-velocity). ;; 2. Nếu có meas: `residual = meas − pred`; `state += K·residual` (Kalman gain; [sim] K=β=0.5). ;; 3. Không có meas → giữ state sau predict (coast).
+SAA| **Sample A (thường)**: init `(10,10,0,0)`; meas theo frame: `(12,10)`, `(13,10)`, `(14,11)`: JSON: {"init":[10,10,0,0],"meas":[[12,10],[13,10],[14,11]],"beta":0.5}   
+EXA| trace `[11,10,1,0] → [12.5,10,1.5,0] → [14,10.5,1.5,0.5]` — vận tốc học dần từ residual.
+SAB| **Sample B (biên — coast)**: `{"state":[14,10.5,1.5,0.5],"frames_no_meas":2}` → **Expected** (verify): frame1 `(14+1.5,  JSON: NONE
+
+### B2 `prediction-age-decay` — Giới hạn tuổi dự đoán
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:239-290` `_predict_tracks` (3 nhánh decay/anchor/freeze); `:297-317` `_prediction_age_seconds`, `_prediction_age_limit_seconds` (merged → `max(0.40, merged_reacquire_max_seconds=3.0)`); `:1304-1330` `_has_recent_merged_freeze`.
+IO| - **Input**: `last_meas_point`, `raw_kalman_point`, `last_meas_time`, `now`, `invisible>0`, `merged_freeze`, `age_limit` (base 0.40s / merged-extended `max(0.40,3.0)`). **Output**: `point`, `prediction_source`, `velocity_confidence`.
+CPLX| - **Độ phức tạp**: O(1). **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: timestamp float; flag `prediction_source` string.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `age = now − last_meas`; `limit = base` (merged-freeze gần đây → `limit = max(0.40, 3.0)`). ;; 2. `age > limit` → `point = measured_point`, `source = stale_prediction`, `conf = 0` — anchor cho B8. ;; 3. `merged_freeze` → `point = raw_point` (**Kalman thô, không decay**), `conf = 1.0` — occlusion guard cần hành lang vận tốc đều tới khi cặp xe tách. ;; 4. Ngược lại → `decay = e^(−age/τ)`; `point = measured + (raw − measured)·decay`; `conf = 1 − age/limit` (**tuyến tính**, không exponential).
+SAA| **Sample A**: `{"measured":[10,10],"raw":[14,10],"ages":[0,0.1,0.2,0.3],"tau":0.25,"age_limit":0.40,"invisible":1}` → ** JSON: NONE
+EXA| `age 0.5 ≤ 3.0` và `merged_freeze` → **`point = [14,10]` raw Kalman, `conf=1.0`, `source=kalman_prediction`** — không decay; cùng input `merged_freeze:false` → `[10,10]` anchor `conf=0`.
+SAB| **Sample B (biên — merged-freeze giữ raw)**: `{"measured":[10,10],"raw":[14,10],"age":0.5,"merged_freeze":true,"extended JSON: NONE
+
+### B3 `association-distance-gate` — Cổng khoảng cách gán
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1193-1231` `_association_gate`; `:1233-1244` `_track_velocity_px_per_frame`. Defaults: `velocity_gate_scale=2.0`, `velocity_gate_size_ratio=1.0`, `velocity_gate_min_observations=3`, `max_distance=180`, `max_prediction_age_seconds=0.40`.
+IO| - **Input**: `track` (speed px/frame, `invisible`, `extent=max(w,h)`, `total_visible_count`, `pred_age`); `det` (anchor). **Output**: `gate_px` — cặp có `dist > gate_px` bị loại khỏi ma trận (cost=∞).
+CPLX| - **Độ phức tạp**: O(1)/cặp → O(T·D) tổng. **space** O(1); **[sim]**: O(T·D).
+STRUCT| - **Cấu trúc**: scalar gate.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `invisible>0 && pred_age > age_limit (0.40s)` → `gate = 0` (dự đoán hết hạn, chỉ còn B8 anchor). ;; 2. `total_visible_count < min_obs (3)` → `gate = ceiling (180)` — track mới được "fail-open" vì Kalman chưa có velocity đáng tin. ;; 3. `budget = speed·(invisible+1)·scale (2.0) + size_ratio (1.0)·extent`. ;; 4. `floor = max(24, size_ratio·extent)`; `gate = min(ceiling, max(floor, budget))`.
+SAA| **Sample A**: `{"speed":5,"inv":3,"extent":10,"visible_count":10,"scale":2.0,"size_ratio":1.0,"ceiling":180,"floor_min": JSON: NONE
+EXA| `budget = 0.5·1·2+10 = 11 < floor 24` → **`gate=24`** (floor cứu xe đứng yên); cùng input nhưng `visible_count:2` → `gate=180`; `inv:2 & pred_age:0.5 > 0.40` → `gate=0`.
+SAB| **Sample B (biên — floor thắng + hai nhánh đặc biệt)**: `{"speed":0.5,"inv":0,"extent":10,"visible_count":10,"scale":2.0 JSON: NONE
+
+### B4 `iou-overlap-score` — Độ chồng lấp hộp
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:397-405` `_iou`; `slot_vehicle_binder.py:712-745` `_overlap_geometry` (phiên bản đa giác cho slot).
+IO| - **Input**: `boxA`, `boxB` [x,y,w,h]. **Output**: `iou ∈ [0,1]`.
+CPLX| - **Độ phức tạp**: O(1). **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: scalar.
+LIB| - **Thư viện ngoài**: không.
+PSEUDO| 1. `inter = max(0, min(x2A,x2B) − max(x1A,x1B)) · max(0, min(y2A,y2B) − max(y1A,y1B))`. ;; 2. `iou = inter / (areaA + areaB − inter)` (union ≠ 0).
+SAA| **Sample A**: `{"a":[0,0,4,4],"b":[2,0,4,4]}` → **Expected** (verify): `inter=2·4=8`, `union=16+16−8=24` → `IoU=0.3333`. JSON: NONE
+EXA| `inter=4`, `union=16` → `IoU=0.25` — lồng hoàn toàn vẫn chỉ 0.25.
+SAB| **Sample B (biên — lồng nhau)**: `{"a":[0,0,2,2],"b":[0,0,4,4]}` → **Expected** (verify): `inter=4`, `union=16` → `IoU=0 JSON: NONE
+
+### B5 `association-cost-matrix` — Ma trận chi phí gán
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1691-1781` (khối build cost trong `_assign`). Công thức literal `:1761-1766`:
+IO| - **Input**: gates (B3), IoU (B4), appearance distance (B10/B11 → `min(histogram_distance, compare_tracklets)` `:1717-1725`, default `0.25` thiếu hist track / `0.5` thiếu hist det), area ratio. **Output**: `costs[T×D]` + `_pair_metrics`.
+CPLX| - **Độ phức tạp (code)**: O(T·D). **space** O(T·D); **[sim]**: O(T·D) + solver B6.
+STRUCT| - **Cấu trúc**: `float[T×D]`; `_pair_metrics{position,iou,appearance,size,total,association_source}`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `max_distance_t = 180 · min(1.25, 1 + min(invisible,15)/60)` (`max_distance=180` literal `:42`). ;; 2. Cặp qua gate distance (B3): `app = min(hist_d, tracklet_d)`; thiếu hist → `0.25`/`0.5`; `zone_d` nếu có → `app = 0.70·app + 0.30·zone` `:1728-1731`. ;; 3. `size_error = min(1, |ln(area_ratio)| / |ln(2.80)|)`; `cost = 0.45·(d/max_d_t) + 0.25·(1−iou) + 0.20·app + 0.10·size_error`. ;; 4. Cặp fail gate (distance/app/size-band/missing-hist-when-invisible) → `cost = 10`; merged/ambiguous col → `10` `:1806`.
+SAA| **Sample A**: `{"d_norm":0.3,"iou":0.35,"app":0.15,"area_ratio":1.5}` → `size_error = |ln1.5|/|ln2.8| = 0.4055/1.0296 =  JSON: NONE
+EXA| `55 > 50 → cost=10` (∞) — không vào solver; gate = giá trị đã verify ở B3 sample A.
+SAB| **Sample B (biên — fail gate)**: `{"d":55,"gate":50}` → **Expected** (verify): `55 > 50 → cost=10` (∞) — không vào solve JSON: NONE
+
+### B6 `lapjv-assignment` — Gán tối ưu Jonker–Volgenant
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1597-2007` `_assign` (gọi `lapjv(costs, extend_cost=True, cost_limit=~)` — thư viện `lap`, **không phải "Hungarian" nói chung**).
+IO| - **Input**: `costs[T×D]` (có cột giả unassigned). **Output**: `assign[]` (row→col hoặc −1).
+CPLX| - **Độ phức tạp (code)**: LAPJV ~O(n³). **space** O(n²) ma trận + O(n) gán; **[sim]**: exhaustive O(n!) với n≤5 — **chỉ cho demo**, ghi rõ khác biệt.
+STRUCT| - **Cấu trúc**: ma trận + mảng gán.
+LIB| - **Thư viện ngoài**: `lap.lapjv` [code] — demo solver exact thuần JS.
+PSEUDO| 1. Với mọi phép gán hợp lệ (mỗi hàng → cột duy nhất hoặc unassigned): `total = Σ cost + (số unassigned)·cost_limit`. ;; 2. Chọn total min (vét cạn n≤5, hoặc LAPJV thật nếu có thư viện).
+SAA| **Sample A**: `{"costs":[[0.2,0.8,10],[0.7,0.3,10],[10,10,0.4]],"cost_limit":0.9}` → **Expected** (verify exhaustive): g JSON: NONE
+EXA| `r0` unassigned (0.95>0.9), `r1→c1` → `total=1.2`.
+SAB| **Sample B (biên — thà không gán)**: `{"costs":[[0.95,10],[10,0.3]],"cost_limit":0.9}` → **Expected** (verify): `r0` una JSON: NONE
+
+### B7 `assignment-margin-ambiguity` — Trì hoãn gán khi tranh chấp sít sao
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1165-1191` `_assignment_has_margin`; `:1278-1302` `_lineage_score`; usage `:1685-1686`, `:1914-1989`; defaults `ambiguous_recovery_frames=3` `:81`, `split_assignment_margin=0.08` `:82`; `occlusion_guard.gate_assignments` `:1994-1999` (A12).
+IO| - **Input**: `costs`, `assignment`, `lineage_score`. **Output**: `assignments'` + `split_recovering` marks + `ambiguous_clear_streak`.
+CPLX| - **Độ phức tạp (code)**: O(T·D) second-min. **space** O(T+D); **[sim]**: O(T·D).
+STRUCT| - **Cấu trúc**: `split_margin_track_ids`; `ambiguous_clear_streak`; `association_state` string.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Với mỗi track được gán mà ∈ `split_margin_track_ids`: `lineage = mean(min(1,|history|/10), min(1,visible/10), min(1,frag/5), min(1,age/15))` `:1287-1302`. ;; 2. `margin = 0.08·(2 − lineage)` — track mới (lineage≈0) cần gap 0.16, track cũ ≈ 0.08 `:1921`. ;; 3. `_assignment_has_margin`: `alternatives = mọi cost[r][c']<10 (c'≠c) ∪ cost[r'][c]<10 (r'≠r)`; `ok = alternatives rỗng hoặc min(alt) − cost ≥ margin` `:1180-1191`. ;; 4. `!ok` → `association_state="split_recovering"`, defer cặp, suppress cột `:1951-1963`. ;; 5. `ok` nhưng `recently_ambiguous && !clear_evidence && streak+1 < 3` → defer + `streak++` (`association_recovery_pending`) `:1964-1985`; `clear_evidence = has_margin && total≤0.12 && app≤0.08 && size≤0.20 && pos≤0.20` `:1939-1945` → bỏ qua streak, gán ngay. ;; 6. Ngược lại → `streak=0`, gán `:1986-1989`.
+SAA| **Sample A (thường — track hồi phục defer)**: JSON: {"costs":[[0.30,0.32,10],[0.90,10,0.31]],"margin_base":0.08,"lineage":0.0,"in_split_margin":[true,true],"assign":[[0,0],[1,2]],"streak":[0,0]}   
+EXA| `margin=0.08·2=0.16`; r0: `min_alt−0.30 = 0.32−0.30 = 0.02 < 0.16` → **defer `split_recovering`**; r1: `min(0.90)−0.31=0.59 ≥ 0.16` và `clear_evidence` (`total 0.31>0.12` → false) nhưng `recently_ambiguous=false` → **keep gán**.
+SAB| **Sample B (biên — track đang-thấy bỏ qua margin)**: JSON: {"costs":[[0.30,0.32,10],[0.90,10,0.31]],"margin_base":0.08,"in_split_margin":[false,true],"assign":[[0,0],[1,2]]}   
+EXB| r0 **không ∈ split_margin** → gán ngay `r0→c0` dù gap chỉ 0.02 — margin check không áp cho track đang được quan sát; r1 như trên keep.
+
+### B8 `stale-anchor-reacquire` — Tái bắt track qua neo cũ
+CODE| - **Code**: `backend/main_detect/src/techgar/motion_tracker.py:1627-1701` (nhánh stale trong `_assign`); gates `:1726-1755`; cost `:1761-1766`; windows `reacquire_max_seconds=1.50` `:68`, `merged 3.0` `:69`, `lost_appearance_threshold=0.30` `:83`, `min/max_reacquire_area_ratio 0.35/2.80` `:84-85`.
+IO| - **Input**: `track` (invisible>0), `last_measured_center`, `clean_size`, `appearance`, `lost_seconds`; `det`. **Output**: `cost | skip`.
+CPLX| - **Độ phức tạp**: O(1)/cặp. **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: scalar; `_last_association_events`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `lost_seconds > reacquire_window` (1.5s; 3.0s nếu merged-freeze gần) → skip toàn bộ track `:1636-1651`. ;; 2. `invisible>0 && prediction_age > limit` → `predicted_point = last_measured_center` + `stale_anchor_reacquire=true` `:1654-1684` (event `stale_prediction_replaced_by_measurement_anchor`). ;; 3. `gate = min(max_distance·scale, max(3.0, 0.30·diag(clean_w,clean_h)))` `:1696-1701` — override gate 0 của `_association_gate`. ;; 4. `det.hist = None && invisible>0` → skip `:1726`; `app > 0.30` → skip `:1732-1733`; `app > min(0.30, 0.22)=0.22` khi stale → skip `:1734-1737`; `area_ratio ∉ [0.35, 2.80]` → skip `:1749-1755`. ;; 5. Qua hết → **cost 4-term bình thường** (B5) — KHÔNG có `cost = floor + w·d`; `association_source="last_measurement_anchor"` `:1776-1780`.
+SAA| **Sample A (thường — hồi sinh)**: JSON: {"last_meas":[5,5],"clean_wh":[4,3],"det":{"point":[6.5,6],"box":[4,3,5,3],"app":0.2,"hist":[1,0]},"lost_s":0.8,"invisible":1,"max_dist_demo":20}   
+EXA| `lost 0.8 ≤ 1.5`; `diag(clean)=5` → `gate=min(20, max(3,1.5))=3`; `d=√(1.5²+1²)=1.803 ≤ 3`; `app 0.2 ≤ 0.22`; `area_ratio=15/12=1.25 ∈ [0.35,2.80]`; `iou(pred_box (3,2,4,3), det)=6/21=0.2857`; `size_err=|ln1.25|/|ln2.8|=0.2167` → **`cost = 0.45·(1.803/20)+0.25·(1−0.2857)+0.20·0.2+0.10·0.2167 = 0.2809`** → vào solver.
+SAB| **Sample B (biên — sai màu / quá hạn)** — track context chung cho cả 2 case: JSON: {"track":{"last_meas":[5,5],"clean_wh":[4,3],"invisible":1,"max_dist_demo":20},    "cases":[      {"det":{"point":[6,6],"box":[4,3,4,3],"app":0.25,"hist":[1,0]},"lost_s":0.8},      {"det":{"point":[6,6],"box":[4,3,4,3],"app":0.2,"hist":[1,0]},"lost_s":2.0}]}   
+EXB| case1 `app 0.25 > 0.22` → **reject appearance** — đúng chỗ sai màu; case2 `lost 2.0 > 1.5` → **skip reacquire_window** — quá hạn thì không vào gate nào nữa.
+
+### B9 `track-lifecycle` — Vòng đời track: tentative→confirmed→lost→removed
+CODE| - **Code**: `backend/main_detect/src/techgar/vehicle_tracker.py:20-23` `TrackStatus` (chỉ 3 enum); `motion_tracker.py:2023` birth; `:2071-2094` `_is_confirmable`; `:2096-2170` `_apply_detection` + `:2170` re-confirm; `:2226-2342` `process_frame` lost/expire; `:2175-2203` `suspend_track`.
+IO| - **Input**: detections đã gán, clock. **Output**: transitions + danh sách `newly_lost`, `exited`, `confirmed`, `expired_tracks`.
+CPLX| - **Độ phức tạp**: O(T). **space** O(T); **[sim]**: O(T).
+STRUCT| - **Cấu trúc**: enum `TrackStatus`; counters `total_visible_count/invisible`; `association_state` string; `_exited_tracks` dict.
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. Detection unmatched → track `tentative` (đếm `total_visible_count`). ;; 2. `_is_confirmable`: `total_visible_count ≥ 3` **và** `‖(cx,cy) − origin‖ ≥ min_confirm_displacement (12px)`; priority track: `min_visible=2` + `priority_observation_count ≥ 2` + `disp ≥ 3`. Đủ → `confirmed`. (Không có điều kiện size/hist.) ;; 3. Track không được gán → `invisible++`; **chỉ `confirmed` → `lost`** — tentative unmatched **không bao giờ thành `lost`**, chỉ bị pop lặng lẽ khi hết TTL (không emit). ;; 4. `invisible > lost_ttl` (hoặc `_lost_beyond_ttl_seconds`) → **pop khỏi `_tracks`**; nếu `status ≠ tentative` → vào `_exited_tracks` + emit `expired_tracks` 1 lần. ;; 5. `suspend_track` (parked) → ghi `association_state = "suspended_*"` — **trường string riêng** song song enum (B7/E6 đọc nó), không phải state thứ 4.
+SAA| **Sample A**: `{"dets":[1,0,0,0,0],"ttl":3,"disp_ok":true}` (đã confirmed) → **Expected** (verify): `[confirmed, lost(1) JSON: NONE
+EXA| `confirmed → lost(1) → confirmed (reset, re-confirm) → lost(1) → lost(2)` — quay lại đúng lúc cứu track.
+SAB| **Sample B (biên — hồi sinh)**: `{"dets":[1,0,1,0,0],"ttl":3}` → **Expected** (verify): `confirmed → lost(1) → confirmed JSON: NONE
+
+### B10 `hsv-lab-descriptor` — Mô tả màu của tracklet
+CODE| - **Code**: `backend/main_detect/src/techgar/tracklet_descriptor.py:18-68` `hsv_histogram`; `:81-138` `compute_sample_quality`; `:141-149` `histogram_distance`; `:152-179` `spatial_histograms`/`spatial_distance`; caller gate `quality < 0.5` (docstring `:90-91`).
+IO| - **Input**: `frame BGR`, `bbox`, `mask`. **Output**: `descriptor: float32[416]` + `quality ∈[0,1]`.
+CPLX| - **Độ phức tạp**: O(compPx + 416). **space** O(416·S); **[sim]**: O(compPx + 6) — demo 1 hist 6-bin H.
+STRUCT| - **Cấu trúc**: `float32[416]`; `AppearanceTracklet.samples` :183-219; `spatial_histograms` 2 vùng.
+LIB| - **Thư viện ngoài**: `cv2`/`numpy` histogram [code] — demo 6-bin.
+PSEUDO| 1. Crop `bbox` clamped vào frame; `hsv=cvtColor`, `lab=cvtColor`; `mask` không khớp/có 0 px fg → bỏ mask `:31-51`. ;; 2. `desc = normalize(concat(0.70·hs16×16, 1.20·ab12×12, 0.60·L16))` `:52-68` — weights nghiêng LAB vì H/S không phân biệt đen/trắng/xám. ;; 3. `quality`: `area<200 → 0` `:112-113`; `fg_ratio<0.15 → 0` `:125-126`; `size_s=min(1,area/1000)`; `fg_s=min(1,fg·2)`; `asp_s = 0.5 nếu aspect∉[0.3,4]`; **`quality = 0.5·size + 0.3·fg + 0.2·aspect`** `:137` — không phải `f(n_px, contrast)`. ;; 4. `distance = cv2.compareHist(a,b,HISTCMP_BHATTACHARYYA)` `:141-149` = `√(1 − BC/√(Σp·Σq))`; với hist Σ=1 → **`√(1−BC)`** (KHÔNG phải `1−BC`).
+SAA| **Sample A**: `{"px_h":[10,10,10,160],"bins":6,"bin_width":30}` → `bin(10)=0`, `bin(160)=5` → hist `[0.75,0,0,0,0,0.25]` JSON: {"samples":[{"crop_area":400,"fg_ratio":0.5,"aspect":1.0},{"crop_area":100,"fg_ratio":0.9,"aspect":1.0},{"crop_area":900,"fg_ratio":0.10,"aspect":1.0}],"q_min":0.5}   
+EXA| s1 `0.5·0.4+0.3·1.0+0.2·1.0 = 0.7 ≥ 0.5` → giữ; s2 `area=100<200` → `quality=0` → loại; s3 `fg=0.10<0.15` → `quality=0` → loại — hai gate cứng chạy TRƯỚC công thức điểm.
+SAB| **Sample B (biên — quality gate cứng)**: JSON: {"samples":[{"crop_area":400,"fg_ratio":0.5,"aspect":1.0},{"crop_area":100,"fg_ratio":0.9,"aspect":1.0},{"crop_area":900,"fg_ratio":0.10,"aspect":1.0}],"q_min":0.5}   
+EXB| s1 `0.5·0.4+0.3·1.0+0.2·1.0 = 0.7 ≥ 0.5` → giữ; s2 `area=100<200` → `quality=0` → loại; s3 `fg=0.10<0.15` → `quality=0` → loại — hai gate cứng chạy TRƯỚC công thức điểm.
+
+### B11 `tracklet-gallery-match` — So khớp gallery tracklet
+CODE| - **Code**: `backend/main_detect/src/techgar/tracklet_descriptor.py:229-263` `appearance_samples`; `:266-274` `aggregate_appearance` (median + L2, fallback mean khi norm≈0); `:277-305` `merge_appearance_samples` (dedup `d ≤ 0.015`, bounded stride-sample tới 24); `:308-351` `compare_tracklets`; fallback gallery rỗng `missing_distance=0.25` `:312-314`.
+IO| - **Input**: `galleryA[]`, `galleryB[]` (hist Σ=1 hoặc đã normalize). **Output**: `TrackletMatch{distance, support, sample_pairs, aggregate_distance, nearest_distance}`.
+CPLX| - **Độ phức tạp**: O(|A|·|B|·N). **space** O(|A|+|B|); **[sim]**: ≤ O(9·6).
+STRUCT| - **Cấu trúc**: 2 list hist; ma trận pairwise; `TrackletMatch`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `pairwise[i][j] = histogram_distance(a_i, b_j)` (cv2 BHATTACHARYYA căn, B10) `:316-319`. ;; 2. `left_nearest = min theo hàng`; `right_nearest = min theo cột` `:321-322`. ;; 3. `partial_nearest = left_nearest nếu |A|≤|B| else right_nearest` `:327-331`; `nearest = median(partial)` `:332`. ;; 4. `coverage = median(concat(left_nearest, right_nearest))` `:333`. ;; 5. `aggregate = d(agg_median_L2(A), agg_median_L2(B))` `:334-336`. ;; 6. `best_pairs = mean(3 giá trị nhỏ nhất của pairwise)` `:337-338`. ;; 7. **`distance = 0.50·nearest + 0.20·coverage + 0.20·aggregate + 0.10·best_pairs`** `:339-344`; `support = min(|A|,|B|)` `:347`; clip [0,1].
+SAA| **Sample A (thường — khớp)**: JSON: {"galleryA":[[0.9,0.1],[0.6,0.4]],"galleryB":[[0.8,0.2],[0.1,0.9]],"match_max":0.5}   
+EXA| `distance = 0.5·0.1281 + 0.2·0.1281 + 0.2·0.22 + 0.1·0.2167 ≈ 0.1553 < 0.5` → **match**; `support=2`.
+SAB| **Sample B (biên — gallery lệch hẳn)**: JSON: {"galleryA":[[0.9,0.1],[0.6,0.4]],"galleryB":[[0,1],[0,1]],"match_max":0.5}   
+EXB| `distance = 0.5·0.7166 + 0.2·0.6063 + 0.2·0.7069 + 0.1·0.6798 ≈ 0.6889 > 0.5` → **không match**.
+
+### C1 `slot-roi-precompute` — Tiền tính mask ROI của ô đỗ
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:228-320` `_compute_rois`; `:37-61` `_PrecomputedROI`, `_ROIEvidence`.
+IO| - **Input**: `polygon[N×2]`, `img_shape`; params `border_ignore_ratio=0.12`, `core_scale=0.55` [literal `:97-137`]. **Output**: `_PrecomputedROI{mask,area,analysis_mask,analysis_boundary,analysis_area,analysis_size,core_mask,core_area,bbox,center}`.
+CPLX| - **Độ phức tạp (code)**: O(H·W) mỗi slot một lần. **space** O(H·W·S) mask; **[sim]**: O(R) raster ô lưới.
+STRUCT| - **Cấu trúc**: 4 mask bool + diện tích/size cache; `_smoother` khởi tạo ở cuối (`:316`).
+LIB| - **Thư viện ngoài**: `cv2.fillPoly`, `cv2.erode`, `MORPH_ELLIPSE`, `boundingRect` [code] — demo raster lưới giản lược tương đương, không port cv2.
+PSEUDO| 1. `mask = fillPoly(polygon)`; `area = count(mask)` (`:259-260`); `bbox = poly-bounds ±2px` (`:249-252`). ;; 2. `inset = round(min(roi_w,roi_h) · border_ignore_ratio)` — **`roi_w/h` là kích thước padded-bbox** (poly bounds ±2px, clip theo ảnh, `:249-254`), không phải width polygon; `inset>0` → `analysis = erode(mask, ellipse 2·inset+1)`, else `analysis = mask` (`:263-272`). ;; 3. **`analysis < 5 px → analysis = mask` (fallback, `:273-274`)** — slot nhỏ không chết, chỉ mất lớp lõi. ;; 4. `inner = erode(analysis, 3×3)`; **`analysis_boundary = analysis − inner`** (`:276-279`) — vành mỏng *trong* analysis, **không phải** `roi − analysis`. ;; 5. `core_poly = centroid + (poly − centroid)·core_scale`; `core = fillPoly(core_poly) ∩ analysis`; `core < 5 px → core = analysis` (`:288-296`). ;; 6. `analysis_size = boundingRect(analysis)`; lưu `area/analysis_area/core_area/analysis_size` (`:280-311`).
+SAA| **Sample A (thường)**: JSON: {"poly":[[0,0],[7,0],[7,7],[0,7]],"border_ignore_ratio":0.12,"core_scale":0.55,"grid":8}   
+EXA| `roi=64, analysis=36, analysis_boundary=20, core=16` — không fallback nào kích hoạt (normal path).
+SAB| **Sample B (biên — CẢ HAI fallback, không invalid)**: JSON: {"poly":[[1,1],[4,1],[4,4],[1,4]],"border_ignore_ratio":0.2,"core_scale":0.55,"grid":8}   
+EXB| `roi=16, analysis=16 (fallback), analysis_boundary=12, core=16 (fallback)` — intermediate `analysis=4, core=4` chỉ là giá trị trước fallback; code **không có nhánh "invalid slot"**, slot nhỏ degrade về ROI đầy đủ.
+
+### C2 `ensemble-threshold-voting` — Bỏ phiếu EMPTY đa-biến-thể + rescue/edge
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:439-600` `detect` — `empty_votes` `:461,527-528`, `exit_votes` `:529-530`, `required_votes` `:533`, `is_free` `:534-549`, edge recheck `:551-566`, `occupied = not is_free` `:574-581`.
+IO| - **Input**: `ratios[V]` (filtered_ratio từng biến thể), `evidence` (C3/C4), `edge_ratio`; params `ratio_thr=0.20`, `edge_thr=0.25`, `V` [literal]. **Output**: `is_free:bool → occupied`.
+CPLX| - **Độ phức tạp (code)**: O(V·R + S) — V=25 biến thể × R px ROI (threshold+mask+count), S slot cho vote/rescue/edge. **space** O(S) votes/evidence + O(S·R) `vote_masks` khi `selective_line_filter=False` (True → O(R) buffer tái dùng); **[sim]**: O(V) + O(1) space.
+STRUCT| - **Cấu trúc**: `empty_votes[]`, `exit_votes[]`, `is_free_list[]`, evidence per-slot.
+LIB| - **Thư viện ngoài**: `cv2.cvtColor/LUT/createCLAHE/adaptiveThreshold/medianBlur/dilate/Canny` [code] — demo nhận `ratios[]`/`edge_ratio` sẵn; giản lược tương đương, không port.
+PSEUDO| 1. Với mỗi biến thể k: `ratio_k = fg(filtered_k)/analysis_area` (`:526`). ;; 2. `ratio_k < ratio_thr` → **`empty_votes++`** (`:527-528`); `ratio_k < min(ratio_thr, exit_ratio_thr=0.08)` → `exit_votes++` (`:529-530`, dùng cho C5-occupied). ;; 3. `required = V // 2` (`:533`); **`is_free = empty_votes ≥ required`** (`:539`). ;; 4. `is_free AND core_rescue(evidence)` → `is_free = False` (`:542-547`). ;; 5. `is_free AND edge_ratio ≥ edge_thr` → `is_free = False` (edge recheck, `:551-566`). ;; 6. **`occupied = ¬is_free`** (`:581`).
+SAA| **Sample A (thường — 4 case cùng V=9, `required=4`, `ratio_thr=0.20`, `edge_thr=0.25`)**: JSON: {"V":9,"ratio_thr":0.20,"edge_thr":0.25,"required":4,    "cases":[     {"id":"occupied_majority","ratios":[0.30,0.28,0.31,0.05,0.04,0.29,0.30,0.02,0.25],"core":{"raw_ratio":0.35,"core_ratio":0.05,"comp_ratio":0.0,"count":0},"edge_ratio":0.10},     {"id":"free_clear","ratios":[0.05,0.28,0.31,0.05,0.04,0.06,0.19,0.10,0.02],"core":{"raw_ratio":0.12,"core_ratio":0.05,"comp_ratio":0.0,"count":0},"edge_ratio":0.10},     {"id":"free_but_rescue","ratios":[0.05,0.28,0.31,0.05,0.04,0.06,0.19,0.10,0.02],"core":{"raw_ratio":0.35,"core_ratio":0.20,"comp_ratio":0.10,"count":1},"edge_ratio":0.10},     {"id":"free_but_edge","ratios":[0.05,0.28,0.31,0.05,0.04,0.06,0.19,0.10,0.02],"core":{"raw_ratio":0.12,"co
+EXA| 
+SAB| **Sample B (biên — ngưỡng vừa đủ + exit_votes)**: `{"ratios":[0.19,0.19,0.19,0.19,0.25,0.25,0.25,0.25,0.07],"ratio_thr": JSON: NONE
+
+### C3 `border-line-filter` — Lọc component dạng vạch *trong* analysis
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:321-416` `_filter_roi_threshold` — `raw_ratio` `:328-329`, `filtered=mask∩analysis_mask` `:331-333`, components `:335`, `touches_boundary` `:338,353`, điều kiện line `:343-367`, selective removal `:368-387`, `filtered_ratio` `:389-415`.
+IO| - **Input**: `roi_threshold` (mask nhị phân), `roi{_PrecomputedROI}`; params `line_min_span_ratio=0.45`, `line_max_thickness_ratio=0.18`, `core_component_threshold=0.08`, `selective_line_filter=True` [literal]. **Output**: `_ROIEvidence{raw_ratio, filtered_ratio, core_ratio, core_component_ratio, core_component_count, filtered_mask, removed_ratio}`.
+CPLX| - **Độ phức tạp (code)**: O(R + C + P_sel) — R px ROI quét, C component kiểm, P_sel px cho `fitLine`+`distanceTransform` khi selective. **space** O(R) label map + O(C) stats; **[sim]**: O(R) raster + O(C) — bỏ P_sel (xóa nguyên component).
+STRUCT| - **Cấu trúc**: label map + stats per component; `_ROIEvidence` dict.
+LIB| - **Thư viện ngoài**: `cv2.connectedComponentsWithStats`, `fitLine`, `distanceTransform` [code] — demo raster + xóa-nguyên-component; giản lược tương đương, không port.
+PSEUDO| 1. `raw_ratio = count(mask ∩ roi.mask) / roi.area` (`:328-329`) — mẫu số **roi.area**, không phải analysis. ;; 2. `filtered = mask ∩ analysis_mask` (`:331-333`) — vành `roi−analysis` **không vào filtered từ đầu** (bị mask chặn, không phải bị lọc). ;; 3. `components = connectedComponents(filtered)` (`:335`); `touches_boundary = component ∩ analysis_boundary ≠ ∅` (`:338,353`). ;; 4. `span = max(w/analysis_w, h/analysis_h)`; `thickness = (area/max(w,h))/min(analysis_size)` (`:336-352`). ;; 5. `vehicle_like_core = (component_core_px/core_area ≥ 0.08) ∧ (thickness ≥ 0.18·0.9)` (`:354-361`). ;; 6. `is_border_line = touches_boundary ∧ span ≥ 0.45 ∧ thickness ≤ 0.18 ∧ ¬vehicle_like_core` (`:362-367`). ;; 7. `selective_line_filter` → fitLine + chỉ xóa phần mảnh `residual ≤ half_width` (giữ vùng dày xe, `:370-387`); else xóa cả component (`:371`). ;; 8. `filtered_ratio = count(filtered)/analysis_area`; `core_ratio = count(filtered∩core)/core_area`; `removed_ratio = removed/analysis_area` (`:389-415`).
+SAA| **Sample A (thường — vạch trong analysis bị xóa)**: analysis `{1..6}²=36`, `analysis_boundary` = vành {i hoặc j ∈{1,6}}  JSON: {"analysis_area":36,"roi_area":64,"core_area":16,"analysis_size":[6,6],    "fg_cells":{"line":[[1,1],[2,1],[3,1],[4,1],[5,1],[6,1]],"blob":[[3,3],[4,3],[3,4],[4,4]]},    "thresholds":{"span_min":0.45,"thickness_max":0.18,"comp_core_min":0.08}}   
+EXA| `filtered trước = 10 → ratio 10/36 ≈ 0.278`; sau xóa line → `filtered = 4 → filtered_ratio = 4/36 ≈ 0.111`; `removed_ratio = 6/36 ≈ 0.167`; **`raw_ratio = 10/64 ≈ 0.156`** (mẫu số roi.area). Vote theo `ratio_thr=0.20`: trước lọc 0.278 → không empty-vote; sau lọc 0.111 <0.20 → **empty-vote** — lọc đúng lật phiếu.
+SAB| **Sample B (biên — component ngắn không bị xóa + xe có đuôi)**: line chỉ 2 ô `{(1,1),(2,1)}` → `span = 2/6 = 0.333 < 0.4 JSON: NONE
+EXB| line ngắn giữ; blob-có-đuôi giữ (vehicle_like_core).
+
+### C4 `core-rescue-vote` — Cứu "free" khi tín hiệu tụ lõi hoặc dày đặc
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:418-428` `_has_core_rescue`; gọi tại `:542-547`.
+IO| - **Input**: `evidence{raw_ratio, core_ratio, core_component_ratio, core_component_count}` (từ `_ROIEvidence` của biến thể **base**); params `core_ratio_threshold=0.18`, `core_component_threshold=0.08`, `core_rescue_raw_ratio=0.30` [literal]. **Output**: `rescue:bool` (lật `is_free` → occupied).
+CPLX| - **Độ phức tạp**: O(1) (≤7 phép so sánh trên 4 field). **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `_ROIEvidence` fields; chỉ evidence của biến thể **base** quyết định rescue (`:488,541-547`).
+LIB| - **Thư viện ngoài**: không trực tiếp (`numpy` đếm component) [code].
+PSEUDO| 1. `central_blob = core_ratio ≥ 0.18 ∧ core_component_ratio ≥ 0.08` (`:419-422`). ;; 2. `textured_dense_blob = raw_ratio ≥ 0.30 ∧ core_ratio ≥ 0.02 ∧ core_component_count ≥ 2` (`:423-427`) — **3 điều kiện, gồm count ≥ 2**. ;; 3. `rescue = central_blob ∨ textured_dense_blob` (`:428`); `is_free ∧ rescue → occupied` (`:544-547`).
+SAA| **Sample A (thường — central_blob)**: JSON: {"core_ratio":0.20,"core_component_ratio":0.10,"raw_ratio":0.15,"core_component_count":1}   
+EXA| `central_blob` (0.20≥0.18 ∧ 0.10≥0.08) → **`rescue=true`** (textured không cần — raw 0.15 <0.30).
+SAB| **Sample B (biên — count gate quyết định)**: hai case cùng `raw=0.35, core_ratio=0.03`: JSON: [{"id":"count1","core_component_count":1},{"id":"count2","core_component_count":2}]   
+EXB| `central_blob`: core 0.03<0.18 → fail cả hai; `textured`: raw 0.35≥0.30 ∧ core 0.03≥0.02 → phụ thuộc count: `count1` (1<2) → **`rescue=false`**; `count2` (2≥2) → **`rescue=true`** — chính count-gate làm khác.
+
+### C5 `temporal-smoothing-dwell` — Hai cơ chế: streak đối xứng vs timestamp dwell
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:63-80` `TemporalSmoother` (dùng trong `detect` khi `apply_smoothing`, `:575-576`); `:602-645` `accept_evidence` (chỉ khi `stable_evidence=True`); params `smoothing_frames=5`, `occupied_seconds=0.5`, `empty_seconds=1.0` [literal `:105,115-116`].
+IO| - **Input**: (a) chuỗi `vote` per frame; (b) chuỗi `(timestamp_s, desired)` + `evidence`. **Output**: (a) `confirmed` bool/slot; (b) `stable_occupied` + `ready` + commit `True/False`.
+CPLX| - **Độ phức tạp**: O(S) mỗi call; (b) O(S·evidence). **space** O(S); **[sim]**: O(S).
+STRUCT| - **Cấu trúc**: (a) 3 mảng `pending/counters/confirmed`; (b) `_stable_slots{slot → {occupied,pending,since,count,initialized}}`, `_accepted_timestamp`.
+LIB| - **Thư viện ngoài**: không trực tiếp (`numpy` cho `isfinite`) [code].
+PSEUDO| 1. `pending == vote` → `counter++`; else `pending = vote`, `counter = 1`. ;; 2. `counter ≥ required_frames(5)` → `confirmed = vote`. ;; 3. `occupied_out = confirmed` (đối xứng cả hai chiều — **không** hysteresis). ;; 1. `now ≤ _accepted_timestamp` (hoặc !finite) → **reject toàn batch** (`:610-611`) — timestamp-monotonic guard (không có biến seq — chỉ so timestamp nguồn). ;; 2. `gap = now − last`; `gap > 1.5 s` → `pending=None, count=0, since=now` (`:612,624-625`). ;; 3. `desired`: đang occupied → `¬(exit_empty_votes ≥ required ∧ ¬rescue)` (`:626-628`); đang free → `instant_occupied` (`:630`). ;; 4. `desired == state` → reset pending/count (`:631-632`). Else: `pending != desired` → `pending=desired, count=0, since=now`; `count++` (`:634-636`). ;; 5. `count ≥ (2 nếu desired=occupied / 3 nếu free)` **∧** `elapsed ≥ (0.5 s / 1.0 s)` → `occupied = desired`, `initialized=True` (`:637-640`). ;; 6. Chưa `initialized` → `result.occupied = True` placeholder + `ready=False` (`:641-643`).
+SAA| **Sample A (thường — count ∧ duration, clock đúng)** (`desired` nhận sẵn, `occupied_seconds=0.5`, `empty_seconds=1.0`, ` JSON: {"t":[0,0.4,0.8,1.2,1.6,2.0,2.4],"desired":[1,1,1,0,0,0,0],"init_state":"free","initialized":true}   
+EXA| 
+SAB| **Sample B (biên — gap reset + stale reject)**: JSON: {"t":[0,2.0,2.4,3.0],"desired":[1,1,1,1],"init_state":"free","gap_max":1.5}   
+EXB| `t=0` count=1; `t=2.0` **gap=2.0 >1.5** → pending/count reset → pending=1,count=1,since=2.0; `t=2.4` count=2 ∧ elapsed 0.4 <0.5 → chưa; `t=3.0` count=3 ∧ elapsed 1.0 ≥0.5 → **`occupied` tại t=3.0`** — gap đã "ăn" mẫu đầu tiên.
+
+### D1 `slot-overlap-geometry` — Đo chồng lấp xe↔ô đỗ
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:712-745` `_overlap_geometry`; `:592-601` `_raw_vehicle_overlap`; `:582-589` `_signed_polygon_distance`; `:577-579` `_slot_diagonal`; `:666-673` `_point_in_polygon`; ngưỡng `min_vehicle_overlap=0.35`, `strong_vehicle_overlap=0.60` `:217-218`.
+IO| - **Input**: `bbox` xywh `[x,y,w,h]`, `binding{polygon, center}`; raster lưới-điểm-bao-biên (demo) / `cv2.intersectConvexConvex` (code). **Output**: `{vehicle_overlap, slot_overlap, center_proximity, score}` | `None`.
+CPLX| - **Độ phức tạp (code)**: O(P) polygon ops (`intersectConvexConvex`, `pointPolygonTest`, `boundingRect`). **space** O(1) ngoài polygon; **[sim]**: O(cells) raster.
+STRUCT| - **Cấu trúc**: metrics dict; polygon `np.ndarray`; `binding.center` cache.
+LIB| - **Thư viện ngoài**: `cv2.pointPolygonTest`, `intersectConvexConvex` [code] — demo raster∩.
+PSEUDO| 1. `inter = |cells(bbox) ∩ cells(poly)|` (code: `intersectConvexConvex` diện tích) `:715-726`. ;; 2. `vehicle_overlap = inter/area(bbox)`; `slot_overlap = inter/area(poly)` `:725-726`. ;; 3. `center_inside = (x+w/2, y+h/2) ∈ poly` `:727-728`. ;; 4. **`qualifies = (center_inside && vo ≥ min_vehicle_overlap) || vo ≥ strong_vehicle_overlap`; không → `None`** `:729-733` — xe ngoài hẳn nhưng `vo≥0.60` vẫn qualify. ;; 5. `center_proximity = max(0, 1 − dist(center, binding.center)/slot_diagonal)` `:735-738` — liên tục, không binary. ;; 6. **`score = min(1, 0.70·vo + 0.20·so + 0.10·proximity)`** `:739-744` — weights literal `[0.70,0.20,0.10]`.
+SAA| **Sample A (thường — đỗ trọn)**: `{"bbox":[2,2,4,4],"slot_poly":[[0,0],[8,0],[8,8],[0,8]],"slot_center":[4,4],"vo_min":0 JSON: NONE
+EXA| **`None`** — xe lấn mép không được tính đỗ.
+SAB| **Sample B (biên — ngoài hầu hết)**: `{"bbox":[7,7,4,4],"slot_poly":[[0,0],[8,0],[8,8],[0,8]],"slot_center":[4,4],"vo_mi JSON: NONE
+
+### D2 `slot-track-batch-match` — Gán track↔slot hàng loạt
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:1285-1314` `_batch_match` (build cost từ geometry + incumbent bonus, gọi `lapjv` với `extend_cost`).
+IO| - **Input**: geometry per cặp (D1), `incumbent` map, `bonus`, `cost_limit`. **Output**: `{track_id → (slot_id, geo)}`.
+CPLX| - **Độ phức tạp (code)**: LAPJV O(n³) + build O(T·S). **space** O(T·S) ma trận; **[sim]**: exhaustive O(n!) n≤5.
+STRUCT| - **Cấu trúc**: ma trận T×S; `SlotBinding`.
+LIB| - **Thư viện ngoài**: `lap.lapjv` [code] — demo solver exact.
+PSEUDO| 1. `score = w·overlap_terms` (D1); `cost = 1 − score`; nếu track đang bind slot này → `cost −= bonus`. ;; 2. Cặp không đủ geometry → `cost = 10`. ;; 3. `lapjv(costs, extend_cost=True, cost_limit)` → assignments.
+SAA| **Sample A (thường — incumbent giữ ô)**: `{"v0_in_s0":true,"geo":{"v0s0":0.72,"v0s1":0.75,"v1s0":0.15,"v1s1":0},"bonus": JSON: NONE
+SAB| **Sample B (biên — challenger áp đảo)**: `{"geo":{"v0s0":0.72,"v1s0":0.95}}` → costs `[[0.13,10],[0.05,10]]` → `v0s0+v1n JSON: NONE
+
+### D3 `arrival-claim-qualification` — Đủ điều kiện nhận xe vào ô
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:1080-1165` `_record_arrival_claim` (score `:1160-1164`); `:758-777` `_qualified_arrival`; `:1167-1283` `_try_commit_arrival_claim`; `:1026-1079` `_disprove_arrival_claims`; defaults `arrival_min_samples=3`, `arrival_vision_confirmations=2`, `arrival_competitor_margin=0.15`, `arrival_lost_commit_delay_seconds=0.35`, `arrival_lookback_seconds=1.5` `:241-247`.
+IO| - **Input**: `claim{observations, first/last_center, first/max_overlap, entered_from_outside, score, lost_at_s}` + `binding`. **Output**: `qualified → bind | disproved | expired | rejected`.
+CPLX| - **Độ phức tạp**: O(obs + claims). **space** O(claims); **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `ArrivalClaim` (:55-89); `_arrival_claims[(slot,gid)]`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Claim mở khi `vision occupied && vehicle_id=None`; `reset` nếu `now − last_seen > 1.5s` `:1100-1103`; `entered_from_outside = prev.slot_id ≠ slot || prev.overlap < 0.35` `:1104-1107`. ;; 2. `_qualified_arrival`: `disproof==0 && obs ≥ 3 && max_overlap ≥ 0.35 && inward && !competing` `:758-777`; `inward = entered || (max−first ≥ 0.10) || (first_dist − last_dist ≥ max(2, 0.05·diag))` `:764-770`; `competing = ∃claim' cùng slot, gid khác, obs≥3, score' ≥ score−0.15` `:771-776`. ;; 3. `score = 0.55·min(1,maxO) + 0.20·min(1,obs/3) + 0.15·min(1,inward_prog/0.10) + 0.10·min(1,ovl_prog/0.15)` `:1160-1164` (`inward_prog = max(0,first_d−cur_d)/diag`; `ovl_prog = max(0,max−first)`). ;; 4. **Commit gates** `_try_commit`: `binding.vision_occupied && vision_streak ≥ 2 && vehicle_id=None` `:1176-1182`; claim `lost_at_s` đã set **và** `now − lost_at_s ≥ 0.35s` **và** obs≥3 **và** maxO≥0.35 `:1184-1193`; ranked theo score; `winner.score − runner.score < 0.15 → reject competing_vehicle` `:1196-1206`; re-check `demonstrated_entry` `:1207-1222`; **newer-motion disproof** (obs fresh sau lost_at, overlap ô khác ≥0.35 → `newer_motion_disproves_arrival`) `:1223-1254`; sau đó `_bind_vehicle` `:1263-1269`.
+SAA| **Sample A (thường — đi vào ô)**: JSON: {"obs":[{"o":0.30,"c":[1,5]},{"o":0.34,"c":[3,5]},{"o":0.38,"c":[5,5]}],"slot_c":[5,5],"slot_diag":11.31,"obs_min":3,"ovl_min":0.35,"lost_at_s":9.0,"now_s":9.5,"vision_streak":2}   
+EXA| `obs=3`, `maxO=0.38≥0.35`; `gain=0.08<0.10` nhưng `dist_gain = 4−0 = 4 ≥ max(2,0.566)` → `inward=true` → `qualified`; score `0.55·0.38+0.20·1.0+0.15·min(1,0.354/0.10→1.0)+0.10·min(1,0.08/0.15) = 0.6123`; commit: streak 2≥2, `9.5−9.0=0.5 ≥ 0.35` → **bind**.
+SAB| **Sample B (biên — tranh chấp sít / xe lướt)**: JSON: {"rival_case":{"obs":[{"o":0.36,"c":[9,5]},{"o":0.36,"c":[9.5,5]},{"o":0.35,"c":[10,5]}],"slot_c":[5,5],"slot_diag":11.31},    "margin_case":{"winner_score":0.6123,"runner_score":0.55,"margin":0.15}}   
+EXB| rival `dist_gain = 4−5 = −1 < 2`, `gain=−0.01` → `inward=false` → **không qualified**; margin `0.6123−0.55=0.0623 < 0.15` → **`competing_vehicle` reject** — hệ thống không chọn bừa khi hai claim ngang nhau.
+
+### D4 `vision-primary-fusion` — Vision là nguồn sự thật của occupied
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:2501-2569` (`update_vision` nhánh `vision_primary`); `_detach_binding_for_departure` `:1533-1565` (`binding.vehicle_id = None` `:1548`); `_restore_false_empty_token` `:1566-1635`; legacy sticky-clear `:2595-2604`.
+IO| - **Input**: `vision[occupied, ratio]` per slot; `binding`; `token`. **Output**: `public state {occupied, vehicle_id}` + token/detach/restore/commit.
+CPLX| - **Độ phức tạp**: O(S) mỗi vision tick. **space** O(S); **[sim]**: O(S).
+STRUCT| - **Cấu trúc**: `SlotBinding{vehicle_id, tracking_state, vision_occupied}`; `DepartureToken{confirmed_empty, empty_observations, predeparture}`.
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. `!vision_occupied` && (owner≠None || token tồn tại) → `_create_departure_token(confirmed_empty=True, reason="vision_became_empty"|"vision_empty_confirmation")` + **`_detach_binding_for_departure` — `vehicle_id=None` ngay** `:2507-2526`, `:1548`. ;; 2. `vision_occupied` && token → `empty_observations>0 || !predeparture` → `_restore_false_empty_token` (occupied đầu tiên sau empty được coi là flicker) `:2546-2557`; predeparture `empty_obs=0` → giữ nguyên (xe còn đậy ô): `:1566-1573`. ;; 3. `vision_occupied && vehicle_id=None` → `_try_commit_arrival_claim` (D3) `:2559-2564`. ;; 4. `_sync_result` — public `occupied = vision` luôn `:2566-2568`.
+SAA| **Sample A**: `{"slot":"s1","vision":1,"owner":null}` → **Expected**: `public.occupied=true`, `vehicle_id=null`, `arriva JSON: NONE
+EXA| `public.occupied=false` (vision thắng) + `departure_token(confirmed_empty)` + **`vehicle_id=None` + `tracking_state="recovery_pending"`** — KHÔNG "binding giữ v7": danh tính đã chuyển vào token; xe thật còn đỗ sẽ được D9/D10 cứu ID nếu fragment xuất hiện.
+SAB| **Sample B (biên — vision mất nhưng owner còn)**: `{"vision":0,"owner":"v7","token":null}` → **Expected** (verify): `pub JSON: NONE
+
+### D5 `stop-dwell-detection` — Xác nhận xe đã dừng hẳn trong ô
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:1316-1355` `_is_stopped`; `:1357-1407` `_advance_strong_overlap` (+`duration ≥ stop_s + stop_commit_grace`); `:1408-1447` `_strong_overlap_is_stable`; `:1365-1369` `_strong_overlap_max_gap_seconds` (derived).
+IO| - **Input**: `observations: [(t_s, center, bbox, slot_id, overlap, fresh)]`, `slot_id`, `now_s`; `stop_s`, `min_stop_samples`, `stationary_radius_ratio`, `stationary_drift_ratio` [~config]. **Output**: `(stopped: bool, stopped_ms: int)` — `stopped_ms = int(duration·1000)` (span mẫu, không phải `now−first_stable`).
+CPLX| - **Độ phức tạp**: O(n) n = số mẫu trong cửa sổ (bounded). **space** O(n) mẫu cửa sổ; **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `VehicleParkingState.observations` deque (:35-53); `strong_overlap_since`; `SlotBinding`.
+LIB| - **Thư viện ngoài**: `numpy` percentile [code].
+PSEUDO| 1. `_is_stopped`: lọc mẫu trong `stop_s` (+ fresh khi `vision_primary`), cắt **fresh-suffix** tại gap `> max_gap_s` (`max_gap_s = max(0.25, 2·stop_s/max(min_stop_samples,2))` — derived); `n ≥ min_stop_samples`; `duration ≥ stop_s·0.90`; `same_slot_ratio ≥ 0.80`; `r95 = percentile95(‖p−median‖) ≤ max(3.0, r_ratio·diag)` và `net_disp = ‖last−first‖ ≤ max(5.0, d_ratio·diag)` với `diag = median bbox_diagonal`. ;; 2. `_strong_overlap_is_stable`: mẫu fresh từ `strong_overlap_since` cùng slot `overlap ≥ strong_vehicle_overlap`; `n ≥ min_samples`; `inlier_ratio = mean(‖p−median‖ ≤ max(3.0, r_ratio·diag)) ≥ 0.60`; `k = max(2, min(n//3, 5))`; `robust_drift = ‖median(last k) − median(first k)‖ ≤ max(5.0, d_ratio·diag)`.
+SAA| **Sample A (thường — đứng yên, đường `_is_stopped`)**:  JSON: {"slot":"s1","samples":[[0.0,[5.0,5.0]],[0.5,[5.2,5.0]],[1.0,[5.0,5.2]],[1.5,[5.1,5.1]],[2.0,[4.9,5.0]],[2.5,[5.0,4.9]]],"min_samples":6,"stop_s":2.5,"r95_max":1.0,"drift_max":0.5,"same_slot":true}   
+EXA| `n=6`, `duration=2.5 ≥ 0.90·2.5`; median=(5,5); `r95 = 0.20` (radii sorted `[0,0.1,0.1,0.141,0.2,0.2]`, p95 index 4.75); `net_disp=0.10` → **`stopped=true`, `stopped_ms=2500`**.
+SAB| **Sample B (biên — một outlier, hai đường khác verdict)**: JSON: {"slot":"s1","samples":[[0.0,[5.0,5.0]],[0.5,[5.2,5.0]],[1.0,[5.0,5.2]],[1.5,[9.0,9.0]],[2.0,[4.9,5.0]],[2.5,[5.0,4.9]]],"min_samples":6,"stop_s":2.5,"r95_max":1.0,"drift_max":0.5,"stat_radius":3.0}   
+EXB| `_is_stopped`: `r95 ≈ 4.29 > 1.0` → **`stopped=false`**; `_strong_overlap_is_stable` (cùng mẫu, radius demo 3.0): `inlier_ratio = 5/6 ≈ 0.83 ≥ 0.60`, `k=2`, `robust_drift = ‖median(last2)−median(first2)‖ = ‖(4.95,4.95)−(5.1,5.0)‖ ≈ 0.16 ≤ drift` → **vẫn stable** — một outlier phá đường r95 nhưng không phá đường inlier.
+
+### D6 `sticky-id-bind-release` — Giữ ID chủ ô + giải phóng
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:1919-1981` `_bind_vehicle`; `:1982-2046` `_release_vehicle`; `:2501-2557` vision-empty→token+detach; `:2595-2604` sticky-clear legacy; `:1566-1634` `_restore_false_empty_token`.
+IO| - **Input**: `slot.owner`, `vision_occupied`, sự kiện tracking (`release`) + vision tick. **Output**: transition + lý do (`sticky_id_conflict`/`competing_vehicle`/`released:reason`/`vision_confirmed_empty`/`false_empty_restored`).
+CPLX| - **Độ phức tạp**: O(1)/sự kiện. **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `SlotBinding{vehicle_id, tracking_state, vision_occupied}`; `DepartureToken`; event log.
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. `bind`: `owner` khác gid đang giữ → reject `sticky_id_conflict` (nếu `vision_occupied`) hoặc `competing_vehicle` (nếu vision trống nhưng owner còn treo). ;; 2. `bind` ok → set `vehicle_id`, `bound_frame`, `overlap`, `stopped_ms`; mở episode `parked` (D11). ;; 3. Tracking mất xe → `_release_vehicle`: episode→`departing`, `tracking_state="exit_pending"` (**nhãn**, không phải bộ đếm); nếu vision còn occupied → owner vẫn treo (sticky) + token `predeparture`; nếu vision đã trống → gỡ owner ngay. ;; 4. Vision-empty đầu tiên (đã có owner/token) → `_create_departure_token(confirmed_empty)` + `_detach_binding_for_departure` — owner bị gỡ **ngay tại tick này**; `empty_observations ≥ 2` chỉ bật cờ audit, không quyết định release. ;; 5. Vision occupied quay lại trước khi token bị consume (ngoại lệ: predeparture `empty_obs=0`) → `_restore_false_empty_token` → owner phục hồi, episode `departing→parked` — đây là "chống flick" thật (token-rollback, không countdown).
+SAA| **Sample A**: `{"slot":"s1","owner":"v0","vision_occupied":true,"events":["t1:claim_v1","t2:tracker_lost","t4:vision_emp JSON: NONE
+EXA| `t3 → _restore_false_empty_token` → **owner v0 phục hồi, token hủy, episode về `parked`** — kết luận "sống sót qua nhiễu" giống hệt nhưng cơ chế là rollback, không phải reset streak.
+SAB| **Sample B (biên — false empty)**: `{"slot":"s1","owner":"v0","events":["t2:vision_empty→detach+token","t3:vision_occupi JSON: NONE
+
+### D7 `departure-token-lifecycle` — Vòng đời token nhớ xe sắp/đã rời
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:1449-1532` `_create_departure_token`; `:1533-1565` `_detach_binding_for_departure`; `:1566-1635` `_restore_false_empty_token`; `:603-609` `_token_radius`; `:1742-1914` `_cleanup_tokens`; defaults `:225-229,236-237` — `retention 5.0`, `extension 15.0`, `initial/max expand ratio 0.05/0.45`, `expand_seconds 1.0`, `guard 2.5`, `false_empty_grace 1.25`.
+IO| - **Input**: owner cũ + timestamp empty; `slot_diagonal`. **Output**: `DepartureToken` sống → `consume` (D10) | `restore` | `cancel` | `expire`.
+CPLX| - **Độ phức tạp**: O(1)/token + O(tokens·candidates) cleanup. **space** O(tokens + evidence); **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `DepartureToken{global_id, polygon, center, slot_diagonal, origin, appearance, size, created_at_s, expires_at_s, confirmed_empty, predeparture, empty_observations, candidates, retention_extensions}`.
+LIB| - **Thư viện ngoài**: `cv2`/`numpy` [code].
+PSEUDO| 1. **`radius(t) = diag · (0.05 + min(1, age/1.0s)·0.40)`** `:603-609` — nội suy ratio, bão hoà sau `expand_seconds`, tỉ lệ theo kích thước ô (không có `r0 + rate·Δt`). ;; 2. `expires = created + recovery_retention_seconds(5.0)` (set trong `_create_departure_token`). ;; 3. Vision occupied lại (empty_obs>0 hoặc !predeparture) → `restore` — hủy token, khôi phục binding (D4) `:2546-2557`. ;; 4. Fragment khớp (D9/D10) → `consume` → gid chuyển sang track mới, episode `released`. ;; 5. Cleanup `:1742-1914`: predeparture `empty_obs=0` && `age > 2.5s` && `!fresh_evidence && !qualified_evidence && !(verdict_pending && candidate_tracking)` → `cancel predeparture_guard_expired` `:1745-1803`; `now ≤ expires` → chỉ dọn candidate cũ `:1804-1819`; `now > expires` && `now < created+5+15` && `_token_extension_blocker` → gia hạn `min(now+max(0.25, expand_s), deadline)` `:1820-1846`; ngược lại expire → episode `released/recovery_expired` (trừ predeparture-owner-còn-parked → `provisional_expired_owner_still_parked`) `:1847-1911`.
+SAA| **Sample A (thường — radius nở)**: JSON: {"slot_diagonal":100,"dt":[0,0.5,1,3],"init":0.05,"max":0.45,"expand_s":1.0}   
+EXA| `radius = [5, 25, 45, 45]` — nội suy `diag·(0.05 + min(1,t/1.0)·0.40)`, **bão hoà 45 sau 1s** (không tăng tuyến tính vô hạn như `r0+rate·t`).
+SAB| **Sample B (biên — guard cancel)**: JSON: {"token":{"predeparture":true,"confirmed_empty":false,"empty_obs":0,"created":10.0,"candidates":[]},"now":12.6,"guard_s":2.5,"binding_vision_occupied":false}   
+EXB| `age 2.6 > 2.5` và không fresh/qualified evidence, không verdict_pending → **`cancel:predeparture_guard_expired`** — token dự phòng không được để treo vô hạn; ngược lại nếu `vision_occupied` vẫn true và `age ≤ max(2.5,1.25)` thì guard chưa chặt (verdict pending).
+
+### D8 `predeparture-candidate-guard` — Đánh dấu ứng viên trước khi mất binding
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:479-552` `prepare_predeparture_tokens` — **duyệt `unbound_tracks` (fragment), không duyệt bindings/owner**: tín hiệu là "fragment không-bind xuất hiện cạnh ô đang occupied", không phải "owner overlap giảm + velocity hướng ra".
+IO| - **Input**: `unbound_tracks` {key→{bbox, point}}, bindings, `camera_id`. **Output**: `protected: set[key]` + predeparture token mới/refresh.
+CPLX| - **Độ phức tạp**: O(F·B), F unbound × B bindings. **space** O(F·B) choices; **[sim]**: O(F·B).
+STRUCT| - **Cấu trúc**: `protected` set; `DepartureToken{predeparture, confirmed_empty}`; `_bindings`.
+LIB| - **Thư viện ngoài**: không trực tiếp (`cv2.pointPolygonTest`, `intersectConvexConvex` bên trong).
+PSEUDO| 1. Với mỗi unbound track: `bbox`, `point` (recovery_bbox/position hoặc bottom_center) `:493-495`. ;; 2. Với mỗi binding `vehicle_id≠None && vision_occupied && polygon && camera khớp`: `diag = _slot_diagonal`; `signed = _signed_polygon_distance(point, poly)`; `overlap = _raw_vehicle_overlap(bbox, poly)`; **bỏ qua nếu `signed < −0.05·diag && overlap ≤ 0`** (quá xa và không chạm) `:505-510`; còn lại → `choices` ghi `dist(point, center)/diag`. ;; 3. `choices` rỗng → bỏ; sắp xếp; **nếu ≥2 choices và `choices[1]−choices[0] < 0.15` → skip** (không đoán khi 2 ô gần nhau tranh fragment) `:511-517`. ;; 4. `binding = choices[0]`; không có token → `_create_departure_token(predeparture=True, confirmed_empty=False, reason="motion_started_in_parked_slot")` + event `predeparture_token_opened` `:519-534`; token predeparture cũ `empty_obs=0` → **refresh `created_at_s` + gia hạn `expires`** `:535-550`. ;; 5. `protected.add(key)` — key được bảo vệ khỏi allocate mới `:551`.
+SAA| **Sample A (thường — fragment cạnh ô)**: JSON: {"slot":{"diag":11.31,"occupied":true,"owner":"v7"},"frag":{"point_signed":-1.0,"overlap":0.10,"dist_over_diag":0.30},"other_slots":[]}   
+EXA| `initial_radius = 11.31·0.05 = 0.566`; `signed=−1.0 < −0.566` nhưng `overlap=0.10 > 0` → **giữ** (điều kiện OR); 1 choice → `predeparture_token(motion_started_in_parked_slot)` + fragment `protected`.
+SAB| **Sample B (biên — hai ô tranh / fragment xa)**: JSON: {"ambiguous":{"frag":{"point_signed":-1.0,"overlap":0.10,"dist_over_diag":0.30,"other_dist_over_diag":0.40}},"far":{"frag":{"point_signed":-11.0,"overlap":0.0,"dist_over_diag":2.0}}}   
+EXB| ambiguous `0.40−0.30=0.10 < 0.15` → **skip — không token** (an toàn hơn đoán nhầm ô); far `signed < −0.566 && overlap=0` → **không ứng viên**.
+
+### D9 `recovery-candidate-gates` — Cổng nhận fragment khôi phục ID
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:2763-3570` `batch_recover_ids` — `radius`/`max_radius` `:2875-2876`; admission `:2980-2994`; origin gate `:3233-3239`; expanding gate `:3240-3249`; size `:3251-3284`; appearance `:3286-3304`; outward `:3306-3391`; confirmed-empty `:3416-3421`; cost `:3423-3472`; defaults `:230-240`.
+IO| - **Input**: `token{polygon, center, slot_diagonal, candidates}` + `fragment{point, bbox, first_center/bbox, appearance, obs}`; `is_cross_camera`. **Output**: `cost | diagnostics{reason}`.
+CPLX| - **Độ phức tạp**: O(T·F). **space** O(T·F); **[sim]**: O(T·F).
+STRUCT| - **Cấu trúc**: `RecoveryCandidateEvidence` (:91-134); `RecoveryBatchResult`; `trajectory_evidence`.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `radius = _token_radius(token)`; `max_radius = diag·0.45` `:2875-2876`. Admission: `signed < −max_radius && overlap≤0 && !continuing` → skip `:2987-2992`. ;; 2. Origin: `first_signed < −max_radius` → `origin_outside_max_gate` `:3233-3239`. ;; 3. Expanding gate: `signed < −radius && overlap ≤ 0 && !continuing` → `waiting_for_expanding_gate` `:3240-3249`. ;; 4. Size: `size_ratio ∈ [0.40, 2.50]` (legacy) **hoặc** `trajectory_ready && ∈ [0.15, 6.0]` `:3251-3284` → `size_missing_or_mismatch`. ;; 5. Appearance: `limit = 0.70 nếu (!cross && max(first_ovl, ovl) ≥ 0.25) else 0.55`; `app is None || app > limit` → `appearance_missing_or_mismatch` `:3286-3304`. ;; 6. Outward evidence — `obs ≥ 3` **và** một trong `:3380-3391`: ;; 7. `!token.confirmed_empty` → `departure_not_yet_confirmed` (chờ, không reject hẳn) `:3416-3421`. ;; 8. `spatial = min(1, ‖point − center‖/(diag + radius))`; `size_cost = min(1, |ln(size_ratio)|/ln 2.5)`; `direction_cost` theo nguồn; **`cost = 0.45·spatial + 0.35·(app/limit) + 0.15·size_cost + 0.05·direction`** `:3423-3472`.
+SAA| **Sample A (thường — qualified)**: JSON: {"token":{"center":[5,5],"diag":11.314,"radius":5.09,"max_radius":5.09,"confirmed_empty":true},    "frag":{"first_center":[5,5],"first_signed":3.0,"first_bbox_overlap":0.5,"point":[12,5],"signed":-4.0,"overlap":0.0,"app":0.2,"size_ratio":0.9,"obs":3,"moved_px":7,"min_radial":0,"radial_now":7,"originated_in_slot":true},"is_cross":false}   
+EXA| gates qua hết (`first_signed 3 > −5.09`; `signed −4 ≥ −5.09`; size 0.9∈[0.4,2.5]; `max(0.5,0)≥0.25` → limit relaxed 0.70, `0.2≤0.70`; `moved 7≥3`, `outward 7≥1.5`, `radial_gain 7≥0.75`; obs 3) → `spatial=min(1,7/16.4)=0.4267`; `size_cost=|ln0.9|/ln2.5=0.115`; `dir_cost=clip(1−7/3)=0` → **`cost = 0.45·0.4267 + 0.35·0.2857 + 0.15·0.115 + 0 = 0.3093`**.
+SAB| **Sample B (biên — đi ngược vào ô)**: JSON: {"token":{"center":[5,5],"diag":11.314,"radius":5.09,"max_radius":5.09,"confirmed_empty":true},    "frag":{"first_center":[10,5],"first_signed":-1.0,"first_bbox_overlap":0.5,"point":[6,5],"signed":-2.0,"overlap":0.5,"app":0.2,"size_ratio":0.9,"obs":3,"moved_px":4,"min_radial":5,"radial_now":1,"originated_in_slot":false,"world_ready":false},"is_cross":false}   
+EXB| qua admission/origin/size/app (`first_signed −1.0 ≥ −5.09`; `signed −2.0 ≥ −5.09`; `max(0.5,0.5)≥0.25` → limit 0.70 ≥ 0.2); outward: `first_vector=(5,0)`, `radial_first=5 ≥ 0.35·11.314=3.96` → `outward_unit=(1,0)`; `outward_px=(−4)·1=−4 < 1.5`; `radial_gain=−4 < 0.75`; escape fail (`originated_in_slot=false`); `world_ready=false` → **`reject:insufficient_outward_evidence`** — đúng chỗ đúng màu nhưng quay đầu vào ô.
+
+### D10 `recovery-batch-assignment` — Gán token→fragment hàng loạt
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:2763-3570` `batch_recover_ids` (`lapjv(extend_cost=True, cost_limit=0.999)` `:3520`; ambiguity margin `:3526-3557`); `:2726-2761` `_consume_departure_token`; `:3571-3595` `consume_recovery_match` (re-validate `confirmed_empty` `:3584`); `try_recover_id` `:3597-…` đường đơn.
+IO| - **Input**: `costs[T×F]` (chỉ cặp qua D9) + `pair_details`. **Output**: `{local_key → global_id}` + `ambiguous_local_keys` + unmatched.
+CPLX| - **Độ phức tạp (code)**: O(n³) + O(T·F) gap. **space** O(T·F); **[sim]**: exhaustive O(n!) n≤5.
+STRUCT| - **Cấu trúc**: `RecoveryBatchResult{recovered_ids, protected_local_keys, ambiguous_local_keys, eligible_pairs, diagnostics}`.
+LIB| - **Thư viện ngoài**: `lap.lapjv` [code] — demo solver exact.
+PSEUDO| 1. `costs[t][f] = cost(D9)` hoặc `10` nếu reject. ;; 2. `lapjv(extend_cost=True, cost_limit=0.999)` `:3520` — **0.999, không phải 0.95**: gần như mọi cặp qua gate đều được gán nếu tối ưu. ;; 3. Với mỗi cặp thắng: `row_gap = min(cost khác trong hàng <10) − cost`; `col_gap = min(cost khác trong cột <10) − cost`; **`row_gap < 0.15 || col_gap < 0.15` → skip consume + đánh dấu `ambiguous_local_keys` + event `parked_id_recovery_ambiguous`** `:3526-3557` — margin cột tính cả token thua. ;; 4. `consume` (`_consume_departure_token`): pop token + `_pending_release`; episode → **`"released"`, reason `"departure_confirmed"`** `:2735-2740`; vehicle `movement_state="exit_pending"`, cooldown `+2.5s`; event `parked_id_recovered` `:2741-2760`.
+SAA| **Sample A (thường — 1 cặp consume)**: JSON: {"costs":[[0.20,10],[0.55,10]],"limit":0.999,"margin":0.15}   
+EXA| tok0 thắng `0.20` vs `0.55`; `col_gap = 0.55−0.20 = 0.35 ≥ 0.15`, `row_gap = ∞` → **`tok0→f0` consume**: fragment nhận `global_id`, episode `released`/`departure_confirmed`; `tok1` unmatched chờ TTL.
+SAB| **Sample B (biên — margin cột chặn)**: JSON: {"costs":[[0.30,10],[0.34,10]],"limit":0.999,"margin":0.15}   
+EXB| tok0 thắng `0.30` nhưng `col_gap = 0.34−0.30 = 0.04 < 0.15` → **`ambiguous_reject` — không ai consume**, event `parked_id_recovery_ambiguous`, cả hai token chờ (an toàn hơn gán sai).
+
+### D11 `parking-episode-state` — Vòng đời episode đỗ xe
+CODE| - **Code**: `backend/main_detect/src/techgar/slot_vehicle_binder.py:888-944` `_open_parking_episode`; `:945-977` `_transition_parking_episode`; `:1533-1565` `_detach_binding_for_departure`; `:1566-1634` restore→`parked` (`false_empty_restored`); `:1986` release→`departing` (`released:<reason>`); `:2618`, `:1906` terminal→`released` (`parking_slot_removed`/`recovery_expired`).
+IO| - **Input**: bind/release/vision/token events + timestamps. **Output**: `episode {parking_episode_id, global_id, slot_id, state, revision, reason, evidence_*}`.
+CPLX| - **Độ phức tạp**: O(1)/transition. **space** O(episodes); **[sim]**: O(n) duyệt chuỗi.
+STRUCT| - **Cấu trúc**: `_episode_by_slot` (đang sống) + `_parking_episodes` (log đã released); `revision`/`reason`/`evidence_frame_idx`.
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. `bind` → episode mới **`state="parked"`** ngay (`revision=1`, id `slot:G{gid}:F{frame}`); dedupe: cùng `global_id` rebind → trả episode cũ (chống double-session). ;; 2. Release/detach (`_release_vehicle`, `_detach_binding_for_departure`) → `departing` (`reason=released:<why>`/`vision_confirmed_empty`...). ;; 3. `restore` (false-empty, D6) → `departing→parked` — **không đóng**, cùng `parking_episode_id`, `revision++`. ;; 4. Consume/expire/vision_confirmed_empty/slot_removed/reservation_rejected → **`released`** = terminal: pop `_episode_by_slot` → append `_parking_episodes` + emit `parking_episode_state_changed`.
+SAA| **Sample A**: `{"events":["bind@1","token+detach@6","vision_confirmed_empty@11"]}` → **Expected**: `parked(1) → departin JSON: NONE
+EXA| `parked → departing → parked` — episode **không đóng**, `revision=3`, tiếp tục (không double-session).
+SAB| **Sample B (biên — false empty)**: `{"events":["bind@1","token+detach@6","restore@6.5"]}` → **Expected**: `parked → depa JSON: NONE
+
+### E1 `world-projection-anchor` — Chiếu pixel→world qua homography
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:1370-1377` `_world`; `:1419-1427` `_local` (chiều ngược); `:1379-1403` `_bbox_anchor` (anchor theo camera config); `:1407-1417` `_track_world`, `_expired_track_world`.
+IO| - **Input**: `local_point (px)`, `cam_id`, `H[3×3]` hoặc `camera_crops[cam_id]=(x1,y1,w,h)`, `anchor_mode`. **Output**: `world (x_cm, y_cm)` — **tuple thường, không có cờ `approx`** (production không đánh dấu fallback).
+CPLX| - **Độ phức tạp**: O(1)/điểm; O(T) cho T track. **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `H` per cam; dict `transforms`.
+LIB| - **Thư viện ngoài**: `cv2.perspectiveTransform`/`numpy` [code] — demo ma trận 3×3.
+PSEUDO| 1. `transform` tồn tại → `p = H · [u, v, 1]ᵀ`; `(x, y) = (p.x/p.w, p.y/p.w)`. ;; 2. Fallback: `(x1, y1, _, _) = camera_crops[cam_id]` → `world = (x1 + u, y1 + v)` — cộng offset crop, **không phải** identity `world = px`. ;; 3. Anchor (A6) theo config cam → pixel → chiếu. ;; 4. `_local` = nhân `H⁻¹` — chiếu ngược world→pixel.
+SAA| **Sample A**: `{"H":[[2,0,10],[0,2,20],[0,0,1]],"px":[5,5]}` → **Expected** (verify): `world = (2·5+10, 2·5+20) = (20,30 JSON: NONE
+EXA| `world = (30+5, 40+5) = (35,45)` — tuple thường, **không kèm cờ**; khác identity `(5,5)` — cross-cam matching vẫn nhận nhưng đo bằng pixel-crop chứ không phải cm.
+SAB| **Sample B (biên — chưa calibrate)**: `{"H":null,"crop_origin":[30,40],"px":[5,5]}` → **Expected** (verify): `world = (3 JSON: NONE
+
+### E2 `handoff-entry-creation` — Tạo yêu cầu chuyển giao khi xe ra biên
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:2475-2548` `_outward_edge`; `:2572-2743` `_upsert_handoff`.
+IO| - **Input**: track (`cx,cy` px, `vx,vy` **px/frame**), `edge`/camera size, `lookahead_frames` (default **16**, `:155`). **Output**: `HandoffEntry{cam, local_id, edge, expected_vel, updated_at_frame, ttl}` (:40-64) hoặc `None`.
+CPLX| - **Độ phức tạp**: O(1)/track. **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `HandoffEntry`; `expected_vel`/`velocity_world` cho E3. TTL **hai dạng**: `handoff_ttl = 45` **frames** (mặc định) hoặc `handoff_ttl_seconds` (tuỳ chọn — khi set thì so timestamp thay frame).
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `_outward_edge` nhánh bbox-edge (`:2531-2542`): `vx < −1.0` → `t = cx/|vx|` edge `left`; `vx > 1.0` → `t = (width − cx)/vx` edge `right`; tương tự `vy` cho `top`/`bottom` — **gate vận tốc `|v| > 1.0 px/frame`**. Nhánh custom-mask (`:2510-2530`): tham số chiếu `t` trên cạnh edge-vector, gate `speed_towards > 0.1`, cho phép overshoot `t > −5.0`. ;; 2. `time_to_edge = min(options)`; `time_to_edge > lookahead_frames` → `None` — **so sánh trực tiếp theo frame**, không quy đổi giây. ;; 3. `t ≤ lookahead` → `_upsert_handoff` tạo entry (refresh nếu đã có); entry hết TTL không match → hủy.
+SAA| **Sample A**: `{"cx":90,"vx":4,"edge_x":95,"lookahead_frames":16}` (vx **px/frame**) → **Expected** (verify): `t_edge =  JSON: NONE
+EXA| `vx=0.2 ≤ 1.0` → không qua gate vận tốc → **`None`**; biến thể `vx=0.5` cũng `None`; nếu dùng `vx=1.5` thì `t_edge = 5/1.5 = 3.33 frames ≤ 16` → entry; `vx=−4` → cạnh trái `t = 90/4 = 22.5 frames > 16` → `None`.
+SAB| **Sample B (biên — chạy xa biên/quá chậm)**: `{"cx":90,"vx":0.2,"edge_x":95,"lookahead_frames":16}` → **Expected** (veri JSON: NONE
+
+### E3 `handoff-prediction-corridor` — Dự đoán nơi xe xuất hiện ở camera kề
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:2744-2775` `_predicted_world`; `:2776-2822` `_entry_depth`; `:2823-2830` `_direction_cosine`.
+IO| - **Input**: `entry.last_world`, `entry.velocity_world` (**world/frame**), `frame_idx`, `entry.updated_at_frame`; nhánh giây: `handoff_ttl_seconds` set + `entry.updated_at_time` + `timestamp_s` + `velocity_world_per_second`. **Output**: `pred_world`, `dir_cos`, `entry_depth`.
+CPLX| - **Độ phức tạp**: O(1). **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `HandoffEntry{last_world, velocity_world, velocity_world_per_second?, updated_at_frame, updated_at_time?}` (:40-64); cosine scalar.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. **Nhánh timestamp** chỉ khi `handoff_ttl_seconds` được set **và** `updated_at_time`, `timestamp_s` tồn tại: `elapsed = max(0, timestamp_s − updated_at_time)`; `vel = velocity_world_per_second` nếu có, ngược lại **`velocity_world × 25.0`** (quy đổi FPS hard-code); `pred = last_world + vel · elapsed`. ;; 2. **Fallback (mặc định)**: `elapsed = max(0, frame_idx − updated_at_frame)` **đơn vị frame** — `pred = last_world + velocity_world · elapsed` — **KHÔNG chia fps**. ;; 3. `dir_cos = cos(vel_track, expected_vel_entry)` — hướng khớp kỳ vọng. ;; 4. `entry_depth` = khoảng đi sâu vào cam kề (đo độ chắc của match).
+SAA| **Sample A (nhánh frame — mặc định)**: `{"last_world":[100,50],"vel_per_frame":[0.2,0],"updated_at_frame":10,"frame_idx" JSON: NONE
+EXA| `elapsed = 1.2s` → `pred = (100 + 2·1.2, 50) = (102.4, 50)`; nếu thiếu `vel_per_second` → fallback `vel_per_frame·25.0` (ví dụ `0.08·25 = 2.0/s` → cùng `(102.4,50)` nếu per-frame=0.08).
+SAB| **Sample B (nhánh timestamp — chỉ khi cấu hình giây)**: `{"last_world":[100,50],"vel_per_second":[2,0],"updated_at_time" JSON: NONE
+
+### E4 `handoff-lapjv-matching` — Khớp entry↔track mới bằng solver
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:3442-3805` `_match_pending_handoffs`; `:2831-3019` `_candidate_cost`.
+IO| - **Input**: `entries[]`, `new_tracks[]` cam kề; cost terms + radius/`cost_limit`. **Output**: `{entry → track}` → bind global ID; rejections.
+CPLX| - **Độ phức tạp (code)**: O(n³) + build O(E·T). **space** O(E·T); **[sim]**: exhaustive n≤5.
+STRUCT| - **Cấu trúc**: ma trận E×T; `HandoffEntry` (:40-64); rejection log (:3020-3028) — mỗi reject kèm reason literal.
+LIB| - **Thư viện ngoài**: `lap.lapjv` [code] — demo solver exact.
+PSEUDO| 1. `residual > prediction_radius` → reject `prediction_distance`; `entry_depth > entry_limit` → `outside_entry_corridor`; điểm ngoài vùng overlap (signed-distance) → `outside_overlap`. ;; 2. `appearance_distance > 0.45` → reject `appearance`; `size_distance > 0.90` → `size`; `dir_cos < 0.25` → `direction`; track `identity_waiting`/`occluded` → reject. ;; 3. `cost = 0.55·(residual/prediction_radius) + 0.30·appearance + 0.10·size + 0.05·direction_cost` (`:3017`) — **literal**, reject `cost > 0.92` (reason `score`). ;; 4. `lapjv(costs, extend_cost=True, cost_limit=0.92)` (`:3615`) → pair; mỗi pair → `_bind` cùng `global_id`; entry TTL hết → drop; track không match → giữ pending.
+SAA| **Sample A**: `{"entry":{"pred":[50,50],"radius":10},"tracks":[{"id":"t1","w":[53,50],"app":0.1,"size":0.05,"dir_cost":0 JSON: NONE
+EXA| `residual 11,12 > radius 10` → **reject `prediction_distance` ngay ở gate 1** (không tới bước cost, `[sim]` hiển thị `cost=10`) → **0 match**, entry chờ `ttl−1`; biến thể `{"w":[59,50],"dir_cos":0.1}` → residual 9 ≤ 10 nhưng `dir_cos 0.1 < 0.25` → reject `direction`.
+SAB| **Sample B (biên — hard gate trước cost)**: `{"entry":{"pred":[50,50],"radius":10},"tracks":[{"w":[61,50]},{"w":[62,50]} JSON: NONE
+
+### E5 `overlap-simultaneous-pairing` — Khớp xe hiện đồng thời ở vùng overlap
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:6312-6356` `_match_simultaneous_overlap`; `:6206-6311` `_match_unbound_cross_camera_pairs`; `:4022-4315` `_match_unique_unbound_cross_camera_tracks`; `:6568-6594` `_merge_all_nearby_active_duplicates`.
+IO| - **Input**: `unbound tracks` 2 cam + `world` points + `radius` + `camera_transforms`. **Output**: `merge | bind | skip` theo đường.
+CPLX| - **Độ phức tạp**: O(T_A·T_B) build + O(P log P) sort. **space** O(T_A+T_B+P); **[sim]**: O(n²).
+STRUCT| - **Cấu trúc**: `pair_costs` sorted + `consumed` set; `MergeResult` (:105-114); `_local_to_global` binding map.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Với mỗi cặp unbound (camA, camB): `d = ‖worldA − worldB‖ ≤ radius` + gate camera-aware size/appearance + probation. ;; 2. Yêu cầu **duy nhất hai chiều** (A chỉ có B trong radius và B chỉ có A) — điều kiện này **chỉ tồn tại ở đường này**. ;; 3. Duy nhất → bind cùng GID; mập mờ → không merge frame này. ;; 4. Build `pair_costs` (overlap distance + appearance gates) → **sort theo cost** → duyệt: bỏ cặp đã `consumed`, bỏ cặp đã có binding, bỏ cặp `_leaves_reserved_slot` (mirror guard E6). ;; 5. Cặp đầu tiên đạt → mint GID mới chung. Ambiguity **được giải bằng thứ tự cost**, không phải skip. ;; 6. `if self.camera_transforms: return None` — **bị vô hiệu khi đã calibrate** (docstring: calibrated dùng đường A). ;; 7. Track unbound của cam này `d ≤ radius` với track cam kề **đã bind GID** → **join GID có sẵn** (pixel-crop shortcut: chỉ 1 distance/histogram check, bỏ qua mọi safeguard của đường A).
+SAA| **Sample A (đường A — merge duy nhất)**: `{"tracksA":[{"id":"a1","w":[50,50]}],"tracksB":[{"id":"b1","w":[52,50]},{"id": JSON: NONE
+EXA| a1 thấy cả b1 (d=2) và b2 (d=4) `≤10` → không duy nhất → đường A **không merge**; cùng input ở đường B: `min cost 0.3 → b1 thắng` (greedy không cần unique) — hai đường cho kết quả KHÁC trên cùng input.
+SAB| **Sample B (đường A — mập mờ)**: `{"tracksA":[{"id":"a1","w":[50,50]}],"tracksB":[{"id":"b1","w":[52,50]},{"id":"b2","w" JSON: NONE
+
+### E6 `global-id-allocation` — Cấp Global ID cho track confirmed
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:2269-2281` `_is_allocatable`; `:2337-2419` `_new_global_id_ready`; `:399-412` `_allocate_global_id`, `_canonical_id`; `:690-746` `bind_external_id`. Defaults `obs_min=5`, `unusual_size_obs=12`, `disp_ratio=0.15` (:163-165).
+IO| - **Input**: track (`confirmed`, `observation_kind`, `association_state`, `fragment_visible_count`, `displacement`, `w,h`). **Output**: `GID` mới hoặc `defer` (ghi nhận defer reason).
+CPLX| - **Độ phức tạp**: O(1). **space** O(G); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: counter GID; map `(cam,local)→GID`; `GlobalIdentityState` (:65-104).
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. `_is_allocatable` = `confirmed` **và** `observation_kind == 'detection'` **và** `association_state ∉ {split_recovering, occluded_prediction, watershed_provisional, frozen_ambiguous, ambiguous_merged}`. ;; 2. `fragment_obs ≥ obs_min (5)` — legacy tracker không có `fragment_visible_count` → pass gate này. ;; 3. `disp ≥ max(6.0, 0.15·hypot(w,h))` — `disp` đo từ `first_observation_point`. ;; 4. Gate tin cậy kích thước (trusted size refs): `size_distance > 0.65` và `(obs<12 || disp<0.6·diag)` → defer. `[sim-omits]` ;; 5. `allocate` → `GID++`; `_bind(cam, local, GID)`; gallery/anchor khởi tạo.
+SAA| **Sample A**: `{"track":{"state":"confirmed","obs_kind":"detection","assoc_state":"matched","fragment_obs":6,"disp":7,"b JSON: NONE
+EXA| `obs 4 < 5` → **defer** — chưa cấp GID mới dù disp đủ; cùng input `assoc_state:"occluded_prediction"` → defer ngay từ gate 1 (blocklist).
+SAB| **Sample B (biên — thiếu một chân)**: `{"track":{"state":"confirmed","obs_kind":"detection","assoc_state":"matched","fra JSON: NONE
+
+### E7 `dormant-identity-reid` — Hồi sinh identity ngủ qua cửa ReID
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:4911-5747` `_match_dormant_identities`; gate helpers `:4659-4910` (`_same_camera_recovery_is_stale` :4659-4692, `_reachable_distance_limit` :4693-4712, `_dormant_candidate_distance_limit` :4713-4790, `_identity_is_established` :4791-4808, `_has_durable_turnaround_proof` :4809-4893, `_predicted_identity_world` :4894-4910).
+IO| - **Input**: track mới + `dormant identities`; ngưỡng `reachable_limit`, `app_max`, `size`, `stale_s` [~config]. **Output**: `revived GID | new GID | defer`.
+CPLX| - **Độ phức tạp**: O(D·k) dormant × gates. **space** O(D); **[sim]**: O(D).
+STRUCT| - **Cấu trúc**: `GlobalIdentityState.dormant`; `DirectionReIDClaim` (:116-128); rejection log.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Với mỗi dormant: `limit = _reachable_distance_limit(id, elapsed)`; `d > limit` → skip. ;; 2. Same-camera: nếu `elapsed > stale_s` và track vẫn đang di chuyển → `stale` → skip (không hồi sinh cùng cam). ;; 3. `app_d`, `size_d`, `dir_cos`, topology (cam có kề?) → fail → reject ghi nhận. ;; 4. Qua hết → `revive`: bind lại GID, gallery cập nhật.
+SAA| **Sample A (thường — revive)**: `{"dormant":{"gid":7,"last_w":[60,60],"elapsed_s":2},"track":{"w":[68,60],"app":0.1},"re JSON: NONE
+EXA| `13 > 12` và vẫn di chuyển → **`stale` → skip → cấp GID mới** — hồi sinh cùng cam sau quá lâu bị cấm.
+SAB| **Sample B (biên — stale cùng cam)**: `{"elapsed_s":13,"stale_s":12,"still_moving":true,"same_cam":true}` → **Expected** JSON: NONE
+
+### E8 `world-trajectory-match` — Khớp quỹ đạo world với fragment
+CODE| - **Code**: `backend/main_detect/src/techgar/trajectory_memory.py:48-546` `WorldTrajectoryMemory` (`_estimate` :241-294, `match` :306-423, `match_departure` :424-538, `_point_segment_distance` :295-305); `cross_camera_manager.py:5748-6205` `_match_world_trajectory_identities`.
+IO| - **Input**: `fragment samples [(t,world)]`, `trajectory[]` + `vel_est`, `limit`, `score_min`, `min_dir`. **Output**: `score | reject(stable_wrong_direction/…)`.
+CPLX| - **Độ phức tạp**: O(n_samples·traj). **space** O(samples); **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `TrajectorySample` (:15-24), `TrajectoryEstimate` (:25-35), `TrajectoryMatchEvidence` (:36-47); hai kho provisional/global.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. `_estimate` quỹ đạo: fit `vel` + last point. ;; 2. Hard rejects (`:387-393`): `corridor_distance > radius` → `teleport`; `topology_score ≤ 0` → `camera_topology`; `stable` (đủ `min_observations`) **và** `dir_cos < min_direction_cosine` → `stable_wrong_direction`. ;; 3. `score = 0.35·distance_score + 0.25·appearance + 0.15·direction + 0.10·speed + 0.10·min(time_score, topology) + 0.05·size` — **6 term, literal** (`:395-401`). ;; 4. `score ≥ score_min` → match → evidence cho E7/D10.
+SAA| **Sample A (thường — match, đủ 6 term)**: `{"scores":{"distance":0.8,"appearance":0.6,"direction":0.9,"speed":0.7,"time" JSON: NONE
+EXA| `stable && dir_cos < min_dir` → **`stable_wrong_direction` reject cứng**; biến thể `{"topology_score":0}` → **`camera_topology` reject** — cả hai bất kể score.
+SAB| **Sample B (biên — hard reject không qua score)**: `{"dir_cos":-0.99,"stable":true,"min_dir":0.25}` → **Expected** (veri JSON: NONE
+
+### E9 `merge-alias-resolution` — Gộp GID trùng và giải quyết alias
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:1201-1365` `_merge_global_ids`; `:404-411` `_canonical_id`; `trajectory_memory.py:138-157` `merge`; `_resolve_same_camera_global_conflicts` :3125+, `_resolve_cross_camera_global_conflicts` :3226+.
+IO| - **Input**: `gid_a, gid_b` + merge reason; alias map. **Output**: `canonical gid` + state đã hợp nhất.
+CPLX| - **Độ phức tạp**: chain lookup O(depth) ~O(1) amortized; merge O(gallery+traj). **space** O(G) alias; **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `alias: dict`, `GlobalIdentityState`; `MergeResult`.
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. `canonical = min/resolve(a,b)` theo rank; `alias[dup] = canonical`. ;; 2. `_canonical_id` follow chuỗi alias → root. ;; 3. Gộp: gallery, trajectory (`trajectory.merge`), parked reservation, member tracks. ;; 4. Conflict ngược (2 cam cùng GID không merge được) → resolve theo `member_rank`.
+SAA| **Sample A**: `{"pairs":[["bind","cam1",3,7],["bind","cam2",1,7],["bind","cam2",2,9]],"merge":[7,9]}` → **Expected**: `a JSON: NONE
+EXA| `canonical(11) = canonical(9) = 7` — chuỗi alias phải follow hết.
+SAB| **Sample B (biên — chuỗi)**: `{"alias":{"9":7,"11":9}}` → **Expected**: `canonical(11) = canonical(9) = 7` — chuỗi alias JSON: NONE
+
+### E10 `global-identity-lifecycle` — Vòng đời identity: active→handoff/dormant→exited/expired
+CODE| - **Code**: `backend/main_detect/src/techgar/cross_camera_manager.py:534-689` `_observe_identity`, `_set_identity_dormant`, `_mark_identity_exited`; `:6995-7074` `_refresh_identity_states`; `:7560-7610` exit/cleanup→`expired`; `:846-1027` `sync_parked_reservations`; `:5657` revive→active.
+IO| - **Input**: observation per frame + exit-zone + retention windows + `_parked_reservations`/`_provisional_identity_holds`. **Output**: state transitions + `identity{state, last_seen}`.
+CPLX| - **Độ phức tạp**: O(G) refresh. **space** O(G); **[sim]**: O(G).
+STRUCT| - **Cấu trúc**: `GlobalIdentityState{state, members, galleries, dormant_since_frame/time}` (:65-104).
+LIB| - **Thư viện ngoài**: `cv2`/`numpy` [code].
+PSEUDO| 1. `observe` → `active` + refresh `last_seen`, gallery, anchor. ;; 2. Refresh mỗi frame: reservation → `state = parked|recovery_pending` (ghi đè + clear `dormant_since`); provisional hold → `parking_verification_pending`; ngược lại track mất: `handoff` nếu `canonical gid ∈ _handoffs` else `dormant` (bắt đầu đếm `dormant_since`). ;; 3. `exited`/`expired` bị skip trong refresh — không tự revive. ;; 4. Track expire trong exit-zone → `exited`; `cleanup` quá retention (dormant/handoff) → `expired` — hai cách kết thúc khác nhau. ;; 5. Dormant được revive (E7) → `active` lại.
+SAA| **Sample A**: `{"events":["obs@0","lost@1","entry@1","entry_ttl@4","dormant@4","revive@6"]}` → **Expected**: `active(0)  JSON: NONE
+EXA| `active → exited(2)` (qua exit-zone → đóng, không dormant/revive); biến thể `{"lost@1", retention_hết@30}` → **`expired`** — `exited` ≠ `expired`: exited = thấy xe đi ra, expired = mất dấu quá lâu.
+SAB| **Sample B (biên — hai cách kết thúc)**: `{"events":["obs@0","lost@1","exit_zone@2"]}` → **Expected**: `active → exited( JSON: NONE
+
+### F1 `homography-fit-distributed` — Fit homography pixel→world phân tán
+CODE| - **Code**: `backend/main_detect/tools/calibrate_shared_map.py:396-511` `compute_distributed_shared_homographies`; `:512-560` `compute_homography`; `:562-571` `transform_polygon`; `:695-723` `distributed_fit_coverage`.
+IO| - **Input**: `pairs[] {(u,v)→(X,Y)}` (≥4/cam), `image_size`, chế độ fit (direct/RANSAC/all-pairs). **Output**: `H[3×3]` per cam + residual metrics.
+CPLX| - **Độ phức tạp (code)**: O(n) DLT + O(n·iters) RANSAC. **space** O(n) pairs; **[sim]**: O(n) DLT 4 điểm.
+STRUCT| - **Cấu trúc**: `H` 3×3; measurements dict; diagnostics.
+LIB| - **Thư viện ngoài**: `cv2.findHomography` [code] — demo DLT giản lược.
+PSEUDO| 1. Chuẩn hoá điểm (`_pixel_normalizer` :357-364) về kích thước chuẩn. ;; 2. `cv2.findHomography` (0=LS / RANSAC) → `H`; all-pairs mode gom mọi cặp shared. ;; 3. `residual_i = ‖H·p_i − P_i‖`; `p95`, `max`, `det(H)`. ;; 4. `det ≈ 0` → fit thoái hoá → reject.
+SAA| **Sample A**: `{"pairs":[[0,0,10,20],[5,0,20,20],[0,5,10,30],[5,5,20,30]]}` (cột: u,v,X,Y) → **Expected** (verify): `H = JSON: NONE
+EXA| `n=3 < 4` → **reject "need ≥4 pairs"** — không fit.
+SAB| **Sample B (biên — thiếu điểm)**: `{"pairs":[[0,0,10,20],[5,0,20,20],[0,5,10,30]]}` → **Expected**: `n=3 < 4` → **reject JSON: NONE
+
+### F2 `rectangle-line-fit-gate` — Cổng chấp nhận fit theo vạch kẻ
+CODE| - **Code**: `backend/main_detect/tools/rectangle_line_calibration.py:24-40` `_line_geometry`; `:41-111` `compute_rectangle_line_homographies`; `:112-129` `fit_gate`; `:130-143` `approve_rectangle_line_calibration`.
+IO| - **Input**: line geometry (đoạn vạch kẻ theo px/cm), diagnostics. **Output**: `H` + `reasons[]` gate; approve/copy file.
+CPLX| - **Độ phức tạp**: O(n) lines + fit. **space** O(n); **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: report dict; gate list.
+LIB| - **Thư viện ngoài**: `cv2`/`numpy` [code].
+PSEUDO| 1. `_line_geometry` mỗi vạch → đoạn thẳng + hướng. ;; 2. Fit H từ cặp đường/điểm của rectangle → H + residuals (px & cm). ;; 3. `fit_gate`: `p95_px > 8.5 | max_px > 12 | err_cm > 2.0` → `reasons[]` (literal signature `:112`). ;; 4. `approve` = chỉ khi `reasons` rỗng + reviewed thủ công → copy vào config.
+SAA| **Sample A**: `{"diag":{"p95_px":7,"max_px":11,"err_cm":1.8}}` → **Expected** (verify): `reasons=[]` → **gate pass** (dư JSON: NONE
+EXA| `reasons=["pixel p95 9.0 > 8.5"]` → **gate fail — không được approve**.
+SAB| **Sample B (biên — vượt p95)**: `{"diag":{"p95_px":9,"max_px":11,"err_cm":1.8}}` → **Expected**: `reasons=["pixel p95 9. JSON: NONE
+
+### F3 `calibration-load-validation` — Kiểm tra calibration khi nạp
+CODE| - **Code**: `backend/main_detect/two_camera.py:284-343` `load_calibration` (đọc file, check det/status, trả transforms/H/anchors/meta).
+IO| - **Input**: `calibration.json` (schema v5). **Output**: `(matrices{cam1,cam2}, adjacency, overlap{(cam1,cam2):poly}, exit_zones)` hoặc `ValueError`.
+CPLX| - **Độ phức tạp**: O(1) + O(P) validate polygon. **space** O(P); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: dict transforms; adjacency map; polygon + exit_zones; H⁻¹ cache.
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Đọc JSON. Nếu `calibration_algorithm == "rectangle_line_v1"`: `reviewed_line_fit = (status=="reviewed_fit") ∧ visual_review.accepted ∧ report.status=="fit_ready" ∧ report.point_count==8 ∧ cameras=={cam1,cam2} ∧ ¬fit_gate(report, cameras, max_error_cm_limit)` (`:287-300`) — sai một điều kiện → `ValueError("chua duoc xem/xac nhan hoac fit khong dat")`. ;; 2. `schema_version ≥ 5` **và** `status != "passed"` **và** `¬reviewed_line_fit` → reject (`:301-304`) — đây là lý do `reviewed_fit` standalone bị từ chối. ;; 3. `camera_transforms` keys **phải đúng** `{cam1, cam2}` (`:306-307`); mỗi H: shape 3×3, finite, `|det| ≥ 1e-12` (`:309-316`). ;; 4. `edge_adjacency` phải **đúng** `{cam1:right→cam2, cam2:left→cam1}` (`:318-320`); thiếu/thừa cạnh → reject. ;; 5. Overlap polygon (fitted nếu `reviewed_line_fit`, ngược lại validated/overlap) ≥3 điểm N×2 finite (`:322-331`); `exit_zones` per-cam: camera hợp lệ + polygon ≥3 điểm (`:332-340`). ;; 6. Build `H⁻¹` cho `_local` (E1).
+SAA| **Sample A (schema-v5 đầy đủ, status passed)**: `{"schema_version":5,"calibration_status":"passed","camera_transforms":{ JSON: NONE
+EXA| không có `calibration_algorithm=="rectangle_line_v1"` → `reviewed_line_fit=false` → gate 2: `status != "passed" && !reviewed_line_fit` → **REJECT** — `reviewed_fit` một mình không mở được cửa; cùng file + `calibration_algorithm:"rectangle_line_v1"` nhưng thiếu `visual_review.accepted` → vẫn reject ở gate 1.
+SAB| **Sample B (biên — `reviewed_fit` standalone)**: `{"schema_version":5,"calibration_status":"reviewed_fit","camera_transf JSON: NONE
+
+### F4 `matching-distance-derivation` — Suy bán kính match từ kích thước ô
+CODE| - **Code**: `backend/main_detect/two_camera.py:395-413` `median_slot_length`; `:415-424` `derive_matching_defaults`; `:426-448` `resolve_matching_distance`.
+IO| - **Input**: `parking_slots_world` (polygons); `override`, `configured`, `fallback` per-name. **Output**: distance per `{handoff_match_distance, handoff_prediction_radius, dormant_match_distance, cross_camera_duplicate_distance}`.
+CPLX| - **Độ phức tạp**: O(S·k²) minAreaRect (k=đỉnh/slot) + O(S log S) median. **space** O(S); **[sim]**: O(S).
+STRUCT| - **Cấu trúc**: `SLOT_MATCHING_MULTIPLES` dict literal; scalar per-name; list cạnh dài.
+LIB| - **Thư viện ngoài**: `numpy` median [code].
+PSEUDO| 1. Với mỗi slot polygon ≥3 điểm: `(w,h) = cv2.minAreaRect(points)` → `length = max(w,h)` — **cạnh dài của min-area-rect**, không phải độ dài tuỳ ý (`:395-412`). ;; 2. `med = median(lengths)`; `None` khi không có slot hợp lệ. ;; 3. `derived[name] = round(med · MULT[name], 3)` với `MULT = {handoff_match:1.75, prediction_radius:2.75, dormant_match:1.75, duplicate:0.50}` (`:387-392`, literal). ;; 4. `resolve(name, override, configured, derived, fallback)` (`:426-448`): `override` có → thắng tuyệt đối; `configured=None` → `derived` (hoặc `fallback`); `derived=None` → `configured`; **cả hai có → `min(configured, derived)`** — ceiling: configured không được phình quá slot-derived.
+SAA| **Sample A (derive — literal multiples)**: `{"slot_long_edges":[400,500,600,520,480]}` → **Expected** (verify): `median  JSON: NONE
+EXA| `min(1000, 875) = 875` — configured không thể vượt slot-derived; biến thể `configured:700` → `min(700,875) = 700` (siết được); `override:300` → `300` bất kể hai giá trị kia; `configured:null,derived:null` → `fallback 600`.
+SAB| **Sample B (biên — resolve ceiling)**: `{"name":"handoff_match","configured":1000,"derived":875,"fallback":600}` → **Exp JSON: NONE
+
+### F5 `frame-size-adaptation` — Thích nghi calibration khi độ phân giải đổi
+CODE| - **Code**: `backend/main_detect/two_camera.py:344-394` `adapt_calibration_to_frame_sizes`.
+IO| - **Input**: `calibration` (có `cameras[cam].width/height` gốc), `frame_sizes` runtime. **Output**: `adapted` transforms hoặc `ValueError`.
+CPLX| - **Độ phức tạp**: O(1)/cam. **space** O(1); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: scale matrix diag(sx,sy,1); adapted copy (transforms khác không đổi).
+LIB| - **Thư viện ngoài**: `numpy` [code].
+PSEUDO| 1. Thiếu `source.width/height` → bỏ qua cam đó (`:356-358`). ;; 2. `aspect_src = calib_w/calib_h`, `aspect_rt = run_w/run_h`; `|aspect_src − aspect_rt| > 0.005` → `ValueError("khac ti le runtime … khong duoc dung map cho crop/goc quay khac")` (`:364-369`). ;; 3. `sx = calib_w / run_w`, `sy = calib_h / run_h`; `|sx − sy| > max(sx,sy)·0.005` → `ValueError("runtime resize khong dong deu")` (`:371-374`). ;; 4. `H' = transform @ diag(sx, sy, 1)` — **nhân PHẢI** (`H @ S`: runtime-px `→S→` calib-px `→H→` world; chỉ 2 cột đầu của H bị scale, cột translation — vốn đã ở calib-px — **giữ nguyên**) (`:375-378`).
+SAA| **Sample A (uniform resize — adapt dù lệch lớn)**: `{"calib":{"w":1280,"h":720},"runtime":{"w":640,"h":360}}` → **Expect JSON: NONE
+EXA| aspect `1.7778` vs `1.8286` → `Δ = 0.0508 > 0.005` → **reject crop/khác tỉ lệ**; biến thể `runtime:{640,370}`: aspect `1.7297` → Δ 0.048 > 0.005 reject *và* `sx=2.0, sy=1.946` → `|Δ|=0.054 > 2.0·0.005=0.01` → cũng reject non-uniform. (Lưu ý: `720→760` cùng tỉ lệ sẽ **adapt**, không reject — không có gate % độ lệch.)
+SAB| **Sample B (biên — hai lỗi khác nhau)**: `{"calib":{"w":1280,"h":720},"runtime":{"w":1280,"h":700}}` → **Expected** (ver JSON: NONE
+
+### F6 `camera-skew-synchronization` — Đồng bộ lệch thời gian giữa 2 camera
+CODE| - **Code**: `backend/main_detect/two_camera.py:450-483` `synchronize_live_frames`; call-site `:2087-2089`, `:2482-2484`; defaults `--max-camera-skew-ms 120.0`, `--sync-catchup-reads 3` (parser `make_parser` :1731-2003).
+IO| - **Input**: `frames{cam:(frame,seq,ts_ns)}`, `captures`, `max_skew_ms`, `max_catchup_reads`. **Output**: `frames` cập nhật (in-place) — stream chậm tiến tới.
+CPLX| - **Độ phức tạp**: O(max_catchup_reads) ≤ 3 đọc. **space** O(1); **[sim]**: O(k) bước.
+STRUCT| - **Cấu trúc**: dict frames in-place; sequences/timestamps.
+LIB| - **Thư viện ngoài**: không trực tiếp (dùng `LatestFrameCapture.read_latest_timed` [code]).
+PSEUDO| 1. `skew = max_ts − min_ts`; `skew ≤ max_skew` → xong. ;; 2. Cam chậm (ts nhỏ nhất): nếu không phải `LatestFrameCapture` → dừng (không đọc thêm được). ;; 3. `read_latest_timed(after_sequence, timeout=0.5)` → frame mới hơn; lặp tối đa `max_catchup_reads`. ;; 4. `TimeoutError` → dừng; skew còn → tiếp tục pipeline với pair hiện có (best-effort).
+SAA| **Sample A (thường — catch-up thành công)**: `{"ts":{"cam1":10.00,"cam2":10.30},"newer_cam1":[10.10,10.20,10.25],"max_sk JSON: NONE
+EXA| skew `300ms` → read1 `10.02` (280) → read2 `10.03` (270) → read3 `10.04` (260) — hết `max_reads` mà skew `260>120` → **best-effort, pipeline vẫn chạy** với pair lệch — không chặn.
+SAB| **Sample B (biên — không kịp)**: `{"ts":{"cam1":10.00,"cam2":10.30},"newer_cam1":[10.02,10.03,10.04],"max_skew_ms":120," JSON: NONE
+
+### F7 `latest-frame-mailbox` — Hộp thư chỉ-giữ-frame-mới-nhất
+CODE| - **Code**: `backend/main_detect/src/techgar/latest_frame_capture.py:12-128` `LatestFrameCapture` (`_reader_loop` đọc liên tục giữ frame mới nhất + seq + `monotonic_ns`; `read_latest_timed` :104-113); `backend/main_detect/runtime_server.py:116-139` `RuntimeState.publish_frame` (rate-limit + overwrite pending); `:173-180` `needs_frame`; `:201-220` `wait_for_frame`.
+IO| - **Input**: events `publish(cam,frame)` / `request(cam)` / `wait_for_frame`. **Output**: `(frame, seq, ts_ns)` mới nhất; `needs_frame: bool`.
+CPLX| - **Độ phức tạp**: O(1) mỗi op; wait O(1) + blocking. **space** O(cam) pending; **[sim]**: O(events).
+STRUCT| - **Cấu trúc**: `_latest`, `_pending{cam}`, `_frame_requested_at{cam}`, `Condition` lock.
+LIB| - **Thư viện ngoài**: `cv2.VideoCapture` (reader), `threading.Condition` [code] — demo queue.
+PSEUDO| 1. Reader: `cap.read()` liên tục → ghi đè `_latest = (frame, ++seq, monotonic_ns)`; `CAP_PROP_BUFFERSIZE=1`. ;; 2. `publish`: `now − last_submitted < stream_interval` → drop; ngược lại `_pending[cam] = frame` (ghi đè pending cũ). ;; 3. `needs_frame` = `requested_at` ≤5s trước **và** `now − last_submitted ≥ interval` (`last_submitted` = lần publish **được nhận** gần nhất, không phải lần request). ;; 4. `wait_for_frame(after_seq)`: đánh dấu `requested_at=now`, chờ `seq > after_seq` (hoặc closed/timeout).
+SAA| **Sample A (thường — liveness + overwrite)**: JSON: {"events":[     {"t":0.0,"op":"publish","cam":"cam1","frame":"f1"},     {"t":0.1,"op":"publish","cam":"cam1","frame":"f2"},     {"t":0.2,"op":"request","cam":"cam1"},     {"t":0.3,"op":"publish","cam":"cam1","frame":"f3"},     {"t":0.35,"op":"needs_frame","cam":"cam1"},     {"t":0.4,"op":"encode_next"},     {"t":0.45,"op":"needs_frame","cam":"cam1"}   ],"stream_interval_s":0.15}   
+EXA| publish f2 bị **drop** (0.1−0.0 < 0.15); request@0.2 → subscriber sống; publish f3 pass (0.3−0.0 ≥ 0.15 → `last_submitted=0.3`) → `pending=f3`; **`needs_frame@0.35 = false`** — `0.35 − 0.3 = 0.05 < 0.15`: interval đo từ lần publish **được nhận** (`last_submitted`), KHÔNG từ request; encode_next lấy **f3**; `needs_frame@0.45 = true` (0.45−0.3 = 0.15 ≥ 0.15 — **đúng biên inclusive** — ∧ request 0.25s trước ≤ 5s) — f1/f2 không bao giờ tới consumer.
+SAB| **Sample B (biên — subscriber chết)**: `{"events":[{"t":0.0,"op":"request","cam":"cam1"},{"t":6.0,"op":"needs_frame","ca JSON: NONE
+
+### F8 `stale-evidence-health-gating` — Chặn bằng chứng cũ + giám sát worker
+CODE| - **Code**: `backend/main_detect/src/techgar/parking_detector.py:602-645` `accept_evidence` (timestamp phải **monotonic tăng**); `two_camera.py:2560-2617` vòng apply kết quả (result-age + monotonic); `:2620-2645` submit gate `parking_futures`; `:2655-2668` `worker_over_deadline`; `PendingParkingJob` `:68-76`. **Không tồn tại `job_seq`/`applied_seq`** trong source — `job_id = f"{cam}:{frame_idx}"` chỉ là nhãn.
+IO| - **Input**: `PendingParkingJob{future, ts, frame_idx, submitted_at_s}`, `camera_timestamps_s`, `parking_max_result_age_seconds`, `parking_futures{}`. **Output**: `accept | reject{result_too_old, evidence_not_monotonic, worker_error}` + `health{state, last_rejection_reason, pending_age_ms}`.
+CPLX| - **Độ phức tạp**: O(S) apply + O(1) gate mỗi job. **space** O(cam); **[sim]**: O(1).
+STRUCT| - **Cấu trúc**: `parking_futures{cam: PendingParkingJob}` (≤1 entry/cam); `parking_pipeline{cam: health}`; `PendingParkingJob` (:68-76).
+LIB| - **Thư viện ngoài**: không trực tiếp.
+PSEUDO| 1. **Submit**: `if camera_id in parking_futures or not parking_due: continue` — cam đang có job → **không submit** (`:2628-2630`); submit → `parking_futures[cam] = PendingParkingJob(ts=camera_now, frame_idx, submitted_at_s=monotonic)`. ;; 2. **Complete**: `job.future.result()` lỗi → `worker_error`, `finish_vision_job(accepted=False)`, `dropped++`. ;; 3. `result_age_s = max(cam_ts − job.timestamp_s, monotonic − job.submitted_at_s)` (`:2569-2573`) — lấy nhánh **xấu hơn** giữa clock camera và wall-clock. ;; 4. `result_age_s > parking_max_result_age_seconds` → `result_too_old` + `finish_vision_job(False)` + `dropped++` (`:2586-2594`). ;; 5. `detector.accept_evidence(results, ts, frame_idx)` trả `False` (timestamp không monotonic — evidence đi lùi) → `evidence_not_monotonic` + reject (`:2596-2602`). ;; 6. Accept → apply + `health=healthy`, `last_rejection_reason=None`, `finish_vision_job(True)`. ;; 7. **Deadline**: job pending `age = monotonic − submitted_at_s > max_result_age` → `worker_over_deadline` (`:2665-2667`) — health degraded dù kết quả chưa về.
+SAA| **Sample A (accept)**: `{"parking_futures":{},"submit":true,"job":{"ts":104.8,"frame_idx":41,"submitted_ago_s":0.3},"cam JSON: NONE
+EXA| `result_age = max(3.0,0.3) = 3.0 > 2.0` → **`result_too_old`**; biến thể `evidence_ts:[104.8,104.5]` → `accept_evidence` False → **`evidence_not_monotonic`**; `parking_futures:{cam1:job}` → submit skip (one-pending); `pending_age 2.5 > 2.0` → **`worker_over_deadline`**.
+SAB| **Sample B (biên — ba kiểu reject)**: `{"job":{"ts":102.0,"submitted_ago_s":0.3},"cam_ts":105.0,"max_age_s":2.0}` → **Ex JSON: NONE
+
+### F9 `replay-session-sync` — Đồng bộ replay theo timestamp đã ghi *(ALIAS → `replay-timestamp-pairing`, owner C)*
+CODE| - **Code**: `backend/main_detect/two_camera.py:146-182` `ReplaySession.__init__` + `ReplayFrameTiming` (:58-67); `:182-228` `_load_timings`; `:229-259` `read_pair`; `:2491-2499` `--replay-realtime` pacing; `:2496-2499` `now = max(camera_timestamps_s)` từ timestamps ghi.
+IO| - **Input**: `session_dir` (video cam1/cam2 + `frame_timestamps.csv` có cột `frame_idx`, `cam1_monotonic_ns`, `cam2_monotonic_ns`); cờ `--replay-realtime`. **Output**: `read_pair() → (frame1, frame2, ts) | None` (EOF sạch).
+CPLX| - **Độ phức tạp**: O(1)/pair đọc; O(n) load CSV. **space** O(n) timings; **[sim]**: O(n).
+STRUCT| - **Cấu trúc**: `ReplayFrameTiming{frame_idx, cam1_ns, cam2_ns}`; hai `cv2.VideoCapture`.
+LIB| - **Thư viện ngoài**: `cv2.VideoCapture` [code] — demo mảng frame; **canonical page thuộc owner C** (dossier C `replay-timestamp-pairing`).
+PSEUDO| 1. `_load_timings`: đọc CSV; `frame_idx` phải **liên tục bắt đầu từ 1**; timestamps `>0` và **nondecreasing** từng cam (bằng nhau cho phép — latest-frame có thể lặp); lùi → lỗi. ;; 2. `read_pair` lần thứ k: đọc frame k từ **mỗi** video + dòng CSV k. ;; 3. EOF: video ngắn hơn CSV → `RuntimeError` (kết thúc sớm); video còn dư frame quá CSV → `RuntimeError` (thừa); đúng → `None`. ;; 4. `--replay-realtime`: `due = wall_started + (src_now − src_started)`; sleep tới `due` (`time.monotonic`, `:2496-2499`) — pace theo **timestamp ghi**, không phải fps cố định.
+SAA| **Sample A (thường — pair đúng)**: JSON: {"csv":[     {"frame_idx":1,"cam1_ns":1000000000,"cam2_ns":1100000000},     {"frame_idx":2,"cam1_ns":1500000000,"cam2_ns":1400000000}   ],"video":{"cam1":["v1_f1","v1_f2"],"cam2":["v2_f1","v2_f2"]},"replay_realtime":true,"wall_start_s":100.0}   
+EXA| `read_pair` 1 → `(v1_f1, v2_f1, ts={cam1:1.0s,cam2:1.1s})`; lần 2 → `(v1_f2, v2_f2, {1.5,1.4})`; lần 3 → `None` (EOF sạch). Pace: `now=max(1.0,1.1)=1.1`, `due = 100 + (1.1−1.0) = 100.1` — phát theo nhịp ghi.
+SAB| **Sample B (biên — video thừa frame)**: `{"csv":[{"frame_idx":1,"cam1_ns":1e9,"cam2_ns":1e9}],"video":{"cam1":["f1","f2" JSON: NONE

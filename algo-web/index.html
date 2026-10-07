@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TechGar2 — Bản đồ pipeline tương tác</title>
+<meta name="description" content="Mô phỏng giáo dục pipeline runtime TechGar2: camera → tracking → handoff/GID → occupancy/binder → snapshot → gate/session → điều hướng.">
+<link rel="stylesheet" href="pipeline.css?v=1">
+</head>
+<body>
+<noscript>Bản đồ pipeline TechGar2 cần JavaScript. Không cần mạng, backend hay tài khoản.</noscript>
+<div id="app" class="app" aria-live="polite"></div>
+<!-- SPEC V2 §5: classic defer, thứ tự bắt buộc — engine → 3 packs → app. -->
+<script defer src="shared/pipeline-engine.js?v=1"></script>
+<script defer src="packs/pipeline-local.js?v=1"></script>
+<script defer src="packs/pipeline-identity.js?v=1"></script>
+<script defer src="packs/pipeline-system.js?v=1"></script>
+<script defer src="pipeline-app.js?v=1"></script>
+</body>
+</html>

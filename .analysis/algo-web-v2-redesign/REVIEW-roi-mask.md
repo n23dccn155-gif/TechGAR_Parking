@@ -1,0 +1,5 @@
+# REVIEW roi-mask (builder-a, Task 6)
+
+- Cơ chế verify OK: target_points=4 (mask_roi.py:8), alpha 0.3 (:45-46), schema {polygon,image_size} (:93-101), defaults `--mask-cam*` (:1762-63), fillPoly uint8 (:2207-16), `--tracking-roi-*` override + fallback `get_global_mask` (:2412-28), ellipse (2·48+1) dilate + clip (motion_tracker.py:801-816), clipped<0.98 / required_support=max(20,min(100,0.08·comp)) / rescue-conditions / anchor gate + tolerated + drawContours xoá (:875-1010) — tất-cả đúng file:dòng.
+- **Sai-số nguồn polygon**: sources ghi "config/roi_mask_cam1.json: (1276,688)(1216,144)(156,143)(77,657)" — file thật là (116,687)(1273,677)(1242,139)(158,143); cam2 note (1228,716)(1168,97)(128,113)(24,716) vs thật (13,716)(1253,719)(1162,82)(68,103). Cùng biên-dạng nhưng lệch tới ~40px/đỉnh; không file roi_mask nào trên đĩa khớp số ghi (đã quét 12 file config + 2 snapshot). Caption ⑤ "polygon cam1 thực tế (config/...)" cũng vẽ bộ số này lên capture `shared_map_01/cal-20260927` — khả-năng là ROI tay cho capture đó, không phải file đang dùng. Mức: trung bình (⑦/⑤ mismatch nguồn, cơ chế không sai).
+- limits OK; nhãn CONFIRMED/UNSURE hợp-lý; prose dễ đọc.

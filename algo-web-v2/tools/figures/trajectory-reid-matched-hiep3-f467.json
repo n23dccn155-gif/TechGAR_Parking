@@ -1,0 +1,16 @@
+{
+  "id": "trajectory-reid-matched-hiep3-f467",
+  "session": "session_hiep3",
+  "cam": 2,
+  "frame": 467,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [342, 137, 398, 214],
+      "color": "#13795b",
+      "label": "lid13 -> GID 2 (score 0.842)"
+    }
+  ],
+  "max_kb": 200
+}

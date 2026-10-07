@@ -1,0 +1,90 @@
+{
+  "id": "homography-cam2-points",
+  "session": "shared_map_01/cal-20260927",
+  "cam": 2,
+  "frame": 0,
+  "image_path": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20260927-160513-decd3099/capture_cam2.png",
+  "draw": [
+    {
+      "type": "circle",
+      "xy": [
+        329,
+        100
+      ],
+      "r": 12,
+      "color": "#ffd23f",
+      "label": "A"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        293,
+        258
+      ],
+      "r": 12,
+      "color": "#ffd23f",
+      "label": "B"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        633,
+        254
+      ],
+      "r": 12,
+      "color": "#ffd23f",
+      "label": "C"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        631,
+        98
+      ],
+      "r": 12,
+      "color": "#ffd23f",
+      "label": "D"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        948,
+        124
+      ],
+      "r": 10,
+      "color": "#33a3ff",
+      "label": "V1"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        818,
+        128
+      ],
+      "r": 10,
+      "color": "#33a3ff",
+      "label": "V2"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        654,
+        133
+      ],
+      "r": 10,
+      "color": "#33a3ff",
+      "label": "V3"
+    },
+    {
+      "type": "circle",
+      "xy": [
+        441,
+        135
+      ],
+      "r": 10,
+      "color": "#33a3ff",
+      "label": "V4"
+    }
+  ],
+  "max_kb": 240
+}

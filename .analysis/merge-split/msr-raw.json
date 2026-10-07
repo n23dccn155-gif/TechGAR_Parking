@@ -1,0 +1,9523 @@
+[
+ {
+  "session": "session_hiep1",
+  "frames": 1049,
+  "fps": 6.529,
+  "event_line_counts": {
+   "local_track_lost": 10,
+   "local_track_expired": 4
+  },
+  "set_rows": {
+   "distinct_sets": 0,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 0,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 0,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [],
+  "n_episodes": 0,
+  "n_member_sets": 0,
+  "outcome_counts": {},
+  "kind_counts": {},
+  "kind_x_outcome": {},
+  "implicit_episodes": 0,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep1",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 0,
+  "recovery_pending_tracks": 0,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep2",
+  "frames": 642,
+  "fps": 4.291,
+  "event_line_counts": {
+   "association_recovery_pending": 2,
+   "merged_detection_frozen": 2,
+   "local_track_lost": 16,
+   "local_track_expired": 8
+  },
+  "set_rows": {
+   "distinct_sets": 0,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 0,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 0,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [],
+  "n_episodes": 0,
+  "n_member_sets": 0,
+  "outcome_counts": {},
+  "kind_counts": {},
+  "kind_x_outcome": {},
+  "implicit_episodes": 0,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep2",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 2,
+  "recovery_pending_tracks": 1,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep3",
+  "frames": 826,
+  "fps": 5.259,
+  "event_line_counts": {
+   "occlusion_group_expired": 4,
+   "association_recovery_pending": 11,
+   "merged_detection_frozen": 34,
+   "local_track_lost": 18,
+   "local_track_expired": 11
+  },
+  "set_rows": {
+   "distinct_sets": 4,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 4,
+   "sets_last_expired": 4,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 4,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     2,
+     4,
+     5
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 254,
+    "end_frame": 254,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     10,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 265,
+    "end_frame": 265,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     4,
+     5
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 268,
+    "end_frame": 268,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 3,
+  "n_member_sets": 4,
+  "outcome_counts": {
+   "occlusion_group_expired": 3
+  },
+  "kind_counts": {
+   "implicit-2": 3
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 3
+   }
+  },
+  "implicit_episodes": 3,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_hiep3",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 11,
+  "recovery_pending_tracks": 4,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_sang7",
+  "frames": 817,
+  "fps": 6.115,
+  "event_line_counts": {
+   "occlusion_group_opened": 3,
+   "occlusion_group_expired": 3,
+   "association_recovery_pending": 15,
+   "merged_detection_frozen": 13,
+   "local_track_lost": 9,
+   "local_track_expired": 2
+  },
+  "set_rows": {
+   "distinct_sets": 3,
+   "sets_with_opened": 3,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 3,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 3,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     46,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 594,
+    "end_frame": 594,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     46,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 608,
+    "end_frame": 608,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     46,
+     47,
+     48
+    ],
+    "n_sets": 2,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 614,
+    "end_frame": 617,
+    "duration_frames": 3,
+    "duration_s": 0.5,
+    "opened": 2,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 3,
+  "n_member_sets": 3,
+  "outcome_counts": {
+   "none": 1,
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "active-2": 2,
+   "implicit-2": 1
+  },
+  "kind_x_outcome": {
+   "active-2": {
+    "none": 1,
+    "occlusion_group_expired": 1
+   },
+   "implicit-2": {
+    "occlusion_group_expired": 1
+   }
+  },
+  "implicit_episodes": 1,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_hiep_sang7",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 15,
+  "recovery_pending_tracks": 8,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_sang8",
+  "frames": 929,
+  "fps": 6.375,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "association_recovery_pending": 12,
+   "merged_detection_frozen": 9,
+   "local_track_lost": 14,
+   "local_track_expired": 8
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     37,
+     38
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 266,
+    "end_frame": 266,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     25,
+     28
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 642,
+    "end_frame": 642,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_hiep_sang8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 12,
+  "recovery_pending_tracks": 4,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_sang9",
+  "frames": 727,
+  "fps": 5.914,
+  "event_line_counts": {
+   "occlusion_group_expired": 1,
+   "split_assignment_deferred": 4,
+   "association_recovery_pending": 20,
+   "merged_detection_frozen": 8,
+   "local_track_lost": 16,
+   "local_track_expired": 6
+  },
+  "set_rows": {
+   "distinct_sets": 1,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 1,
+   "sets_last_expired": 1,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 1,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     61,
+     63
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 497,
+    "end_frame": 497,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   }
+  ],
+  "n_episodes": 1,
+  "n_member_sets": 1,
+  "outcome_counts": {
+   "occlusion_group_expired": 1
+  },
+  "kind_counts": {
+   "implicit-2": 1
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 1
+   }
+  },
+  "implicit_episodes": 1,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_hiep_sang9",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 4,
+  "split_deferred_tracks": 3,
+  "split_defer_cost_median": 0.578,
+  "split_defer_margin_median": 0.115,
+  "recovery_pending_events": 20,
+  "recovery_pending_tracks": 9,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_thai1",
+  "frames": 6050,
+  "fps": 6.97,
+  "event_line_counts": {
+   "occlusion_group_opened": 1,
+   "occlusion_group_expired": 4,
+   "split_assignment_deferred": 3,
+   "association_recovery_pending": 26,
+   "merged_detection_frozen": 71,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 51,
+   "local_track_expired": 12
+  },
+  "set_rows": {
+   "distinct_sets": 4,
+   "sets_with_opened": 1,
+   "sets_terminal_only": 3,
+   "sets_last_expired": 4,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 4,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     4,
+     5
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 204,
+    "end_frame": 204,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 536,
+    "end_frame": 536,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 549,
+    "end_frame": 549,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     9,
+     10
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1047,
+    "end_frame": 1047,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     50,
+     53
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5007,
+    "end_frame": 5007,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 5,
+  "n_member_sets": 4,
+  "outcome_counts": {
+   "occlusion_group_expired": 4,
+   "none": 1
+  },
+  "kind_counts": {
+   "implicit-2": 4,
+   "active-2": 1
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 4
+   },
+   "active-2": {
+    "none": 1
+   }
+  },
+  "implicit_episodes": 4,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep_thai1",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 3,
+  "split_deferred_tracks": 2,
+  "split_defer_cost_median": 0.418,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 26,
+  "recovery_pending_tracks": 13,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_thai2",
+  "frames": 1,
+  "fps": null,
+  "event_line_counts": {},
+  "set_rows": {
+   "distinct_sets": 0,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 0,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 0,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [],
+  "n_episodes": 0,
+  "n_member_sets": 0,
+  "outcome_counts": {},
+  "kind_counts": {},
+  "kind_x_outcome": {},
+  "implicit_episodes": 0,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep_thai2",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 0,
+  "recovery_pending_tracks": 0,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_thai3",
+  "frames": 5965,
+  "fps": 7.698,
+  "event_line_counts": {
+   "occlusion_group_opened": 7,
+   "occlusion_group_recovered": 2,
+   "occlusion_group_expired": 11,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 81,
+   "merged_detection_frozen": 140,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 70,
+   "local_track_expired": 22
+  },
+  "set_rows": {
+   "distinct_sets": 10,
+   "sets_with_opened": 6,
+   "sets_terminal_only": 4,
+   "sets_last_expired": 10,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 13,
+   "terminal_rows_repeated": 2
+  },
+  "episodes": [
+   {
+    "members": [
+     18,
+     21
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 166,
+    "end_frame": 166,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     18,
+     21
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     18,
+     21
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 171,
+    "end_frame": 171,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     18,
+     21
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 252,
+    "end_frame": 252,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     18,
+     28
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 259,
+    "end_frame": 259,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     37,
+     38
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 950,
+    "end_frame": 950,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     47,
+     48
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1114,
+    "end_frame": 1114,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     47,
+     48
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1119,
+    "end_frame": 1120,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     47,
+     48
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1146,
+    "end_frame": 1146,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     50,
+     51
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1355,
+    "end_frame": 1355,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     50
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     50,
+     51
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1368,
+    "end_frame": 1368,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     59,
+     70
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1925,
+    "end_frame": 1925,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     18,
+     21
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2365,
+    "end_frame": 2365,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     25,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2419,
+    "end_frame": 2419,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     25,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2436,
+    "end_frame": 2436,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     30,
+     31
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2588,
+    "end_frame": 2588,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     31,
+     32
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2594,
+    "end_frame": 2594,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     31
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     31,
+     32
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2612,
+    "end_frame": 2612,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     87,
+     88
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2850,
+    "end_frame": 2850,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 18
+   },
+   {
+    "members": [
+     87,
+     88
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2859,
+    "end_frame": 2859,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 14
+   }
+  ],
+  "n_episodes": 19,
+  "n_member_sets": 10,
+  "outcome_counts": {
+   "none": 6,
+   "occlusion_group_recovered": 2,
+   "occlusion_group_expired": 11
+  },
+  "kind_counts": {
+   "active-2": 7,
+   "implicit-2": 12
+  },
+  "kind_x_outcome": {
+   "active-2": {
+    "none": 6,
+    "occlusion_group_recovered": 1
+   },
+   "implicit-2": {
+    "occlusion_group_recovered": 1,
+    "occlusion_group_expired": 11
+   }
+  },
+  "implicit_episodes": 12,
+  "episodes_member_lost": 3,
+  "eps_with_new_id_after": 6,
+  "source": "session_hiep_thai3",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.161,
+  "split_defer_margin_median": 0.125,
+  "recovery_pending_events": 81,
+  "recovery_pending_tracks": 28,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_thai4",
+  "frames": 5764,
+  "fps": 6.828,
+  "event_line_counts": {
+   "occlusion_group_opened": 1,
+   "occlusion_group_expired": 8,
+   "split_assignment_deferred": 3,
+   "association_recovery_pending": 53,
+   "merged_detection_frozen": 117,
+   "watershed_partition_provisional": 4,
+   "local_track_lost": 80,
+   "local_track_expired": 29
+  },
+  "set_rows": {
+   "distinct_sets": 8,
+   "sets_with_opened": 1,
+   "sets_terminal_only": 7,
+   "sets_last_expired": 8,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 8,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     7,
+     8
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 573,
+    "end_frame": 573,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     6,
+     7
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 577,
+    "end_frame": 577,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     7,
+     8
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 588,
+    "end_frame": 588,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     34,
+     37
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1337,
+    "end_frame": 1337,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     38,
+     41
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1590,
+    "end_frame": 1590,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     35,
+     36
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1746,
+    "end_frame": 1746,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     107,
+     109
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3693,
+    "end_frame": 3693,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     102,
+     103
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3916,
+    "end_frame": 3916,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     106,
+     108
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4270,
+    "end_frame": 4270,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     106
+    ],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 9,
+  "n_member_sets": 8,
+  "outcome_counts": {
+   "none": 1,
+   "occlusion_group_expired": 8
+  },
+  "kind_counts": {
+   "active-2": 1,
+   "implicit-2": 8
+  },
+  "kind_x_outcome": {
+   "active-2": {
+    "none": 1
+   },
+   "implicit-2": {
+    "occlusion_group_expired": 8
+   }
+  },
+  "implicit_episodes": 8,
+  "episodes_member_lost": 1,
+  "eps_with_new_id_after": 4,
+  "source": "session_hiep_thai4",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 3,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.298,
+  "split_defer_margin_median": 0.144,
+  "recovery_pending_events": 53,
+  "recovery_pending_tracks": 25,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_thai5",
+  "frames": 3977,
+  "fps": 6.208,
+  "event_line_counts": {
+   "occlusion_group_opened": 1,
+   "occlusion_group_expired": 5,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 36,
+   "merged_detection_frozen": 50,
+   "local_track_lost": 60,
+   "local_track_expired": 15
+  },
+  "set_rows": {
+   "distinct_sets": 5,
+   "sets_with_opened": 1,
+   "sets_terminal_only": 4,
+   "sets_last_expired": 5,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 5,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     20,
+     49
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 434,
+    "end_frame": 434,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 8
+   },
+   {
+    "members": [
+     52,
+     53
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 480,
+    "end_frame": 480,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     58,
+     67
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1003,
+    "end_frame": 1003,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     67,
+     77
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1018,
+    "end_frame": 1018,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     117,
+     122
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1771,
+    "end_frame": 1771,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     117,
+     122
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1785,
+    "end_frame": 1785,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 6,
+  "n_member_sets": 5,
+  "outcome_counts": {
+   "occlusion_group_expired": 5,
+   "none": 1
+  },
+  "kind_counts": {
+   "implicit-2": 5,
+   "active-2": 1
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 5
+   },
+   "active-2": {
+    "none": 1
+   }
+  },
+  "implicit_episodes": 5,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 5,
+  "source": "session_hiep_thai5",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.309,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 36,
+  "recovery_pending_tracks": 17,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_toi4",
+  "frames": 620,
+  "fps": 4.679,
+  "event_line_counts": {
+   "association_recovery_pending": 5,
+   "merged_detection_frozen": 3,
+   "local_track_lost": 11,
+   "local_track_expired": 4
+  },
+  "set_rows": {
+   "distinct_sets": 0,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 0,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 0,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [],
+  "n_episodes": 0,
+  "n_member_sets": 0,
+  "outcome_counts": {},
+  "kind_counts": {},
+  "kind_x_outcome": {},
+  "implicit_episodes": 0,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep_toi4",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 5,
+  "recovery_pending_tracks": 3,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_toi5",
+  "frames": 806,
+  "fps": 5.31,
+  "event_line_counts": {
+   "association_recovery_pending": 6,
+   "merged_detection_frozen": 14,
+   "local_track_lost": 14,
+   "local_track_expired": 4
+  },
+  "set_rows": {
+   "distinct_sets": 0,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 0,
+   "sets_last_expired": 0,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 0,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [],
+  "n_episodes": 0,
+  "n_member_sets": 0,
+  "outcome_counts": {},
+  "kind_counts": {},
+  "kind_x_outcome": {},
+  "implicit_episodes": 0,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep_toi5",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 6,
+  "recovery_pending_tracks": 3,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_hiep_toi6",
+  "frames": 865,
+  "fps": 5.691,
+  "event_line_counts": {
+   "occlusion_group_expired": 1,
+   "association_recovery_pending": 6,
+   "merged_detection_frozen": 7,
+   "local_track_lost": 12,
+   "local_track_expired": 4
+  },
+  "set_rows": {
+   "distinct_sets": 1,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 1,
+   "sets_last_expired": 1,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 1,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     81,
+     82
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 153,
+    "end_frame": 153,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 1,
+  "n_member_sets": 1,
+  "outcome_counts": {
+   "occlusion_group_expired": 1
+  },
+  "kind_counts": {
+   "implicit-2": 1
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 1
+   }
+  },
+  "implicit_episodes": 1,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_hiep_toi6",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 6,
+  "recovery_pending_tracks": 2,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_test1",
+  "frames": 298,
+  "fps": 4.725,
+  "event_line_counts": {
+   "occlusion_group_opened": 16,
+   "occlusion_group_expired": 100,
+   "split_assignment_deferred": 19,
+   "association_recovery_pending": 131,
+   "merged_detection_frozen": 83,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 34,
+   "local_track_expired": 19
+  },
+  "set_rows": {
+   "distinct_sets": 100,
+   "sets_with_opened": 16,
+   "sets_terminal_only": 84,
+   "sets_last_expired": 100,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 100,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     33,
+     36
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 39,
+    "end_frame": 39,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 76
+   },
+   {
+    "members": [
+     33,
+     36
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 60,
+    "end_frame": 60,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 75
+   },
+   {
+    "members": [
+     33,
+     35
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 68,
+    "end_frame": 68,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 68
+   },
+   {
+    "members": [
+     36,
+     44
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 68,
+    "end_frame": 68,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 68
+   },
+   {
+    "members": [
+     53,
+     73
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 71,
+    "end_frame": 71,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     53
+    ],
+    "new_ids_45f_after": 64
+   },
+   {
+    "members": [
+     53,
+     73
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 83,
+    "end_frame": 83,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 66
+   },
+   {
+    "members": [
+     53,
+     59,
+     65,
+     69,
+     76,
+     80,
+     82,
+     99,
+     111
+    ],
+    "n_sets": 8,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 89,
+    "end_frame": 90,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 7,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     59
+    ],
+    "new_ids_45f_after": 71
+   },
+   {
+    "members": [
+     81,
+     86
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 89,
+    "end_frame": 89,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 71
+   },
+   {
+    "members": [
+     59,
+     69,
+     108,
+     109
+    ],
+    "n_sets": 3,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 92,
+    "end_frame": 93,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     108
+    ],
+    "new_ids_45f_after": 71
+   },
+   {
+    "members": [
+     114,
+     118
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 92,
+    "end_frame": 92,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 73
+   },
+   {
+    "members": [
+     81,
+     88
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 93,
+    "end_frame": 93,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 71
+   },
+   {
+    "members": [
+     101,
+     107
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 93,
+    "end_frame": 93,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 71
+   },
+   {
+    "members": [
+     101,
+     107
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 96,
+    "end_frame": 96,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 72
+   },
+   {
+    "members": [
+     59,
+     111,
+     116
+    ],
+    "n_sets": 3,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 97,
+    "end_frame": 100,
+    "duration_frames": 3,
+    "duration_s": 0.6,
+    "opened": 2,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     59
+    ],
+    "new_ids_45f_after": 72
+   },
+   {
+    "members": [
+     108,
+     109,
+     110,
+     111,
+     114,
+     118
+    ],
+    "n_sets": 6,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 102,
+    "end_frame": 103,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 0,
+    "expired": 6,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 66
+   },
+   {
+    "members": [
+     114,
+     118
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 102,
+    "end_frame": 102,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 65
+   },
+   {
+    "members": [
+     66,
+     106
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 103,
+    "end_frame": 103,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 66
+   },
+   {
+    "members": [
+     59,
+     108,
+     116,
+     136
+    ],
+    "n_sets": 5,
+    "kind": "ge3-covering",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 105,
+    "end_frame": 108,
+    "duration_frames": 3,
+    "duration_s": 0.6,
+    "opened": 2,
+    "expired": 5,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     108
+    ],
+    "new_ids_45f_after": 66
+   },
+   {
+    "members": [
+     81,
+     115
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 106,
+    "end_frame": 106,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 64
+   },
+   {
+    "members": [
+     109,
+     110,
+     114,
+     118,
+     125
+    ],
+    "n_sets": 5,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 106,
+    "end_frame": 106,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 5,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 64
+   },
+   {
+    "members": [
+     81,
+     119,
+     127
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 110,
+    "end_frame": 110,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 69
+   },
+   {
+    "members": [
+     65,
+     82
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 111,
+    "end_frame": 111,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 70
+   },
+   {
+    "members": [
+     66,
+     117
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 111,
+    "end_frame": 111,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 70
+   },
+   {
+    "members": [
+     59,
+     132
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 113,
+    "end_frame": 113,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 68
+   },
+   {
+    "members": [
+     126,
+     127,
+     131,
+     137
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 115,
+    "end_frame": 115,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 69
+   },
+   {
+    "members": [
+     131,
+     137
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 121,
+    "end_frame": 121,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 72
+   },
+   {
+    "members": [
+     130,
+     132,
+     133,
+     138
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 126,
+    "end_frame": 126,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 64
+   },
+   {
+    "members": [
+     101,
+     123,
+     125
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 129,
+    "end_frame": 129,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 56
+   },
+   {
+    "members": [
+     123,
+     125,
+     130,
+     133,
+     138,
+     144
+    ],
+    "n_sets": 7,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 131,
+    "end_frame": 131,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 7,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 52
+   },
+   {
+    "members": [
+     163,
+     164
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 131,
+    "end_frame": 131,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     164
+    ],
+    "new_ids_45f_after": 52
+   },
+   {
+    "members": [
+     160,
+     167
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 135,
+    "end_frame": 135,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 46
+   },
+   {
+    "members": [
+     163,
+     164
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 138,
+    "end_frame": 138,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 44
+   },
+   {
+    "members": [
+     144,
+     172
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 139,
+    "end_frame": 139,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 43
+   },
+   {
+    "members": [
+     160,
+     167
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 140,
+    "end_frame": 140,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 41
+   },
+   {
+    "members": [
+     161,
+     163,
+     164,
+     187,
+     189
+    ],
+    "n_sets": 5,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 143,
+    "end_frame": 144,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 0,
+    "expired": 5,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     164
+    ],
+    "new_ids_45f_after": 37
+   },
+   {
+    "members": [
+     160,
+     188
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 145,
+    "end_frame": 145,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 36
+   },
+   {
+    "members": [
+     158,
+     172,
+     173
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 147,
+    "end_frame": 147,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 36
+   },
+   {
+    "members": [
+     167,
+     189
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 149,
+    "end_frame": 149,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 33
+   },
+   {
+    "members": [
+     171,
+     192
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 159,
+    "end_frame": 159,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 14
+   },
+   {
+    "members": [
+     161,
+     173,
+     187,
+     188,
+     189,
+     193
+    ],
+    "n_sets": 6,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 164,
+    "end_frame": 164,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 6,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     188
+    ],
+    "new_ids_45f_after": 13
+   },
+   {
+    "members": [
+     198,
+     206
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 168,
+    "end_frame": 169,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 14
+   },
+   {
+    "members": [
+     214,
+     224,
+     236
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 204,
+    "end_frame": 204,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 69
+   },
+   {
+    "members": [
+     227,
+     230
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 204,
+    "end_frame": 204,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 69
+   },
+   {
+    "members": [
+     228,
+     229
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 204,
+    "end_frame": 204,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 69
+   },
+   {
+    "members": [
+     260,
+     269
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 232,
+    "end_frame": 232,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 57
+   },
+   {
+    "members": [
+     244,
+     262
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 235,
+    "end_frame": 235,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 50
+   },
+   {
+    "members": [
+     260,
+     269
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 236,
+    "end_frame": 236,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 49
+   },
+   {
+    "members": [
+     245,
+     257
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 237,
+    "end_frame": 237,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 49
+   },
+   {
+    "members": [
+     245,
+     276
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 241,
+    "end_frame": 241,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 44
+   },
+   {
+    "members": [
+     259,
+     260
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 241,
+    "end_frame": 242,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     260
+    ],
+    "new_ids_45f_after": 42
+   },
+   {
+    "members": [
+     271,
+     277
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 244,
+    "end_frame": 244,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 37
+   },
+   {
+    "members": [
+     271,
+     277
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 246,
+    "end_frame": 246,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 36
+   },
+   {
+    "members": [
+     254,
+     259
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 256,
+    "end_frame": 256,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 19
+   },
+   {
+    "members": [
+     277,
+     281
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 256,
+    "end_frame": 256,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 19
+   },
+   {
+    "members": [
+     273,
+     275,
+     276
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 256,
+    "end_frame": 256,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 19
+   },
+   {
+    "members": [
+     259,
+     290
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 260,
+    "end_frame": 260,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 15
+   },
+   {
+    "members": [
+     275,
+     281
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 261,
+    "end_frame": 261,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 10
+   },
+   {
+    "members": [
+     271,
+     297
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 264,
+    "end_frame": 264,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 7
+   },
+   {
+    "members": [
+     275,
+     276
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 266,
+    "end_frame": 266,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     308,
+     313
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 266,
+    "end_frame": 266,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     307,
+     312,
+     329
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 293,
+    "end_frame": 293,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     310,
+     317
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 293,
+    "end_frame": 293,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 62,
+  "n_member_sets": 100,
+  "outcome_counts": {
+   "none": 8,
+   "occlusion_group_expired": 54
+  },
+  "kind_counts": {
+   "active-2": 13,
+   "implicit-2": 47,
+   "ge3-covering": 2
+  },
+  "kind_x_outcome": {
+   "active-2": {
+    "none": 8,
+    "occlusion_group_expired": 5
+   },
+   "implicit-2": {
+    "occlusion_group_expired": 47
+   },
+   "ge3-covering": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 47,
+  "episodes_member_lost": 9,
+  "eps_with_new_id_after": 60,
+  "source": "session_test1",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 19,
+  "split_deferred_tracks": 16,
+  "split_defer_cost_median": 0.484,
+  "split_defer_margin_median": 0.123,
+  "recovery_pending_events": 131,
+  "recovery_pending_tracks": 54,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_thai6",
+  "frames": 5937,
+  "fps": 7.922,
+  "event_line_counts": {
+   "occlusion_group_opened": 25,
+   "occlusion_group_recovered": 1,
+   "occlusion_group_expired": 62,
+   "split_assignment_deferred": 13,
+   "association_recovery_pending": 219,
+   "new_local_id_deferred_unresolved_merge": 3,
+   "merged_detection_frozen": 198,
+   "watershed_partition_provisional": 3,
+   "local_track_lost": 101,
+   "local_track_expired": 41
+  },
+  "set_rows": {
+   "distinct_sets": 57,
+   "sets_with_opened": 24,
+   "sets_terminal_only": 33,
+   "sets_last_expired": 56,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 1,
+   "terminal_rows_total": 63,
+   "terminal_rows_repeated": 2
+  },
+  "episodes": [
+   {
+    "members": [
+     1,
+     2
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 289,
+    "end_frame": 289,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     13,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 641,
+    "end_frame": 641,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     13,
+     14,
+     15
+    ],
+    "n_sets": 2,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 648,
+    "end_frame": 648,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     13,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 652,
+    "end_frame": 652,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     13,
+     14,
+     15
+    ],
+    "n_sets": 3,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 659,
+    "end_frame": 664,
+    "duration_frames": 5,
+    "duration_s": 0.6,
+    "opened": 0,
+    "expired": 8,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     13,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 681,
+    "end_frame": 681,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     18,
+     19
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 685,
+    "end_frame": 685,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     18
+    ],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     18,
+     19
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 714,
+    "end_frame": 714,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     21,
+     22
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 864,
+    "end_frame": 864,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     22
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     21,
+     22
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 890,
+    "end_frame": 890,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     22,
+     25
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1784,
+    "end_frame": 1784,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     22
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     17,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1803,
+    "end_frame": 1803,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     22,
+     25
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1806,
+    "end_frame": 1806,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     41,
+     42
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2109,
+    "end_frame": 2109,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     41,
+     42
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2125,
+    "end_frame": 2125,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     44,
+     49
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2190,
+    "end_frame": 2191,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     60,
+     87
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2261,
+    "end_frame": 2261,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     60
+    ],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     60,
+     87
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2282,
+    "end_frame": 2282,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     83,
+     89
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2287,
+    "end_frame": 2287,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     89
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     60,
+     88
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2294,
+    "end_frame": 2294,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     83,
+     89
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2305,
+    "end_frame": 2305,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     78,
+     81
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2428,
+    "end_frame": 2428,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 36
+   },
+   {
+    "members": [
+     78,
+     80,
+     81
+    ],
+    "n_sets": 2,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2444,
+    "end_frame": 2444,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 13
+   },
+   {
+    "members": [
+     78,
+     80
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2455,
+    "end_frame": 2455,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 13
+   },
+   {
+    "members": [
+     90,
+     91
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2461,
+    "end_frame": 2462,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 26
+   },
+   {
+    "members": [
+     122,
+     123
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2528,
+    "end_frame": 2528,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     122,
+     123
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2544,
+    "end_frame": 2544,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     156,
+     163
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2859,
+    "end_frame": 2859,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 20
+   },
+   {
+    "members": [
+     173,
+     174
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2899,
+    "end_frame": 2899,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     189,
+     203
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3029,
+    "end_frame": 3029,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     197,
+     203
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3042,
+    "end_frame": 3042,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     196,
+     199
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3044,
+    "end_frame": 3044,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     196,
+     199,
+     200
+    ],
+    "n_sets": 2,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3060,
+    "end_frame": 3060,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     200,
+     202
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3064,
+    "end_frame": 3064,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     202
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     196,
+     198,
+     199
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3068,
+    "end_frame": 3068,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     197,
+     199,
+     201
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3071,
+    "end_frame": 3071,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     200,
+     201
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3074,
+    "end_frame": 3074,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     196,
+     197,
+     200
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3076,
+    "end_frame": 3076,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     197,
+     200,
+     201,
+     202
+    ],
+    "n_sets": 4,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3086,
+    "end_frame": 3087,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 0,
+    "expired": 4,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     201,
+     202
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3098,
+    "end_frame": 3098,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 9
+   },
+   {
+    "members": [
+     203,
+     210
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3163,
+    "end_frame": 3164,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     203
+    ],
+    "new_ids_45f_after": 7
+   },
+   {
+    "members": [
+     214,
+     215
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3201,
+    "end_frame": 3201,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     225,
+     226
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3364,
+    "end_frame": 3364,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     240,
+     242,
+     244
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3886,
+    "end_frame": 3886,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     242,
+     245
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3889,
+    "end_frame": 3889,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     242,
+     245
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3911,
+    "end_frame": 3911,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     235,
+     236
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 3987,
+    "end_frame": 3987,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     235,
+     236
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4009,
+    "end_frame": 4009,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     240,
+     241
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4033,
+    "end_frame": 4033,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     240,
+     241
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4053,
+    "end_frame": 4053,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     252,
+     254
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 4275,
+    "end_frame": 4275,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     252
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     252,
+     254
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4295,
+    "end_frame": 4295,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     259,
+     260
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 4478,
+    "end_frame": 4478,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     259
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     259,
+     260
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4500,
+    "end_frame": 4500,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     259,
+     262
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4648,
+    "end_frame": 4648,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     296,
+     297
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 5064,
+    "end_frame": 5064,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     297
+    ],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     296,
+     297
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5070,
+    "end_frame": 5070,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     297,
+     298
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 5072,
+    "end_frame": 5072,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     297
+    ],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     294,
+     296
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5073,
+    "end_frame": 5073,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     297,
+     299
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 5081,
+    "end_frame": 5081,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     297,
+     298,
+     299
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5092,
+    "end_frame": 5092,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 9
+   },
+   {
+    "members": [
+     299,
+     300
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5113,
+    "end_frame": 5113,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 9
+   },
+   {
+    "members": [
+     313,
+     314
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5404,
+    "end_frame": 5404,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     310,
+     311
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5791,
+    "end_frame": 5791,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     298,
+     318
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5814,
+    "end_frame": 5814,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     362,
+     367
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5926,
+    "end_frame": 5926,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     337,
+     338
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 5928,
+    "end_frame": 5928,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     337,
+     338
+    ],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 67,
+  "n_member_sets": 57,
+  "outcome_counts": {
+   "occlusion_group_expired": 44,
+   "none": 22,
+   "occlusion_group_recovered": 1
+  },
+  "kind_counts": {
+   "implicit-2": 37,
+   "active-2": 25,
+   "ge3-covering": 5
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 37
+   },
+   "active-2": {
+    "none": 22,
+    "occlusion_group_expired": 3
+   },
+   "ge3-covering": {
+    "occlusion_group_recovered": 1,
+    "occlusion_group_expired": 4
+   }
+  },
+  "implicit_episodes": 37,
+  "episodes_member_lost": 12,
+  "eps_with_new_id_after": 46,
+  "source": "session_thai6",
+  "birth_veto_events": 3,
+  "birth_veto_pairs": 2,
+  "split_deferred_events": 13,
+  "split_deferred_tracks": 11,
+  "split_defer_cost_median": 0.592,
+  "split_defer_margin_median": 0.141,
+  "recovery_pending_events": 219,
+  "recovery_pending_tracks": 87,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_thai7",
+  "frames": 2872,
+  "fps": 7.732,
+  "event_line_counts": {
+   "occlusion_group_opened": 8,
+   "occlusion_group_expired": 14,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 71,
+   "merged_detection_frozen": 194,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 59,
+   "local_track_expired": 16
+  },
+  "set_rows": {
+   "distinct_sets": 15,
+   "sets_with_opened": 8,
+   "sets_terminal_only": 7,
+   "sets_last_expired": 14,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 1,
+   "terminal_rows_total": 14,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     12,
+     14
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 109,
+    "end_frame": 109,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     13,
+     14
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 118,
+    "end_frame": 119,
+    "duration_frames": 1,
+    "duration_s": 0.1,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     14
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     3,
+     5
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 187,
+    "end_frame": 187,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 458,
+    "end_frame": 458,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 476,
+    "end_frame": 476,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     35,
+     38
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 503,
+    "end_frame": 503,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     26,
+     31
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 825,
+    "end_frame": 825,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     47,
+     48
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 875,
+    "end_frame": 875,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     35,
+     36
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 898,
+    "end_frame": 898,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     35,
+     36
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 906,
+    "end_frame": 906,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     62,
+     63
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1351,
+    "end_frame": 1351,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     62,
+     63
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1372,
+    "end_frame": 1372,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     44,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 1864,
+    "end_frame": 1864,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     47
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     44,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1872,
+    "end_frame": 1872,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     77,
+     78
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2057,
+    "end_frame": 2057,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     49,
+     50
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2117,
+    "end_frame": 2117,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     49,
+     50
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2141,
+    "end_frame": 2141,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     82,
+     84
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2196,
+    "end_frame": 2196,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     93,
+     98
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2525,
+    "end_frame": 2525,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     93,
+     98
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2530,
+    "end_frame": 2530,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     117,
+     120
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2864,
+    "end_frame": 2864,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 21,
+  "n_member_sets": 15,
+  "outcome_counts": {
+   "occlusion_group_expired": 14,
+   "none": 7
+  },
+  "kind_counts": {
+   "implicit-2": 13,
+   "active-2": 8
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 13
+   },
+   "active-2": {
+    "occlusion_group_expired": 1,
+    "none": 7
+   }
+  },
+  "implicit_episodes": 13,
+  "episodes_member_lost": 2,
+  "eps_with_new_id_after": 11,
+  "source": "session_thai7",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.183,
+  "split_defer_margin_median": 0.132,
+  "recovery_pending_events": 71,
+  "recovery_pending_tracks": 27,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "session_thai8",
+  "frames": 1952,
+  "fps": 8.321,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 5,
+   "association_recovery_pending": 11,
+   "merged_detection_frozen": 65,
+   "local_track_lost": 23,
+   "local_track_expired": 9
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     68,
+     69
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1549,
+    "end_frame": 1549,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     23,
+     25
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1815,
+    "end_frame": 1815,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_thai8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 5,
+  "split_deferred_tracks": 4,
+  "split_defer_cost_median": 0.524,
+  "split_defer_margin_median": 0.135,
+  "recovery_pending_events": 11,
+  "recovery_pending_tracks": 8,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r0_session_hiep_thai5",
+  "frames": 3977,
+  "fps": 2.244,
+  "event_line_counts": {
+   "occlusion_group_opened": 2,
+   "occlusion_group_expired": 7,
+   "split_assignment_deferred": 2,
+   "association_recovery_pending": 40,
+   "merged_detection_frozen": 106,
+   "local_track_lost": 61,
+   "local_track_expired": 14
+  },
+  "set_rows": {
+   "distinct_sets": 7,
+   "sets_with_opened": 2,
+   "sets_terminal_only": 5,
+   "sets_last_expired": 7,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 7,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     59,
+     61
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 439,
+    "end_frame": 439,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 10
+   },
+   {
+    "members": [
+     67,
+     78
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 996,
+    "end_frame": 996,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 8
+   },
+   {
+    "members": [
+     67,
+     78
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1007,
+    "end_frame": 1007,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     135,
+     139
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1771,
+    "end_frame": 1771,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     135,
+     139
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1785,
+    "end_frame": 1785,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     139,
+     143
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1796,
+    "end_frame": 1796,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     217,
+     219
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3781,
+    "end_frame": 3781,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     158,
+     159
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3921,
+    "end_frame": 3921,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 17
+   },
+   {
+    "members": [
+     161,
+     169
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3966,
+    "end_frame": 3966,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 9,
+  "n_member_sets": 7,
+  "outcome_counts": {
+   "occlusion_group_expired": 7,
+   "none": 2
+  },
+  "kind_counts": {
+   "implicit-2": 7,
+   "active-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 7
+   },
+   "active-2": {
+    "none": 2
+   }
+  },
+  "implicit_episodes": 7,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 5,
+  "source": "session_hiep_thai5",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 2,
+  "split_deferred_tracks": 2,
+  "split_defer_cost_median": 0.649,
+  "split_defer_margin_median": 0.141,
+  "recovery_pending_events": 40,
+  "recovery_pending_tracks": 21,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r0_session_thai6",
+  "frames": 5937,
+  "fps": 2.711,
+  "event_line_counts": {
+   "occlusion_group_opened": 22,
+   "occlusion_group_recovered": 3,
+   "occlusion_group_expired": 90,
+   "split_assignment_deferred": 23,
+   "association_recovery_pending": 195,
+   "new_local_id_deferred_unresolved_merge": 1,
+   "merged_detection_frozen": 116,
+   "watershed_partition_provisional": 3,
+   "local_track_lost": 104,
+   "local_track_expired": 42
+  },
+  "set_rows": {
+   "distinct_sets": 64,
+   "sets_with_opened": 20,
+   "sets_terminal_only": 44,
+   "sets_last_expired": 64,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 93,
+   "terminal_rows_repeated": 8
+  },
+  "episodes": [
+   {
+    "members": [
+     1,
+     2
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 286,
+    "end_frame": 286,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 603,
+    "end_frame": 603,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 609,
+    "end_frame": 609,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 629,
+    "end_frame": 629,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 647,
+    "end_frame": 647,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 653,
+    "end_frame": 653,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     11,
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 669,
+    "end_frame": 676,
+    "duration_frames": 7,
+    "duration_s": 2.6,
+    "opened": 0,
+    "expired": 8,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 7
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 681,
+    "end_frame": 681,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 6
+   },
+   {
+    "members": [
+     11,
+     12,
+     13,
+     15
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 684,
+    "end_frame": 684,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 6
+   },
+   {
+    "members": [
+     11,
+     12,
+     15,
+     16,
+     17,
+     18
+    ],
+    "n_sets": 4,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 686,
+    "end_frame": 696,
+    "duration_frames": 10,
+    "duration_s": 3.7,
+    "opened": 0,
+    "expired": 13,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     16,
+     17
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 709,
+    "end_frame": 709,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     15,
+     16,
+     17,
+     18
+    ],
+    "n_sets": 4,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 714,
+    "end_frame": 714,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 4,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     15,
+     16,
+     17,
+     18,
+     21,
+     22
+    ],
+    "n_sets": 10,
+    "kind": "ge3-covering",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 716,
+    "end_frame": 727,
+    "duration_frames": 11,
+    "duration_s": 4.1,
+    "opened": 1,
+    "expired": 16,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     21,
+     22
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 745,
+    "end_frame": 745,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     22,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 761,
+    "end_frame": 761,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     23,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 864,
+    "end_frame": 864,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     23
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     23,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 891,
+    "end_frame": 891,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     14,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1409,
+    "end_frame": 1409,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     14,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1431,
+    "end_frame": 1431,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     18,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1803,
+    "end_frame": 1803,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     42,
+     43,
+     48
+    ],
+    "n_sets": 2,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2189,
+    "end_frame": 2191,
+    "duration_frames": 2,
+    "duration_s": 0.7,
+    "opened": 2,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     78,
+     85
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2313,
+    "end_frame": 2313,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     87,
+     91
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2428,
+    "end_frame": 2428,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 39
+   },
+   {
+    "members": [
+     87,
+     90
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2437,
+    "end_frame": 2437,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 17
+   },
+   {
+    "members": [
+     87,
+     90,
+     91
+    ],
+    "n_sets": 3,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2444,
+    "end_frame": 2444,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 10
+   },
+   {
+    "members": [
+     171,
+     172
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2785,
+    "end_frame": 2785,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     171,
+     172
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2804,
+    "end_frame": 2804,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     174,
+     176,
+     178
+    ],
+    "n_sets": 2,
+    "kind": "ge3-covering",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2848,
+    "end_frame": 2849,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 23
+   },
+   {
+    "members": [
+     176,
+     178
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2852,
+    "end_frame": 2852,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 23
+   },
+   {
+    "members": [
+     174,
+     178
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2855,
+    "end_frame": 2855,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 22
+   },
+   {
+    "members": [
+     174,
+     180
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2859,
+    "end_frame": 2859,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 20
+   },
+   {
+    "members": [
+     185,
+     192
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3026,
+    "end_frame": 3026,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     184,
+     197
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3029,
+    "end_frame": 3029,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     194,
+     197
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3044,
+    "end_frame": 3044,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     217,
+     219
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3052,
+    "end_frame": 3052,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     214,
+     216,
+     217,
+     219
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3068,
+    "end_frame": 3068,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     216,
+     217
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3082,
+    "end_frame": 3083,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     230,
+     231
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3202,
+    "end_frame": 3202,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     237,
+     238
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3364,
+    "end_frame": 3364,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     246,
+     247
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3888,
+    "end_frame": 3888,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     246
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     246,
+     247
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3907,
+    "end_frame": 3907,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     234,
+     238
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4013,
+    "end_frame": 4013,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     234,
+     238
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4022,
+    "end_frame": 4022,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     234,
+     238,
+     239
+    ],
+    "n_sets": 1,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4030,
+    "end_frame": 4030,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     234,
+     239
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4033,
+    "end_frame": 4033,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     234,
+     238
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4065,
+    "end_frame": 4065,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     250,
+     251
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4185,
+    "end_frame": 4185,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     251,
+     253
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 4275,
+    "end_frame": 4275,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     251
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     251,
+     253
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4296,
+    "end_frame": 4296,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     243,
+     245
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4299,
+    "end_frame": 4299,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     248,
+     249
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4507,
+    "end_frame": 4507,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     248
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     248,
+     249
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4529,
+    "end_frame": 4529,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     286,
+     288
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 5081,
+    "end_frame": 5081,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     286
+    ],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     286,
+     287
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5092,
+    "end_frame": 5092,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 9
+   },
+   {
+    "members": [
+     286,
+     288
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5102,
+    "end_frame": 5102,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 8
+   },
+   {
+    "members": [
+     304,
+     305
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5404,
+    "end_frame": 5404,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     295,
+     299
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 5630,
+    "end_frame": 5630,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     295,
+     298,
+     299
+    ],
+    "n_sets": 1,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5632,
+    "end_frame": 5632,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     295,
+     298
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 5639,
+    "end_frame": 5640,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     295,
+     299
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5643,
+    "end_frame": 5643,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     309,
+     311
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5791,
+    "end_frame": 5791,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     297,
+     315
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5814,
+    "end_frame": 5814,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     358,
+     359,
+     364
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5925,
+    "end_frame": 5926,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 63,
+  "n_member_sets": 64,
+  "outcome_counts": {
+   "occlusion_group_expired": 44,
+   "none": 16,
+   "occlusion_group_recovered": 3
+  },
+  "kind_counts": {
+   "implicit-2": 36,
+   "active-2": 19,
+   "ge3-covering": 8
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 33,
+    "occlusion_group_recovered": 3
+   },
+   "active-2": {
+    "none": 16,
+    "occlusion_group_expired": 3
+   },
+   "ge3-covering": {
+    "occlusion_group_expired": 8
+   }
+  },
+  "implicit_episodes": 36,
+  "episodes_member_lost": 5,
+  "eps_with_new_id_after": 37,
+  "source": "session_thai6",
+  "birth_veto_events": 1,
+  "birth_veto_pairs": 1,
+  "split_deferred_events": 23,
+  "split_deferred_tracks": 16,
+  "split_defer_cost_median": 0.491,
+  "split_defer_margin_median": 0.135,
+  "recovery_pending_events": 195,
+  "recovery_pending_tracks": 80,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r0_session_thai7",
+  "frames": 2872,
+  "fps": 4.681,
+  "event_line_counts": {
+   "occlusion_group_opened": 9,
+   "occlusion_group_expired": 17,
+   "association_recovery_pending": 77,
+   "merged_detection_frozen": 117,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 51,
+   "local_track_expired": 17
+  },
+  "set_rows": {
+   "distinct_sets": 17,
+   "sets_with_opened": 9,
+   "sets_terminal_only": 8,
+   "sets_last_expired": 17,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 17,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     15,
+     19
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 111,
+    "end_frame": 111,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     32,
+     35
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 426,
+    "end_frame": 427,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     9,
+     10
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 488,
+    "end_frame": 488,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     28,
+     29
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 903,
+    "end_frame": 903,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     28
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     28,
+     29
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 920,
+    "end_frame": 920,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     28,
+     33
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 977,
+    "end_frame": 977,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     61,
+     62
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1379,
+    "end_frame": 1380,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     61
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     60,
+     61
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1447,
+    "end_frame": 1447,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     36,
+     37
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 1851,
+    "end_frame": 1851,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     36,
+     37
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1871,
+    "end_frame": 1871,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     79,
+     80
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2025,
+    "end_frame": 2025,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     79
+    ],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     79,
+     80
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2038,
+    "end_frame": 2038,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     39,
+     41
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2196,
+    "end_frame": 2196,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     95,
+     99
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2530,
+    "end_frame": 2531,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     45,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2576,
+    "end_frame": 2576,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     46,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2586,
+    "end_frame": 2587,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     45,
+     46
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2590,
+    "end_frame": 2590,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     103,
+     105
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2597,
+    "end_frame": 2597,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     103
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     45,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2598,
+    "end_frame": 2598,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     103,
+     105,
+     106
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2616,
+    "end_frame": 2617,
+    "duration_frames": 1,
+    "duration_s": 0.2,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 20,
+  "n_member_sets": 17,
+  "outcome_counts": {
+   "occlusion_group_expired": 15,
+   "none": 5
+  },
+  "kind_counts": {
+   "implicit-2": 11,
+   "active-2": 9
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 11
+   },
+   "active-2": {
+    "occlusion_group_expired": 4,
+    "none": 5
+   }
+  },
+  "implicit_episodes": 11,
+  "episodes_member_lost": 4,
+  "eps_with_new_id_after": 13,
+  "source": "session_thai7",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 77,
+  "recovery_pending_tracks": 29,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r0_session_thai8",
+  "frames": 1952,
+  "fps": 4.516,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 17,
+   "merged_detection_frozen": 41,
+   "local_track_lost": 23,
+   "local_track_expired": 9
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     70,
+     71
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1548,
+    "end_frame": 1548,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     24,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1815,
+    "end_frame": 1815,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_thai8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.257,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 17,
+  "recovery_pending_tracks": 6,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r0b_session_thai8",
+  "frames": 1952,
+  "fps": 2.644,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 17,
+   "merged_detection_frozen": 41,
+   "local_track_lost": 23,
+   "local_track_expired": 9
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     70,
+     71
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1548,
+    "end_frame": 1548,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     24,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1815,
+    "end_frame": 1815,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_thai8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.257,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 17,
+  "recovery_pending_tracks": 6,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1_session_hiep_thai5",
+  "frames": 3977,
+  "fps": 2.411,
+  "event_line_counts": {
+   "occlusion_group_opened": 2,
+   "occlusion_group_expired": 7,
+   "split_assignment_deferred": 2,
+   "association_recovery_pending": 40,
+   "merged_detection_frozen": 106,
+   "local_track_lost": 61,
+   "local_track_expired": 14
+  },
+  "set_rows": {
+   "distinct_sets": 7,
+   "sets_with_opened": 2,
+   "sets_terminal_only": 5,
+   "sets_last_expired": 7,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 7,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     59,
+     61
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 439,
+    "end_frame": 439,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 10
+   },
+   {
+    "members": [
+     67,
+     78
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 996,
+    "end_frame": 996,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 8
+   },
+   {
+    "members": [
+     67,
+     78
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1007,
+    "end_frame": 1007,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     135,
+     139
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1771,
+    "end_frame": 1771,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     135,
+     139
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1785,
+    "end_frame": 1785,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     139,
+     143
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1796,
+    "end_frame": 1796,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     217,
+     219
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3781,
+    "end_frame": 3781,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     158,
+     159
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3921,
+    "end_frame": 3921,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 17
+   },
+   {
+    "members": [
+     161,
+     169
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3966,
+    "end_frame": 3966,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 9,
+  "n_member_sets": 7,
+  "outcome_counts": {
+   "occlusion_group_expired": 7,
+   "none": 2
+  },
+  "kind_counts": {
+   "implicit-2": 7,
+   "active-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 7
+   },
+   "active-2": {
+    "none": 2
+   }
+  },
+  "implicit_episodes": 7,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 5,
+  "source": "session_hiep_thai5",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 2,
+  "split_deferred_tracks": 2,
+  "split_defer_cost_median": 0.649,
+  "split_defer_margin_median": 0.141,
+  "recovery_pending_events": 40,
+  "recovery_pending_tracks": 21,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1_session_hiep_thai5.log",
+  "frames": 0,
+  "fps": null,
+  "error": "no predictions.jsonl"
+ },
+ {
+  "session": "reidfix_r1_session_thai6",
+  "frames": 5937,
+  "fps": 2.913,
+  "event_line_counts": {
+   "occlusion_group_opened": 22,
+   "occlusion_group_recovered": 2,
+   "occlusion_group_expired": 84,
+   "split_assignment_deferred": 23,
+   "association_recovery_pending": 186,
+   "new_local_id_deferred_unresolved_merge": 1,
+   "merged_detection_frozen": 116,
+   "watershed_partition_provisional": 3,
+   "local_track_lost": 106,
+   "local_track_expired": 42
+  },
+  "set_rows": {
+   "distinct_sets": 58,
+   "sets_with_opened": 20,
+   "sets_terminal_only": 38,
+   "sets_last_expired": 58,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 86,
+   "terminal_rows_repeated": 7
+  },
+  "episodes": [
+   {
+    "members": [
+     1,
+     2
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 286,
+    "end_frame": 286,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 603,
+    "end_frame": 603,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 609,
+    "end_frame": 609,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 629,
+    "end_frame": 629,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 647,
+    "end_frame": 647,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 0,
+    "recovered": 1,
+    "outcome": "occlusion_group_recovered",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 653,
+    "end_frame": 653,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     11,
+     12,
+     13
+    ],
+    "n_sets": 1,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 669,
+    "end_frame": 676,
+    "duration_frames": 7,
+    "duration_s": 2.4,
+    "opened": 0,
+    "expired": 8,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 7
+   },
+   {
+    "members": [
+     11,
+     12
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 681,
+    "end_frame": 681,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 6
+   },
+   {
+    "members": [
+     11,
+     12,
+     13,
+     15
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 684,
+    "end_frame": 684,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 6
+   },
+   {
+    "members": [
+     11,
+     12,
+     15,
+     16,
+     17,
+     18
+    ],
+    "n_sets": 4,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 686,
+    "end_frame": 696,
+    "duration_frames": 10,
+    "duration_s": 3.4,
+    "opened": 0,
+    "expired": 13,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     16,
+     17
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 709,
+    "end_frame": 709,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 5
+   },
+   {
+    "members": [
+     15,
+     16,
+     17,
+     18
+    ],
+    "n_sets": 4,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 714,
+    "end_frame": 714,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 4,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     15,
+     16,
+     17,
+     18,
+     21,
+     22
+    ],
+    "n_sets": 10,
+    "kind": "ge3-covering",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 716,
+    "end_frame": 727,
+    "duration_frames": 11,
+    "duration_s": 3.8,
+    "opened": 1,
+    "expired": 16,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     21,
+     22
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 745,
+    "end_frame": 745,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     22,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 761,
+    "end_frame": 761,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     23,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 864,
+    "end_frame": 864,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     23
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     23,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 891,
+    "end_frame": 891,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     14,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1409,
+    "end_frame": 1409,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     14,
+     15
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1431,
+    "end_frame": 1431,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     18,
+     24
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1803,
+    "end_frame": 1803,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     42,
+     43,
+     48
+    ],
+    "n_sets": 2,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2189,
+    "end_frame": 2191,
+    "duration_frames": 2,
+    "duration_s": 0.7,
+    "opened": 2,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     78,
+     82
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2313,
+    "end_frame": 2313,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     87,
+     91
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2428,
+    "end_frame": 2428,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 39
+   },
+   {
+    "members": [
+     87,
+     90
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2437,
+    "end_frame": 2437,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 17
+   },
+   {
+    "members": [
+     87,
+     90,
+     91
+    ],
+    "n_sets": 3,
+    "kind": "ge3-covering",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2444,
+    "end_frame": 2444,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 10
+   },
+   {
+    "members": [
+     171,
+     172
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2785,
+    "end_frame": 2785,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     171,
+     172
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2804,
+    "end_frame": 2804,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 3
+   },
+   {
+    "members": [
+     174,
+     176
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2846,
+    "end_frame": 2846,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     174
+    ],
+    "new_ids_45f_after": 23
+   },
+   {
+    "members": [
+     174,
+     176
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2851,
+    "end_frame": 2851,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 23
+   },
+   {
+    "members": [
+     174,
+     178
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2859,
+    "end_frame": 2859,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 20
+   },
+   {
+    "members": [
+     182,
+     189
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3026,
+    "end_frame": 3026,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     181,
+     194
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3029,
+    "end_frame": 3029,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     191,
+     194
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 3044,
+    "end_frame": 3044,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     215,
+     217
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3052,
+    "end_frame": 3052,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     212,
+     214,
+     215,
+     217
+    ],
+    "n_sets": 3,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3068,
+    "end_frame": 3068,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 3,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     214,
+     215
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3082,
+    "end_frame": 3083,
+    "duration_frames": 1,
+    "duration_s": 0.3,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     228,
+     229
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3202,
+    "end_frame": 3202,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     235,
+     236
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3364,
+    "end_frame": 3364,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     244,
+     245
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 3888,
+    "end_frame": 3888,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     244
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     244,
+     245
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 3907,
+    "end_frame": 3907,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     231,
+     235
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4013,
+    "end_frame": 4013,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     231
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     231,
+     235,
+     236
+    ],
+    "n_sets": 2,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4029,
+    "end_frame": 4030,
+    "duration_frames": 1,
+    "duration_s": 0.3,
+    "opened": 1,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     248,
+     249
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4185,
+    "end_frame": 4185,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     249,
+     251
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 4275,
+    "end_frame": 4275,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     249
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     249,
+     251
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 4296,
+    "end_frame": 4296,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     240,
+     242
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4299,
+    "end_frame": 4299,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     245,
+     246
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 4507,
+    "end_frame": 4507,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     245
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     245,
+     246
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 4529,
+    "end_frame": 4529,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     284,
+     286
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 5081,
+    "end_frame": 5081,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     284
+    ],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     284,
+     285
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5092,
+    "end_frame": 5092,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 9
+   },
+   {
+    "members": [
+     284,
+     286
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5102,
+    "end_frame": 5102,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 8
+   },
+   {
+    "members": [
+     302,
+     303
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5404,
+    "end_frame": 5404,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     292,
+     295
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 5624,
+    "end_frame": 5624,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     292
+    ],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     292,
+     295
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5637,
+    "end_frame": 5637,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     306,
+     308
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5791,
+    "end_frame": 5791,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     294,
+     312
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 5814,
+    "end_frame": 5814,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     356,
+     357,
+     362
+    ],
+    "n_sets": 2,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 5925,
+    "end_frame": 5926,
+    "duration_frames": 1,
+    "duration_s": 0.3,
+    "opened": 0,
+    "expired": 2,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 57,
+  "n_member_sets": 58,
+  "outcome_counts": {
+   "occlusion_group_expired": 38,
+   "none": 17,
+   "occlusion_group_recovered": 2
+  },
+  "kind_counts": {
+   "implicit-2": 32,
+   "active-2": 20,
+   "ge3-covering": 5
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 30,
+    "occlusion_group_recovered": 2
+   },
+   "active-2": {
+    "none": 17,
+    "occlusion_group_expired": 3
+   },
+   "ge3-covering": {
+    "occlusion_group_expired": 5
+   }
+  },
+  "implicit_episodes": 32,
+  "episodes_member_lost": 8,
+  "eps_with_new_id_after": 34,
+  "source": "session_thai6",
+  "birth_veto_events": 1,
+  "birth_veto_pairs": 1,
+  "split_deferred_events": 23,
+  "split_deferred_tracks": 17,
+  "split_defer_cost_median": 0.491,
+  "split_defer_margin_median": 0.135,
+  "recovery_pending_events": 186,
+  "recovery_pending_tracks": 76,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1_session_thai6.log",
+  "frames": 0,
+  "fps": null,
+  "error": "no predictions.jsonl"
+ },
+ {
+  "session": "reidfix_r1_session_thai7",
+  "frames": 2872,
+  "fps": 2.6,
+  "event_line_counts": {
+   "occlusion_group_opened": 7,
+   "occlusion_group_expired": 13,
+   "association_recovery_pending": 65,
+   "merged_detection_frozen": 115,
+   "watershed_partition_provisional": 1,
+   "local_track_lost": 57,
+   "local_track_expired": 16
+  },
+  "set_rows": {
+   "distinct_sets": 13,
+   "sets_with_opened": 7,
+   "sets_terminal_only": 6,
+   "sets_last_expired": 13,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 13,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     15,
+     19
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 111,
+    "end_frame": 111,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     32,
+     35
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 426,
+    "end_frame": 427,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 4
+   },
+   {
+    "members": [
+     9,
+     10
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 488,
+    "end_frame": 488,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     28,
+     29
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 903,
+    "end_frame": 903,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     28
+    ],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     28,
+     29
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 920,
+    "end_frame": 920,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     28,
+     33
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 977,
+    "end_frame": 977,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     61,
+     62
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 1379,
+    "end_frame": 1380,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [
+     61
+    ],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     60,
+     61
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1447,
+    "end_frame": 1447,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     36,
+     37
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 1851,
+    "end_frame": 1851,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     36,
+     37
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1871,
+    "end_frame": 1871,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     79,
+     80
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam2",
+    "open_frame": 2025,
+    "end_frame": 2025,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [
+     79
+    ],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     79,
+     80
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 2038,
+    "end_frame": 2038,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 2
+   },
+   {
+    "members": [
+     39,
+     41
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2196,
+    "end_frame": 2196,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     45,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2576,
+    "end_frame": 2576,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 1,
+    "expired": 0,
+    "recovered": 0,
+    "outcome": "none",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     46,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "active-2",
+    "has_opened": true,
+    "camera": "cam1",
+    "open_frame": 2586,
+    "end_frame": 2587,
+    "duration_frames": 1,
+    "duration_s": 0.4,
+    "opened": 1,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     45,
+     46
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2590,
+    "end_frame": 2590,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   },
+   {
+    "members": [
+     45,
+     47
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 2598,
+    "end_frame": 2598,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 17,
+  "n_member_sets": 13,
+  "outcome_counts": {
+   "occlusion_group_expired": 13,
+   "none": 4
+  },
+  "kind_counts": {
+   "implicit-2": 10,
+   "active-2": 7
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 10
+   },
+   "active-2": {
+    "occlusion_group_expired": 3,
+    "none": 4
+   }
+  },
+  "implicit_episodes": 10,
+  "episodes_member_lost": 3,
+  "eps_with_new_id_after": 11,
+  "source": "session_thai7",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 0,
+  "split_deferred_tracks": 0,
+  "recovery_pending_events": 65,
+  "recovery_pending_tracks": 26,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1_session_thai7.log",
+  "frames": 0,
+  "fps": null,
+  "error": "no predictions.jsonl"
+ },
+ {
+  "session": "reidfix_r1_session_thai8",
+  "frames": 1952,
+  "fps": 2.487,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 13,
+   "merged_detection_frozen": 47,
+   "local_track_lost": 29,
+   "local_track_expired": 11
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     70,
+     71
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1548,
+    "end_frame": 1548,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     24,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1815,
+    "end_frame": 1815,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_thai8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.257,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 13,
+  "recovery_pending_tracks": 6,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1_session_thai8.log",
+  "frames": 0,
+  "fps": null,
+  "error": "no predictions.jsonl"
+ },
+ {
+  "session": "reidfix_r1b_session_thai8",
+  "frames": 1952,
+  "fps": 2.885,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 13,
+   "merged_detection_frozen": 47,
+   "local_track_lost": 29,
+   "local_track_expired": 11
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     70,
+     71
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 1548,
+    "end_frame": 1548,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     24,
+     26
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam1",
+    "open_frame": 1815,
+    "end_frame": 1815,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 1
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 1,
+  "source": "session_thai8",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.257,
+  "split_defer_margin_median": 0.139,
+  "recovery_pending_events": 13,
+  "recovery_pending_tracks": 6,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ },
+ {
+  "session": "reidfix_r1b_session_thai8.log",
+  "frames": 0,
+  "fps": null,
+  "error": "no predictions.jsonl"
+ },
+ {
+  "session": "runtime_session_bt",
+  "frames": 1529,
+  "fps": 4.052,
+  "event_line_counts": {
+   "occlusion_group_expired": 2,
+   "split_assignment_deferred": 1,
+   "association_recovery_pending": 10,
+   "merged_detection_frozen": 45,
+   "local_track_lost": 20,
+   "local_track_expired": 7
+  },
+  "set_rows": {
+   "distinct_sets": 2,
+   "sets_with_opened": 0,
+   "sets_terminal_only": 2,
+   "sets_last_expired": 2,
+   "sets_last_recovered": 0,
+   "sets_open_no_terminal": 0,
+   "terminal_rows_total": 2,
+   "terminal_rows_repeated": 0
+  },
+  "episodes": [
+   {
+    "members": [
+     55,
+     56
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 943,
+    "end_frame": 943,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   },
+   {
+    "members": [
+     55,
+     57
+    ],
+    "n_sets": 1,
+    "kind": "implicit-2",
+    "has_opened": false,
+    "camera": "cam2",
+    "open_frame": 947,
+    "end_frame": 947,
+    "duration_frames": 0,
+    "duration_s": 0.0,
+    "opened": 0,
+    "expired": 1,
+    "recovered": 0,
+    "outcome": "occlusion_group_expired",
+    "member_lost_during": [],
+    "new_ids_45f_after": 0
+   }
+  ],
+  "n_episodes": 2,
+  "n_member_sets": 2,
+  "outcome_counts": {
+   "occlusion_group_expired": 2
+  },
+  "kind_counts": {
+   "implicit-2": 2
+  },
+  "kind_x_outcome": {
+   "implicit-2": {
+    "occlusion_group_expired": 2
+   }
+  },
+  "implicit_episodes": 2,
+  "episodes_member_lost": 0,
+  "eps_with_new_id_after": 0,
+  "source": "session_bt",
+  "birth_veto_events": 0,
+  "birth_veto_pairs": 0,
+  "split_deferred_events": 1,
+  "split_deferred_tracks": 1,
+  "split_defer_cost_median": 0.75,
+  "split_defer_margin_median": 0.124,
+  "recovery_pending_events": 10,
+  "recovery_pending_tracks": 7,
+  "gt": {
+   "note": "N/A — csv header-only, 0 rows"
+  }
+ }
+]

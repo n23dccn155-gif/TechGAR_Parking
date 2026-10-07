@@ -1,0 +1,176 @@
+{
+  "generatedAt": "2026-10-04T08:48:03.393Z",
+  "status": "FINAL APPROVED — Phase 3 web deliverable đã duyệt (SPEC status COMPLETE). ALL packs frozen (A ee4682… @08:35, B 27b693… @08:40, C 4092aa… @08:47). 117 unique lessons / 236 scenarios · contract 236/236 · srcRefs 253/253 · checks 547/547 · 956 frames file-mode · HTTP 117/117 lessons + 236/236 scenarios · paramChanges 130/130 · 0 console/page/request errors. Closure: A verifier 6395 PASS · B verifier 14970 PASS + A peer-review CV closing PASS · B independent audit trên C hash 4092aa (LEAD-run 3389/3389 PASS) → B final closing PASS. Mọi owner verdict đạt — LEAD duyệt.",
+  "browser": "151.0.7922.34",
+  "runFile": "qa/smoke-results.json",
+  "packMeta": {
+    "index.html": { "size": 1089, "mtime": "2026-10-04T08:16:40.563Z", "sha256_16": "76b60c3c64db2c91" },
+    "shared/engine.js": { "size": 10555, "mtime": "2026-10-04T06:27:03.895Z", "sha256_16": "fcd3f3026adf0e9b" },
+    "app.js": { "size": 42025, "mtime": "2026-10-04T08:04:12.821Z", "sha256_16": "70e6b78bd1ba3406" },
+    "packs/frontend.js": { "size": 285193, "mtime": "2026-10-04T08:35:12.374Z", "sha256_16": "ee4682454f1f8b80", "state": "FROZEN by A (owner verifier 6395 PASS/0 FAIL — gate-node-mutate + cumulative pairs + 2 lowFrames fixed)" },
+    "packs/cv.js": { "size": 402497, "mtime": "2026-10-04T08:40:03.483Z", "sha256_16": "27b693e84ff600d3", "state": "FROZEN by B (owner verifier 14970 PASS/0 FAIL, 411 frames — §3.7 3 findings + 16 self-PASS + MOG2 3-level mask + contour param-aware fixed)" },
+    "packs/integration.js": { "size": 289652, "mtime": "2026-10-04T08:47:19.962Z", "sha256_16": "4092aa839ac25e8d", "state": "FROZEN by C sau B independent review — P1/M1..M5/L1/L3/L4/L6 đóng; audit _audit_integration.mjs 3389/3389 PASS (276 frames, emptyState=0, noMetrics=0, <3frames=0, drawThrow=0, 70 param runs 0 invariant fail)" }
+  },
+  "packs": {
+    "total": 117,
+    "byPack": { "frontend": 37, "cv": 57, "integration": 23 },
+    "aliases": [
+      "live-runtime-validator",
+      "frame-cursor-guard",
+      "runtime-request-coalesce",
+      "qr-visibility-window",
+      "canonical-gid-chain",
+      "replay-session-sync"
+    ],
+    "packStatus": {
+      "frontend": { "registered": true, "count": 37, "expected": 37 },
+      "cv": { "registered": true, "count": 57, "expected": 57 },
+      "integration": { "registered": true, "count": 23, "expected": 23 }
+    }
+  },
+  "contract": { "file": { "total": 236, "ok": 236, "fails": [] } },
+  "srcRefs": { "file": { "total": 253, "ok": 253, "fails": [] } },
+  "fileMode": {
+    "lessonsTested": 117,
+    "scenariosTested": 236,
+    "checksOk": 547,
+    "checksTotal": 547,
+    "framesTotal": 956,
+    "fails": []
+  },
+  "httpMode": {
+    "catalog": 117,
+    "lessonsTested": 117,
+    "scenariosTested": 236,
+    "coverage": "FULL — ALL packs step-through mọi scenario",
+    "fails": [],
+    "sourceLinks": [
+      "../backend/gate_session_controller.py#L190",
+      "../backend/gate_session_controller.py#L405",
+      "../backend/gate_session_controller.py#L874",
+      "../backend/main_detect/runtime_server.py#L25"
+    ]
+  },
+  "aliases": {
+    "file": {
+      "live-runtime-validator": { "target": "live-freshness-contract", "landed": "ok" },
+      "frame-cursor-guard": { "target": "frame-cursor-monotonic-poll", "landed": "ok" },
+      "runtime-request-coalesce": { "target": "frame-cursor-monotonic-poll", "landed": "ok" },
+      "qr-visibility-window": { "target": "qr-token-issuance-ttl", "landed": "ok" },
+      "canonical-gid-chain": { "target": "canonical-runtime-id-consumer", "landed": "ok" },
+      "replay-session-sync": { "target": "replay-timestamp-pairing", "landed": "ok" }
+    },
+    "http": {
+      "live-runtime-validator": { "target": "live-freshness-contract", "landed": "ok" },
+      "frame-cursor-guard": { "target": "frame-cursor-monotonic-poll", "landed": "ok" },
+      "runtime-request-coalesce": { "target": "frame-cursor-monotonic-poll", "landed": "ok" },
+      "qr-visibility-window": { "target": "qr-token-issuance-ttl", "landed": "ok" },
+      "canonical-gid-chain": { "target": "canonical-runtime-id-consumer", "landed": "ok" },
+      "replay-session-sync": { "target": "replay-timestamp-pairing", "landed": "ok" }
+    }
+  },
+  "controls": {
+    "file": {
+      "playMoved": { "before": 1, "after": 2, "ok": true },
+      "pauseStable": { "idx": 2, "after400ms": 2, "ariaPressed": "false", "ok": true },
+      "speedOptions": ["0.25", "0.5", "1", "2", "4"],
+      "speedAdvance": { "1": "908ms", "2": "469ms", "4": "339ms", "0.25": "3706ms", "0.5": "1840ms" },
+      "speedOrdering": "ok (4 < 0.25)",
+      "scrubbed": "5 / 10",
+      "nextPrev": "6 / 10 → 5 / 10",
+      "afterFirst": "1 / 10",
+      "endAutoPause": { "c": "10 / 10", "playing": "false" },
+      "afterScenario": { "counter": "1 / 5", "frame0": true, "paramResetOk": true, "dirtyBefore": "1" },
+      "scenIds": ["normal", "edge"],
+      "routeChangeWhilePlaying": { "counter": "1 / 6", "ariaPressed": "false", "ok": true }
+    },
+    "http": {
+      "playMoved": { "before": 1, "after": 2, "ok": true },
+      "pauseStable": { "idx": 2, "after400ms": 2, "ariaPressed": "false", "ok": true },
+      "speedOptions": ["0.25", "0.5", "1", "2", "4"],
+      "speedOrdering": "ok (4 < 0.25)",
+      "endAutoPause": { "playing": "false" },
+      "routeChangeWhilePlaying": { "ariaPressed": "false", "ok": true }
+    }
+  },
+  "paramChanges": {
+    "scope": "ALL packs — mọi lesson có parameters (130 params)",
+    "tested": 130,
+    "changed": 130,
+    "checksPass": 130,
+    "lowFrames": 0,
+    "traceKo": 0,
+    "rowFields": ["lesson", "pack", "scenario", "param", "from", "to", "effectiveParams", "uiParams", "frames", "traceFrames1", "traceDiff", "traceKo", "checks", "packVersions"],
+    "fails": [],
+    "previouslyFailedNowPass": [
+      { "lesson": "invalid-spot-recovery", "param": "outcome secondOk→firstOk", "was": "trace 3→2 lowFrames", "now": "pass — A freeze v3", "owner": "A-closed" },
+      { "lesson": "mock-scenario-emitter", "param": "scenario normal→stale", "was": "trace 5→2 lowFrames", "now": "pass — A freeze v3", "owner": "A-closed" },
+      { "lesson": "contour-geometry-filter", "param": "min_ratio 0.08→0.01", "was": "expectation không param-aware (reject:motion)", "now": "pass — B freeze", "owner": "B-closed" },
+      { "lesson": "gate-node-mutate", "param": "recompute false→true", "was": "2/3 KO", "now": "pass — A freeze v2", "owner": "A-closed" },
+      { "lesson": "source-mode-live-gating", "param": "replay_realtime true→false", "was": "due_s 1060 vs null + frames 3→2", "now": "pass — C pacing-off frame", "owner": "C-closed" },
+      { "lesson": "parked-evidence-dwell-legacy", "param": "v2_mode false→true", "was": "frames 5→1", "now": "pass — C v2-input/v2-gate/v2-result", "owner": "C-closed" }
+    ]
+  },
+  "integrationBReview": {
+    "reviewFile": ".analysis/algos/integration-web-quality-review-b.md",
+    "reviewedHash": "cb443779b97555fe",
+    "closingHash": "4092aa839ac25e8d",
+    "closingAudit": ".analysis/algos/_audit_integration.mjs → 3389/3389 PASS (276 frames · emptyState=0 · noMetrics=0 · <3frames=0 · drawThrow=0 · 70 param runs · invariant fails=0)",
+    "findings": {
+      "P1": "replay missing-col 2→3 frames (load-input context trước header) — audit <3frames=0",
+      "M1": "error class phân loại thật: ValueError header/ts/idx vs RuntimeError EOF/early — errors lưu {cls,msg} thay chuỗi",
+      "M2": "claim key hyphen→underscore (claim_s-new → claim_s_new) — check claim sau TTL chạy thật; check duyệt theo expected keys (thiếu result key = fail)",
+      "M3": "revision emit result.note (u-1 trôi cap 32 → replay mutate lại) + verdicts_head/verdicts_tail projections + checks",
+      "M4": "ttl_s wire thật: s-old thành legacy session (gỡ qrExpiresAt → fallback createdAt+ttl_s; giá trị default 120 ≡ fixture cũ, ttl_s=30 loại s-old khỏi waiting)",
+      "M5": "8 typed I/O description rỗng đã điền tiếng Việt theo semantics từng lesson",
+      "L1": "replay row/pair/eof/done states dữ liệu thật + atomic done state — audit emptyState=0",
+      "L3": "expected-key coverage: layout_count · sid_of_gid5_rt1 · measured-path rejected(class-map)+rejected_all · parking-episode skipped(allSkipped) · gate-config whole-map post/ctrl · QR claim theo expected keys",
+      "L4": "buildTrace wrap nội bộ: merge lesson-defaults→scenario.defaultParams→caller (buildTrace(id,{})≡defaults, verified 46/46 node)",
+      "L6": "replay expected = independent reference mirror đầy đủ pipeline (inject fault trong reference riêng) — không fallback fixture khi params đổi; 70 param runs 0 invariant fail"
+    }
+  },
+  "paramDomEvidence": {
+    "lesson": "vehicle-svg-project",
+    "scenario": "default",
+    "ok": true,
+    "fails": [],
+    "fields": [
+      { "label": "Session gid", "tag": "SELECT", "optionCount": 3, "options": [{ "value": "9", "text": "9" }, { "value": "7", "text": "7" }, { "value": "5", "text": "5" }], "selected": "9" },
+      { "label": "Alias map", "tag": "SELECT", "optionCount": 2, "options": [{ "value": "chain", "text": "5→7→9 (chuỗi)" }, { "value": "cycle", "text": "5→7→5 (chu trình)" }], "selected": "chain" }
+    ],
+    "uiChanges": [
+      { "field": "Session gid", "from": "9", "to": "7", "changed": true },
+      { "field": "Alias map", "from": "chain", "to": "cycle", "changed": true }
+    ],
+    "optionContract": "select options: [{value,label}] (shape chính) hoặc primitive string (legacy) — SPEC.md đã ghi; shell flag malformed, không normalize"
+  },
+  "mobile": {
+    "catalogOk": true,
+    "sidebarCollapsed": true,
+    "hScroll": false,
+    "canvasNonblank": true,
+    "canvasFits": true,
+    "canvasEdgeLit": 300
+  },
+  "errors": { "console": [], "page": [], "requests": [] },
+  "screenshots": {
+    "dir": "qa/screenshots/",
+    "policy": "frame nhiều mực nhất trong nửa sau trace (ink = pixel delta vs nền >90); scroll top trước chụp; shotFrame + ink ghi trong smoke-results.lessons",
+    "refreshedAt": "2026-10-04T08:48Z — chụp lại trên packs frozen",
+    "files": [
+      "catalog-file.png", "catalog-http.png",
+      "astar-find-route-default.png", "vehicle-svg-project-default.png", "world-svg-project-default.png",
+      "lapjv-assignment-normal.png", "association-cost-matrix-normal.png", "foreground-morphology-normal.png",
+      "handoff-lapjv-matching-normal.png", "mog2-foreground-mask-normal.png",
+      "directed-crossing-direction-normal.png", "parking-episode-apply-normal.png", "qr-token-issuance-ttl-normal.png",
+      "replay-timestamp-pairing-normal.png", "atomic-session-store-normal.png", "gate-config-validate-save-normal.png",
+      "mobile-390.png", "mobile-390-canvas.png"
+    ]
+  },
+  "commands": {
+    "smoke": "cd D:/TechGar2/algo-web && node qa/smoke.js — FULL QA: contract 236 + srcRefs 253 + DOM step-through 236 scen cả file+HTTP + controls strict + paramChanges ALL packs + paramDomEvidence + mobile + mid-ink screenshots",
+    "integrationAudit": "cd D:/TechGar2/algo-web && node ../.analysis/algos/_audit_integration.mjs — audit độc lập B: shape/state/metrics/activeLines/expected-coverage/draw/param-invariants",
+    "httpServe": "cd D:/TechGar2/algo-web && python -m http.server 8080 --directory .."
+  },
+  "limits": "param test mỗi param 1 giá trị khác default (không quét pair-combinations); canvas check = nonblank + newFrameSync + ink-diff cho shots, chưa per-frame pixel oracle; MOG2: A independent Node peer-review trên final hash 27b693 + LEAD visual canvas refined (4+1=5 shots). Run này trên packs FROZEN — đổi pack → rerun cả 2 commands."
+}

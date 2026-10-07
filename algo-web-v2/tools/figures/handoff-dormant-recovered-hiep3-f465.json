@@ -1,0 +1,16 @@
+{
+  "id": "handoff-dormant-recovered-hiep3-f465",
+  "session": "session_hiep3",
+  "cam": 1,
+  "frame": 465,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [902, 96, 972, 171],
+      "color": "#188038",
+      "label": "lid10 -> GID2 (dormant 39.8s, app 0.167)"
+    }
+  ],
+  "max_kb": 200
+}

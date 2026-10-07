@@ -1,0 +1,26 @@
+ M backend/main_detect/config/roi_mask_cam1.json
+ M backend/main_detect/config/roi_mask_cam2.json
+ M backend/main_detect/config/two_camera.shared_cm_01.json
+ M backend/main_detect/src/techgar/cross_camera_manager.py
+ M backend/main_detect/src/techgar/slot_vehicle_binder.py
+ M backend/main_detect/src/techgar/trajectory_memory.py
+ M backend/main_detect/tests/test_gid_departure_token.py
+ M backend/main_detect/tests/test_gid_reserved_competition.py
+ M backend/main_detect/two_camera.py
+?? .agents/
+?? .analysis/
+?? .claude/
+?? .publish/
+?? algo-web-v2/
+?? algo-web/
+?? backend/.analysis/
+?? backend/main_detect/config/shared_map_01/attempts/cal-20261006-180750-46035b9a/
+?? backend/main_detect/experiment_test/merge_split_report.py
+?? backend/main_detect/experiment_test/reid_fix/
+?? backend/main_detect/experiment_test/verify/
+?? backend/main_detect/tests/test_merge_split_scenarios.py
+?? backend/main_detect/tests/test_stationary_reacquire.py
+?? docs/Bao_cao_NCKH_TechGAR_hoan_chinh.docx
+?? docs/_bao_cao_dump.txt
+?? nul
+?? skills-lock.json

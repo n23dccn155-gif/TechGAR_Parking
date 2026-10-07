@@ -1,0 +1,51 @@
+{
+  "id": "motion",
+  "title": "Motion detection đa tỉ lệ",
+  "tier": "T1",
+  "nodes": ["N5"],
+  "problem": "Xe đậu yên vẫn 'động' nếu chỉ so sánh frame kề (rung camera); cây lay cũng động nhưng không phải xe. Cần motion bền theo thời gian + hình dạng đủ lớn.",
+  "does": "Ba nguồn chứng cứ pixel: MOG2 background-subtractor (fg >200, marker 127 = nghi-bóng chỉ admit khi reject_cast_shadows), temporal frame-diff 2 mốc (0.25s gần / 0.80s xa), support = giao 2 nguồn; sau đó morphology (open 3×3, join 5×5), contours→bbox, cascade cổng diện tích/tỉ-lệ/aspect/bbox-max.",
+  "role": {"before": "Frame gray đã blur + ROI mask (N1)", "after": "Danh sách detection {bbox, area, hist, priority, roi_clipped} cho N6", "missing": "Mọi nhiễu pixel thành detection → tracker ngập; xe chậm/đậu yên mất hẳn khỏi pipeline"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "759-860", "symbol": "_detect"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "203", "symbol": "MOG2 ctor"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "486-560", "symbol": "_temporal_motion_mask/_motion_between"}],
+  "why": "Hai mốc temporal bắt cả xe vừa dừng (vẫn khác nền 0.8s) lẫn xe đang chạy; support∧ chỉ giữ pixel được CẢ HAI nguồn đồng ý → loại flicker [code mt:790-793]. MOG2 cho vùng thay đổi lâu dài, temporal cho thay đổi có nhịp.",
+  "steps": [
+    "MOG2.apply → fgmask; threshold >200 (marker 127 loại trừ khi flag shadow bật).",
+    "Temporal: diff frame hiện tại với reference 0.25s và 0.80s (đã bù sáng), dilate support 17×17.",
+    "motion_mask = mog ∨ temporal; giữ pixel có support.",
+    "∩ ROI mask (N1) + morphology OPEN 3×3 / CLOSE 5×5 iter1.",
+    "findContours → bbox → cascade: area ≥650 → ratio ≥0.05 → pixels ≥100 → aspect 0.25–5.0 → bbox ≤30%/42%/12% ảnh.",
+    "Đánh dấu priority/roi_clipped/dark_foreground_rescued trước khi ra N6."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "768-789", "symbol": "MOG2 threshold + 127 admission", "note": ">200 loại marker; cổng admit 127 chỉ khi reject_cast_shadows=True"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "790-793", "symbol": "temporal + support ∧", "note": "dilate 17×17"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "817-827", "symbol": "morphology", "note": "OPEN 3×3, CLOSE 5×5 iter1"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "973-975", "symbol": "aspect-ratio gate", "note": "0.25–5.0"}
+  ],
+  "realParams": [
+    {"name": "MOG2 history/varThreshold", "value": "700 / 32", "unit": "frames/-", "scope": "runtime", "ref": "motion_tracker.py:203 (hardcode)"},
+    {"name": "enable_multiscale_motion", "value": true, "unit": "flag", "scope": "runtime", "ref": "two_camera.py:2366-2397 (class False)"},
+    {"name": "motion_threshold", "value": 20, "unit": "mức xám", "scope": "runtime", "ref": "two_camera.py:1813 (class 25)"},
+    {"name": "motion_min_pixels / motion_min_ratio", "value": "100 / 0.05", "unit": "px / tỉ lệ", "scope": "runtime", "ref": "two_camera.py:1814-1815 (class 160/0.08)"},
+    {"name": "min_area", "value": 650, "unit": "px²", "scope": "runtime", "ref": "two_camera.py:1807"},
+    {"name": "temporal targets", "value": "0.25 / 0.80", "unit": "s", "scope": "runtime", "ref": "motion_tracker.py:34-96; window 0.45–2.25×target :500"},
+    {"name": "frame gaps", "value": "3 / 9", "unit": "frames", "scope": "runtime", "ref": "motion_tracker.py:34-96"},
+    {"name": "bbox max", "value": "0.30 / 0.42 / 0.12", "unit": "W/H/area tỉ lệ ảnh", "scope": "runtime", "ref": "two_camera.py:1826-1841"},
+    {"name": "morphology", "value": "3×3 open / 5×5×1 join", "unit": "kernel", "scope": "runtime", "ref": "two_camera.py:1844-1853"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Xe chạy qua cảnh yên", "seed": 11}, {"id": "edge", "label": "Nhiễu gió + xe đậu lâu", "seed": 11}],
+    "keyframes": [
+      {"id": "k1", "caption": "3 khung: ref 0.80s / ref 0.25s / current — xe A dịch 6px/frame [minh họa]", "mode": "both", "state": {"refs": 2}},
+      {"id": "k2", "caption": "MOG2 mask: nền học chậm → xe + cây lay đều sáng; temporal mask: chỉ vùng có nhịp", "mode": "both", "state": {"mog_blobs": 4, "temporal_blobs": 2}},
+      {"id": "k3", "caption": "support∧ loại cây lay (chỉ temporal thấy) và vệt sáng (chỉ MOG2 thấy) → còn vùng xe", "mode": "both", "state": {"support_blobs": 1}},
+      {"id": "k4", "caption": "Morphology nối vệt rời → contour → bbox; cascade loại blob <650px² → 1 detection", "mode": "both", "state": {"detections": 1, "min_area": 650}}
+    ]
+  },
+  "qa": [
+    {"q": "Xe đậu yên 5 phút còn là motion?", "a": "Không — temporal diff=0; nó thuộc occupancy (parking detector N2), không phải motion tracker."},
+    {"q": "Vì sao cần CẢ MOG2 lẫn temporal?", "a": "MOG2 bắt đổi nền dai (xe mới vào), temporal bắt nhịp ngắn; support∧ loại flicker chỉ-1-nguồn [code + suy luận]."},
+    {"q": "Blob to vượt 12% ảnh?", "a": "Bị bbox-max gate loại — tránh nổ sáng toàn cảnh thành 1 'xe' khổng lồ."}
+  ],
+  "certainty": "Cao [code]: chuỗi _detect + cascade đã đọc callsite; cửa sổ temporal 0.45–2.25× target từ :500."
+}

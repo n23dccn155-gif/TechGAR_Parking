@@ -1,0 +1,308 @@
+[
+  {
+    "file": "brightness-high-exposure.jpg",
+    "origin": "session_hiep_sang8/f600/cam2",
+    "source": "raw",
+    "sha256": "407be9620a77887ccd6ddeffc776fb37c6cdba550edaf51f55d76fb5b34eeb8d",
+    "session": "session_hiep_sang8",
+    "cam": 2,
+    "frame": 600
+  },
+  {
+    "file": "brightness-normal-exposure.jpg",
+    "origin": "session_hiep_thai1/f1500/cam1",
+    "source": "raw",
+    "sha256": "9af348e88872bf22c731e5f83962d591f4143dfac0624c025d814d47fdaa5c10",
+    "session": "session_hiep_thai1",
+    "cam": 1,
+    "frame": 1500
+  },
+  {
+    "file": "contour-giant-blob.jpg",
+    "origin": "runtime_session_bt/f1422/cam2",
+    "source": "raw",
+    "sha256": "0324a85463ea4e690e98824c85c7cab5713984f6c864fa2f56d3212af1992541",
+    "session": "runtime_session_bt",
+    "cam": 2,
+    "frame": 1422
+  },
+  {
+    "file": "failure-coasting-burst.jpg",
+    "origin": "verify_replay/f51/cam2",
+    "source": ".analysis/verify-replay/sheets/session_hiep_toi4/sheet_0003.jpg (toi4 cam2 ~f51 burst)",
+    "sha256": "82524315c972994bdf68eb8ef78f78b100c021d78cc3b5bdca64b3cc40bd3832",
+    "session": "verify_replay",
+    "cam": 2,
+    "frame": 51
+  },
+  {
+    "file": "failure-dup-track.jpg",
+    "origin": "verify_replay/f1350/cam1",
+    "source": ".analysis/verify-replay/sheets/session_hiep_thai3_events/sheet_0021.jpg (thai3 cam1 ~f1350)",
+    "sha256": "ea5231066d0cf3b0e8dd517b2f2a9684b4f58a10a43f9473a17ece0a456a5789",
+    "session": "verify_replay",
+    "cam": 1,
+    "frame": 1350
+  },
+  {
+    "file": "fixture-demo.jpg",
+    "origin": "session_fixture/f100/cam1",
+    "source": "synthetic",
+    "sha256": "04372924c9f229eec2824ed86528d1a47ed9c79e5e7244baacaad7696d1860ca",
+    "session": "qa-fixture",
+    "cam": 0,
+    "frame": 0
+  },
+  {
+    "file": "frontend-dataflow-map.jpg",
+    "origin": "frontend_artifacts/f0/cam0",
+    "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, navigation mode)",
+    "sha256": "488d63f9fd95f20ab698718f3a105bebf2399b4f11841493db692da244bcb3f7",
+    "session": "frontend_artifacts",
+    "cam": 0,
+    "frame": 0
+  },
+  {
+    "file": "gate-session-cam2-gates.jpg",
+    "origin": "shared_map_01/f0/cam2",
+    "source": "attempt capture_cam2.png (cal-20260927-160513-decd3099); gate px = inv(camera_transforms.cam2) @ gate_zones.json world cm",
+    "sha256": "cf588630b335da6dc5d410f4471ca50f85874b7a02c74da03d9a64e3a36d9d95",
+    "session": "shared_map_01",
+    "cam": 2,
+    "frame": 0
+  },
+  {
+    "file": "gid-conflict-detached-thai3-f2869-cam1.jpg",
+    "origin": "session_hiep_thai3/f2869/cam1",
+    "source": "raw",
+    "sha256": "f4ea12ab9ca5ada2cb59a03dcd7d487f81fbe7d11e11a4edee23dd18b1fc8186",
+    "session": "session_hiep_thai3",
+    "cam": 1,
+    "frame": 2869
+  },
+  {
+    "file": "gid-conflict-detached-thai3-f2869-cam2.jpg",
+    "origin": "session_hiep_thai3/f2869/cam2",
+    "source": "raw",
+    "sha256": "7a8bf94aa0d254b6a02910a6f58a1238194169f120ef44d7c9110a4936390302",
+    "session": "session_hiep_thai3",
+    "cam": 2,
+    "frame": 2869
+  },
+  {
+    "file": "handoff-dormant-gap-sang8-f450.jpg",
+    "origin": "session_hiep_sang8/f450/cam2",
+    "source": "raw",
+    "sha256": "b5f0f1eb32b0456d36b3b0027260dc77018650713f272f6f456461fa3a792bc8",
+    "session": "session_hiep_sang8",
+    "cam": 2,
+    "frame": 450
+  },
+  {
+    "file": "handoff-dormant-recovered-hiep3-f465.jpg",
+    "origin": "session_hiep3/f465/cam1",
+    "source": "raw",
+    "sha256": "07c2378f8232aabaa224e30d439b01950fe7a212bbf2f16b4e323a346959067c",
+    "session": "session_hiep3",
+    "cam": 1,
+    "frame": 465
+  },
+  {
+    "file": "homography-cam1-points.jpg",
+    "origin": "shared_map_01/cal-20260927/f0/cam1",
+    "source": "raw",
+    "sha256": "a6596e42cf323ce220e0d2fe8edff15cb1353b236ebfc2bab965cc84bf42dbb0",
+    "session": "shared_map_01/cal-20260927",
+    "cam": 1,
+    "frame": 0
+  },
+  {
+    "file": "homography-cam2-points.jpg",
+    "origin": "shared_map_01/cal-20260927/f0/cam2",
+    "source": "raw",
+    "sha256": "cf588630b335da6dc5d410f4471ca50f85874b7a02c74da03d9a64e3a36d9d95",
+    "session": "shared_map_01/cal-20260927",
+    "cam": 2,
+    "frame": 0
+  },
+  {
+    "file": "kalman-coast.jpg",
+    "origin": "session_hiep_thai1/f1407/cam1",
+    "source": "raw",
+    "sha256": "2d534ae6a5abcea9a79fb522f54fbfc88f873e80790af01452f7f8e1c5f8c354",
+    "session": "session_hiep_thai1",
+    "cam": 1,
+    "frame": 1407
+  },
+  {
+    "file": "lifecycle-confirmed.jpg",
+    "origin": "session_hiep_thai1/f1500/cam1",
+    "source": "raw",
+    "sha256": "9af348e88872bf22c731e5f83962d591f4143dfac0624c025d814d47fdaa5c10",
+    "session": "session_hiep_thai1",
+    "cam": 1,
+    "frame": 1500
+  },
+  {
+    "file": "motion-moving-car.jpg",
+    "origin": "session_hiep_thai1/f1500/cam1",
+    "source": "raw",
+    "sha256": "9af348e88872bf22c731e5f83962d591f4143dfac0624c025d814d47fdaa5c10",
+    "session": "session_hiep_thai1",
+    "cam": 1,
+    "frame": 1500
+  },
+  {
+    "file": "occlusion-cluster.jpg",
+    "origin": "session_hiep_thai1/f1407/cam1",
+    "source": "raw",
+    "sha256": "2d534ae6a5abcea9a79fb522f54fbfc88f873e80790af01452f7f8e1c5f8c354",
+    "session": "session_hiep_thai1",
+    "cam": 1,
+    "frame": 1407
+  },
+  {
+    "file": "parking-detector-bw-hiep3-f466.jpg",
+    "origin": "session_hiep3/f466/cam2",
+    "source": "debug",
+    "sha256": "d4f64aadb7bc3f9ecce8aa25b0c276ebe0a2d5e636c79bc9c78d81425d1e735d",
+    "session": "session_hiep3",
+    "cam": 2,
+    "frame": 466
+  },
+  {
+    "file": "parking-detector-votes-hiep3-f466.jpg",
+    "origin": "session_hiep3/f466/cam2",
+    "source": "raw",
+    "sha256": "ba41d83904f6f2fc86088900652f022341e275ca48c3e0c86059054bbd9a0008",
+    "session": "session_hiep3",
+    "cam": 2,
+    "frame": 466
+  },
+  {
+    "file": "replay-ground-truth-sheet.jpg",
+    "origin": "verify_replay/f0/cam2",
+    "source": ".analysis/verify-replay/sheets/verify_cur_session_thai8/sheet_0040.jpg (contact sheet replay thật)",
+    "sha256": "83a5cb07df9fdb7dd57e6f2ee36f29e6225e16cfbc54fc8806fe2efef3a92748",
+    "session": "verify_replay",
+    "cam": 2,
+    "frame": 0
+  },
+  {
+    "file": "roi-cam1.jpg",
+    "origin": "shared_map_01/cal-20261006-180750-46035b9a/f0/cam1",
+    "source": "raw",
+    "sha256": "7151f21830096bc0bd70986275c44744e0f5a1369e78d3057adf60b2f13a7fda",
+    "session": "shared_map_01/cal-20261006-180750-46035b9a",
+    "cam": 1,
+    "frame": 0
+  },
+  {
+    "file": "roi-cam2.jpg",
+    "origin": "shared_map_01/cal-20261006-180750-46035b9a/f0/cam2",
+    "source": "raw",
+    "sha256": "4f79efb97236d20fb74d26bf5b7eda3580abdbe92e045a2f89d374ee486d045b",
+    "session": "shared_map_01/cal-20261006-180750-46035b9a",
+    "cam": 2,
+    "frame": 0
+  },
+  {
+    "file": "routing-astar-map.jpg",
+    "origin": "frontend_artifacts/f0/cam0",
+    "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, route C10)",
+    "sha256": "488d63f9fd95f20ab698718f3a105bebf2399b4f11841493db692da244bcb3f7",
+    "session": "frontend_artifacts",
+    "cam": 0,
+    "frame": 0
+  },
+  {
+    "file": "slot-binder-parked-hiep3-f155.jpg",
+    "origin": "session_hiep3/f155/cam1",
+    "source": "raw",
+    "sha256": "2b63bb6a1b04ea6fb4bff0d708894ef683b4fe0114abf9d6bd4ae2b3c38b6723",
+    "session": "session_hiep3",
+    "cam": 1,
+    "frame": 155
+  },
+  {
+    "file": "slot-binder-recovery-hiep3-f440.jpg",
+    "origin": "session_hiep3/f440/cam1",
+    "source": "raw",
+    "sha256": "0a5ed4df6991d8e12d5d0e600697f736dfff8a46c943a8766245b695dc01429b",
+    "session": "session_hiep3",
+    "cam": 1,
+    "frame": 440
+  },
+  {
+    "file": "slots-cam1.jpg",
+    "origin": "shared_map_01/cal-20260927/f0/cam1",
+    "source": "raw",
+    "sha256": "a6596e42cf323ce220e0d2fe8edff15cb1353b236ebfc2bab965cc84bf42dbb0",
+    "session": "shared_map_01/cal-20260927",
+    "cam": 1,
+    "frame": 0
+  },
+  {
+    "file": "slots-cam2.jpg",
+    "origin": "shared_map_01/cal-20260927/f0/cam2",
+    "source": "raw",
+    "sha256": "cf588630b335da6dc5d410f4471ca50f85874b7a02c74da03d9a64e3a36d9d95",
+    "session": "shared_map_01/cal-20260927",
+    "cam": 2,
+    "frame": 0
+  },
+  {
+    "file": "snapshot-api-debug-cam1-f600.jpg",
+    "origin": "session_hiep_sang8/f600/cam1",
+    "source": "debug",
+    "sha256": "3cbafe76b635c9d74494ca929c880013b3a6cc4f43a194e6ecd3fe59d0d558f1",
+    "session": "session_hiep_sang8",
+    "cam": 1,
+    "frame": 600
+  },
+  {
+    "file": "tracklet-descriptor-cam1-f326.jpg",
+    "origin": "session_hiep_sang8/f326/cam1",
+    "source": "raw",
+    "sha256": "1e69b47e6ae76fc6a0b6d370b18473c7b7d6d7d8c930c8383153ed37183ed666",
+    "session": "session_hiep_sang8",
+    "cam": 1,
+    "frame": 326
+  },
+  {
+    "file": "tracklet-descriptor-cam2-f300.jpg",
+    "origin": "session_hiep_sang8/f300/cam2",
+    "source": "raw",
+    "sha256": "2f4dd5b66f4dd84852004973622928f32f13adc630122704cf75f3ccd88e962d",
+    "session": "session_hiep_sang8",
+    "cam": 2,
+    "frame": 300
+  },
+  {
+    "file": "trajectory-reid-fail-sang8-f600.jpg",
+    "origin": "session_hiep_sang8/f600/cam2",
+    "source": "raw",
+    "sha256": "407be9620a77887ccd6ddeffc776fb37c6cdba550edaf51f55d76fb5b34eeb8d",
+    "session": "session_hiep_sang8",
+    "cam": 2,
+    "frame": 600
+  },
+  {
+    "file": "trajectory-reid-matched-hiep3-f467.jpg",
+    "origin": "session_hiep3/f467/cam2",
+    "source": "raw",
+    "sha256": "5fad02493b6df980592b6a8087f0de9adbc861a7c4875372ce8b3b94cbfc5137",
+    "session": "session_hiep3",
+    "cam": 2,
+    "frame": 467
+  },
+  {
+    "file": "voice-guidance-map.jpg",
+    "origin": "frontend_artifacts/f0/cam0",
+    "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, route C10)",
+    "sha256": "488d63f9fd95f20ab698718f3a105bebf2399b4f11841493db692da244bcb3f7",
+    "session": "frontend_artifacts",
+    "cam": 0,
+    "frame": 0
+  }
+]

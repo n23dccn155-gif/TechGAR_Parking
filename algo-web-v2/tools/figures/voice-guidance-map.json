@@ -1,0 +1,18 @@
+{
+  "id": "voice-guidance-map",
+  "session": "frontend_artifacts",
+  "cam": 0,
+  "frame": 0,
+  "source": "frontend/artifacts/screenshots/1440x900-c10-navigation.png (UI thật, route C10)",
+  "image_path": "D:/TechGar2/frontend/artifacts/screenshots/1440x900-c10-navigation.png",
+  "out": "voice-guidance-map.jpg",
+  "max_kb": 260,
+  "draw": [
+    {"type": "box", "xyxy": [10, 168, 1430, 222], "color": "#1c7ed6",
+     "label": "thanh chỉ dẫn — navInstruction render khi có session", "label_at": [480, 150]},
+    {"type": "circle", "xy": [735, 558], "r": 35, "color": "#2f9e44",
+     "label": "vào bán kính 35: câu 'đã đến'", "label_at": [430, 660]},
+    {"type": "circle", "xy": [1013, 562], "r": 18, "color": "#ffd600",
+     "label": "góc cua: cos<0.93 → rẽ", "label_at": [1150, 620]}
+  ]
+}

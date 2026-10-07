@@ -1,0 +1,1281 @@
+[] HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG
+[] CƠ SỞ HỌC VIỆN TẠI THÀNH PHỐ HỒ CHÍ MINH
+[] BÁO CÁO TỔNG KẾT ĐỀ TÀI
+[] NGHIÊN CỨU KHOA HỌC SINH VIÊN
+[] NGHIÊN CỨU PHƯƠNG PHÁP HỢP NHẤT BẰNG CHỨNG THỊ GIÁC VÀ GLOBAL VEHICLE ID THEO THỜI GIAN CHO QUẢN LÝ Ô ĐỖ TRONG HỆ THỐNG SMART PARKING ĐA CAMERA CỐ ĐỊNH
+[] Thông tin
+[] Nội dung
+[] Giảng viên hướng dẫn
+[] TS. Lê Hà Thanh
+[] Nhóm nghiên cứu
+[] TechGAR (Khoa Công nghệ thông tin 2)
+[] Thành viên — chủ trì
+[] Nguyễn Quốc Thái — N23DCCN191 — D23CQCN03-N
+[] Thành viên
+[] Phạm Quốc An — N23DCCN136 — D23CQCN03-N
+[] Thành viên
+[] Đặng Văn Hiệp — N23DCCN155 — D23CQCN03-N
+[] Tên đề tài trong hồ sơ đăng ký
+[] ??? (nhóm đối chiếu với hồ sơ đã phê duyệt)
+[] Thời gian thực hiện
+[] 2026
+[] TP. Hồ Chí Minh — 2026
+[Heading1] GHI CHÚ VỀ TRẠNG THÁI SỐ LIỆU CỦA BÁO CÁO
+[] Bản báo cáo này được xây dựng đồng bộ với mã nguồn TechGAR_Parking_AI (nhánh refactor_20_9) và tài liệu protocol thực nghiệm v2 của nhóm. Về số liệu, báo cáo tuân theo ba nguyên tắc:
+[ListBullet] Số liệu thực đo hệ thống đã được điền từ 9 run chính thức quay ngày 27/09/2026 (số frame, thời lượng, tốc độ xử lý, độ trễ, skew giữa hai camera), lấy trực tiếp từ session_info.json, performance.csv và frame_timestamps.csv của từng session.
+[ListBullet] Các metric chất lượng (F1, ID Consistency, Handoff Success, Binding Accuracy, ...) đánh dấu bằng ??? và sẽ được thay sau khi hoàn tất gán nhãn Ground Truth cho 9 run và chạy evaluator. Không có số liệu nào trong nhóm này được ước lượng hay suy đoán.
+[ListBullet] Mô tả thuật toán ở Chương 3 phản ánh đúng mã nguồn hiện tại: parking detector thực thi 25 biến thể (5 delta-gamma × 5 delta-CLAHE) — khác với mô tả 9 biến thể trong một số tài liệu trình bày cũ.
+[] Tên đề tài ở trang bìa cần được đối chiếu với tên đã được Học viện phê duyệt trong hồ sơ đăng ký; nếu khác, nhóm giữ tên chính thức trên bìa và giữ phạm vi nghiên cứu như trình bày ở Chương 1.
+[Heading1] MỤC LỤC
+[] (Trong Microsoft Word: chọn toàn bộ mục lục rồi nhấn F9 / Update Field để cập nhật số trang sau khi hoàn thiện nội dung.)
+[Heading1] DANH MỤC BẢNG
+[ListBullet] Bảng 1-1 — Câu hỏi nghiên cứu và bằng chứng cần thu thập
+[ListBullet] Bảng 2-1 — Tổng hợp nghiên cứu liên quan
+[ListBullet] Bảng 3-1 — Tham số parking detector theo cấu hình thực tế
+[ListBullet] Bảng 3-2 — Tham số SlotVehicleBinder theo cấu hình thực tế
+[ListBullet] Bảng 4-1 — Bộ dataset chính thức
+[ListBullet] Bảng 4-2 — Cấu hình thí nghiệm A — Parking ablation
+[ListBullet] Bảng 4-3 — Cấu hình thí nghiệm B — Global ID ablation
+[ListBullet] Bảng 4-4 — Cấu hình thí nghiệm C — Vehicle-slot binding ablation
+[ListBullet] Bảng 4-5 — Cấu hình thí nghiệm D — Exposure robustness
+[ListBullet] Bảng 4-6 — Định nghĩa metric
+[ListBullet] Bảng 4-7 — Khung thống kê mô tả theo mức EV
+[ListBullet] Bảng 5-1 — Đặc điểm bộ dữ liệu thực nghiệm (thực đo 27/09/2026)
+[ListBullet] Bảng 5-2 — Kết quả parking ablation theo run
+[ListBullet] Bảng 5-3 — Kết quả Global ID ablation theo run
+[ListBullet] Bảng 5-4 — Kết quả vehicle-slot binding ablation theo run
+[ListBullet] Bảng 5-5 — Exposure robustness theo run
+[ListBullet] Bảng 5-6 — Summary exposure robustness theo EV
+[ListBullet] Bảng 5-7 — Runtime thực đo trên 9 run
+[ListBullet] Bảng 5-8 — Khung phân loại failure cases
+[ListBullet] Bảng A-1 — Bản đồ code sang mục báo cáo
+[ListBullet] Bảng D-1 — Ma trận thay số liệu
+[Heading1] DANH MỤC HÌNH
+[ListBullet] Hình 3-1 — Pipeline nghiên cứu hiện tại của TechGAR
+[ListBullet] Hình 4-1 — Sơ đồ thiết kế thực nghiệm
+[] (Các hình minh họa failure case ở mục 5-7 và flowchart chi tiết của ba module nghiên cứu sẽ được bổ sung sau khi chụp từ dữ liệu run chính thức.)
+[Heading1] DANH MỤC TỪ VIẾT TẮT
+[] Từ viết tắt
+[] Giải thích
+[] AI
+[] Artificial Intelligence — Trí tuệ nhân tạo
+[] API
+[] Application Programming Interface
+[] AE / AWB
+[] Auto Exposure / Auto White Balance
+[] CLAHE
+[] Contrast Limited Adaptive Histogram Equalization
+[] CNN
+[] Convolutional Neural Network
+[] CV
+[] Computer Vision — Thị giác máy tính
+[] EV
+[] Exposure Value — Giá trị bù phơi sáng
+[] FPS
+[] Frames Per Second — Số khung hình xử lý mỗi giây
+[] GID
+[] Global Vehicle ID — Định danh phương tiện toàn cục
+[] GT
+[] Ground Truth — Nhãn chuẩn
+[] HSV
+[] Hue — Saturation — Value
+[] IDSW
+[] ID Switch — Lần thay đổi định danh không đúng
+[] LAB
+[] Không gian màu CIE Lab*
+[] LAPJV
+[] Linear Assignment Problem — Jonker-Volgenant
+[] MOG2
+[] Mixture of Gaussians 2 — Phương pháp trừ nền
+[] QR
+[] Quick Response
+[] Re-ID
+[] Re-identification — Tái nhận diện
+[] RQ
+[] Research Question — Câu hỏi nghiên cứu
+[] ROI
+[] Region of Interest — Vùng quan tâm
+[] SD
+[] Standard Deviation — Độ lệch chuẩn
+[Heading1] TÓM TẮT
+[] Bãi đỗ xe thông minh dựa trên thị giác máy tính đang chuyển từ bài toán nhận diện trạng thái ô đỗ đơn lẻ sang các bài toán có tính thời gian và không gian cao hơn: duy trì danh tính phương tiện, theo dõi qua nhiều camera và liên kết phương tiện với vị trí đỗ. Các tổng quan gần đây cho thấy YOLO và các mô hình học sâu đã trở thành nhóm phương pháp phổ biến, nhưng việc so sánh giữa các nghiên cứu vẫn bị hạn chế bởi sự khác biệt về bộ dữ liệu, phần cứng, metric và protocol; đồng thời đánh giá dưới các điều kiện môi trường còn chưa đồng đều (Yunganina Mamani et al., 2026). MetaPKLot công bố năm 2026 tiếp tục nhấn mạnh nhu cầu về benchmark có persistent vehicle ID, timestamp, occupancy label và protocol có khả năng tái lập (de Almeida et al., 2026).
+[] Trên cơ sở đó, đề tài TechGAR nghiên cứu một pipeline Smart Parking đa camera cố định, trong đó bằng chứng thị giác tại các parking-slot ROI được kết hợp với thông tin chuyển động, Global Vehicle ID và bằng chứng theo thời gian. Ở tầng theo dõi, hệ thống sử dụng MotionVehicleTracker dựa trên foreground motion (MOG2 và frame difference nhiều thang thời gian), Kalman prediction, global assignment bằng LAPJV và descriptor ngoại hình HSV/LAB; CrossCameraManager thực hiện hợp nhất Global ID bằng thông tin vị trí, vận tốc, hướng, kích thước và appearance. Ở tầng ô đỗ, ParkingDetector thực hiện 25 biến thể tiền xử lý Gamma — CLAHE và majority voting, sau đó SlotVehicleBinder kết hợp overlap hình học, trạng thái dừng, temporal evidence và cơ chế bảo vệ identity khi xe rời ô.
+[] Thiết kế thực nghiệm gồm hai nhóm. Nhóm ablation sử dụng ba video EV = 0 quay lặp lại cùng kịch bản để so sánh baseline và proposed cho parking detection, Global ID và vehicle-slot binding. Nhóm robustness sử dụng toàn bộ chín run (ba run mỗi mức EV = -7, 0, +7) để đánh giá độ nhạy của hệ thống hoàn chỉnh dưới biến thiên phơi sáng được kiểm soát. Tại thời điểm viết báo cáo, cả chín run đã được thu thập (27/09/2026, hai camera DroidCam 1280×720, tổng 7.281 frame), hệ thống ghi nhận tốc độ xử lý trung bình 5,57 ± 0,76 FPS và độ trễ xử lý khung trung bình 136,7 ms (P95 = 218,3 ms). Các metric chất lượng (Precision, Recall, F1, False-Free Rate, ID Consistency, ID Switches, Handoff Success Rate, Binding Accuracy) sẽ được tính tự động bằng evaluator sau khi hoàn tất gán nhãn Ground Truth và hiện để ở dạng ???.
+[] Từ khóa: Smart Parking, Computer Vision, Parking Occupancy, Multi-Camera Tracking, Global Vehicle ID, Vehicle-Slot Association, Robustness, Exposure Variation.
+[Heading1] ABSTRACT
+[] Vision-based smart parking research is increasingly moving from frame-level parking occupancy classification toward temporally and spatially structured tasks such as persistent vehicle identity, multi-camera tracking and vehicle-slot association. Recent reviews report that YOLO-family architectures are widely adopted, while cross-study comparison remains difficult because of heterogeneous datasets, hardware, metrics and experimental protocols. The MetaPKLot benchmark further highlights the importance of persistent vehicle identifiers, timestamps, occupancy labels and standardized protocols for reproducible parking management research.
+[] This study investigates TechGAR, a fixed-camera multi-camera smart parking pipeline that combines parking-slot region evidence with motion information, Global Vehicle ID and temporal evidence. The current implementation uses foreground-motion tracking (MOG2 and multi-scale frame difference) with Kalman prediction, LAPJV assignment and HSV/LAB appearance descriptors. Cross-camera identity management combines spatial and motion constraints, appearance evidence, camera topology and canonical identity merging. Parking occupancy is estimated by a 25-variant Gamma — CLAHE preprocessing consensus, followed by geometric and temporal vehicle-slot binding.
+[] The experimental design contains two main parts: a paired ablation on three repeated EV = 0 runs for parking detection, Global ID and vehicle-slot binding, and an exposure-sensitivity study of the full pipeline on nine runs (three each at EV = -7, 0 and +7). All nine runs have been recorded on 27/09/2026 with two DroidCam cameras at 1280×720 (7,281 frames in total); the measured processing throughput is 5.57 ± 0.76 FPS with a mean per-frame latency of 136.7 ms (P95 = 218.3 ms). Quality metrics are reported as ??? until ground-truth labeling of the official runs is completed. The report therefore separates implementation evidence and measured system characteristics from final empirical evidence, and does not treat development-stage numbers as research results.
+[Heading1] CHƯƠNG 1 — MỞ ĐẦU
+[Heading2] 1-1 — Bối cảnh nghiên cứu
+[] Bài toán tìm kiếm và quản lý chỗ đỗ xe là một thành phần quan trọng của giao thông đô thị thông minh. Khi nhu cầu đỗ xe tăng, người điều khiển phương tiện không chỉ đối mặt với thiếu chỗ đỗ mà còn phải dành thêm thời gian di chuyển trong khu vực để tìm vị trí phù hợp. Các nghiên cứu tổng quan về Smart Parking xem việc nhận diện trạng thái ô đỗ và cung cấp thông tin theo thời gian thực là những thành phần nền tảng của hệ thống quản lý bãi đỗ dựa trên dữ liệu (de Almeida et al., 2022; Yunganina Mamani et al., 2026).
+[] Trong giai đoạn đầu, nhiều hệ thống Smart Parking dựa trên cảm biến vật lý tại từng ô đỗ như cảm biến siêu âm, từ trường hoặc cảm biến quang học. Cách tiếp cận này có ưu điểm về tính trực tiếp nhưng làm tăng chi phí triển khai, bảo trì và số lượng thiết bị khi số ô đỗ lớn. Camera có khả năng quan sát đồng thời nhiều vị trí và do đó trở thành một hướng tiếp cận hấp dẫn đối với các bãi đỗ đã có hạ tầng camera. Tổng quan của de Almeida et al. (2022) cũng chỉ ra ưu thế về khả năng bao phủ của camera và đồng thời nhấn mạnh các thách thức về góc nhìn, điều kiện ánh sáng và protocol đánh giá.
+[] Bối cảnh thực tế tại Việt Nam cũng đang chuyển từ bãi đỗ truyền thống sang các hệ thống có mức độ số hóa cao hơn. QTSC tại Thành phố Hồ Chí Minh đã đưa vào vận hành bãi đỗ xe thông minh không dùng tiền mặt tại Lô 41 vào năm 2025, trong đó người dùng có thể tìm kiếm và kiểm tra tình trạng bãi đỗ theo thời gian thực và thực hiện thanh toán điện tử. Điều này cho thấy Smart Parking tại Việt Nam đã bước sang giai đoạn tích hợp quản lý vận hành, thông tin thời gian thực và dịch vụ số thay vì chỉ dừng ở việc kiểm soát vào — ra (QTSC, 2025).
+[] Đối với Đà Nẵng, vấn đề vẫn có tính thực tiễn rõ ràng. Các bãi đỗ xe thông minh tại 166 Hải Phòng và 255 Phan Châu Trinh đã được triển khai, nhưng các bài phản ánh năm 2024 cho thấy tình trạng sử dụng chưa tương xứng với hạ tầng đầu tư và mức giá dịch vụ là một trong các vấn đề được nhắc tới. Đến tháng 5/2026, Đà Nẵng tiếp tục mời tư vấn lập báo cáo kinh tế — kỹ thuật cho dự án bãi xe thông minh tại khu nhà làm việc các ban quản lý dự án và khu vực phía tây Trung tâm Hành chính thành phố; tháng 8/2026, Báo Đà Nẵng đề cập nhu cầu phát triển bãi đỗ xe thông minh cho vùng lõi đô thị. Những diễn biến này cho thấy nhu cầu ứng dụng công nghệ trong quản lý đỗ xe tại địa phương vẫn đang tiếp tục tăng (Báo Đà Nẵng, 2024, 2026).
+[Heading2] 1-2 — Sự phát triển của nghiên cứu quốc tế
+[] Các benchmark kinh điển như PKLot và CNRPark+EXT đã đặt nền tảng cho nghiên cứu nhận diện trạng thái ô đỗ. PKLot được xây dựng để đánh giá khả năng phân loại ô đỗ trên các bãi khác nhau, trong khi CNRPark+EXT mở rộng phạm vi dữ liệu với nhiều camera, nhiều ngày thu thập và các điều kiện thời tiết, ánh sáng, bóng và che khuất khác nhau (de Almeida et al., 2015; Amato et al., 2017).
+[] Đến năm 2022, một systematic review tập trung vào các bộ dữ liệu công khai đã chỉ ra một vấn đề phương pháp luận quan trọng: nhiều công trình đạt kết quả cao nhưng phụ thuộc mạnh vào dataset, thiếu protocol chuẩn hóa và chưa phản ánh đầy đủ tính liên tục theo thời gian của cùng một phương tiện. Review này đề xuất nhu cầu về dataset độc lập, video sequence và điều kiện đa dạng hơn (de Almeida et al., 2022).
+[] Đến năm 2026, khoảng trống này vẫn chưa biến mất mà đang được định hình lại. Systematic review năm 2026 tổng hợp 15 nghiên cứu giai đoạn 2021 đến tháng 3/2026 cho thấy YOLO là nhóm kiến trúc xuất hiện thường xuyên nhất, nhưng so sánh trực tiếp giữa các nghiên cứu bị hạn chế bởi sự khác biệt về dataset, phần cứng, metric và điều kiện thực nghiệm; các điều kiện như fog, occlusion và lighting variation vẫn được đánh giá chưa đồng đều (Yunganina Mamani et al., 2026).
+[] MetaPKLot công bố tháng 8/2026 tiếp tục mở rộng hướng nghiên cứu bằng cách bổ sung hơn 1,3 triệu annotation, persistent vehicle IDs, timestamp, vehicle polygons và occupancy labels trên các dataset PKLot, CNRPark-EXT và PLds. Đáng chú ý, benchmark mới đưa dwell time và persistent identity thành một phần của bài toán quản lý bãi đỗ, đồng thời yêu cầu protocol đánh giá có khả năng tái lập và generalization sang bãi đỗ chưa nhìn thấy trong quá trình huấn luyện (de Almeida et al., 2026).
+[Heading2] 1-3 — Vấn đề thực tế của TechGAR
+[] TechGAR được xây dựng trong bối cảnh bãi đỗ có camera cố định, trong đó cùng một phương tiện có thể xuất hiện ở nhiều vùng quan sát và trạng thái đỗ không thể chỉ được suy ra từ một khung hình độc lập. Khi xe di chuyển, hệ thống cần duy trì local track; khi xe đi vào vùng quan sát của camera khác, hệ thống cần xác định đó vẫn là cùng một phương tiện; khi xe dừng trong ô, hệ thống cần xác định xe nào chiếm ô nào và giữ trạng thái đó ổn định trong thời gian xe đứng yên.
+[] Điều kiện camera cố định cũng tạo ra các vấn đề đặc thù. Background subtraction có thể nhầm bóng đổ hoặc thay đổi ánh sáng thành chuyển động. Khi xe dừng lâu, foreground detector có thể dần coi xe là một phần của nền. Khi hai xe có ngoại hình tương tự hoặc cùng màu, appearance đơn giản có thể không đủ để phân biệt. Khi hai camera có vùng chồng lấn, một phương tiện có thể đồng thời được quan sát bởi hai camera và cần một cơ chế hợp nhất danh tính.
+[] Trong đề cương ban đầu, các thách thức về ánh sáng, bóng đổ, mưa, mặt sàn ướt, chi phí cảm biến và khả năng tận dụng camera sẵn có đã được xác định; tuy nhiên phạm vi đề cương cũ còn bao gồm recommendation, A* và nhiều chức năng sản phẩm. Báo cáo này thu hẹp trọng tâm vào các vấn đề thực sự được triển khai trong pipeline nghiên cứu hiện tại: occupancy, tracking, Global ID, vehicle-slot association và robustness dưới controlled exposure variation.
+[Heading2] 1-4 — Khoảng trống nghiên cứu
+[] Từ các nghiên cứu liên quan, khoảng trống của đề tài được xác định theo bốn hướng.
+[ListBullet] Khoảng trống về đánh giá môi trường — các nghiên cứu gần đây đã quan tâm đến ánh sáng, bóng và thời tiết nhưng mức độ bao phủ điều kiện môi trường vẫn không đồng đều. Cần các protocol có biến độc lập được kiểm soát rõ ràng thay vì chỉ mô tả định tính rằng hệ thống hoạt động dưới ánh sáng khác nhau.
+[ListBullet] Khoảng trống về thông tin theo thời gian — occupancy của một ô đỗ là trạng thái có tính thời gian. Một hệ thống có thể đạt accuracy cao nếu chỉ xét frame tĩnh nhưng vẫn có hiện tượng flicker, false empty hoặc mất identity khi xe dừng và khởi động lại.
+[ListBullet] Khoảng trống về identity trong môi trường đa camera — cross-camera tracking vẫn là bài toán khó do xe có appearance tương tự, vùng che khuất và sự chuyển tiếp giữa các vùng quan sát. Một nghiên cứu Việt Nam năm 2024 đã triển khai MOMCT với YOLO, DeepSORT và ResNet, trong khi nghiên cứu năm 2025 về parking cho thấy hướng Re-ID-free dựa trên geometry và motion cũng đang được quan tâm (Huu et al., 2024; Kim et al., 2025).
+[ListBullet] Khoảng trống về reproducibility và ablation — kết quả cao không đủ để xác định thành phần nào thực sự tạo ra cải thiện. MetaPKLot và các review gần đây đều nhấn mạnh standardized protocols, benchmark và reproducibility. TechGAR vì vậy tách baseline và proposed theo từng nhóm thành phần thay vì chỉ trình diễn full system.
+[Heading2] 1-5 — Mục tiêu nghiên cứu
+[] Mục tiêu tổng quát của đề tài là xây dựng và đánh giá một pipeline thị giác máy tính đa camera cố định có khả năng duy trì nhận thức về phương tiện và ô đỗ theo thời gian, đồng thời xác định mức độ ổn định của pipeline khi điều kiện phơi sáng của camera thay đổi.
+[] Mục tiêu cụ thể:
+[ListBullet] Xây dựng pipeline phát hiện chuyển động và theo dõi phương tiện trên từng camera trong bối cảnh camera cố định.
+[ListBullet] Xây dựng cơ chế hợp nhất local track thành Global Vehicle ID dựa trên thông tin không gian, động học, appearance và quan hệ topology giữa các camera.
+[ListBullet] Xây dựng cơ chế nhận diện trạng thái ô đỗ trên parking-slot ROI bằng nhiều biến thể Gamma — CLAHE và voting.
+[ListBullet] Xây dựng cơ chế vehicle-slot binding có xét overlap, trạng thái dừng và bằng chứng theo thời gian.
+[ListBullet] Thiết kế bộ Ground Truth và evaluator có cấu trúc để tính metric tự động.
+[ListBullet] Đánh giá đóng góp của từng nhóm thành phần bằng ablation và đánh giá độ nhạy theo Exposure Value.
+[Heading2] 1-6 — Câu hỏi nghiên cứu
+[] Bảng 1-1 — Câu hỏi nghiên cứu và bằng chứng cần thu thập
+[] Mã
+[] Câu hỏi nghiên cứu
+[] Bằng chứng cần thu thập
+[] RQ1
+[] Cơ chế 25 Gamma — CLAHE variants và voting có cải thiện nhận diện trạng thái ô đỗ so với baseline hay không?
+[] Precision, Recall, F1, False-Free Rate trên E0-R01 đến E0-R03
+[] RQ2
+[] Cơ chế Global ID và handoff có cải thiện tính liên tục của identity giữa các camera hay không?
+[] ID Consistency, ID Switches, Handoff Success Rate
+[] RQ3
+[] Vehicle-slot temporal binding có cải thiện độ chính xác xác định xe thuộc ô đỗ nào hay không?
+[] Binding Accuracy, Wrong Binding Rate, Confirmation Delay nếu đo được
+[] RQ4
+[] Hiệu năng của full TechGAR thay đổi như thế nào khi Exposure Value của camera thay đổi trong phạm vi EV = -7, 0, +7?
+[] Mean và SD của các metric chính theo EV
+[Heading2] 1-7 — Đóng góp dự kiến
+[] Đóng góp thứ nhất là một cơ chế consensus-based parking occupancy trên parking-slot ROI, trong đó 25 biến thể tiền xử lý Gamma — CLAHE tạo ra các bằng chứng độc lập tương đối và majority voting đưa ra quyết định cuối.
+[] Đóng góp thứ hai là một cơ chế Global Vehicle ID nhẹ, không phụ thuộc deep Re-ID trong motion backend hiện tại. Cơ chế kết hợp world position, velocity prediction, camera topology, heading, size và HSV/LAB appearance để hạn chế identity switch.
+[] Đóng góp thứ ba là vehicle-slot temporal binding, trong đó trạng thái occupied không chỉ phụ thuộc vào việc một bbox chạm polygon mà còn xét mức overlap, trạng thái dừng, temporal confirmation, departure token và recovery.
+[] Đóng góp thứ tư là protocol thực nghiệm có baseline, ablation và exposure robustness, cho phép phân biệt hiệu quả của từng thành phần với hiệu quả của toàn hệ thống.
+[Heading2] 1-8 — Phạm vi và giới hạn
+[ListBullet] Phạm vi camera — hai camera DroidCam được dùng làm nguồn video cho protocol chính thức, với mỗi run có hai file video quay đồng thời.
+[ListBullet] Phạm vi điều kiện ánh sáng — ba mức EV = -7, 0, +7 được sử dụng cho robustness. Đây là controlled exposure variation, không đại diện cho toàn bộ điều kiện thời tiết và môi trường.
+[ListBullet] Phạm vi bãi đỗ — hệ thống sử dụng parking-slot polygons được định nghĩa trước trong cấu hình camera (30 ô mỗi camera, tổng 60 ô trên hai camera).
+[ListBullet] Phạm vi nhận diện phương tiện — motion backend hiện tại sử dụng foreground motion và không phụ thuộc một deep Re-ID model được huấn luyện riêng; báo cáo không tuyên bố deep Re-ID.
+[ListBullet] Phạm vi định vị — calibration hiện tại đưa điểm quan sát vào shared ground plane với đơn vị cm. Độ chính xác calibration độc lập sẽ được đánh giá riêng nếu nhóm muốn dùng nó như một kết quả khoa học.
+[ListBullet] Phạm vi dữ liệu — ground truth hiện tại đang ở giai đoạn gán nhãn; các metric chất lượng sẽ chỉ tính trên bộ GT chính thức của 9 run, không dùng số liệu pilot/development làm kết quả.
+[Heading2] 1-9 — Ý nghĩa thực tiễn
+[] Một pipeline có thể duy trì Global ID và vehicle-slot relation cung cấp lớp dữ liệu nền cho các chức năng Smart Parking như bản đồ trạng thái bãi, dẫn đường tới ô đỗ, lịch sử sử dụng ô, kiểm soát session và hỗ trợ quản lý vận hành. Giá trị của nghiên cứu không nằm ở việc thay thế toàn bộ hệ thống bãi đỗ thương mại mà ở việc kiểm chứng một cách có cấu trúc liệu một camera-based pipeline chi phí thấp có thể duy trì thông tin occupancy và identity ổn định đến mức nào trong bối cảnh kiểm soát.
+[Heading1] CHƯƠNG 2 — CƠ SỞ LÝ THUYẾT VÀ NGHIÊN CỨU LIÊN QUAN
+[Heading2] 2-1 — Smart Parking dựa trên thị giác máy tính
+[] Smart Parking có thể được phân thành nhiều lớp: cảm biến, nhận diện trạng thái, quản lý identity, chỉ dẫn và dịch vụ người dùng. Trong phạm vi đề tài, thị giác máy tính đóng vai trò cung cấp bằng chứng quan sát từ camera, còn logic thời gian và identity biến các quan sát rời rạc thành trạng thái vận hành. Các công trình trước đây thường tách bài toán thành nhận diện vị trí ô đỗ, phân loại occupancy, phát hiện phương tiện và đếm xe; review 2022 cho thấy phần lớn nghiên cứu tập trung vào phân loại trạng thái của từng ô đỗ, trong khi automatic parking-space detection và protocol video có tính thời gian ít được nghiên cứu hơn (de Almeida et al., 2022).
+[Heading2] 2-2 — Parking-slot ROI và polygon
+[] Parking-slot polygon là hình học cố định mô tả vị trí của một ô đỗ trong ảnh camera. Polygon không phải Ground Truth về trạng thái: polygon trả lời câu hỏi ô đỗ nằm ở đâu, trong khi Ground Truth trạng thái trả lời xe nào thực sự chiếm ô đỗ trong khoảng thời gian nào.
+[] TechGAR sử dụng các file parking_slots_cam1.json và parking_slots_cam2.json để lưu polygon, center và camera của các ô đỗ. Cấu hình hiện tại có 30 slot cho mỗi camera: camera 1 gồm D01–D10, E01–E10, F01–F10; camera 2 gồm A01–A10, B01–B10, C01–C10; tổng 60 ô trên hai camera. Trong báo cáo, polygon được xem là một phần của calibration/configuration chứ không được dùng thay cho Ground Truth.
+[Heading2] 2-3 — Foreground motion và MOG2
+[] Camera cố định tạo điều kiện thuận lợi cho background subtraction. TechGAR sử dụng MotionVehicleTracker để phát hiện vùng foreground bằng MOG2 (mô hình hỗn hợp Gauss thích nghi, Zivkovic 2004) kết hợp frame difference ở các thang thời gian khác nhau, kèm các bộ lọc kích thước, diện tích và tỷ lệ chuyển động; trường hợp bóng được nhận diện qua chromaticity. Cách tiếp cận này tránh phụ thuộc vào một mô hình object detector nặng trong motion backend.
+[] Ưu điểm của foreground motion là chi phí tính toán thấp và phù hợp với camera cố định. Nhược điểm là dễ bị ảnh hưởng bởi bóng, thay đổi ánh sáng và hiện tượng xe đứng yên dần bị hấp thụ vào nền. Vì vậy tracker được bổ sung các cơ chế temporal, rescue, reacquire và appearance.
+[Heading2] 2-4 — Kalman Filter
+[] Kalman Filter được sử dụng để ước lượng trạng thái động của track và dự đoán vị trí trong những frame ngắn bị mất detection. Trong bối cảnh bãi xe, điểm tiếp xúc mặt đường ở cạnh đáy bounding box được ưu tiên hơn tâm bbox vì có ý nghĩa hình học tốt hơn khi camera nhìn xiên. Về nghiên cứu, Kalman không được coi là đóng góp mới của đề tài; nó là thành phần nền tảng giúp kiểm chứng giả thuyết rằng thông tin động học theo thời gian có thể hỗ trợ identity continuity và vehicle-slot association.
+[Heading2] 2-5 — Global assignment bằng LAPJV
+[] Việc gán các detection mới cho các track hiện tại được biểu diễn thành bài toán Linear Assignment và giải bằng thuật toán Jonker-Volgenant (thư viện lap). Assignment tìm ghép cặp một-một tối ưu theo ma trận chi phí, kết hợp với gating về khoảng cách, vận tốc, kích thước và appearance.
+[] Điểm quan trọng là assignment không tự nó tạo ra Global ID: nó chỉ giải quyết ghép cặp ở tầng local hoặc trong các candidate cross-camera. Global ID cần thêm topology, canonicalization và các guard để tránh một identity đồng thời sở hữu hai track vật lý khác nhau.
+[Heading2] 2-6 — Appearance descriptor HSV và LAB
+[] Tracklet descriptor của TechGAR không sử dụng deep Re-ID trong motion backend. Descriptor được xây dựng từ histogram màu HSV, chromaticity LAB và luminance, sau đó được chuẩn hóa; một track có thể lưu một gallery nhiều mẫu thay vì chỉ lưu crop cuối cùng. Ý tưởng này phù hợp với bối cảnh camera cố định khi appearance cung cấp bằng chứng bổ sung cho vị trí và động học. Tuy nhiên, appearance histogram không đủ để phân biệt tuyệt đối hai xe cùng màu hoặc khi ánh sáng thay đổi mạnh, nên trong thiết kế cross-camera, appearance chỉ là một thành phần của cost matrix chứ không phải tiêu chí duy nhất.
+[Heading2] 2-7 — Homography và shared ground plane
+[] Homography ánh xạ các điểm ảnh trên mặt phẳng sàn về một hệ tọa độ chung. TechGAR lưu world unit là cm trong calibration hiện tại và sử dụng shared map để so sánh vị trí giữa các camera. Cấu hình calibration ghi rõ calibration quality là reviewed fit và các sai số được tính trên chính các điểm dùng để fit; vì vậy các số liệu calibration không được coi là independent validation. Nếu muốn biến calibration accuracy thành kết quả nghiên cứu, nhóm cần bổ sung một tập điểm kiểm tra độc lập.
+[Heading2] 2-8 — Cross-camera tracking và Global Vehicle ID
+[] Multi-camera tracking yêu cầu duy trì identity của một vật thể qua các camera có góc nhìn khác nhau. Nghiên cứu của Huu et al. (2024) sử dụng YOLO, DeepSORT và ResNet để thực hiện vehicle detection, local tracking và cross-camera Re-ID trong bối cảnh Việt Nam. Nghiên cứu năm 2025 về autonomous parking cho thấy một hướng khác là giảm phụ thuộc Re-ID bằng geometry, motion priors và probabilistic association (Huu et al., 2024; Kim et al., 2025).
+[] TechGAR nằm gần hướng thứ hai: geometry và motion là bằng chứng chính, HSV/LAB appearance là tín hiệu hỗ trợ. Đây là lý do báo cáo gọi phương pháp là lightweight identity-aware tracking hoặc appearance-assisted geometric association, thay vì deep vehicle Re-ID.
+[Heading2] 2-9 — Parking occupancy bằng Gamma, CLAHE và adaptive threshold
+[] Gamma correction là phép biến đổi phi tuyến cường độ sáng, cho phép thay đổi mức nhấn mạnh vùng tối hoặc vùng sáng. CLAHE tăng tương phản cục bộ nhưng giới hạn mức khuếch đại histogram để giảm nguy cơ làm nổi bật nhiễu. Adaptive threshold sau đó chuyển ảnh đã tiền xử lý thành mặt nạ nhị phân dựa trên ngưỡng cục bộ.
+[] Trong implementation hiện tại, ParkingDetector tạo 5 mức delta Gamma và 5 mức delta CLAHE quanh giá trị cơ sở, tạo thành 25 tổ hợp. Mỗi tổ hợp thực hiện blur, adaptive threshold, median filter, dilation và đánh giá tỷ lệ pixel trong ROI; majority voting đưa ra quyết định occupied/free. Do đó cần phân biệt rõ 25 preprocessing variants với 25 threshold.
+[Heading2] 2-10 — Temporal smoothing và temporal evidence
+[] Một quyết định occupancy hoặc binding không nên thay đổi chỉ vì một frame nhiễu. Temporal smoothing yêu cầu nhiều frame liên tiếp đồng thuận trước khi đổi trạng thái. SlotVehicleBinder còn sử dụng số mẫu tối thiểu, thời gian dừng, arrival confirmation, absence delay và departure token để quản lý vòng đời của một parking episode. Cách tiếp cận này phù hợp với nhận xét của các benchmark mới rằng parking management không chỉ là bài toán classification ảnh tĩnh; MetaPKLot đã đưa timestamp và persistent vehicle ID vào annotation để hỗ trợ dwell time và phân tích theo thời gian (de Almeida et al., 2026).
+[Heading2] 2-11 — Vehicle-slot association
+[] Vehicle-slot association là bước chuyển từ câu hỏi ô đỗ có xe hay không sang câu hỏi xe nào đang chiếm ô nào. TechGAR sử dụng giao cắt hình học giữa vùng xe và polygon ô đỗ, kết hợp trạng thái dừng và temporal evidence, cho phép phân biệt xe chỉ chạy ngang qua một ô với xe thực sự hoàn tất quá trình đỗ. Đây là điểm quan trọng đối với một hệ thống có chức năng dẫn đường và session, vì nếu binding sai, trạng thái ô đỗ và phiên người dùng đều sai theo.
+[Heading2] 2-12 — Exposure robustness
+[] Exposure robustness trong nghiên cứu này được định nghĩa hẹp là mức độ ổn định của các metric khi Exposure Compensation của camera thay đổi trong ba mức EV được kiểm soát; khái niệm này không đồng nghĩa với robustness trước mọi điều kiện thời tiết. Nghiên cứu năm 2026 về variable lighting cho thấy protocol chia train-test có thể ảnh hưởng mạnh đến kết quả và random split có thể tạo ra ước lượng quá lạc quan khi cảnh cố định có mức tương đồng cao. Phát hiện này củng cố nguyên tắc của TechGAR: quay các run độc lập và đánh giá theo run thay vì random hóa các frame của cùng một video (Yunganina Mamani et al., 2026).
+[Heading2] 2-13 — Tổng hợp nghiên cứu liên quan
+[] Bảng 2-1 — Tổng hợp nghiên cứu liên quan
+[] Nghiên cứu
+[] Bài toán
+[] Phương pháp / dữ liệu
+[] Điểm liên quan TechGAR
+[] de Almeida et al., 2015
+[] Parking occupancy
+[] PKLot — benchmark đa bãi
+[] Nền tảng cho occupancy và đánh giá khác bãi
+[] Amato et al., 2017
+[] Occupancy
+[] CNRPark+EXT — nhiều camera, ánh sáng, thời tiết, occlusion
+[] Cơ sở cho robustness
+[] de Almeida et al., 2022
+[] Systematic review
+[] Dataset và protocol
+[] Nêu vấn đề bias, video sequence và reproducibility
+[] Huu et al., 2024
+[] Multi-camera vehicle tracking
+[] YOLO + DeepSORT + ResNet + cosine
+[] So sánh hướng Global ID trong bối cảnh Việt Nam
+[] Kim et al., 2025
+[] Parking multi-camera tracking
+[] Geometry + motion + probabilistic association
+[] Gần với hướng Re-ID-free của TechGAR
+[] de Almeida et al., 2026
+[] Benchmark mới
+[] MetaPKLot, persistent IDs, timestamps
+[] Ủng hộ temporal identity và protocol chuẩn
+[] Yunganina Mamani et al., 2026
+[] Parking detection review
+[] 15 nghiên cứu, đánh giá môi trường
+[] Cơ sở research gap về robustness và heterogeneity
+[] Yunganina Mamani et al., 2026
+[] Variable lighting
+[] So sánh detector và partition protocol
+[] Cơ sở cho run-based evaluation
+[] Zivkovic, 2004
+[] Background subtraction
+[] MOG2 thích nghi số thành phần
+[] Thuật toán nền của motion tracker
+[] gatagat/lap, 2016
+[] Linear assignment
+[] Thuật toán Jonker-Volgenant
+[] Thành phố ghép cặp detection — track
+[] QTSC, 2025
+[] Triển khai Smart Parking
+[] Cashless parking + real-time availability
+[] Bối cảnh Việt Nam
+[] Báo Đà Nẵng, 2024/2026
+[] Bãi xe thông minh
+[] Dự án và nhu cầu vùng lõi
+[] Bối cảnh địa phương
+[Heading1] CHƯƠNG 3 — PHƯƠNG PHÁP VÀ THIẾT KẾ HỆ THỐNG TECHGAR
+[Heading2] 3-1 — Tổng quan phương pháp
+[] TechGAR được tổ chức thành pipeline nhiều tầng. Camera cung cấp frame; tracking ROI giới hạn vùng quan sát; MotionVehicleTracker tạo local track; CrossCameraManager hợp nhất local track thành Global Vehicle ID; ParkingDetector xác định trạng thái ô đỗ; SlotVehicleBinder liên kết Global ID với slot và quản lý vòng đời parking episode; runtime API xuất snapshot có cấu trúc cho frontend.
+[] Camera 1 + Camera 2
+[] |
+[] v
+[] LatestFrameCapture  (đồng bộ frame hai camera)
+[] |
+[] v
+[] Tracking ROI  (roi_mask_cam1/cam2.json)
+[] |
+[] v
+[] MotionVehicleTracker
+[] MOG2 + FrameDiff + Kalman + LAPJV
+[] |
+[] v
+[] Tracklet Descriptor HSV/LAB
+[] |
+[] v
+[] CrossCameraManager
+[] Topology + World Position + Motion + Appearance
+[] |
+[] +-----------------------------+
+[] |                             |
+[] v                             v
+[] ParkingDetector                 TrajectoryMemory
+[] 25 Gamma-CLAHE variants         Shared world trajectory
+[] |
+[] v
+[] SlotVehicleBinder
+[] Overlap + stopped state + temporal evidence
+[] |
+[] v
+[] Runtime Snapshot API
+[] |
+[] v
+[] React Web Application
+[] Hình 3-1 — Pipeline nghiên cứu hiện tại của TechGAR theo mã nguồn refactor_20_9
+[Heading2] 3-2 — Kiến trúc phần mềm
+[] Backend AI được triển khai bằng Python. Module two_camera.py là pipeline hai camera chính, runtime_server.py cung cấp API runtime (port 8001) kèm chế độ replay video và ghi session phục vụ thực nghiệm, còn gate_session_controller.py (port 8000) và session_manager.py quản lý lớp session của ứng dụng. Frontend được triển khai bằng React 19, Vite 6, TypeScript 5.7 và Zustand 5, cung cấp bản đồ bãi, session flow, recommendation và navigation.
+[] Trong báo cáo NCKH, các chức năng frontend như QR kiosk, Dijkstra, voice guidance và recommendation được xem là lớp ứng dụng tích hợp; chúng không được coi là đóng góp khoa học chính vì protocol thực nghiệm tập trung vào occupancy, identity và binding.
+[Heading2] 3-3 — Camera và đồng bộ frame
+[] Nguồn camera của protocol là DroidCam trên điện thoại, mỗi run tạo hai video quay đồng thời với resolution 1280×720. Vị trí camera, góc camera, resolution, calibration và slot polygon được giữ cố định giữa ba mức EV. Runtime có LatestFrameCapture và cơ chế ghi nhận camera skew vào frame_timestamps.csv cho từng frame.
+[] Số liệu thực đo từ 9 run chính thức (27/09/2026): camera skew trung bình theo run nằm trong khoảng 11,7–19,3 ms và p95 trong khoảng 31–47 ms; FPS camera gốc không bị khóa cứng mà được ghi nhận gián tiếp qua timestamp; tốc độ xử lý pipeline thực đo đạt trung bình 5,57 ± 0,76 FPS (chi tiết theo run ở mục 5-1 và 5-6).
+[Heading2] 3-4 — Tracking ROI
+[] Tracking ROI là vùng giới hạn mà MotionVehicleTracker được phép xem xét foreground vehicle. ROI này khác với parking-slot polygon: tracking ROI phục vụ giảm nhiễu và giới hạn phạm vi theo dõi, còn parking-slot polygon mô tả từng ô đỗ. Các file roi_mask_cam1.json và roi_mask_cam2.json được giữ cố định trong protocol; không được thay đổi mask giữa các mức EV nếu mục tiêu là đo ảnh hưởng của EV.
+[Heading2] 3-5 — Phát hiện chuyển động
+[] MotionVehicleTracker được thiết kế cho camera cố định và không phụ thuộc detector học sâu trong motion backend. Các tín hiệu gồm background subtraction MOG2, frame difference ở nhiều thang thời gian và các bộ lọc kích thước, diện tích, tỷ lệ chuyển động; bóng được lọc theo khoảng cách chromaticity (shadow_max_chromaticity_distance = 0,10). Các trường hợp foreground bị bóng che hoặc mất do xe đứng yên được xử lý bằng cơ chế rescue và reacquire, trong đó reacquire có cửa sổ thời gian giới hạn và ngưỡng appearance khi track bị lost (lost_appearance_threshold = 0,30).
+[] Đây là điểm cần viết chính xác trong báo cáo: một số tài liệu cũ có thể gọi hệ thống là YOLO-based, nhưng implementation motion backend hiện tại không dùng YOLO để tạo local track. Báo cáo phản ánh theo code được chạy trong thực nghiệm chính thức.
+[Heading2] 3-6 — Local tracking
+[] Mỗi camera duy trì local track với các trạng thái tentative, confirmed và lost. Tracker lưu bbox, điểm tiếp xúc mặt đường (anchor), lịch sử vị trí, vận tốc và appearance tracklet. Kalman prediction hỗ trợ dự đoán vị trí khi detection bị gián đoạn ngắn.
+[] Global assignment được giải bằng LAPJV (thư viện lap) với ma trận chi phí có các ràng buộc về khoảng cách, prediction gate, kích thước và appearance. OcclusionGuard bảo vệ camera-local các xe bị che khuất: nhóm blob bị gộp được mở bằng hình học trước, appearance chỉ dùng để xác nhận các vùng đã tách; pixel dự đoán không làm mới thời điểm quan sát thật. Mục tiêu của tầng này là giảm ID fragmentation trước khi chuyển sang tầng Global ID.
+[Heading2] 3-7 — Appearance tracklet
+[] Mỗi track lưu một gallery các mẫu appearance thay vì một crop duy nhất. Descriptor gồm histogram HSV, chromaticity LAB và luminance, có chuẩn hóa; mẫu appearance được lọc chất lượng để hạn chế crop quá nhỏ hoặc chứa quá nhiều background. Trong cross-camera association, appearance distance là một thành phần của cost chứ không phải tiêu chí duy nhất, giúp giảm nguy cơ ghép nhầm hai xe cùng màu hoặc ghép nhầm khi ánh sáng thay đổi.
+[Heading2] 3-8 — Shared ground plane và Homography
+[] Calibration hiện tại sử dụng một shared ground plane với đơn vị cm; mỗi camera có phép biến đổi về không gian chung và các candidate handoff được so sánh trong không gian này để giảm ảnh hưởng của khác biệt góc nhìn. Cấu hình calibration ghi nhận các điểm fit trên bốn điểm metric anchor và bốn điểm line correction cho mỗi camera. Tuy nhiên các sai số trong file cấu hình là training-fit evidence chứ chưa phải independent validation, nên báo cáo chỉ mô tả calibration là hạ tầng hình học và không tuyên bố độ chính xác định vị độc lập.
+[Heading2] 3-9 — CrossCameraManager và Global Vehicle ID
+[] CrossCameraManager duy trì một canonical namespace cho Global ID. Khi local track ở camera nguồn có candidate chuyển sang camera đích, hệ thống áp dụng camera adjacency, topology gate, prediction distance, direction gate, appearance distance và size consistency trước khi chạy assignment. Candidate cost trong implementation hiện tại gồm bốn thành phần:
+[] C_total = 0.55 * (position_residual / prediction_radius)
+[] + 0.30 * D_appearance
+[] + 0.10 * D_size
+[] + 0.05 * D_heading
+[] Nếu cosine(heading_source, heading_target) < min_direction_cosine
+[] => candidate bị loại khỏi assignment
+[] Công thức này được trình bày như một mô hình association hiện tại, không được tuyên bố là tối ưu toàn cục vì chưa có ablation về trọng số. TrajectoryMemory bổ sung bằng chứng theo không gian chung (world trajectory) cho việc so khớp qua thời gian dài. Canonical alias map hợp nhất các Global ID trùng để tránh phát hành nhiều identity cho cùng một phương tiện — thành phần quan trọng đối với metric ID Consistency và ID Switch.
+[Heading2] 3-10 — Parking Detector
+[] ParkingDetector đọc parking-slot polygons và tạo ROI riêng cho từng ô. Trước khi phân tích, module tạo analysis mask và core mask để giảm ảnh hưởng biên polygon (border_ignore_ratio = 0,12; core_scale = 0,8 cho cam1 và 0,79 cho cam2). Mỗi frame được chuyển sang LAB và xử lý qua 25 tổ hợp Gamma — CLAHE quanh giá trị cơ sở; mỗi tổ hợp thực hiện Gaussian blur, adaptive Gaussian threshold, median filtering và dilation, sau đó so tỷ lệ pixel với ratio threshold.
+[] delta_gamma = [-0.2, -0.1, 0.0, 0.1, 0.2]
+[] delta_clahe = [-0.5, -0.2, 0.0, 0.2, 0.5]
+[] 25 variants = 5 x 5
+[] required_votes = 25 // 2 = 12
+[] is_free = (empty_votes >= required_votes)
+[] Cần mô tả chính xác hướng mã hóa vote: một biến thể bỏ phiếu "trống" khi tỷ lệ foreground trong ROI dưới ngưỡng; ô được quyết định là TRỐNG nếu có ít nhất 12/25 phiếu trống, và là CÓ XE khi số phiếu trống còn ≤ 11 (tương đương ít nhất 14/25 biến thể ủng hộ "có vật thể"). Do 25 là số lẻ nên hai quyết định không đối xứng: quyết định "có xe" bảo thủ hơn quyết định "trống". Điểm này phải được giữ nguyên khi viết evaluator để tránh nhầm giữa empty_votes và occupied_votes.
+[] Bảng 3-1 — Tham số parking detector theo cấu hình thực tế (two_camera.detector.json)
+[] Tham số
+[] cam1
+[] cam2
+[] Ý nghĩa
+[] base_gamma
+[] 2.5
+[] 2.5
+[] Gamma cơ sở trước khi cộng delta
+[] base_clahe
+[] 2.0
+[] 2.0
+[] clipLimit CLAHE cơ sở
+[] clahe_grid
+[] 8
+[] 8
+[] Kích thước grid CLAHE
+[] ratio_thr
+[] 0.12
+[] 0.12
+[] Ngưỡng tỷ lệ foreground cho một biến thể
+[] core_ratio_threshold
+[] 0.18
+[] 0.18
+[] Ngưỡng tỷ lệ trên core mask (core rescue)
+[] core_scale
+[] 0.80
+[] 0.79
+[] Hệ số thu nhỏ polygon tạo core mask
+[] border_ignore_ratio
+[] 0.12
+[] 0.12
+[] Tỷ lệ biên polygon bị bỏ qua
+[] line_min_span_ratio
+[] 0.45
+[] 0.45
+[] Lọc đường kẻ ô có span quá nhỏ
+[] line_max_thickness_ratio
+[] 0.18
+[] 0.18
+[] Lọc đường kẻ ô quá dày
+[] use_edge_recheck
+[] false
+[] false
+[] Bật/kiện bước kiểm tra cạnh bổ sung
+[Heading2] 3-11 — Temporal smoothing trong occupancy
+[] ParkingDetector có TemporalSmoother yêu cầu nhiều frame liên tiếp đồng thuận (required_frames mặc định = 5) trước khi đổi trạng thái; tầng điều phối còn có stable evidence với tham số occupied_seconds và empty_seconds. Các cơ chế này hạn chế flicker do một frame bị nhiễu. Khi thiết kế baseline, temporal smoothing phải được kiểm soát tường minh: nếu baseline là quyết định vision theo từng frame thì cần ghi rõ khác biệt đó; không được vô tình bật temporal smoothing ở cả hai cấu hình rồi kết luận temporal evidence là đóng góp của proposed.
+[Heading2] 3-12 — Vehicle-Slot Binder
+[] SlotVehicleBinder là tầng liên kết Global ID với parking slot, lưu binding, vehicle-to-slot mapping, vehicle state và parking episode. Việc bind không chỉ dựa vào tâm bbox mà xét overlap giữa vùng xe và polygon ô đỗ, trạng thái dừng và temporal confirmation:
+[] O_v = A_intersection / A_vehicle        (tỷ lệ vùng xe nằm trong ô)
+[] O_s = A_intersection / A_slot          (tỷ lệ ô bị vùng xe phủ)
+[] pair score = 0.70 * O_v + 0.20 * O_s + 0.10 * center_proximity
+[] claim score = 0.55 * max_overlap
+[] + 0.20 * min(1, observations / arrival_min_samples)
+[] + 0.15 * min(1, inward_progress / 0.10)
+[] Binding được kích hoạt khi (tâm xe nằm trong ô và O_v ≥ min_vehicle_overlap) hoặc O_v ≥ strong_vehicle_overlap, kèm các điều kiện dừng và số mẫu tối thiểu. Khi xe rời ô, Departure Token, pre-departure guard và recovery logic giúp tránh giải phóng ô quá sớm và tránh gán ô cho một xe khác chỉ vì một fragment đi ngang qua vùng slot.
+[] Bảng 3-2 — Tham số SlotVehicleBinder theo cấu hình thực tế
+[] Tham số
+[] Giá trị mặc định
+[] Ý nghĩa
+[] min_vehicle_overlap
+[] 0.35
+[] Ngưỡng overlap tối thiểu để tính binding
+[] strong_vehicle_overlap
+[] 0.60
+[] Ngưỡng overlap đủ mạnh độc lập tâm xe
+[] stop_seconds
+[] 1.0
+[] Thời gian dừng tối thiểu để xem xét arrival
+[] arrival_min_samples
+[] 3
+[] Số mẫu tối thiểu để xác nhận arrival
+[] arrival_vision_confirmations
+[] 2
+[] Số xác nhận vision cho arrival
+[] arrival_absence_seconds
+[] 0.75
+[] Khoảng vắng tối đa giữa các mẫu arrival
+[] exit_seconds
+[] 0.5
+[] Thời gian xác nhận xe đã rời ô
+[] predeparture_guard_seconds
+[] 2.5
+[] Thời gian bảo vệ trước khi phát departure
+[] recovery_retention_seconds
+[] 5.0
+[] Cửa sổ giữ identity khi xe tạm biến mất
+[] recovery_expand_seconds
+[] 1.0
+[] Thời gian mở rộng vùng recovery
+[] recovery_appearance_threshold
+[] 0.55
+[] Ngưỡng appearance cho recovery
+[] stationary_drift_ratio
+[] 0.10
+[] Ngưỡng lệch vị trí cho trạng thái đứng yên
+[Heading2] 3-13 — Runtime API và frontend
+[] Runtime Contract (runtime_contract.py) chuẩn hóa snapshot gồm schema_version, camera metadata, parking_slots, vehicles, slot_layout, pending handoffs, parking episodes và recent events; frontend nhận snapshot qua runtime API và hiển thị map, vehicle marker, trạng thái slot và session flow. Song song, prediction_writer.py xuất predictions.jsonl (schema v3) cho mỗi session — bao gồm các quan sát xe, identity events, parking episodes và trạng thái slot theo từng frame — là nguồn dữ liệu duy nhất cho evaluator. Các chức năng frontend (routing, recommendation, voice guidance) chứng minh khả năng tích hợp sản phẩm nhưng không được dùng thay cho metric khoa học.
+[Heading2] 3-14 — Thuật toán tổng thể
+[] For each synchronized camera frame:
+[] 1.  Read camera frames
+[] 2.  Apply tracking ROI
+[] 3.  Detect foreground motion
+[] 4.  Update local tracks with Kalman + LAPJV
+[] 5.  Update HSV/LAB appearance galleries
+[] 6.  Project ground points to shared world plane
+[] 7.  Resolve cross-camera candidates
+[] 8.  Canonicalize Global IDs
+[] 9.  Run parking-slot vision detector
+[] 10. Fuse vision evidence with temporal state
+[] 11. Bind Global IDs to parking slots
+[] 12. Publish structured runtime snapshot
+[] Thuật toán trên là mô tả khái quát; flowchart chi tiết và pseudocode đầy đủ cho ba module nghiên cứu chính (Global ID, Parking Detector, SlotVehicleBinder) sẽ được bổ sung như hình minh họa trong bản in.
+[Heading2] 3-15 — Chức năng sản phẩm không thuộc core experiment
+[ListBullet] Dijkstra route engine — tìm đường trên lane graph (routeEngine.ts, laneGraph.ts).
+[ListBullet] Recommendation engine — đề xuất ô đỗ theo ngữ cảnh.
+[ListBullet] QR kiosk và session management — liên kết phương tiện với phiên người dùng.
+[ListBullet] Voice guidance và off-route warning — hỗ trợ trải nghiệm người dùng.
+[] Các chức năng này được trình bày trong một mục hệ thống ứng dụng nhưng không làm loãng câu hỏi nghiên cứu chính.
+[Heading1] CHƯƠNG 4 — THIẾT KẾ THỰC NGHIỆM
+[Heading2] 4-1 — Nguyên tắc thiết kế
+[] Thực nghiệm được thiết kế theo nguyên tắc controlled comparison. Ba video EV = 0 được dùng cho các thí nghiệm ablation để baseline và proposed chạy trên cùng dữ liệu; toàn bộ chín run được dùng cho exposure robustness của full proposed pipeline. Cách tổ chức này hạn chế số lượng video cần quay nhưng vẫn tạo ra hai lớp bằng chứng khác nhau: đóng góp của từng module và độ nhạy theo điều kiện phơi sáng.
+[] Các yếu tố phải giữ cố định giữa các run gồm vị trí camera, góc camera, resolution, calibration, homography, tracking ROI, parking-slot polygons, số xe tĩnh, vị trí xe tĩnh, đường đi của xe động, trình tự event và cấu hình phần mềm. Biến độc lập chính của robustness là EV.
+[] TECHGAR
+[] │
+[] ┌──────────┼──────────┐
+[] ▼          ▼          ▼
+[] PARKING    GLOBAL ID   VEHICLE-SLOT
+[] │          │          │
+[] A0 vs A1   B0 vs B1    C0 vs C1
+[] │          │          │
+[] └──────────┼──────────┘
+[] ▼
+[] FULL TECHGAR
+[] │
+[] Exposure Test
+[] │
+[] ┌─────────┼─────────┐
+[] ▼         ▼         ▼
+[] EV -7      EV 0      EV +7
+[] │         │         │
+[] R01-03    R01-03    R01-03
+[] Hình 4-1 — Sơ đồ thiết kế thực nghiệm: ablation ba thành phần và exposure robustness của full pipeline
+[Heading2] 4-2 — Dataset chính thức
+[] Bảng 4-1 — Bộ dataset chính thức
+[] Nhóm
+[] Run
+[] EV
+[] Số video/run
+[] Mục đích
+[] E-7
+[] E-7-R01, E-7-R02, E-7-R03
+[] -7
+[] 2
+[] Exposure robustness
+[] E0
+[] E0-R01, E0-R02, E0-R03
+[] 0
+[] 2
+[] Ablation + robustness
+[] E+7
+[] E+7-R01, E+7-R02, E+7-R03
+[] +7
+[] 2
+[] Exposure robustness
+[] Tổng
+[] 9 run
+[] 3 mức EV
+[] 18 video
+[] Ablation + robustness
+[] Mỗi run gồm hai video quay đồng thời bằng hai camera DroidCam (1280×720). Tên file chuẩn hóa theo run_id để evaluator tự động nhóm dữ liệu. Tại thời điểm viết báo cáo, cả 9 run đã được thu thập ngày 27/09/2026 cùng toàn bộ prediction và performance log của từng session.
+[Heading2] 4-3 — Kịch bản quay
+[] Tất cả chín run sử dụng cùng một scenario; ba run trong cùng một mức EV là các lần lặp độc lập của cùng kịch bản. Nếu scenario thay đổi quá nhiều giữa các lần lặp, sự khác biệt kết quả có thể đến từ hành vi xe thay vì EV hoặc cấu hình thuật toán.
+[ListBullet] Camera 1 và Camera 2 được đặt cố định.
+[ListBullet] Exposure Compensation được đặt lần lượt -7, 0, +7; các thông số camera khác giữ cố định; nếu có thể, AE và AWB được khóa sau khi thiết lập exposure.
+[ListBullet] Calibration và slot polygons không được vẽ lại giữa các mức EV.
+[ListBullet] Scenario có xe tĩnh, xe di chuyển, ít nhất một event camera handoff và ít nhất một event parking/departure.
+[ListBullet] Thời gian và thứ tự event giữa ba lần lặp cùng EV phải tương đối giống nhau.
+[Heading2] 4-4 — Ground Truth
+[] Ground Truth chính thức của 9 run được chuẩn bị theo một schema duy nhất (Phụ lục B) và được phân biệt bằng run_id, EV, repeat, camera_id, vehicle_id, GT identity, start_frame, end_frame, state, slot_id và event_type. Nếu một xe đã đỗ từ frame đầu đến frame cuối, chỉ cần một dòng với start_frame là frame đầu, end_frame là frame cuối, state = parked và slot_id tương ứng; evaluator tự expand thành nhãn từng frame, không cần annotation thủ công từng frame.
+[] Trong mã nguồn hiện tại, các session đã sinh sẵn khung annotation (ground_truth_events.csv, ground_truth_identity.csv, ground_truth_slots.csv) và công cụ make_label_template.py tạo file manual_tracking.csv cho người gán nhãn. Tại thời điểm viết báo cáo, các file này mới có header — quá trình gán nhãn đang được thực hiện. Slot polygon không phải Ground Truth: polygon là hình học của ô đỗ, Ground Truth là trạng thái thực tế theo khoảng frame.
+[Heading2] 4-5 — Experimental A — Parking Detection Ablation
+[] A0 là parking baseline được xác định từ code sau khi nhóm khóa configuration; A1 là proposed parking detector với 25 Gamma — CLAHE variants và voting. Cả hai chạy trên E0-R01, E0-R02 và E0-R03. Baseline A0 được cấu hình bằng cách tắt cơ chế ensemble/voting và các cơ chế proposed (core rescue, temporal smoothing bổ sung) để chỉ còn một quyết định vision đơn giản từ cùng ROI — cấu hình chính xác sẽ được ghi lại tại thời điểm khóa kết quả và đính kèm vào Phụ lục thay thế số liệu.
+[] Bảng 4-2 — Cấu hình thí nghiệm A — Parking ablation
+[] Cấu hình
+[] Parking pipeline
+[] Dữ liệu
+[] Metric chính
+[] A0 — Baseline
+[] Quyết định vision đơn giản trên cùng parking ROI (khóa từ code)
+[] E0-R01 đến E0-R03
+[] F1
+[] A1 — Proposed
+[] 25 Gamma — CLAHE variants + voting + core rescue
+[] E0-R01 đến E0-R03
+[] F1
+[Heading2] 4-6 — Experimental B — Global ID Ablation
+[] B0 bypass cross-camera Global ID hoặc dùng local identity độc lập theo cách phù hợp với code; B1 bật đầy đủ Global ID/handoff proposed. Parking configuration giữ ở A1.
+[] Bảng 4-3 — Cấu hình thí nghiệm B — Global ID ablation
+[] Cấu hình
+[] Identity
+[] Dữ liệu
+[] Metric chính
+[] B0 — Baseline
+[] Không hợp nhất Global ID giữa camera (local ID độc lập)
+[] E0-R01 đến E0-R03
+[] ID Switches, ID Consistency
+[] B1 — Proposed
+[] CrossCameraManager + topology + motion + appearance + canonical ID
+[] E0-R01 đến E0-R03
+[] Handoff Success Rate, ID Consistency
+[Heading2] 4-7 — Experimental C — Vehicle-Slot Binding Ablation
+[] C0 là association baseline được xác định từ implementation hiện tại; C1 là proposed binder với Global ID, overlap, stopped state và temporal evidence. Parking dùng A1 và Global ID dùng B1.
+[] Bảng 4-4 — Cấu hình thí nghiệm C — Vehicle-slot binding ablation
+[] Cấu hình
+[] Binding
+[] Dữ liệu
+[] Metric chính
+[] C0 — Baseline
+[] Association cơ bản theo overlap/centroid (khóa từ code)
+[] E0-R01 đến E0-R03
+[] Binding Accuracy
+[] C1 — Proposed
+[] Global ID + overlap + stopped state + temporal evidence + departure token
+[] E0-R01 đến E0-R03
+[] Binding Accuracy, Wrong Binding Rate
+[Heading2] 4-8 — Experimental D — Exposure Robustness
+[] Full proposed TechGAR chạy trên toàn bộ chín run; không chạy A0, B0, C0 trên toàn bộ chín run. Mục tiêu là đo mức thay đổi của hiệu năng khi EV thay đổi trong cùng bối cảnh.
+[] Bảng 4-5 — Cấu hình thí nghiệm D — Exposure robustness
+[] EV
+[] Run
+[] Số lặp
+[] Metric
+[] -7
+[] E-7-R01 đến E-7-R03
+[] 3
+[] Parking F1, ID Consistency, Handoff Success, Binding Accuracy
+[] 0
+[] E0-R01 đến E0-R03
+[] 3
+[] Parking F1, ID Consistency, Handoff Success, Binding Accuracy
+[] +7
+[] E+7-R01 đến E+7-R03
+[] 3
+[] Parking F1, ID Consistency, Handoff Success, Binding Accuracy
+[Heading2] 4-9 — Metrics và chuỗi công cụ đánh giá
+[] Các metric được định nghĩa trước khi chạy experiment để tránh chọn metric sau khi nhìn thấy kết quả.
+[] Bảng 4-6 — Định nghĩa metric
+[] Metric
+[] Công thức / định nghĩa
+[] Ý nghĩa
+[] Precision
+[] TP / (TP + FP)
+[] Tỷ lệ dự đoán positive đúng
+[] Recall
+[] TP / (TP + FN)
+[] Khả năng phát hiện đúng positive
+[] F1
+[] 2PR / (P + R)
+[] Metric chính cho occupancy
+[] False-Free Rate
+[] FN / (TP + FN)
+[] Tỷ lệ xe thật nhưng bị coi là free
+[] Handoff Success Rate
+[] Successful handoffs / total handoffs
+[] Khả năng duy trì identity qua camera
+[] ID Switches
+[] Số lần GT vehicle bị đổi Global ID sai
+[] Đo lỗi identity
+[] ID Consistency
+[] Tỷ lệ identity event giữ đúng GID
+[] Độ ổn định Global ID
+[] Binding Accuracy
+[] Correct bindings / total binding events
+[] Độ chính xác xe — ô
+[] Wrong Binding Rate
+[] Wrong bindings / total binding events
+[] Tỷ lệ ghép sai xe — ô
+[] Confirmation Delay
+[] Prediction confirmation time - GT event time
+[] Độ trễ xác nhận
+[] FPS
+[] Processed frames / second
+[] Hiệu năng thời gian thực
+[] P95 latency
+[] 95th percentile processing latency
+[] Độ trễ đuôi
+[] Chuỗi công cụ đánh giá hiện tại gồm ba bước: (1) make_label_template.py sinh file manual_tracking.csv từ prediction, người gán nhãn điền cột physical_vehicle cho từng quan sát; (2) evaluate_session_metrics.py đối chiếu manual_tracking.csv với predictions.jsonl và tính tự động id_consistency, id_switches, miss_rate, handoff/handoff_ok; (3) khi ground_truth_events.csv và ground_truth_slots.csv được gán nhãn, script kiểm tra delay handoff theo preferred/max_delay_frames và so slot dự đoán với target_slot_id cho các event park. Kết quả tổng hợp ghi ra bảng markdown (research_metrics.md) dùng cho Chương 5. Evaluator không dựa vào AI đọc log thủ công.
+[Heading2] 4-10 — Tổng hợp theo mean và SD
+[] Ba run trong mỗi mức EV tạo thành ba quan sát độc lập tương đối. Báo cáo trình bày mean ± SD theo EV và không chỉ lấy một run tốt nhất. Với ablation, kết quả được trình bày từng run và summary mean ± SD; do số lượng run nhỏ, không dùng kiểm định thống kê phức tạp để tạo cảm giác chính xác giả. Có thể báo cáo paired difference giữa A0 và A1 trên cùng run nếu phù hợp.
+[Heading2] 4-11 — Kiểm soát leakage
+[] Không randomize frame của cùng một video thành train/test vì nghiên cứu không huấn luyện model trên 9 video; các video được dùng như independent experimental runs. Nghiên cứu năm 2026 về variable lighting cho thấy random partition trong fixed-camera parking có thể tạo ra kết quả gần bão hòa do train và test chia sẻ cấu trúc không gian và thời gian tương tự; vì vậy run-based evaluation của TechGAR phù hợp hơn với mục tiêu kiểm chứng hệ thống hiện tại.
+[Heading2] 4-12 — Image exposure descriptive statistics
+[] Evaluator bổ sung mean luminance, dark-pixel ratio và highlight-pixel ratio cho ba mức EV. Đây chỉ là thống kê mô tả để kiểm tra rằng input images thực sự khác nhau; không được gọi các chỉ số này là lux vì không có lux meter.
+[] Bảng 4-7 — Khung thống kê mô tả theo mức EV
+[] EV
+[] Mean luminance
+[] Dark pixel ratio
+[] Highlight ratio
+[] Ghi chú
+[] -7
+[] ???
+[] ???
+[] ???
+[] Tối hơn
+[] 0
+[] ???
+[] ???
+[] ???
+[] Điều kiện chuẩn
+[] +7
+[] ???
+[] ???
+[] ???
+[] Sáng hơn
+[Heading1] CHƯƠNG 5 — KẾT QUẢ VÀ THẢO LUẬN
+[] Chương trình bày hai lớp kết quả: (i) số liệu thực đo hệ thống đã có từ 9 run đã thu thập (đặc điểm dataset, runtime, độ trễ, skew) và (ii) các metric chất lượng đánh dấu ??? sẽ được thay sau khi gán nhãn Ground Truth và chạy evaluator. Nhóm chỉ thay ??? bằng số liệu truy xuất được về raw prediction; không thay đổi kết luận cho khớp giả thuyết ban đầu nếu dữ liệu cho kết quả ngược lại.
+[Heading2] 5-1 — Đặc điểm bộ dữ liệu thực nghiệm
+[] Bảng 5-1 — Đặc điểm bộ dữ liệu thực nghiệm (thực đo 27/09/2026)
+[] Chỉ tiêu
+[] Kết quả
+[] Tổng số run / video
+[] 9 run / 18 video (hai camera quay đồng thời)
+[] Camera
+[] 2 × DroidCam, resolution 1280×720
+[] EV
+[] -7, 0, +7 (3 lặp mỗi mức)
+[] Tổng số frame
+[] 7.281
+[] Số frame theo run
+[] 620–1.049 (chi tiết Bảng 5-7)
+[] Thời lượng run
+[] 123–161 s (trung bình ≈ 145 s)
+[] FPS xử lý thực đo
+[] 5,57 ± 0,76 (min 4,29 — max 6,53)
+[] Độ trễ xử lý khung
+[] 136,7 ± 47,2 ms, P50 = 129,2 ms, P95 = 218,3 ms
+[] Camera skew
+[] trung bình 11,7–19,3 ms; p95 31–47 ms theo run
+[] Số parking slots
+[] 60 (30 ô mỗi camera: cam1 D/E/F01–10, cam2 A/B/C01–10)
+[] Số xe động / xe tĩnh mỗi run
+[] ??? — xác nhận khi gán nhãn GT
+[Heading2] 5-2 — Kết quả Parking Detection Ablation
+[] Bảng 5-2 — Kết quả parking ablation theo run (điền từ evaluator sau khi có GT)
+[] Run
+[] Method
+[] TP
+[] FP
+[] FN
+[] TN
+[] Precision
+[] Recall
+[] F1
+[] False-Free
+[] E0-R01
+[] A0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R01
+[] A1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] A0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] A1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] A0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] A1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] Diễn giải dự kiến: nếu A1 có F1 cao hơn A0 ở cả ba run, có thể kết luận rằng trong protocol đã thiết kế, 25-variant consensus tạo ra cải thiện nhất quán đối với occupancy. Nếu A1 chỉ cải thiện một hoặc hai run, kết luận phải phản ánh sự không ổn định đó. Nếu chênh lệch nhỏ, không mô tả contribution là lớn.
+[Heading2] 5-3 — Kết quả Global ID Ablation
+[] Bảng 5-3 — Kết quả Global ID ablation theo run (điền từ evaluate_session_metrics.py sau khi có GT)
+[] Run
+[] Method
+[] Total handoffs
+[] Successful
+[] Handoff Success
+[] ID Switches
+[] ID Consistency
+[] E0-R01
+[] B0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R01
+[] B1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] B0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] B1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] B0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] B1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] Kết quả cần được đọc theo event thay vì chỉ theo tổng số frame. Nếu một run có rất ít handoff, ID Consistency toàn video có thể không phản ánh đúng độ khó của bài toán; phần thảo luận mô tả riêng event handoff và các failure cases.
+[Heading2] 5-4 — Kết quả Vehicle-Slot Binding Ablation
+[] Bảng 5-4 — Kết quả vehicle-slot binding ablation theo run (điền sau khi có GT)
+[] Run
+[] Method
+[] Binding events
+[] Correct
+[] Wrong
+[] Binding Accuracy
+[] Wrong Binding Rate
+[] Delay
+[] E0-R01
+[] C0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R01
+[] C1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] C0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R02
+[] C1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] C0
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] E0-R03
+[] C1
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[] ???
+[Heading2] 5-5 — Exposure Robustness
+[] Bảng 5-5 — Exposure robustness theo run (metric chất lượng điền sau khi có GT; FPS là số liệu thực đo)
+[] EV
+[] Run
+[] Parking F1
+[] ID Consistency
+[] Handoff Success
+[] Binding Accuracy
+[] FPS
+[] -7
+[] R01
+[] ???
+[] ???
+[] ???
+[] ???
+[] 4,68
+[] -7
+[] R02
+[] ???
+[] ???
+[] ???
+[] ???
+[] 5,31
+[] -7
+[] R03
+[] ???
+[] ???
+[] ???
+[] ???
+[] 5,69
+[] 0
+[] R01
+[] ???
+[] ???
+[] ???
+[] ???
+[] 6,53
+[] 0
+[] R02
+[] ???
+[] ???
+[] ???
+[] ???
+[] 4,29
+[] 0
+[] R03
+[] ???
+[] ???
+[] ???
+[] ???
+[] 5,26
+[] +7
+[] R01
+[] ???
+[] ???
+[] ???
+[] ???
+[] 6,12
+[] +7
+[] R02
+[] ???
+[] ???
+[] ???
+[] ???
+[] 6,38
+[] +7
+[] R03
+[] ???
+[] ???
+[] ???
+[] ???
+[] 5,91
+[] Bảng 5-6 — Summary exposure robustness theo EV (mean ± SD, điền sau khi có GT)
+[] EV
+[] Parking F1
+[] ID Consistency
+[] Handoff Success
+[] Binding Accuracy
+[] -7
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] 0
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] +7
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] ??? ± ???
+[] Diễn giải dự kiến: nếu các metric biến động nhỏ giữa ba mức EV, có thể kết luận rằng full pipeline có độ ổn định tương đối trong phạm vi EV được kiểm tra. Nếu metric giảm mạnh ở EV -7 hoặc +7, đó là evidence về sensitivity chứ không phải failure toàn hệ thống.
+[Heading2] 5-6 — Runtime
+[] Bảng 5-7 — Runtime thực đo trên 9 run (nguồn: session_info.json và performance.csv)
+[] Run
+[] Frames
+[] FPS xử lý
+[] Latency mean (ms)
+[] Latency SD (ms)
+[] Latency P95 (ms)
+[] Skew mean (ms)
+[] Skew P95 (ms)
+[] E-7-R01
+[] 620
+[] 4,68
+[] 164,2
+[] 45,8
+[] 238,5
+[] 11,7
+[] 31,0
+[] E-7-R02
+[] 806
+[] 5,31
+[] 140,6
+[] 56,9
+[] 219,9
+[] 13,2
+[] 32,0
+[] E-7-R03
+[] 865
+[] 5,69
+[] 131,0
+[] 41,1
+[] 212,8
+[] 13,1
+[] 31,0
+[] E0-R01
+[] 1.049
+[] 6,53
+[] 111,8
+[] 35,3
+[] 178,0
+[] 13,9
+[] 32,0
+[] E0-R02
+[] 642
+[] 4,29
+[] 178,6
+[] 49,1
+[] 250,7
+[] 12,8
+[] 31,0
+[] E0-R03
+[] 826
+[] 5,26
+[] 142,5
+[] 39,7
+[] 217,8
+[] 13,3
+[] 31,0
+[] E+7-R01
+[] 817
+[] 6,12
+[] 128,4
+[] 45,9
+[] 209,6
+[] 18,3
+[] 47,0
+[] E+7-R02
+[] 929
+[] 6,38
+[] 123,6
+[] 38,6
+[] 201,5
+[] 19,3
+[] 47,0
+[] E+7-R03
+[] 727
+[] 5,91
+[] 134,3
+[] 38,4
+[] 207,3
+[] 17,2
+[] 47,0
+[] Tổng thể
+[] 7.281
+[] 5,57 ± 0,76
+[] 136,7
+[] 47,2
+[] 218,3
+[] —
+[] —
+[] FPS xử lý được đo trên cùng một máy cho toàn bộ 9 run; end-to-end web latency chưa đo trong protocol này nên không trình bày. Các giá trị này thể hiện chi phí tính toán của full pipeline (tracking + Global ID + parking + binding) trên khung 1280×720.
+[Heading2] 5-7 — Failure cases
+[] Phần failure cases sẽ có ảnh/frame minh họa thực tế từ các session đã quay. Mỗi failure case ghi bốn thông tin: điều kiện, quan sát thực tế, nguyên nhân kỹ thuật và metric bị ảnh hưởng.
+[] Bảng 5-8 — Khung phân loại failure cases
+[] Mã lỗi
+[] Điều kiện
+[] Hiện tượng
+[] Nguyên nhân giả định
+[] Metric ảnh hưởng
+[] F01
+[] EV = ???
+[] Mất detection khi xe dừng
+[] Foreground bị hấp thụ vào background
+[] ID Consistency
+[] F02
+[] Overlap
+[] Đổi Global ID
+[] Hai candidate có cost gần nhau
+[] ID Switch
+[] F03
+[] Slot boundary
+[] Ghép xe vào ô sai
+[] Overlap không đủ hoặc xe chưa dừng
+[] Binding Accuracy
+[] F04
+[] EV = ???
+[] False occupied
+[] Ánh sáng/bóng tạo pixel foreground
+[] Precision
+[] F05
+[] Departure
+[] Ô bị giải phóng quá sớm
+[] Thiếu temporal evidence
+[] Wrong Binding
+[Heading2] 5-8 — Thảo luận
+[] Phần thảo luận trả lời từng RQ bằng evidence, không chỉ nhắc lại số liệu:
+[ListBullet] RQ1 — so sánh A0 và A1 trên cùng ba run EV = 0; trình bày chênh lệch F1 và False-Free Rate.
+[ListBullet] RQ2 — so sánh B0 và B1 về ID Switch, Handoff Success và ID Consistency; tập trung vào event handoff thay vì trung bình tất cả frame.
+[ListBullet] RQ3 — so sánh C0 và C1 về Binding Accuracy, Wrong Binding Rate và Confirmation Delay nếu có dữ liệu đáng tin cậy.
+[ListBullet] RQ4 — so sánh mean ± SD theo EV; không suy rộng ngoài EV = -7, 0, +7.
+[] Nếu kết quả không ủng hộ giả thuyết, kết luận vẫn giữ tính trung thực: ví dụ nếu A1 không cải thiện F1 nhưng giảm false-free rate, contribution được diễn giải theo trade-off đó thay vì tuyên bố accuracy tổng thể tăng.
+[Heading2] 5-9 — So sánh với nghiên cứu liên quan
+[] Không xếp hạng trực tiếp TechGAR với các bài báo khác chỉ dựa trên một con số F1, accuracy hoặc FPS vì dataset và protocol khác nhau; MetaPKLot và systematic review 2026 đều chỉ ra heterogeneity về dataset, hardware, metric và split làm hạn chế khả năng so sánh trực tiếp. Phần này so sánh theo cấp độ phương pháp: TechGAR dùng predefined slot polygons, motion-based tracking, lightweight appearance, cross-camera geometry và temporal binding; các công trình khác có thể dùng YOLO, DeepSORT, ResNet Re-ID, ByteTrack hoặc segmentation.
+[Heading2] 5-10 — Ý nghĩa của kết quả
+[] Nếu đạt được cải thiện ổn định, kết quả cung cấp bằng chứng rằng việc kết hợp nhiều nguồn evidence giúp một camera-based parking pipeline duy trì trạng thái và identity tốt hơn so với cách tiếp cận đơn giản; giá trị chỉ trong phạm vi bãi thử, camera setup, scenario và EV đã đánh giá. Một đóng góp quan trọng khác là protocol: tách pilot dataset khỏi official evaluation, dùng một Ground Truth chính thức và chạy baseline/proposed trên cùng run giúp giảm nguy cơ thay đổi dữ liệu giữa các cấu hình. Ngoài ra, toàn bộ cấu hình của 9 run được ghi kèm SHA-256 trong session_info.json của từng session, giúp kiểm tra tính nhất quán của calibration, slot polygon và ROI mask giữa các run.
+[Heading1] CHƯƠNG 6 — KẾT LUẬN VÀ KIẾN NGHỊ
+[Heading2] 6-1 — Kết luận
+[] Đề tài đã xây dựng một pipeline Smart Parking đa camera cố định tập trung vào ba vấn đề có tính liên kết: nhận diện trạng thái ô đỗ, duy trì Global Vehicle ID và liên kết phương tiện với ô đỗ theo thời gian. Khác với cách tiếp cận chỉ xem occupancy là một bài toán classification ảnh tĩnh, TechGAR duy trì thông tin động học và identity trong toàn bộ vòng đời của phương tiện.
+[] Ở tầng tracking, hệ thống sử dụng foreground motion, Kalman prediction, LAPJV assignment, HSV/LAB appearance và shared ground plane. Ở tầng cross-camera, Global ID được duy trì bằng topology, motion, position, size, appearance và canonicalization. Ở tầng parking, 25 Gamma — CLAHE variants được tổng hợp bằng voting, sau đó SlotVehicleBinder sử dụng geometry và temporal evidence để xác nhận parking episode.
+[] Về mặt thực nghiệm, nghiên cứu đã hoàn thành thu thập 9 run chính thức (18 video, 7.281 frame) kèm prediction và performance log có cấu trúc cho từng frame; tốc độ xử lý thực đo 5,57 ± 0,76 FPS và độ trễ P95 = 218,3 ms cho thấy pipeline gần với khả năng hoạt động thời gian thực trên phần cứng phổ thông. Các metric chất lượng sẽ được tính tự động sau khi hoàn tất gán nhãn Ground Truth; báo cáo không sử dụng số liệu minh họa hoặc development làm kết quả chính thức.
+[Heading2] 6-2 — Trả lời RQ1
+[] Kết luận RQ1: ???. Bằng chứng chính là sự khác biệt giữa A0 và A1 về F1, Precision, Recall và False-Free Rate trên E0-R01 đến E0-R03.
+[Heading2] 6-3 — Trả lời RQ2
+[] Kết luận RQ2: ???. Bằng chứng chính là Handoff Success Rate, ID Consistency và ID Switches của B0 và B1.
+[Heading2] 6-4 — Trả lời RQ3
+[] Kết luận RQ3: ???. Bằng chứng chính là Binding Accuracy, Wrong Binding Rate và Confirmation Delay nếu metric này đo được đáng tin cậy.
+[Heading2] 6-5 — Trả lời RQ4
+[] Kết luận RQ4: ???. Kết luận giới hạn trong EV = -7, 0, +7 và không suy rộng thành mọi điều kiện ánh sáng hoặc thời tiết.
+[Heading2] 6-6 — Hạn chế
+[ListBullet] Số lượng run chính thức là chín, chưa đủ đại diện cho mọi điều kiện camera hoặc bãi đỗ.
+[ListBullet] Exposure Value chỉ là một biến kiểm soát phơi sáng, không thay thế thí nghiệm mưa, sương, bóng đổ mạnh, camera rung hoặc thay đổi góc nhìn.
+[ListBullet] Parking-slot polygons được định nghĩa trước; đề tài chưa nghiên cứu automatic parking-slot extraction.
+[ListBullet] Global ID không sử dụng deep vehicle Re-ID được huấn luyện riêng; appearance descriptor là HSV/LAB histogram và chỉ đóng vai trò hỗ trợ.
+[ListBullet] Nếu hai camera thực tế không có khác biệt viewpoint đủ lớn, kết quả cross-camera có thể chưa phản ánh đầy đủ độ khó của deployment nhiều camera ngoài thực tế.
+[ListBullet] Calibration hiện tại có fit evidence nhưng chưa có independent validation set trong protocol chính thức.
+[ListBullet] Các metric cuối cùng phụ thuộc chất lượng Ground Truth; GT phải được xây dựng độc lập với prediction của hệ thống.
+[ListBullet] FPS xử lý trung bình hiện thấp hơn tốc độ ghi của camera gốc, cho thấy cần tối ưu hiệu năng nếu muốn vận hành thời gian thực liên tục.
+[Heading2] 6-7 — Kiến nghị
+[ListBullet] Mở rộng dataset theo nhiều ngày, nhiều góc camera và nhiều bãi đỗ.
+[ListBullet] Bổ sung các điều kiện mưa, bóng đổ, low light và camera occlusion.
+[ListBullet] Xây dựng independent calibration validation set.
+[ListBullet] Đánh giá trên MetaPKLot hoặc benchmark công khai phù hợp nếu có thể chuyển đổi protocol.
+[ListBullet] So sánh thêm với một baseline deep detector/tracker khi có đủ tài nguyên, giữ cùng protocol và tránh leakage.
+[ListBullet] Tối ưu evaluator để tạo bảng kết quả và biểu đồ tự động từ prediction CSV/JSONL.
+[ListBullet] Bổ sung confidence interval hoặc paired statistical analysis khi số run đủ lớn.
+[Heading2] 6-8 — Kết luận cuối cùng
+[] TechGAR nên được xem là một nghiên cứu về identity-aware temporal fusion cho Smart Parking thay vì chỉ là một ứng dụng hiển thị chỗ trống. Giá trị khoa học của đề tài nằm ở việc biến một hệ thống prototype nhiều module thành một thiết kế có câu hỏi nghiên cứu, baseline, ablation, Ground Truth, metric và robustness protocol rõ ràng. Việc hoàn thiện gán nhãn Ground Truth và chạy evaluator trên bộ dữ liệu đã thu thập là bước quyết định để chuyển từ một prototype kỹ thuật sang một báo cáo NCKH có bằng chứng định lượng.
+[Heading1] PHỤ LỤC A — BẢN ĐỒ CODE SANG BÁO CÁO
+[] Bảng A-1 — Bản đồ code sang mục báo cáo
+[] Thành phần code
+[] File / module
+[] Mục báo cáo
+[] Vai trò nghiên cứu
+[] Two-camera runner
+[] backend/main_detect/two_camera.py
+[] 3-1, 3-14
+[] Điều phối pipeline
+[] Runtime server
+[] backend/main_detect/runtime_server.py
+[] 3-3, 3-13
+[] API snapshot, replay, ghi session
+[] Frame sync
+[] src/techgar/latest_frame_capture.py
+[] 3-3
+[] Đồng bộ frame hai camera
+[] Motion tracking
+[] src/techgar/motion_tracker.py
+[] 3-5, 3-6
+[] Local tracking (MOG2, Kalman, LAPJV)
+[] Vehicle state
+[] src/techgar/vehicle_tracker.py
+[] 3-6
+[] Track data model
+[] Occlusion guard
+[] src/techgar/occlusion_guard.py
+[] 3-6
+[] Bảo vệ xe bị che khuất camera-local
+[] Appearance
+[] src/techgar/tracklet_descriptor.py
+[] 3-7
+[] Cross-camera evidence HSV/LAB
+[] Global ID
+[] src/techgar/cross_camera_manager.py
+[] 3-9
+[] Core research component
+[] Trajectory
+[] src/techgar/trajectory_memory.py
+[] 3-8, 3-9
+[] Temporal/world evidence
+[] Parking detector
+[] src/techgar/parking_detector.py
+[] 3-10, 3-11
+[] Core research component
+[] Slot binding
+[] src/techgar/slot_vehicle_binder.py
+[] 3-12
+[] Core research component
+[] Runtime contract
+[] src/techgar/runtime_contract.py
+[] 3-13
+[] Snapshot API cho web
+[] Prediction writer
+[] src/techgar/prediction_writer.py
+[] 3-13, Phụ lục C
+[] predictions.jsonl schema v3
+[] Gate/session API
+[] backend/gate_session_controller.py, session_manager.py
+[] 3-13
+[] REST API 8000, QR session
+[] Calibration tools
+[] calibrate_map.py, mask_roi.py, tools/ParkingSpacePicker_ve_js.py, tools/draw_gate_zones.py
+[] 3-4, 3-8
+[] ROI, slot polygon, calibration
+[] Frontend
+[] frontend/src (App.tsx, routing/, recommendation/)
+[] 3-13, 3-15
+[] Application layer
+[] Evaluator
+[] experiment_test/evaluate_session_metrics.py, make_label_template.py
+[] 4-9, Chương 5
+[] Tính metric tự động
+[Heading1] PHỤ LỤC B — SCHEMA GROUND TRUTH CHÍNH THỨC
+[] run_id,ev,repeat,camera_id,vehicle_id,gt_id,start_frame,end_frame,state,slot_id,event_type
+[] Ví dụ xe đỗ từ frame đầu:
+[] E0-R01,0,1,1,Car01,GT01,0,2999,parked,A01,initial_parked
+[] Ví dụ xe bắt đầu rời ô:
+[] E0-R01,0,1,1,Car01,GT01,0,799,parked,A01,initial_parked
+[] E0-R01,0,1,1,Car01,GT01,800,1200,moving,,departure
+[] Ghi chú hiện trạng: các session đã sinh khung annotation (ground_truth_events.csv, ground_truth_identity.csv, ground_truth_slots.csv) và file ground_truth_offical.csv (lưu ý tên file trên đĩa có lỗi chính tả "offical"); tại thời điểm viết báo cáo các file này mới có header. Nhóm nên thống nhất một file ground_truth_official.csv duy nhất chứa toàn bộ 9 run và phân biệt bằng run_id/ev/camera_id theo schema trên.
+[Heading1] PHỤ LỤC C — SCHEMA PREDICTION (predictions.jsonl, schema v3)
+[] Mỗi dòng là một record theo frame, sinh bởi prediction_writer.py:
+[] schema_version, frame_idx, capture_unix_ns, wall_time_iso,
+[] camera_skew_ms, camera_timestamps_ns, gid_aliases,
+[] observations[], identity_events[], parking_episodes[], parking_events[],
+[] parking_pipeline, parking_recovery, pending_parking_confirmations,
+[] parked_identity_reservations, slots[], association_trajectory_policy,
+[] trail_render_only
+[] Các trường chính của một observation:
+[] observation_uid, camera_id, local_track_id,
+[] raw_gid, canonical_gid, gid_aliases,
+[] bbox [x, y, w, h], anchor_pixel {x, y, reference}, anchor_world,
+[] track_state (tentative/confirmed/lost), association_state, association_source,
+[] prediction_source, predicted_anchor_pixel, prediction_age_s,
+[] velocity_px_per_frame, velocity_confidence,
+[] identity_state, slot_ownership, occlusion_group,
+[] mog_shadow_marker_ratio, roi_clipped, roi_support_ratio,
+[] dark_foreground_rescued, fragment_visible_count, invisible_count,
+[] first_observation_frame
+[] parking_episodes chứa vòng đời parking của mỗi Global ID (slot_id, state, timestamps); parking_events chứa các sự kiện arrival/departure đã xác nhận. Evaluator chỉ đọc từ file này, không đọc log tự do.
+[Heading1] PHỤ LỤC D — MA TRẬN THAY SỐ LIỆU
+[] Bảng D-1 — Ma trận thay số liệu
+[] Hạng mục
+[] Giá trị
+[] Số run hợp lệ
+[] 9 (đã thu thập 27/09/2026) ✓
+[] Số video hợp lệ
+[] 18 ✓
+[] Resolution
+[] 1280×720 ✓
+[] Tổng frame
+[] 7.281 ✓
+[] FPS xử lý
+[] 5,57 ± 0,76 ✓
+[] P95 latency
+[] 218,3 ms ✓
+[] Parking F1 A0 / A1
+[] ??? / ???
+[] ID Consistency B0 / B1
+[] ??? / ???
+[] Binding Accuracy C0 / C1
+[] ??? / ???
+[] EV -7 mean ± SD (F1/ID/Handoff/Binding)
+[] ???
+[] EV 0 mean ± SD (F1/ID/Handoff/Binding)
+[] ???
+[] EV +7 mean ± SD (F1/ID/Handoff/Binding)
+[] ???
+[] Mean luminance theo EV
+[] ???
+[Heading1] PHỤ LỤC E — CHECKLIST KHÓA KẾT QUẢ
+[] ☑ Khóa commit/version code dùng cho official experiments (refactor_20_9; config được ghi SHA-256 trong session_info.json)
+[] ☑ Khóa config camera, ROI, slot polygons và calibration
+[] ☑ Quay đủ 9 run với hai camera đồng thời (27/09/2026)
+[] ☑ Xác nhận tên file và run_id (session_runtime_<RUN_ID>)
+[] ☑ Xuất prediction có schema cố định (predictions.jsonl v3)
+[] ☑ Đo runtime và skew theo frame (performance.csv, frame_timestamps.csv)
+[] ☐ Hoàn thiện ground_truth_official.csv (đang gán nhãn qua manual_tracking.csv)
+[] ☐ Chạy evaluator không dùng AI đọc log thủ công (evaluate_session_metrics.py)
+[] ☐ Tính metric từng run và mean/SD theo EV
+[] ☐ Chạy A0/A1, B0/B1, C0/C1 trên E0-R01 đến E0-R03
+[] ☐ Chạy Full Proposed trên cả 9 run
+[] ☐ Kiểm tra failure cases (ảnh minh họa từ debug video)
+[] ☐ Thay toàn bộ ??? trong Chương 5 và Chương 6
+[] ☐ Kiểm tra mọi con số trong bảng có truy xuất về raw prediction
+[] ☐ Cập nhật danh mục bảng và hình
+[] ☐ Đối chiếu tên đề tài với hồ sơ NCKH PTIT
+[Heading1] TÀI LIỆU THAM KHẢO
+[] [1] Amato, G., Carrara, F., Falchi, F., Gennaro, C., Meghini, C., & Vairo, C. (2017). Deep learning for decentralized parking lot occupancy detection. Expert Systems with Applications, 72, 327-334. https://cnrpark.it/
+[] [2] de Almeida, P. R. L., Oliveira, L. S., Britto Jr., A. S., Silva Jr., E. J., & Koerich, A. L. (2015). PKLot — A robust dataset for parking lot classification. Expert Systems with Applications, 42(11), 4937-4949. https://doi.org/10.1016/j.eswa.2015.02.009
+[] [3] de Almeida, P. R. L., Alves, J. H., Parpinelli, R. S., & Barddal, J. P. (2022). A systematic review on computer vision-based parking lot management applied on public datasets. Expert Systems with Applications, 198, 116731. https://doi.org/10.1016/j.eswa.2022.116731
+[] [4] de Almeida, P. L., Alves, J. H., Kujavski, L. M., Alves, P. L., & Oliveira, L. E. (2026). MetaPKLot — New challenges and protocols for vision-based parking lot management. Neural Computing and Applications, 38, 704. https://doi.org/10.1007/s00521-026-12398-0
+[] [5] Huu, P. N., Anh, B. N., & Minh, Q. T. (2024). Proposing smart system for detecting and monitoring vehicle using multiobject multicamera tracking. International Journal of Digital Multimedia Broadcasting, 2024, 6667738. https://doi.org/10.1155/2024/6667738
+[] [6] Kim, E. H., Choi, Y., Suh, Y. H., & Jeon, J. W. (2025). Re-ID free multi camera tracking and real-time ID fusion for ROS2-based autonomous parking systems. 2025 International Technical Conference on Circuits/Systems, Computers and Communications. https://doi.org/10.1109/ITC-CSCC66376.2025.11137749
+[] [7] Yunganina Mamani, G. F., Cori Coarite, G. L., Chambi Vilca, J. A., Condori-Coaquira, Á. R., Mamani-Pari, D., Humpiri-Flores, M. E., & Tocto-Cano, E. (2026). Parking space detection using computer vision: A systematic review of the literature. Frontiers in Artificial Intelligence, 9, 1854166. https://doi.org/10.3389/frai.2026.1854166
+[] [8] Yunganina Mamani, G. F., Cori Coarite, G. L., Chambi Vilca, J. A., Condori-Coaquira, Á. R., Mamani-Pari, D., Humpiri-Flores, M. E., & Tocto-Cano, E. (2026). Comparative evaluation of deep learning object detectors for real-time parking occupancy detection under variable lighting conditions. Sensors, 26(17), 5329. https://doi.org/10.3390/s26175329
+[] [9] Zivkovic, Z. (2004). Improved adaptive Gaussian mixture model for background subtraction. Proceedings of the 17th International Conference on Pattern Recognition (ICPR), 2, 28-31. https://doi.org/10.1109/ICPR.2004.1333992
+[] [10] gatagat. (2016). lap — Linear Assignment Problem solver (thu vien Jonker-Volgenant cho Python). https://github.com/gatagat/lap
+[] [11] QTSC. (2025, June 20). Cashless smart parking with integrated utilities at QTSC. https://www.qtsc.com.vn/en/news/cashless-smart-parking-with-integrated-utilities-at-qtsc
+[] [12] Báo Đà Nẵng. (2024, December 24). Sẽ điều chỉnh giá dịch vụ tại bãi giữ xe thông minh. https://baodanang.vn/se-dieu-chinh-gia-dich-vu-tai-bai-giu-xe-thong-minh-3282649.html
+[] [13] Báo Đà Nẵng. (2026, May 15). Mời thầu tư vấn khảo sát, lập báo cáo kinh tế kỹ thuật Dự án triển khai bãi xe thông minh. https://baodanang.vn/moi-thau-tu-van-khao-sat-lap-bao-cao-kinh-te-ky-thuat-du-an-trien-khai-bai-xe-thong-minh-3336630.html
+[] [14] Báo Đà Nẵng. (2026, August 16). Bãi đỗ xe thông minh cho vùng lõi đô thị. https://baodanang.vn/bai-do-xe-thong-minh-cho-vung-loi-do-thi-3348827.html
+[] [15] Học viện Công nghệ Bưu chính Viễn thông. (2025). Công văn số 1690/HV-KHCN về việc đăng ký kế hoạch khoa học công nghệ năm 2026. https://khcn.ptit.edu.vn/wp-content/uploads/sites/5/2026/01/CV1690_Dang-ky-KH-KHCN-2026.pdf
+[] [16] Học viện Công nghệ Bưu chính Viễn thông. (2020). Quy định về hoạt động nghiên cứu khoa học của sinh viên theo Quyết định số 521/QĐ-HV ngày 17/7/2020.
+[] [17] TechGAR. (2026). TechGAR_Parking_AI — Source code and experimental documentation, branch refactor_20_9 [Tài liệu nội bộ của nhóm].
+[] [18] TechGAR. (2026). TECHGAR NCKH Experimental Protocol & AI Agent Implementation Plan v2 [Tài liệu nội bộ của nhóm].

@@ -1,0 +1,44 @@
+{
+  "id": "track-lifecycle",
+  "title": "Vòng đời track (FSM)",
+  "tier": "T2",
+  "nodes": ["N7"],
+  "problem": "Không phải blob nào cũng là xe: vệt motion đơn lẻ (giật camera, bóng mây) không nên được cấp danh tính thật. Track phải 'chứng minh' tồn tại qua nhiều quan sát trước khi downstream tin.",
+  "does": "FSM 3 trạng thái: TENTATIVE khi _create_or_reid sinh (luôn local ID MỚI); CONFIRMED khi đủ min_visible_count=3 obs VÀ displacement ≥6px từ điểm-đầu (chống blob đứng yên); LOST khi confirmed mất khớp → coasting; hết TTL → expired ra khỏi pool, báo N8. suspend_track (binder gọi, dormant) pop khỏi _tracks hẳn — không predict/TTL.",
+  "role": {"before": "detection qua N5/N6", "after": "chỉ CONFIRMED đi tiếp xuống manager/binder (notify tc:2690-2716)", "missing": "Confirm ngay 1 obs → mọi nhiễu tức thì thành 'xe' → snapshot rác"},
+  "where": [{"file": "backend/main_detect/src/techgar/vehicle_tracker.py", "line": "20-68", "symbol": "TrackStatus/fields"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2071-2094", "symbol": "_is_confirmable"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2009-2069", "symbol": "_create_or_reid"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2175-2187", "symbol": "suspend_track"}],
+  "why": "Hai điều kiện (số obs VÀ quãng đường) chống cả nhiễu-nhất-thời lẫn nhiễu-đứng-yên [code]. Confirm theo SỐ FRAME không theo giây: 3 obs ở 30fps ≈0.1s nhưng ở 10fps ≈0.3s — đánh đổi đã chọn [code].",
+  "steps": [
+    "Detection unmatched → _create_or_reid: TENTATIVE + local ID mới (không tái dùng ID cũ).",
+    "Mỗi match: total_visible_count++ và đo displacement từ first_observation_point.",
+    "count ≥3 VÀ ‖điểm−origin‖ ≥6px → CONFIRMED (priority: ≥2 obs TRONG vùng + 3px).",
+    "Confirmed mất khớp → LOST → nhánh coasting/T1-4.",
+    "Hết TTL → expired → N8 notify; suspend → pop sang _suspended_tracks."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2071-2094", "symbol": "_is_confirmable", "note": "count + displacement từ origin; multiscale dùng first_observation_point, legacy history[0]"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2167-2169", "symbol": "priority_observation_count", "note": "chỉ tăng khi detection priority=True"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2012-2016", "symbol": "fresh local ID", "note": "GID recovery thuộc CrossCameraManager"}
+  ],
+  "realParams": [
+    {"name": "min_visible_count", "value": 3, "unit": "obs", "scope": "runtime", "ref": "two_camera arg (class khác)"},
+    {"name": "min_confirm_displacement", "value": 6.0, "unit": "px", "scope": "runtime", "ref": "two_camera.py:1808-1810"},
+    {"name": "priority confirm", "value": "≥2 obs trong vùng / 3.0px", "unit": "-", "scope": "runtime", "ref": "motion_tracker.py:2081 + :2167-2169"},
+    {"name": "lost_track_ttl", "value": 90, "unit": "frames", "scope": "runtime", "ref": "two_camera arg"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "TENTATIVE→CONFIRMED→LOST→expire", "seed": 8}, {"id": "edge", "label": "Blob đứng yên không confirm / suspend", "seed": 8}],
+    "keyframes": [
+      {"id": "k1", "caption": "Blob đầu → TENTATIVE (ID mới); 2 match sau vẫn TENTATIVE — chưa đủ 3 obs", "mode": "both", "state": {"status": "TENTATIVE", "count": 2}},
+      {"id": "k2", "caption": "Obs 3 + đã đi 12px ≥6 → CONFIRMED; badge đổi, downstream mới nhìn thấy track", "mode": "both", "state": {"status": "CONFIRMED", "disp_px": 12}},
+      {"id": "k3", "caption": "Phản-ví: vệt nước lay 3 obs nhưng đi 2px <6 → mãi TENTATIVE → expire, không lọt downstream", "mode": "off", "state": {"status": "TENTATIVE→expire"}},
+      {"id": "k4", "caption": "Suspend: binder báo đỗ yên → pop khỏi pool (association_state='suspended_parked'), giữ danh tính cho dormant", "mode": "on", "state": {"association_state": "suspended_parked"}}
+    ]
+  },
+  "qa": [
+    {"q": "3 obs = bao lâu?", "a": "Theo frame không theo giây — ~0.1s ở 30fps, ~0.3s ở 10fps."},
+    {"q": "Track mất 1 frame rồi quay lại?", "a": "LOST chỉ khi confirmed mất khớp; reacquire trong _assign giữ nguyên ID (xem coasting)."},
+    {"q": "ID cũ có tái dùng?", "a": "Không — _create_or_reid luôn mint mới; khôi phục GID là việc cross-camera manager."}
+  ],
+  "certainty": "Cao [code] enum/confirm/suspend/fresh-ID; ranh giới dormant = phần B đã ghi."
+}

@@ -185,6 +185,28 @@ class CrossCameraManager:
         # jitter between two fragments of the same vehicle.
         reid_reachable_speed_scale: float = 1.5,
         reid_reachable_margin: Optional[float] = None,
+        # Stationary re-acquisition (F1-design rev2).  A parked car whose
+        # local track starved while motionless is unreachable for the
+        # dormant and world-trajectory passes (``same_camera_stale`` veto +
+        # direction/time-topology collapse), so its re-fired fragment mints
+        # a duplicate Global ID for the same physical car.  This optional
+        # last-resort pass re-binds a stationary fragment to a nearby
+        # retained identity under same-spot distance + appearance/size/IoU
+        # gates, with persistent deferral for ambiguous or contested spots.
+        # Disabled by default; flag-off is bit-identical to the old code.
+        enable_stationary_reacquire: bool = False,
+        stationary_reacquire_core_distance: float = 3.0,
+        stationary_reacquire_distance: float = 5.0,
+        stationary_reacquire_appearance_distance: float = 0.30,
+        stationary_reacquire_appearance_support: int = 2,
+        stationary_reacquire_size_distance: float = 0.90,
+        stationary_reacquire_iou: float = 0.15,
+        stationary_reacquire_tail_span: float = 4.0,
+        stationary_reacquire_velocity: float = 1.5,
+        stationary_reacquire_margin_distance: float = 1.5,
+        stationary_reacquire_margin_appearance: float = 0.08,
+        stationary_reacquire_member_drift: float = 2.0,
+        stationary_reacquire_member_window: int = 10,
     ):
         self.camera_sizes = camera_sizes
         self.camera_crops = camera_crops
@@ -264,6 +286,44 @@ class CrossCameraManager:
             if dormant_appearance_threshold is not None
             else min(0.75, self.appearance_threshold + 0.15)
         )
+        self.enable_stationary_reacquire = bool(enable_stationary_reacquire)
+        self.stationary_reacquire_core_distance = max(
+            0.1, float(stationary_reacquire_core_distance)
+        )
+        self.stationary_reacquire_distance = max(
+            self.stationary_reacquire_core_distance,
+            float(stationary_reacquire_distance),
+        )
+        self.stationary_reacquire_appearance_distance = float(
+            np.clip(stationary_reacquire_appearance_distance, 0.0, 1.0)
+        )
+        self.stationary_reacquire_appearance_support = max(
+            1, int(stationary_reacquire_appearance_support)
+        )
+        self.stationary_reacquire_size_distance = float(
+            np.clip(stationary_reacquire_size_distance, 0.0, 1.0)
+        )
+        self.stationary_reacquire_iou = float(
+            np.clip(stationary_reacquire_iou, 0.0, 1.0)
+        )
+        self.stationary_reacquire_tail_span = max(
+            0.0, float(stationary_reacquire_tail_span)
+        )
+        self.stationary_reacquire_velocity = max(
+            0.0, float(stationary_reacquire_velocity)
+        )
+        self.stationary_reacquire_margin_distance = max(
+            0.0, float(stationary_reacquire_margin_distance)
+        )
+        self.stationary_reacquire_margin_appearance = max(
+            0.0, float(stationary_reacquire_margin_appearance)
+        )
+        self.stationary_reacquire_member_drift = max(
+            0.0, float(stationary_reacquire_member_drift)
+        )
+        self.stationary_reacquire_member_window = max(
+            1, int(stationary_reacquire_member_window)
+        )
         self.tracklet_gallery_size = max(1, int(tracklet_gallery_size))
         self.new_identity_min_observations = max(
             3, int(new_identity_min_observations)
@@ -338,6 +398,16 @@ class CrossCameraManager:
         self._ambiguous_local_identities: Dict[
             Tuple[str, int], Tuple[int, set[int]]
         ] = {}
+        # Stationary re-acquire persistent deferrals (flag-gated usage):
+        # first deferred frame, the competing Global IDs that justified it,
+        # and the original deferral reason.  Unlike the 3-frame
+        # ``_ambiguous_local_identities`` window, a claim here survives until
+        # fewer than two competing identities remain or the cap elapses, so
+        # an ambiguous dormant match cannot fall through to a LAPJV steal.
+        self._stationary_deferred_since: Dict[Tuple[str, int], int] = {}
+        self._stationary_deferred_claims: Dict[Tuple[str, int], set] = {}
+        self._stationary_deferred_reasons: Dict[Tuple[str, int], str] = {}
+        self._stationary_event_last: Dict[tuple, int] = {}
         self._new_identity_defer_last: Dict[Tuple[str, int, str], int] = {}
         # First frame each unbound fragment was deferred for physically
         # leaving a reserved parking slot (keyed like
@@ -1877,6 +1947,15 @@ class CrossCameraManager:
         )
         if len(samples) < self.trajectory.min_observations:
             return False
+        # The rolling trail only keeps ``history_seconds`` of samples, so
+        # samples[0] is where the fragment was moments ago -- not where it
+        # began.  Origin membership must be judged against the epoch start;
+        # a departing car prunes its own in-slot samples as it drives away.
+        origin_sample = self.trajectory.provisional_origin(
+            (str(cam_id), int(local_track_id))
+        )
+        if origin_sample is None:
+            return False
         origin = self.trajectory.parked_origin(int(global_id))
         if origin is None:
             reservation_camera = reservation.get("camera_id")
@@ -1897,7 +1976,7 @@ class CrossCameraManager:
             ):
                 return False
         earliest_distance = float(
-            np.linalg.norm(np.subtract(samples[0].world, origin))
+            np.linalg.norm(np.subtract(origin_sample.world, origin))
         )
         return earliest_distance > self.dormant_match_distance
 
@@ -1949,6 +2028,11 @@ class CrossCameraManager:
         )
         if len(samples) < self.trajectory.min_observations:
             return False
+        origin_sample = self.trajectory.provisional_origin(
+            (str(cam_id), int(local_track_id))
+        )
+        if origin_sample is None:
+            return False
         origin = self.trajectory.parked_origin(int(global_id))
         if origin is None:
             reservation_camera = reservation.get("camera_id")
@@ -1969,7 +2053,7 @@ class CrossCameraManager:
             ):
                 return False
         earliest_distance = float(
-            np.linalg.norm(np.subtract(samples[0].world, origin))
+            np.linalg.norm(np.subtract(origin_sample.world, origin))
         )
         return earliest_distance <= self.dormant_match_distance
 
@@ -4299,6 +4383,853 @@ class CrossCameraManager:
                 )
         return deferred
 
+    # ------------------------------------------------------------------
+    # Stationary re-acquisition (F1-design rev2, flag-gated).
+    # ------------------------------------------------------------------
+
+    def _stationary_event(
+        self,
+        kind: str,
+        frame_idx: int,
+        global_id: Optional[int],
+        *,
+        cam_id: Optional[str] = None,
+        local_id: Optional[int] = None,
+        reason: str = "",
+        **details,
+    ) -> None:
+        """Emit ``stationary_reacquire_*`` events at most once per 8 frames
+        per (kind, gid, camera, local, reason) so flag-on telemetry does not
+        flood the 200-entry recent-events ring."""
+        dedup_key = (
+            str(kind),
+            int(global_id) if global_id is not None else -1,
+            str(cam_id),
+            int(local_id) if local_id is not None else -1,
+            str(reason),
+        )
+        if int(frame_idx) - self._stationary_event_last.get(
+            dedup_key, -999999
+        ) < 8:
+            return
+        self._stationary_event_last[dedup_key] = int(frame_idx)
+        self._event(
+            kind,
+            frame_idx,
+            global_id,
+            target_camera=cam_id,
+            target_local_id=(
+                int(local_id) if local_id is not None else None
+            ),
+            reason=str(reason) if reason else None,
+            **details,
+        )
+
+    def _stationary_claim_alive(self, global_id: int) -> bool:
+        canonical = self._canonical_id(int(global_id))
+        identity = self._identities.get(canonical)
+        return (
+            identity is not None
+            and identity.state not in {"exited", "expired"}
+            and canonical not in self._occluded_global_ids
+            and canonical not in self._provisional_identity_holds
+        )
+
+    def _prune_stationary_deferred(self, all_tracks: Dict[str, dict]) -> None:
+        """Drop deferral records whose fragment bound or disappeared."""
+        present = {
+            (str(cam_id), int(local_id))
+            for cam_id, tracks in (
+                self._ownership_tracks or all_tracks
+            ).items()
+            for local_id in tracks
+        }
+        for key in list(self._stationary_deferred_since):
+            if key in self._local_to_global or key not in present:
+                self._stationary_deferred_since.pop(key, None)
+                self._stationary_deferred_claims.pop(key, None)
+                self._stationary_deferred_reasons.pop(key, None)
+
+    def _stationary_hold_is_live(
+        self,
+        key: Tuple[str, int],
+        frame_idx: int,
+        all_tracks: Optional[Dict[str, dict]] = None,
+    ) -> bool:
+        """Whether the persistent deferral still protects this fragment."""
+        since = self._stationary_deferred_since.get(key)
+        if since is None:
+            return False
+        if int(frame_idx) - int(since) > max(self.handoff_ttl, 60):
+            self._stationary_deferred_since.pop(key, None)
+            self._stationary_deferred_claims.pop(key, None)
+            self._stationary_deferred_reasons.pop(key, None)
+            return False
+        live_claims = {
+            claim
+            for claim in self._stationary_deferred_claims.get(key, set())
+            if self._stationary_claim_alive(claim)
+        }
+        reason = self._stationary_deferred_reasons.get(key, "")
+        if reason == "awaiting_evidence":
+            # Held only until the fragment can be fully evaluated: release
+            # as soon as it has accumulated enough provisional trajectory
+            # and appearance evidence, or when no claimant remains.
+            cam_id, local_id = key
+            track = (all_tracks or {}).get(cam_id, {}).get(local_id)
+            mature = (
+                track is not None
+                and len(appearance_samples(track)) >= 2
+                and len(self.trajectory.provisional_samples(key))
+                >= self.trajectory.min_observations
+            )
+            keep = bool(live_claims) and not mature
+        else:
+            # The competition resolved itself; release the fragment so the
+            # ordinary passes (or minting) can proceed from this frame.
+            keep = len(live_claims) >= 2
+        if not keep:
+            self._stationary_deferred_since.pop(key, None)
+            self._stationary_deferred_claims.pop(key, None)
+            self._stationary_deferred_reasons.pop(key, None)
+            return False
+        return True
+
+    def _emit_stationary_hold_deferred(
+        self, key: Tuple[str, int], frame_idx: int
+    ) -> None:
+        claims = self._stationary_deferred_claims.get(key, set())
+        since = self._stationary_deferred_since.get(key, frame_idx)
+        self._stationary_event(
+            "stationary_reacquire_deferred",
+            frame_idx,
+            None,
+            cam_id=key[0],
+            local_id=key[1],
+            reason=self._stationary_deferred_reasons.get(
+                key, "ambiguous_candidates"
+            ),
+            competing_global_ids=sorted(int(claim) for claim in claims),
+            deferred_since_frame=int(since),
+            deferred_frames=int(frame_idx) - int(since),
+        )
+
+    def _stationary_member_drift_window(
+        self,
+        global_id: int,
+        member_cam: str,
+        member_lid: int,
+        frame_idx: int,
+    ) -> Optional[dict]:
+        """Window-local drift of a bound live member (rev2 G6 fix).
+
+        Velocity is sampled from the member's own observations inside the
+        +-``stationary_reacquire_member_window`` frame window around the
+        event -- deliberately NOT the identity-wide EMA
+        (``velocity_world_per_second``), which dilutes a member that only
+        started moving recently (thai3_f1528 false-merge).
+        """
+        window_lo = int(frame_idx) - self.stationary_reacquire_member_window
+        window_hi = int(frame_idx) + self.stationary_reacquire_member_window
+        samples = [
+            sample
+            for sample in self.trajectory.global_samples(global_id)
+            if sample.camera_id == member_cam
+            and sample.local_track_id == int(member_lid)
+            and window_lo <= int(sample.frame_idx) <= window_hi
+        ]
+        if len(samples) < 2:
+            return None
+        drift = float(
+            np.linalg.norm(
+                np.subtract(samples[-1].world, samples[0].world)
+            )
+        )
+        elapsed_s = float(
+            samples[-1].timestamp_s - samples[0].timestamp_s
+        )
+        return {
+            "member_cam": member_cam,
+            "member_lid": int(member_lid),
+            "f_lo": int(samples[0].frame_idx),
+            "f_hi": int(samples[-1].frame_idx),
+            "drift_wu": round(drift, 3),
+            "velocity_wu_s": (
+                round(drift / elapsed_s, 3) if elapsed_s > 1e-6 else None
+            ),
+            "member_drift_stat": self.stationary_reacquire_member_drift,
+        }
+
+    def _match_stationary_reacquire(
+        self,
+        all_tracks: Dict[str, dict],
+        frame_idx: int,
+        camera_timestamps_s: Optional[Dict[str, float]],
+    ) -> set[Tuple[str, int]]:
+        """Last-resort re-acquisition of *stationary* vehicles.
+
+        Runs only when ``enable_stationary_reacquire`` is set, between the
+        unique-cross-camera pass and new-GID minting.  A parked car whose
+        local track starved while motionless fails every conservative pass
+        upstream (dormant ``same_camera_stale``, world-trajectory
+        ``time_topology == 0`` and direction noise), so the allocator mints
+        a duplicate GID for the same physical car (sang8 f600).  This pass
+        re-binds a stationary fragment to a retained identity under tight
+        same-spot distance plus appearance/size/IoU corroboration;
+        ambiguous or contested spots defer persistently instead of
+        guessing.  Returns fragment keys that must stay unallocated this
+        frame.
+        """
+        if not self.enable_stationary_reacquire:
+            return set()
+        deferred: set[Tuple[str, int]] = set()
+        candidates = [
+            (cam_id, int(local_id), track)
+            for cam_id, tracks in all_tracks.items()
+            for local_id, track in tracks.items()
+            if (cam_id, local_id) not in self._local_to_global
+            and self._is_allocatable(track)
+            and self._has_fresh_detection(track)
+        ]
+        identities = [
+            identity
+            for identity in self._identities.values()
+            if identity.state not in {"exited", "expired"}
+            and self._canonical_id(identity.global_id)
+            not in self._provisional_identity_holds
+            and self._canonical_id(identity.global_id)
+            not in self._occluded_global_ids
+        ]
+        if not candidates or not identities:
+            return deferred
+
+        for cam_id, local_id, track in candidates:
+            key = (str(cam_id), int(local_id))
+            timestamp_s = (camera_timestamps_s or {}).get(cam_id)
+            frag_samples = self.trajectory.provisional_samples(key)
+            try:
+                frag_world = self._track_world(cam_id, track)
+            except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+                continue
+            frag_span = 0.0
+            frag_worlds = [sample.world for sample in frag_samples]
+            if len(frag_worlds) >= 2:
+                frag_span = float(
+                    np.linalg.norm(
+                        np.subtract(frag_worlds[-1], frag_worlds[0])
+                    )
+                )
+                for earlier in frag_worlds[:-1]:
+                    frag_span = max(
+                        frag_span,
+                        float(
+                            np.linalg.norm(
+                                np.subtract(frag_worlds[-1], earlier)
+                            )
+                        ),
+                    )
+            fragment_moving = frag_span > self.stationary_reacquire_tail_span
+
+            mature = (
+                len(appearance_samples(track)) >= 2
+                and len(frag_samples) >= self.trajectory.min_observations
+            )
+            if not mature:
+                # Too young to prove a stationary re-acquisition.  If any
+                # retained identity still screens positive, defer minting
+                # for a short evidence window instead of stamping a
+                # duplicate GID before the fragment can prove itself.
+                screened_ids = set()
+                if not fragment_moving:
+                    for identity in identities:
+                        other_gid = self._canonical_id(identity.global_id)
+                        anchor = identity.last_world
+                        if anchor is not None:
+                            other_distance = float(
+                                np.linalg.norm(
+                                    np.subtract(frag_world, anchor)
+                                )
+                            )
+                            if (
+                                other_distance
+                                <= 2.0 * self.stationary_reacquire_distance
+                            ):
+                                screened_ids.add(other_gid)
+                                continue
+                        gallery = (
+                            identity.camera_appearance_samples.get(cam_id)
+                            or identity.appearance_samples
+                        )
+                        if gallery and appearance_samples(track):
+                            app_match = compare_tracklets(track, gallery)
+                            if (
+                                app_match is not None
+                                and app_match.distance <= 0.5
+                            ):
+                                screened_ids.add(other_gid)
+                if screened_ids:
+                    claims = screened_ids | set(
+                        self._stationary_deferred_claims.get(key, set())
+                    )
+                    self._stationary_deferred_since.setdefault(
+                        key, int(frame_idx)
+                    )
+                    self._stationary_deferred_claims[key] = claims
+                    self._stationary_deferred_reasons[key] = (
+                        "awaiting_evidence"
+                    )
+                    deferred.add(key)
+                    self._stationary_event(
+                        "stationary_reacquire_deferred",
+                        frame_idx,
+                        None,
+                        cam_id=cam_id,
+                        local_id=local_id,
+                        reason="awaiting_evidence",
+                        competing_global_ids=sorted(
+                            int(claim) for claim in claims
+                        ),
+                        deferred_since_frame=int(
+                            self._stationary_deferred_since[key]
+                        ),
+                        deferred_frames=int(frame_idx)
+                        - int(self._stationary_deferred_since[key]),
+                    )
+                continue
+
+            qualified = []
+            screened_any = False
+            for identity in identities:
+                gid = self._canonical_id(identity.global_id)
+
+                def reject(reason: str, **details) -> None:
+                    self._stationary_event(
+                        "stationary_reacquire_rejected",
+                        frame_idx,
+                        gid,
+                        cam_id=cam_id,
+                        local_id=local_id,
+                        reason=reason,
+                        source_camera=identity.last_camera,
+                        **details,
+                    )
+
+                # G1: never steal an identity that still owns a confirmed
+                # member on the fragment's own camera.
+                if self._has_confirmed_camera_member(
+                    gid,
+                    cam_id,
+                    all_tracks,
+                    exclude_local_id=local_id,
+                ):
+                    reject("same_camera_live_owner")
+                    continue
+
+                # Cross-camera live members (bound, other camera).
+                members = []
+                for (member_cam, member_lid), raw_gid in (
+                    self._local_to_global.items()
+                ):
+                    if member_cam == cam_id:
+                        continue
+                    if self._canonical_id(raw_gid) != gid:
+                        continue
+                    member_track = all_tracks.get(member_cam, {}).get(
+                        member_lid
+                    )
+                    member_world = None
+                    if (
+                        member_track is not None
+                        and self._is_confirmed(member_track)
+                        and self._has_fresh_detection(member_track)
+                    ):
+                        try:
+                            member_world = self._track_world(
+                                member_cam, member_track
+                            )
+                        except (
+                            cv2.error,
+                            KeyError,
+                            np.linalg.LinAlgError,
+                            ValueError,
+                        ):
+                            member_world = None
+                    members.append((member_cam, member_lid, member_world))
+
+                # Distance to the identity anchor (Euclidean, not the
+                # corridor metric).  Take the better of the current fragment
+                # point and its first provisional sample.
+                anchor = identity.last_world
+                distance = None
+                if anchor is not None:
+                    distance = float(
+                        np.linalg.norm(np.subtract(frag_world, anchor))
+                    )
+                    if frag_samples:
+                        distance = min(
+                            distance,
+                            float(
+                                np.linalg.norm(
+                                    np.subtract(
+                                        frag_samples[0].world, anchor
+                                    )
+                                )
+                            ),
+                        )
+
+                # Gallery resolution (rev2): a live-member identity or a
+                # cross-camera identity needs the *target* camera gallery;
+                # the source-camera fallback is only meaningful for a
+                # same-camera re-fire.
+                target_gallery = identity.camera_appearance_samples.get(
+                    cam_id, ()
+                )
+                gallery_missing = not target_gallery
+                if gallery_missing and (
+                    members or identity.last_camera != cam_id
+                ):
+                    # No destination-camera evidence for a live/cross-camera
+                    # identity -> reject (the f1528 backstop).
+                    reject("target_camera_gallery_missing")
+                    continue
+                if gallery_missing:
+                    target_gallery = identity.appearance_samples
+                appearance_match = (
+                    compare_tracklets(track, target_gallery)
+                    if target_gallery
+                    else None
+                )
+
+                screened = (
+                    distance is not None
+                    and distance <= 2.0 * self.stationary_reacquire_distance
+                ) or (
+                    appearance_match is not None
+                    and appearance_match.distance <= 0.5
+                )
+                if not screened:
+                    continue
+                screened_any = True
+
+                last_world_field = (
+                    (float(anchor[0]), float(anchor[1]))
+                    if anchor is not None
+                    else None
+                )
+
+                # Fresh live-member divergence: a member provably on a
+                # different physical car vetoes the merge.
+                divergent = None
+                for member_cam, member_lid, member_world in members:
+                    if member_world is None:
+                        continue
+                    member_distance = float(
+                        np.linalg.norm(
+                            np.subtract(member_world, frag_world)
+                        )
+                    )
+                    if member_distance > self.stationary_reacquire_distance:
+                        divergent = (member_cam, member_lid, member_distance)
+                        break
+                if divergent is not None:
+                    reject(
+                        "live_member_divergence",
+                        member_cam=divergent[0],
+                        member_lid=int(divergent[1]),
+                        member_distance=round(divergent[2], 3),
+                        identity_last_world=last_world_field,
+                    )
+                    continue
+
+                # rev2 window-drift veto: catches members that only started
+                # moving recently (identity-level EMA stays under V_STAT).
+                member_drift_window = None
+                member_moved = False
+                for member_cam, member_lid, _member_world in members:
+                    member_drift_window = (
+                        self._stationary_member_drift_window(
+                            gid, member_cam, member_lid, frame_idx
+                        )
+                    )
+                    if (
+                        member_drift_window is not None
+                        and member_drift_window["drift_wu"]
+                        > self.stationary_reacquire_member_drift
+                    ):
+                        member_moved = True
+                        break
+                if member_moved:
+                    reject(
+                        "live_member_moving",
+                        identity_last_world=last_world_field,
+                        member_drift_window=member_drift_window,
+                    )
+                    continue
+
+                if distance is None:
+                    reject(
+                        "identity_anchor_missing",
+                        identity_last_world=None,
+                    )
+                    continue
+                if distance > self.stationary_reacquire_distance:
+                    reject(
+                        "distance",
+                        world_distance=round(distance, 3),
+                        identity_last_world=last_world_field,
+                        member_drift_window=member_drift_window,
+                    )
+                    continue
+                bbox_iou = None
+                if distance > self.stationary_reacquire_core_distance:
+                    # Extended band: corroborate with the projected bbox
+                    # footprint of the identity anchor in this camera.
+                    bbox_iou = self._stationary_anchor_iou(
+                        identity, cam_id, track
+                    )
+                    ref_size = identity.camera_bbox_sizes.get(
+                        cam_id, identity.bbox_size
+                    )
+                    ref_area = max(1, int(ref_size[0]) * int(ref_size[1]))
+                    new_area = max(1, int(track.w) * int(track.h))
+                    iou_ok = (
+                        bbox_iou is not None
+                        and bbox_iou >= self.stationary_reacquire_iou
+                    )
+                    # A fragment seen only partially (smaller than the
+                    # learned size) underestimates IoU; the relaxed floor
+                    # applies only to that direction, never to an inflated
+                    # blob.
+                    partial_ok = (
+                        bbox_iou is not None
+                        and new_area <= ref_area
+                        and bbox_iou >= 0.5 * self.stationary_reacquire_iou
+                    )
+                    if not (iou_ok or partial_ok):
+                        reject(
+                            "distance",
+                            world_distance=round(distance, 3),
+                            bbox_iou=(
+                                round(bbox_iou, 3)
+                                if bbox_iou is not None
+                                else None
+                            ),
+                            identity_last_world=last_world_field,
+                            member_drift_window=member_drift_window,
+                        )
+                        continue
+                # ``merge_appearance_samples`` dedupes near-identical
+                # histograms, so a truly stationary car can legitimately
+                # own a 1-sample gallery; require the fragment to cover at
+                # least ``min(A_SUPPORT, gallery_size)`` nodes rather than
+                # an absolute two (which would deadlock exactly the parked
+                # cars this pass exists to re-acquire).
+                required_support = min(
+                    self.stationary_reacquire_appearance_support,
+                    len(target_gallery),
+                )
+                if (
+                    appearance_match is None
+                    or appearance_match.support < required_support
+                    or appearance_match.distance
+                    > self.stationary_reacquire_appearance_distance
+                ):
+                    reject(
+                        "appearance",
+                        appearance_distance=(
+                            round(float(appearance_match.distance), 4)
+                            if appearance_match is not None
+                            else None
+                        ),
+                        appearance_support=(
+                            int(appearance_match.support)
+                            if appearance_match is not None
+                            else 0
+                        ),
+                        world_distance=round(distance, 3),
+                        identity_last_world=last_world_field,
+                        member_drift_window=member_drift_window,
+                    )
+                    continue
+                size = self._size_distance(
+                    (track.w, track.h),
+                    identity.camera_bbox_sizes.get(cam_id, identity.bbox_size),
+                )
+                if size > self.stationary_reacquire_size_distance:
+                    reject(
+                        "size",
+                        size_distance=round(float(size), 4),
+                        world_distance=round(distance, 3),
+                        identity_last_world=last_world_field,
+                        member_drift_window=member_drift_window,
+                    )
+                    continue
+                velocity_norm = float(
+                    np.hypot(*identity.velocity_world_per_second)
+                )
+                tail_samples = self.trajectory.global_samples(gid)
+                tail_span = 0.0
+                if len(tail_samples) >= 2:
+                    tail_last = tail_samples[-1].world
+                    tail_span = max(
+                        float(
+                            np.linalg.norm(
+                                np.subtract(tail_last, sample.world)
+                            )
+                        )
+                        for sample in tail_samples
+                    )
+                stationary_history = (
+                    velocity_norm <= self.stationary_reacquire_velocity
+                    or tail_span <= self.stationary_reacquire_tail_span
+                    or gid in self._parked_reservations
+                )
+                if not stationary_history:
+                    reject(
+                        "stationary_history_missing",
+                        velocity_norm=round(velocity_norm, 3),
+                        tail_span=round(tail_span, 3),
+                        world_distance=round(distance, 3),
+                        identity_last_world=last_world_field,
+                        member_drift_window=member_drift_window,
+                    )
+                    continue
+                elapsed, uses_seconds = self._identity_elapsed(
+                    identity, frame_idx, timestamp_s
+                )
+                qualified.append(
+                    {
+                        "gid": gid,
+                        "identity": identity,
+                        "distance": distance,
+                        "appearance": appearance_match,
+                        "size": float(size),
+                        "bbox_iou": bbox_iou,
+                        "elapsed": float(elapsed),
+                        "elapsed_uses_seconds": bool(uses_seconds),
+                        "velocity_norm": velocity_norm,
+                        "tail_span": tail_span,
+                        "member_drift_window": member_drift_window,
+                        "identity_last_world": last_world_field,
+                    }
+                )
+
+            if fragment_moving:
+                if screened_any or qualified:
+                    self._stationary_event(
+                        "stationary_reacquire_rejected",
+                        frame_idx,
+                        None,
+                        cam_id=cam_id,
+                        local_id=local_id,
+                        reason="fragment_moving",
+                        fragment_span=round(frag_span, 3),
+                    )
+                continue
+            if not qualified:
+                continue
+
+            qualified.sort(
+                key=lambda item: item["distance"]
+                + 4.0 * float(item["appearance"].distance)
+            )
+            winner = qualified[0]
+            if len(qualified) > 1:
+                runner_up = qualified[1]
+                margin_ok = (
+                    runner_up["distance"] - winner["distance"]
+                    >= self.stationary_reacquire_margin_distance
+                ) and (
+                    runner_up["appearance"].distance
+                    - winner["appearance"].distance
+                    >= self.stationary_reacquire_margin_appearance
+                )
+                if not margin_ok:
+                    claims = {
+                        entry["gid"] for entry in qualified
+                    } | set(self._stationary_deferred_claims.get(key, set()))
+                    self._stationary_deferred_since.setdefault(
+                        key, int(frame_idx)
+                    )
+                    self._stationary_deferred_claims[key] = claims
+                    self._stationary_deferred_reasons[key] = (
+                        "ambiguous_candidates"
+                    )
+                    deferred.add(key)
+                    self._stationary_event(
+                        "stationary_reacquire_deferred",
+                        frame_idx,
+                        None,
+                        cam_id=cam_id,
+                        local_id=local_id,
+                        reason="ambiguous_candidates",
+                        competing_global_ids=sorted(int(c) for c in claims),
+                        deferred_since_frame=int(
+                            self._stationary_deferred_since[key]
+                        ),
+                        deferred_frames=int(frame_idx)
+                        - int(self._stationary_deferred_since[key]),
+                        margin_d=self.stationary_reacquire_margin_distance,
+                        margin_a=self.stationary_reacquire_margin_appearance,
+                        competitors=[
+                            {
+                                "global_id": entry["gid"],
+                                "world_distance": round(
+                                    entry["distance"], 3
+                                ),
+                                "appearance_distance": round(
+                                    float(
+                                        entry["appearance"].distance
+                                    ),
+                                    4,
+                                ),
+                            }
+                            for entry in qualified
+                        ],
+                    )
+                    continue
+
+            # Occupied-spot conflict: two live/dormant identities cannot
+            # legitimately share one parking spot.  If another identity's
+            # anchor sits inside D_STAT of the winner's anchor, defer rather
+            # than commit the fragment to either side.
+            conflict_gid = None
+            for other in identities:
+                other_gid = self._canonical_id(other.global_id)
+                if other_gid == winner["gid"]:
+                    continue
+                if other.last_world is None:
+                    continue
+                spot_distance = float(
+                    np.linalg.norm(
+                        np.subtract(
+                            other.last_world,
+                            winner["identity"].last_world,
+                        )
+                    )
+                )
+                if spot_distance <= self.stationary_reacquire_distance:
+                    conflict_gid = other_gid
+                    break
+            if conflict_gid is not None:
+                claims = {winner["gid"], conflict_gid} | set(
+                    self._stationary_deferred_claims.get(key, set())
+                )
+                self._stationary_deferred_since.setdefault(
+                    key, int(frame_idx)
+                )
+                self._stationary_deferred_claims[key] = claims
+                self._stationary_deferred_reasons[key] = (
+                    "occupied_spot_conflict"
+                )
+                deferred.add(key)
+                self._stationary_event(
+                    "stationary_reacquire_deferred",
+                    frame_idx,
+                    None,
+                    cam_id=cam_id,
+                    local_id=local_id,
+                    reason="occupied_spot_conflict",
+                    competing_global_ids=sorted(int(c) for c in claims),
+                    conflict_global_id=int(conflict_gid),
+                    deferred_since_frame=int(
+                        self._stationary_deferred_since[key]
+                    ),
+                    deferred_frames=int(frame_idx)
+                    - int(self._stationary_deferred_since[key]),
+                )
+                continue
+
+            bound_gid = self._bind(cam_id, local_id, winner["gid"])
+            self._stationary_deferred_since.pop(key, None)
+            self._stationary_deferred_claims.pop(key, None)
+            self._stationary_deferred_reasons.pop(key, None)
+            self._stationary_event(
+                "stationary_reacquire_accepted",
+                frame_idx,
+                bound_gid,
+                cam_id=cam_id,
+                local_id=local_id,
+                source_camera=winner["identity"].last_camera,
+                identity_state=winner["identity"].state,
+                identity_last_world=winner["identity_last_world"],
+                world_distance=round(winner["distance"], 3),
+                bbox_iou=(
+                    round(winner["bbox_iou"], 3)
+                    if winner["bbox_iou"] is not None
+                    else None
+                ),
+                appearance_distance=round(
+                    float(winner["appearance"].distance), 4
+                ),
+                appearance_support=int(winner["appearance"].support),
+                size_distance=round(winner["size"], 4),
+                elapsed_s=(
+                    round(winner["elapsed"], 3)
+                    if winner["elapsed_uses_seconds"]
+                    else None
+                ),
+                elapsed_frames=(
+                    int(winner["elapsed"])
+                    if not winner["elapsed_uses_seconds"]
+                    else None
+                ),
+                velocity_norm=round(winner["velocity_norm"], 3),
+                tail_span=round(winner["tail_span"], 3),
+                member_drift_window=winner["member_drift_window"],
+                competitors=[
+                    {
+                        "global_id": entry["gid"],
+                        "world_distance": round(entry["distance"], 3),
+                        "appearance_distance": round(
+                            float(entry["appearance"].distance), 4
+                        ),
+                    }
+                    for entry in qualified
+                ],
+                margin_d=self.stationary_reacquire_margin_distance,
+                margin_a=self.stationary_reacquire_margin_appearance,
+            )
+        return deferred
+
+    def _stationary_anchor_iou(
+        self,
+        identity: GlobalIdentityState,
+        cam_id: str,
+        track,
+    ) -> Optional[float]:
+        """IoU between the identity anchor's projected bbox and the fragment."""
+        if identity.last_world is None:
+            return None
+        try:
+            local_anchor = self._local(cam_id, identity.last_world)
+        except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+            return None
+        ref_w, ref_h = identity.camera_bbox_sizes.get(
+            cam_id, identity.bbox_size
+        )
+        ref_w = int(ref_w)
+        ref_h = int(ref_h)
+        if ref_w <= 0 or ref_h <= 0:
+            return None
+        ax, ay = float(local_anchor[0]), float(local_anchor[1])
+        if self.shared_map_anchor == "bbox_center":
+            ref_x1, ref_y1 = ax - ref_w * 0.5, ay - ref_h * 0.5
+        else:
+            ref_x1, ref_y1 = ax - ref_w * 0.5, ay - ref_h
+        ref_x2, ref_y2 = ref_x1 + ref_w, ref_y1 + ref_h
+        frag_x1, frag_y1 = float(track.x), float(track.y)
+        frag_x2, frag_y2 = frag_x1 + float(track.w), frag_y1 + float(track.h)
+        inter_w = min(ref_x2, frag_x2) - max(ref_x1, frag_x1)
+        inter_h = min(ref_y2, frag_y2) - max(ref_y1, frag_y1)
+        if inter_w <= 0 or inter_h <= 0:
+            return 0.0
+        inter = inter_w * inter_h
+        union = ref_w * ref_h + track.w * track.h - inter
+        if union <= 0:
+            return None
+        return float(inter / union)
+
     def _identity_elapsed(
         self,
         identity: GlobalIdentityState,
@@ -4913,6 +5844,30 @@ class CrossCameraManager:
             for local_id, track in tracks.items()
             if (cam_id, local_id) not in self._local_to_global
         ]
+        deferred_keys: set[Tuple[str, int]] = set()
+        if self.enable_stationary_reacquire:
+            # F1 1b / defect-2: a fragment once deferred for competing
+            # dormant claims keeps its quarantine until fewer than two
+            # claimants remain or the cap expires.  Held fragments are
+            # filtered out *here* so neither this pass's LAPJV assignment
+            # nor any downstream pass can steal or mint over them.
+            self._prune_stationary_deferred(all_tracks)
+            held_keys = {
+                (str(cam_id), int(local_id))
+                for cam_id, local_id, _track in candidates
+                if self._stationary_hold_is_live(
+                    (str(cam_id), int(local_id)), frame_idx, all_tracks
+                )
+            }
+            if held_keys:
+                deferred_keys.update(held_keys)
+                candidates = [
+                    candidate
+                    for candidate in candidates
+                    if (str(candidate[0]), int(candidate[1])) not in held_keys
+                ]
+                for held_key in sorted(held_keys):
+                    self._emit_stationary_hold_deferred(held_key, frame_idx)
         identities = [
             identity
             for identity in self._identities.values()
@@ -4923,12 +5878,11 @@ class CrossCameraManager:
             not in self._provisional_identity_holds
         ]
         if not candidates or not identities:
-            return set()
+            return deferred_keys
 
         invalid_cost = 10.0
         costs = np.full((len(identities), len(candidates)), invalid_cost, dtype=np.float64)
         details_by_pair = {}
-        deferred_keys: set[Tuple[str, int]] = set()
         for row, identity in enumerate(identities):
             for col, (cam_id, local_id, track) in enumerate(candidates):
                 timestamp_s = (camera_timestamps_s or {}).get(cam_id)
@@ -5535,10 +6489,29 @@ class CrossCameraManager:
                     else set()
                 )
                 competing_ids.add(self._canonical_id(identity.global_id))
+                if self.enable_stationary_reacquire:
+                    # Record every identity that cleared this fragment's
+                    # gates (not only the LAPJV-selected row) so the
+                    # persistent deferral knows the full competing set.
+                    competing_ids |= {
+                        self._canonical_id(identities[row_index].global_id)
+                        for row_index in range(costs.shape[0])
+                        if costs[row_index, col] < invalid_cost
+                    }
                 self._ambiguous_local_identities[ambiguity_key] = (
                     ambiguity_until,
                     competing_ids,
                 )
+                if self.enable_stationary_reacquire:
+                    self._stationary_deferred_since.setdefault(
+                        ambiguity_key, int(frame_idx)
+                    )
+                    self._stationary_deferred_claims[ambiguity_key] = set(
+                        competing_ids
+                    )
+                    self._stationary_deferred_reasons[ambiguity_key] = (
+                        "ambiguous_candidates"
+                    )
                 self._event(
                     "dormant_reid_ambiguous",
                     frame_idx,
@@ -5639,6 +6612,83 @@ class CrossCameraManager:
                     reason="live_member_anchor_divergence",
                 )
                 continue
+            if self.enable_stationary_reacquire:
+                # F1 rev2 drift veto (thai3_f1528): an identity whose
+                # still-bound cross-camera member moved more than
+                # ``stationary_reacquire_member_drift`` inside the +-10f
+                # window around this frame is riding a *moving* car.  A
+                # stationary-looking fragment re-firing elsewhere must not
+                # be merged onto it -- defer the bind this frame and let
+                # the stationary pass (or minting) decide once the member
+                # proves stationary.  A fragment that is itself moving
+                # (real handoff) is exempt: member drift then simply
+                # agrees with the fragment's own motion.
+                frag_span = 0.0
+                frag_worlds = [
+                    sample.world
+                    for sample in self.trajectory.provisional_samples(
+                        (str(cam_id), int(local_id))
+                    )
+                ]
+                if len(frag_worlds) >= 2:
+                    frag_span = max(
+                        float(
+                            np.linalg.norm(
+                                np.subtract(frag_worlds[-1], earlier)
+                            )
+                        )
+                        for earlier in frag_worlds[:-1]
+                    )
+                if frag_span <= self.stationary_reacquire_tail_span:
+                    moved_window = None
+                    for (
+                        member_key,
+                        member_raw_gid,
+                    ) in self._local_to_global.items():
+                        member_cam, member_local = member_key
+                        if member_cam == cam_id:
+                            continue
+                        if (
+                            self._canonical_id(member_raw_gid)
+                            != identity_global_id
+                        ):
+                            continue
+                        drift_window = (
+                            self._stationary_member_drift_window(
+                                identity_global_id,
+                                member_cam,
+                                member_local,
+                                frame_idx,
+                            )
+                        )
+                        if (
+                            drift_window is not None
+                            and drift_window["drift_wu"]
+                            > self.stationary_reacquire_member_drift
+                        ):
+                            moved_window = drift_window
+                            break
+                    if moved_window is not None:
+                        deferred_keys.add((cam_id, local_id))
+                        self._stationary_event(
+                            "stationary_reacquire_rejected",
+                            frame_idx,
+                            identity.global_id,
+                            cam_id=cam_id,
+                            local_id=local_id,
+                            reason="live_member_moving",
+                            source_camera=identity.last_camera,
+                            member_drift_window=moved_window,
+                            identity_last_world=(
+                                (
+                                    float(identity.last_world[0]),
+                                    float(identity.last_world[1]),
+                                )
+                                if identity.last_world is not None
+                                else None
+                            ),
+                        )
+                        continue
             self._bind(cam_id, local_id, identity.global_id)
             identity.state = "active"
             identity.dormant_since_frame = None
@@ -7226,12 +8276,27 @@ class CrossCameraManager:
             frame_idx,
         )
 
+        # Last resort before minting: a stationary fragment re-firing on a
+        # parked car's dead track can still re-acquire its retained identity
+        # when the flag is on.  Flag-off returns an empty set so the
+        # allocation loop below is bit-identical.
+        stationary_deferred = (
+            self._match_stationary_reacquire(
+                post_world_trajectory_tracks,
+                frame_idx,
+                camera_timestamps_s,
+            )
+            if self.enable_stationary_reacquire
+            else set()
+        )
+
         # Tentative tracks remain ID-less unless they consumed a handoff.
         for cam_id, tracks in post_world_trajectory_tracks.items():
             for local_track_id, track in tracks.items():
                 if (
                     (cam_id, local_track_id) in self._local_to_global
                     or (cam_id, local_track_id) in deferred_cross_camera
+                    or (cam_id, local_track_id) in stationary_deferred
                     or not self._is_allocatable(track)
                 ):
                     continue

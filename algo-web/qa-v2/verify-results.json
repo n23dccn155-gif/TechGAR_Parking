@@ -1,0 +1,1085 @@
+{
+  "generatedAt": "2026-10-04T10:39:04.559Z",
+  "scope": "V2 pipeline QA — 12 node × mọi scenario × mọi frame, file+HTTP",
+  "packMeta": {
+    "index.html": {
+      "sha256": "c472d0bab9e1c5ae",
+      "mtime": "2026-10-04T09:47:12.290Z"
+    },
+    "shared/pipeline-engine.js": {
+      "sha256": "89e4255afa59775a",
+      "mtime": "2026-10-04T10:06:56.231Z"
+    },
+    "pipeline-app.js": {
+      "sha256": "ab03135ec3150312",
+      "mtime": "2026-10-04T10:17:57.633Z"
+    },
+    "packs/pipeline-system.js": {
+      "sha256": "c3fd2348aeca4674",
+      "mtime": "2026-10-04T10:16:07.294Z"
+    },
+    "packs/pipeline-local.js": {
+      "sha256": "6dee1455c790151b",
+      "mtime": "2026-10-04T10:30:47.251Z"
+    },
+    "packs/pipeline-identity.js": {
+      "sha256": "8117e9984048deb5",
+      "mtime": "2026-10-04T10:34:52.789Z"
+    },
+    "pipeline.css": {
+      "sha256": "e273f97d228d32d6",
+      "mtime": "2026-10-04T10:30:40.441Z"
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "contract": {
+    "nodes": {
+      "capture": [],
+      "kalman": [],
+      "motion": [],
+      "roi": [],
+      "assignment": [],
+      "coasting": [],
+      "handoff": [],
+      "slot-vision": [],
+      "binder": [],
+      "snapshot": [],
+      "gate-session": [],
+      "navigation": []
+    },
+    "allOk": true,
+    "buildDeterminism": {
+      "capture": true,
+      "kalman": true,
+      "motion": true,
+      "roi": true,
+      "assignment": true,
+      "coasting": true,
+      "handoff": true,
+      "slot-vision": true,
+      "binder": true,
+      "snapshot": true,
+      "gate-session": true,
+      "navigation": true
+    },
+    "viewKeysOk": true
+  },
+  "map": {
+    "loadedNodes": 12,
+    "nodeCards": 12,
+    "fails": [],
+    "missingNodes": [],
+    "edges": 14,
+    "legend": 5,
+    "beatAfterPlay": "bước 2/12 — Áp parking evidence của worker vào đầu vòng — trước identity",
+    "beatPaused": true,
+    "clickOpens": true,
+    "backToMap": true,
+    "transportBackOnMap": true,
+    "journeyEdges": 1,
+    "journeyBadge": "4·11·12",
+    "hashBack": true,
+    "hashFwd": true
+  },
+  "nodes": {
+    "capture": {
+      "scenarios": {
+        "sync-ok": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            387175734,
+            514904285,
+            514904285,
+            850686079,
+            578833827
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        },
+        "skew-recover": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            502512993,
+            494851918,
+            977464233,
+            745224818,
+            81006605
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        }
+      },
+      "frames": 10,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 4,
+      "refLinksSample": "../backend/main_detect/src/techgar/latest_frame_capture.py"
+    },
+    "kalman": {
+      "scenarios": {
+        "normal": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            258611522,
+            361318428,
+            610300883,
+            191424011,
+            179338008
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        },
+        "edge": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            361318428,
+            303087447,
+            101362794,
+            219562598
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        }
+      },
+      "frames": 9,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 4,
+      "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+    },
+    "motion": {
+      "scenarios": {
+        "normal": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            346614784,
+            485036803,
+            47302014,
+            766485391,
+            565552428
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        },
+        "edge": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            295339689,
+            930124013,
+            924232759,
+            156655380
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        }
+      },
+      "frames": 9,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 3,
+      "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+    },
+    "roi": {
+      "scenarios": {
+        "normal": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            949660093,
+            248721745,
+            583842615,
+            983437356
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        },
+        "edge": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            811353651,
+            642559222,
+            896928460,
+            438791379
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        }
+      },
+      "frames": 8,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 3,
+      "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+    },
+    "assignment": {
+      "scenarios": {
+        "normal": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            205248245,
+            205248245,
+            343705913,
+            32314238,
+            943202797
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        },
+        "edge": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            561434593,
+            374200092,
+            205505911,
+            205505911
+          ],
+          "syncBad": [],
+          "distinctSigs": 3
+        }
+      },
+      "frames": 9,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 4,
+      "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+    },
+    "coasting": {
+      "scenarios": {
+        "normal": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            503191809,
+            187770019,
+            187770019,
+            723151358
+          ],
+          "syncBad": [],
+          "distinctSigs": 3
+        },
+        "edge": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            758983289,
+            354367988,
+            318402092,
+            318402092
+          ],
+          "syncBad": [],
+          "distinctSigs": 3
+        }
+      },
+      "frames": 8,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 4,
+      "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+    },
+    "handoff": {
+      "scenarios": {
+        "handoff-qua-vung-chuyen": {
+          "frames": 8,
+          "blankFrames": [],
+          "sigs": [
+            95262430,
+            748623843,
+            615638779,
+            823182191,
+            101656455,
+            285149941,
+            490869664,
+            754209209
+          ],
+          "syncBad": [],
+          "distinctSigs": 8
+        },
+        "reid-dormant-cuu": {
+          "frames": 6,
+          "blankFrames": [],
+          "sigs": [
+            447739540,
+            864218136,
+            794442957,
+            398039129,
+            971230567,
+            299023057
+          ],
+          "syncBad": [],
+          "distinctSigs": 6
+        }
+      },
+      "frames": 14,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 6,
+      "refLinksSample": "../backend/main_detect/src/techgar/cross_camera_manager.py"
+    },
+    "slot-vision": {
+      "scenarios": {
+        "xe-dung-trong-o": {
+          "frames": 7,
+          "blankFrames": [],
+          "sigs": [
+            578836106,
+            206652506,
+            805261473,
+            109051764,
+            728902903,
+            647499023,
+            109051764
+          ],
+          "syncBad": [],
+          "distinctSigs": 6
+        },
+        "xe-toi-rescue-lat": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            339278115,
+            529416753,
+            370891126,
+            499442215
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        }
+      },
+      "frames": 11,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 5,
+      "refLinksSample": "../backend/main_detect/src/techgar/parking_detector.py"
+    },
+    "binder": {
+      "scenarios": {
+        "dung-do-token": {
+          "frames": 8,
+          "blankFrames": [],
+          "sigs": [
+            731490593,
+            848755610,
+            868752990,
+            775492109,
+            449030208,
+            334708639,
+            596361722,
+            534316683
+          ],
+          "syncBad": [],
+          "distinctSigs": 8
+        },
+        "strong-overlap": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            495648307,
+            461614703,
+            349832488,
+            365571081,
+            797682546
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        }
+      },
+      "frames": 13,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 7,
+      "refLinksSample": "../backend/main_detect/src/techgar/slot_vehicle_binder.py"
+    },
+    "snapshot": {
+      "scenarios": {
+        "publish-flow": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            856162434,
+            531912100,
+            504962638,
+            489392826,
+            489392826
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        },
+        "latest-only": {
+          "frames": 6,
+          "blankFrames": [],
+          "sigs": [
+            532739845,
+            140059825,
+            5140040,
+            869780442,
+            589071196,
+            842003235
+          ],
+          "syncBad": [],
+          "distinctSigs": 6
+        }
+      },
+      "frames": 11,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 6,
+      "refLinksSample": "../backend/main_detect/two_camera.py"
+    },
+    "gate-session": {
+      "scenarios": {
+        "lifecycle": {
+          "frames": 7,
+          "blankFrames": [],
+          "sigs": [
+            344989960,
+            977805538,
+            595835810,
+            948357315,
+            279549934,
+            951028235,
+            352697144
+          ],
+          "syncBad": [],
+          "distinctSigs": 7
+        },
+        "qr-expiry": {
+          "frames": 4,
+          "blankFrames": [],
+          "sigs": [
+            190574053,
+            966928169,
+            254386909,
+            345211300
+          ],
+          "syncBad": [],
+          "distinctSigs": 4
+        }
+      },
+      "frames": 11,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 7,
+      "refLinksSample": "../backend/gate_session_controller.py"
+    },
+    "navigation": {
+      "scenarios": {
+        "astar": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            984970477,
+            659908037,
+            555753069,
+            827723365,
+            872827937
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        },
+        "offroute": {
+          "frames": 5,
+          "blankFrames": [],
+          "sigs": [
+            816674946,
+            841562525,
+            876524322,
+            359885614,
+            245049075
+          ],
+          "syncBad": [],
+          "distinctSigs": 5
+        }
+      },
+      "frames": 10,
+      "fails": [],
+      "transportScoped": true,
+      "refCards": 5,
+      "refLinksSample": "../frontend/src/routing/routeEngine.ts"
+    }
+  },
+  "controls": {
+    "file": {
+      "playAdvanced": 1,
+      "pauseStable": true,
+      "prevNext": [
+        1,
+        1,
+        2
+      ],
+      "resetIdx": 0,
+      "scrubIdx": 4,
+      "speedOrdering": {
+        "0.5x": 442,
+        "4x": 3533,
+        "ok": true
+      },
+      "scenarioSwitch": "skew-recover",
+      "scenarioOptions": [
+        "sync-ok",
+        "skew-recover"
+      ]
+    }
+  },
+  "refsCheck": {
+    "total": 58,
+    "checked": 58,
+    "fails": []
+  },
+  "mobile": {
+    "mapOverflow": false,
+    "detailOverflow": false,
+    "canvasW": 372,
+    "mapList": {
+      "svgHidden": true,
+      "listVisible": true,
+      "count": 12,
+      "allTappable": true
+    },
+    "tapOpens": true,
+    "ok": true
+  },
+  "http": {
+    "loadedNodes": 12,
+    "map": {
+      "nodeCards": 12,
+      "fails": [],
+      "missingNodes": [],
+      "loadedNodes": 12,
+      "edges": 14,
+      "legend": 5,
+      "beatAfterPlay": "bước 2/12 — Áp parking evidence của worker vào đầu vòng — trước identity",
+      "beatPaused": true,
+      "clickOpens": true,
+      "backToMap": true,
+      "transportBackOnMap": true,
+      "journeyEdges": 1,
+      "journeyBadge": "4·11·12",
+      "hashBack": true,
+      "hashFwd": true
+    },
+    "nodes": {
+      "capture": {
+        "scenarios": {
+          "sync-ok": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              387175734,
+              514904285,
+              514904285,
+              850686079,
+              578833827
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          },
+          "skew-recover": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              502512993,
+              494851918,
+              977464233,
+              745224818,
+              81006605
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          }
+        },
+        "frames": 10,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 4,
+        "refLinksSample": "../backend/main_detect/src/techgar/latest_frame_capture.py"
+      },
+      "kalman": {
+        "scenarios": {
+          "normal": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              258611522,
+              361318428,
+              610300883,
+              191424011,
+              179338008
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          },
+          "edge": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              361318428,
+              303087447,
+              101362794,
+              219562598
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          }
+        },
+        "frames": 9,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 4,
+        "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+      },
+      "motion": {
+        "scenarios": {
+          "normal": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              346614784,
+              485036803,
+              47302014,
+              766485391,
+              565552428
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          },
+          "edge": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              295339689,
+              930124013,
+              924232759,
+              156655380
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          }
+        },
+        "frames": 9,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 3,
+        "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+      },
+      "roi": {
+        "scenarios": {
+          "normal": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              949660093,
+              248721745,
+              583842615,
+              983437356
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          },
+          "edge": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              811353651,
+              642559222,
+              896928460,
+              438791379
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          }
+        },
+        "frames": 8,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 3,
+        "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+      },
+      "assignment": {
+        "scenarios": {
+          "normal": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              205248245,
+              205248245,
+              343705913,
+              32314238,
+              943202797
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          },
+          "edge": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              561434593,
+              374200092,
+              205505911,
+              205505911
+            ],
+            "syncBad": [],
+            "distinctSigs": 3
+          }
+        },
+        "frames": 9,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 4,
+        "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+      },
+      "coasting": {
+        "scenarios": {
+          "normal": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              503191809,
+              187770019,
+              187770019,
+              723151358
+            ],
+            "syncBad": [],
+            "distinctSigs": 3
+          },
+          "edge": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              758983289,
+              354367988,
+              318402092,
+              318402092
+            ],
+            "syncBad": [],
+            "distinctSigs": 3
+          }
+        },
+        "frames": 8,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 4,
+        "refLinksSample": "../backend/main_detect/src/techgar/motion_tracker.py"
+      },
+      "handoff": {
+        "scenarios": {
+          "handoff-qua-vung-chuyen": {
+            "frames": 8,
+            "blankFrames": [],
+            "sigs": [
+              95262430,
+              748623843,
+              615638779,
+              823182191,
+              101656455,
+              285149941,
+              490869664,
+              754209209
+            ],
+            "syncBad": [],
+            "distinctSigs": 8
+          },
+          "reid-dormant-cuu": {
+            "frames": 6,
+            "blankFrames": [],
+            "sigs": [
+              447739540,
+              864218136,
+              794442957,
+              398039129,
+              971230567,
+              299023057
+            ],
+            "syncBad": [],
+            "distinctSigs": 6
+          }
+        },
+        "frames": 14,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 6,
+        "refLinksSample": "../backend/main_detect/src/techgar/cross_camera_manager.py"
+      },
+      "slot-vision": {
+        "scenarios": {
+          "xe-dung-trong-o": {
+            "frames": 7,
+            "blankFrames": [],
+            "sigs": [
+              578836106,
+              206652506,
+              805261473,
+              109051764,
+              728902903,
+              647499023,
+              109051764
+            ],
+            "syncBad": [],
+            "distinctSigs": 6
+          },
+          "xe-toi-rescue-lat": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              339278115,
+              529416753,
+              370891126,
+              499442215
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          }
+        },
+        "frames": 11,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 5,
+        "refLinksSample": "../backend/main_detect/src/techgar/parking_detector.py"
+      },
+      "binder": {
+        "scenarios": {
+          "dung-do-token": {
+            "frames": 8,
+            "blankFrames": [],
+            "sigs": [
+              731490593,
+              848755610,
+              868752990,
+              775492109,
+              449030208,
+              334708639,
+              596361722,
+              534316683
+            ],
+            "syncBad": [],
+            "distinctSigs": 8
+          },
+          "strong-overlap": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              495648307,
+              461614703,
+              349832488,
+              365571081,
+              797682546
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          }
+        },
+        "frames": 13,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 7,
+        "refLinksSample": "../backend/main_detect/src/techgar/slot_vehicle_binder.py"
+      },
+      "snapshot": {
+        "scenarios": {
+          "publish-flow": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              856162434,
+              531912100,
+              504962638,
+              489392826,
+              489392826
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          },
+          "latest-only": {
+            "frames": 6,
+            "blankFrames": [],
+            "sigs": [
+              532739845,
+              140059825,
+              5140040,
+              869780442,
+              589071196,
+              842003235
+            ],
+            "syncBad": [],
+            "distinctSigs": 6
+          }
+        },
+        "frames": 11,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 6,
+        "refLinksSample": "../backend/main_detect/two_camera.py"
+      },
+      "gate-session": {
+        "scenarios": {
+          "lifecycle": {
+            "frames": 7,
+            "blankFrames": [],
+            "sigs": [
+              344989960,
+              977805538,
+              595835810,
+              948357315,
+              279549934,
+              951028235,
+              352697144
+            ],
+            "syncBad": [],
+            "distinctSigs": 7
+          },
+          "qr-expiry": {
+            "frames": 4,
+            "blankFrames": [],
+            "sigs": [
+              190574053,
+              966928169,
+              254386909,
+              345211300
+            ],
+            "syncBad": [],
+            "distinctSigs": 4
+          }
+        },
+        "frames": 11,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 7,
+        "refLinksSample": "../backend/gate_session_controller.py"
+      },
+      "navigation": {
+        "scenarios": {
+          "astar": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              984970477,
+              659908037,
+              555753069,
+              827723365,
+              872827937
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          },
+          "offroute": {
+            "frames": 5,
+            "blankFrames": [],
+            "sigs": [
+              816674946,
+              841562525,
+              876524322,
+              359885614,
+              245049075
+            ],
+            "syncBad": [],
+            "distinctSigs": 5
+          }
+        },
+        "frames": 10,
+        "fails": [],
+        "transportScoped": true,
+        "refCards": 5,
+        "refLinksSample": "../frontend/src/routing/routeEngine.ts"
+      }
+    },
+    "controls": {
+      "playAdvanced": 1,
+      "pauseStable": true,
+      "prevNext": [
+        1,
+        1,
+        2
+      ],
+      "resetIdx": 0,
+      "scrubIdx": 4,
+      "speedOrdering": {
+        "0.5x": 450,
+        "4x": 3600,
+        "ok": true
+      },
+      "scenarioSwitch": "skew-recover",
+      "scenarioOptions": [
+        "sync-ok",
+        "skew-recover"
+      ]
+    }
+  },
+  "screenshots": [
+    "file-journey.png",
+    "file-map.png",
+    "file-node-capture-sync-ok.png",
+    "file-node-capture-skew-recover.png",
+    "file-node-kalman-normal.png",
+    "file-node-kalman-edge.png",
+    "file-node-motion-normal.png",
+    "file-node-motion-edge.png",
+    "file-node-roi-normal.png",
+    "file-node-roi-edge.png",
+    "file-node-assignment-normal.png",
+    "file-node-assignment-edge.png",
+    "file-node-coasting-normal.png",
+    "file-node-coasting-edge.png",
+    "file-node-handoff-handoff-qua-vung-chuyen.png",
+    "file-node-handoff-reid-dormant-cuu.png",
+    "file-node-slot-vision-xe-dung-trong-o.png",
+    "file-node-slot-vision-xe-toi-rescue-lat.png",
+    "file-node-binder-dung-do-token.png",
+    "file-node-binder-strong-overlap.png",
+    "file-node-snapshot-publish-flow.png",
+    "file-node-snapshot-latest-only.png",
+    "file-node-gate-session-lifecycle.png",
+    "file-node-gate-session-qr-expiry.png",
+    "file-node-navigation-astar.png",
+    "file-node-navigation-offroute.png",
+    "file-mobile-map390.png",
+    "file-mobile390.png",
+    "http-journey.png",
+    "http-map.png",
+    "http-node-capture-sync-ok.png",
+    "http-node-capture-skew-recover.png",
+    "http-node-kalman-normal.png",
+    "http-node-kalman-edge.png",
+    "http-node-motion-normal.png",
+    "http-node-motion-edge.png",
+    "http-node-roi-normal.png",
+    "http-node-roi-edge.png",
+    "http-node-assignment-normal.png",
+    "http-node-assignment-edge.png",
+    "http-node-coasting-normal.png",
+    "http-node-coasting-edge.png",
+    "http-node-handoff-handoff-qua-vung-chuyen.png",
+    "http-node-handoff-reid-dormant-cuu.png",
+    "http-node-slot-vision-xe-dung-trong-o.png",
+    "http-node-slot-vision-xe-toi-rescue-lat.png",
+    "http-node-binder-dung-do-token.png",
+    "http-node-binder-strong-overlap.png",
+    "http-node-snapshot-publish-flow.png",
+    "http-node-snapshot-latest-only.png",
+    "http-node-gate-session-lifecycle.png",
+    "http-node-gate-session-qr-expiry.png",
+    "http-node-navigation-astar.png",
+    "http-node-navigation-offroute.png"
+  ],
+  "summary": {
+    "loadedNodes": "12+12",
+    "nodeFramesTested": 246,
+    "nodeFails": [],
+    "excerptChecked": "58/58",
+    "excerptFails": [],
+    "contractAllOk": true,
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "requestFailures": 0
+  }
+}

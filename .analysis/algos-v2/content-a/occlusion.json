@@ -1,0 +1,46 @@
+{
+  "id": "occlusion",
+  "title": "Occlusion guard",
+  "tier": "T2",
+  "nodes": ["N4", "N5", "N6"],
+  "problem": "Hai xe đi sát/nhập nhau → contour dính thành 1 blob to. Tracker thường sẽ gán cả hai track vào cùng blob hoặc nuốt nhầm — sau tách ra thì ID đã hoán đổi.",
+  "does": "OcclusionGuard quản group 2 xe: prepare() ghép cặp ứng viên từ track ≥3 clean-obs (tâm gần + bbox sạch cuối overlap ≤0.20 + khe ≤0.4×diag) → watch. Blob chứa TẤT CẢ tâm group + diện tích ≥1.6×median-ref → activate: members đóng băng (occluded_prediction), detection đánh ambiguous_merged. Watershed tách theo 2 seed tại tâm dự đoán → provisional child (ratio 0.35–1.8×ref). Recovery: nghiệm gán thắng rõ swapped−direct ≥2·margin + direct<1.2, đủ 3 frame liên tiếp. Birth-veto cấm ID mới cho blob che cặp đã-chứng-minh.",
+  "role": {"before": "predict N3", "after": "group state điều khiển detect/assign/birth", "missing": "Merged blob ăn sai cả hai track; tách xong ID hoán đổi vĩnh viễn"},
+  "where": [{"file": "backend/main_detect/src/techgar/occlusion_guard.py", "line": "26-232", "symbol": "OcclusionGuard (full)"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2229-2232", "symbol": "prepare callsite"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "364-389", "symbol": "_unresolved_merged_birth"}],
+  "why": "Chỉ đóng băng cặp đã có bằng chứng độc-lập (≥3 clean obs) — không đoán mò khi nào 'có thể là 2 xe' [code]. Provisional watershed được thử nhưng appearance vẫn không-tin tới khi tách tự nhiên — tránh khâu ReID trên dữ liệu bẩn [code].",
+  "steps": [
+    "prepare: track ≥3 clean-obs + tươi → xét cặp gần (overlap ≤0.20, gap ≤0.4·diag) → watch + independent_pairs.",
+    "_detect: blob phủ mọi tâm group + area ≥1.6×median → activate: freeze members, obs='occluded_prediction'.",
+    "partition: watershed 2 seed → vùng con hợp lệ (≥20px, ratio 0.35–1.8) → provisional.",
+    "_assign: gate_assignments chỉ nhận thắng rõ (swapped−direct ≥2·margin, direct<1.2) + 3 frame liên tiếp → recover.",
+    "Chưa resolve: member + member-like detection đều defer; birth bị veto vùng merged."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/occlusion_guard.py", "line": "55-100", "symbol": "prepare/watch", "note": "≥3 clean obs, overlap ≤0.20, gap ≤0.4×diag"},
+    {"file": "backend/main_detect/src/techgar/occlusion_guard.py", "line": "102-148", "symbol": "activate", "note": "pad 0.15×ref, area ≥1.6×median"},
+    {"file": "backend/main_detect/src/techgar/occlusion_guard.py", "line": "150-189", "symbol": "partition", "note": "≥40 pts, seed ≤0.25×diag, sep ≥0.2×min-ref, ratio 0.35–1.8"},
+    {"file": "backend/main_detect/src/techgar/occlusion_guard.py", "line": "191-232", "symbol": "gate_assignments", "note": "2·margin / <1.2 / 3 frames"}
+  ],
+  "realParams": [
+    {"name": "timeout", "value": 3.0, "unit": "s", "scope": "runtime", "ref": "occlusion_guard.py:26-27 ← merged_reacquire_max_seconds mt:229"},
+    {"name": "blob-cover", "value": "pad 0.15×ref / area ≥1.6×median", "unit": "-", "scope": "default", "ref": "occlusion_guard.py:109-112"},
+    {"name": "recovery gate", "value": "swapped−direct ≥2·margin ∧ direct<1.2 ∧ 3 frames", "unit": "-", "scope": "default", "ref": "occlusion_guard.py:206-212"},
+    {"name": "birth-veto", "value": "blob ≥1.6× + independent-pair", "unit": "-", "scope": "default", "ref": "motion_tracker.py:364-389"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "2 xe nhập rồi tách đúng ID", "seed": 10}, {"id": "edge", "label": "Chưa đủ bằng chứng → giữ freeze", "seed": 10}],
+    "keyframes": [
+      {"id": "k1", "caption": "T1,T2 độc lập ≥3 obs → watch-group; hai xe tiến lại gần", "mode": "both", "state": {"group": "watch"}},
+      {"id": "k2", "caption": "Blob merge phủ 2 tâm + 1.7×area → activate: T1,T2 đóng băng occluded_prediction, det = ambiguous_merged", "mode": "both", "state": {"group": "active", "obs": "occluded_prediction"}},
+      {"id": "k3", "caption": "Watershed tách provisional 2 vùng — nhưng chưa tin appearance: gán chỉ khi nghiệm thắng rõ 2·margin 3 frame liên tiếp", "mode": "both", "state": {"recovering": "0→3"}},
+      {"id": "k4", "caption": "Đủ 3 frame thắng rõ → recover: T1,T2 giữ đúng ID; blob mới lạ trong vùng merged bị birth-veto", "mode": "on", "state": {"group": "recovered"}},
+      {"id": "k5", "caption": "Edge: nghiệm hòa (không vượt 2·margin) → vẫn freeze, KHÔNG cưỡng gán — chờ chứng cứ", "mode": "off", "state": {"recovering": "stuck"}}
+    ]
+  },
+  "qa": [
+    {"q": "Freeze bao lâu?", "a": "Tối đa timeout 3.0s (= merged_reacquire window) rồi group hết hạn tự xử."},
+    {"q": "Watershed tách sai thì sao?", "a": "Chỉ là provisional — appearance vẫn không-tin; quyết định cuối thuộc nghiệm gán thắng-rõ 3 frame."},
+    {"q": "Xe thứ 3 đi vào vùng merged?", "a": "Birth bị veto nếu blob che cặp đã-chứng-minh — tránh cấp ID mới cho mảnh của xe cũ."}
+  ],
+  "certainty": "Cao [code] — đã đọc toàn occlusion_guard.py 232 dòng + callsite."
+}

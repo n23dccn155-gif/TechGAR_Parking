@@ -1,0 +1,13 @@
+{
+  "id": "parking-detector-votes-hiep3-f466",
+  "session": "session_hiep3",
+  "cam": 2,
+  "frame": 466,
+  "source": "raw",
+  "draw": [
+    {"type": "polygon", "pts": [[303,461],[371,459],[359,574],[285,571]], "color": "#16a34a", "label": "A01 trong 25/25"},
+    {"type": "polygon", "pts": [[395,247],[456,247],[449,335],[385,337]], "color": "#eab308", "label": "B02 trong (raw>nguong)"},
+    {"type": "polygon", "pts": [[578,248],[637,248],[639,332],[579,334]], "color": "#dc2626", "label": "B05 co xe 0/25"}
+  ],
+  "max_kb": 220
+}

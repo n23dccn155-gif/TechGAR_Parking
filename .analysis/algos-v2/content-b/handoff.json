@@ -1,0 +1,61 @@
+{
+  "id": "handoff",
+  "title": "Handoff dự-đoán + Global ID xuyên 2 camera",
+  "tier": "T1",
+  "nodes": ["N11"],
+  "problem": "Xe ra biên cam1 → cam2 thấy mảnh mới trước khi cam1 mất hẳn. Nếu chỉ bắt 'mảnh gần nhất', đổi tốc độ hay hai xe cùng cửa sẽ gán nhầm.",
+  "does": "Track tiến ra outward_edge → mở pending HandoffEntry TTL 45 frame. Mỗi frame dự đoán điểm hẹn trên map chung, sàng ứng viên qua hàng loạt cổng cứng, chấm cost 4 thành phần, LAPJV 1-1, thắng margin + đủ streak mới bind cùng Global ID.",
+  "role": "Trước: homography (map chung) + tracklet (gallery). Sau: thành công → identity sống ở cam mới; timeout → dormant/token; race với GID mới → _bound_handoff_merge_allowed. Mất nó: mỗi lần qua cầu nối = tách ID, episode vỡ.",
+  "where": "cross_camera_manager.py — _upsert_handoff:2572, _predicted_world:2744, _entry_depth:2776, _direction_cosine:2823, _candidate_cost:2831 (appearance :2935-2990, cost :3017), _match_pending_handoffs:3442 (lapjv :3615, margin :3622, streak :3658-3667), _bound_handoff_merge_allowed:3376. Callsites trong update_all_tracks ~:7155.",
+  "why": "Biên-camera + occlusion ngắn là chỗ ID tách nhiều nhất; multi-gate tránh gán nhầm khi hai xe cùng qua cửa [suy luận]. Alternative [suy luận]: chỉ appearance → chết khi hai xe cùng màu; chỉ vị trí → chết khi đổi tốc; code giữ cả hai + dự đoán quỹ đạo.",
+  "steps": [
+    "_upsert_handoff khi track ra outward_edge: entry TTL 45f (giây nếu handoff_ttl_seconds); sống theo track sống, refresh gallery/bbox mỗi frame (:2588-2636).",
+    "_predicted_world: last_world + velocity·elapsed — per-second nếu có timestamps, fallback per-frame ×25fps (:2759-2764).",
+    "Gates cứng theo thứ tự: parking-hold/occluded → reject; residual >prediction_radius → 'prediction_distance'; overlap → pointPolygonTest < −radius; edge-handoff → _entry_depth > entry_limit → 'outside_entry_corridor' (px ảnh, :2776-2821).",
+    "Appearance: hard=min(0.45, thr); soft-overlap ≤min(0.60,0.82)+residual≤4.634cm → bind_eligible=False; adaptive (non-overlap+source-ref+residual≤7.5cm) → ≤0.82; vượt → return None,'appearance' (:2935-2990).",
+    "_size_distance >0.90 → 'size'; _direction_cosine <0.25 → 'direction' (None khi |v|<1.0 → direction_cost=0.20).",
+    "cost = 0.55·residual/25 + 0.30·app + 0.10·size + 0.05·dir ≤0.92 (:3017) → lapjv cost_limit=0.92 (:3615) + margin 0.08 (:3622) + streak {strong 2/overlap 3/temporal 2/else 1} (:3658-3667) → _bind."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2572-2636", "symbol": "_upsert_handoff", "note": "TTL 45f, refresh gallery"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2744-2774", "symbol": "_predicted_world", "note": "per-second velocity, fallback ×25fps"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2776-2829", "symbol": "_entry_depth + _direction_cosine", "note": "px-ảnh cho entry, cosine None khi v<1"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "2935-2990", "symbol": "appearance gates", "note": "hard 0.45 / soft 0.60 / adaptive 0.82 → return 'appearance'"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "3017", "symbol": "cost formula", "note": "0.55/0.30/0.10/0.05 ≤0.92"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "3615-3667", "symbol": "lapjv+margin+streak", "note": "cost_limit=0.92, margin 0.08, streak 1-3f"},
+    {"file": "backend/main_detect/src/techgar/cross_camera_manager.py", "line": "3376-3440", "symbol": "_bound_handoff_merge_allowed", "note": "target≤3f→allow; source≤3f→cần same-view ≤0.30"}
+  ],
+  "realParams": [
+    {"name": "handoff_ttl", "value": "45", "unit": "frames", "scope": "runtime CLI", "ref": "two_camera.py:1926"},
+    {"name": "handoff_lookahead_frames", "value": "16", "unit": "frames", "scope": "runtime CLI", "ref": "two_camera.py:1949"},
+    {"name": "cross_camera_defer_frames", "value": "8", "unit": "frames", "scope": "runtime CLI", "ref": "two_camera.py:1944-1948"},
+    {"name": "min_direction_cosine", "value": "0.25", "unit": "cosine", "scope": "runtime CLI", "ref": "two_camera.py:1951"},
+    {"name": "appearance_threshold / relaxed", "value": "0.45 / 0.82", "unit": "Bhattacharyya", "scope": "runtime CLI", "ref": "two_camera.py:1928/:1931"},
+    {"name": "prediction_radius", "value": "25.0", "unit": "cm (resolved)", "scope": "resolved = min(cfg 25.0, derived 25.486)", "ref": "two_camera.py:2170-2176 + cfg:1463-1468"},
+    {"name": "match_distance", "value": "15.0", "unit": "cm (resolved)", "scope": "resolved = min(cfg 15.0, derived 16.218)", "ref": "two_camera.py:2163-2169"},
+    {"name": "duplicate_distance", "value": "4.634", "unit": "cm (resolved)", "scope": "resolved = min(cfg 9.0, derived 4.634)", "ref": "two_camera.py:2184-2190"},
+    {"name": "strong_spatial_distance", "value": "4.634", "unit": "cm", "scope": "derived runtime", "ref": "cross_camera_manager.py:226-229"},
+    {"name": "edge_margin_px", "value": "40", "unit": "px", "scope": "class default", "ref": "cross_camera_manager.py:2895-2907"},
+    {"name": "cost weights / cap", "value": "0.55/0.30/0.10/0.05 ≤0.92", "unit": "weight", "scope": "class default", "ref": "cross_camera_manager.py:3017, :3615"},
+    {"name": "lapjv margin / streak", "value": "0.08 / {2,3,2,1}", "unit": "cost / frames", "scope": "class default", "ref": "cross_camera_manager.py:3622, :3658-3667"}
+  ],
+  "storyboard": {
+    "scene": "Xe A đỏ cam1 ra biên phải; ở cửa cam2 cùng lúc có xe B trắng và xe C đỏ-tươi — CÙNG cảnh, chỉ khác cờ handoff.",
+    "seed": "handoff-demo-01 (deterministic)",
+    "frames": [
+      {"k": 1, "off": "Không có pending handoff — mảnh cam2 sinh GID mới G#9; episode G#5 kết giả: 1 xe = 2 episode.", "on": "Pending handoff mở (TTL 45f); map vẽ 'điểm hẹn' = _predicted_world, vòng tròn 25cm."},
+      {"k": 2, "off": "—", "on": "Ứng viên A: residual 11cm<25 ✓, app 0.21≤0.45 ✓, size 0.12 ✓, dir-cos 0.71≥0.25 → vào ma trận; panel hiển thị 4 tick gates xanh."},
+      {"k": 3, "off": "—", "on": "Xe B trắng: appearance 0.83 > hard 0.45 VÀ > relaxed 0.82 → REJECT 'appearance' ngay tại gate (ccm:2990) — chip đỏ 'bị loại trước khi chấm điểm', KHÔNG vào ma trận."},
+      {"k": 4, "off": "—", "on": "Xe C đỏ-tươi: app 0.40 qua hard ✓, residual 20cm → cost 0.591 — vào ma trận cùng A (cost A=0.324)."},
+      {"k": 5, "off": "—", "on": "LAPJV 1-1: A 0.324 vs C 0.591, chênh 0.267 ≥ margin 0.08 → A thắng; streak bar đếm 1/2/3 frame trước bind."},
+      {"k": 6, "off": "—", "on": "local#7 → G#5 — một GID sống xuyên cầu nối; badge 'streak đủ → bind'."}
+    ],
+    "visual": "Split canvas: trái cam1 + cam2 (xe ra biên), phải shared-map với điểm hẹn + vòng 25cm. Panel gates checklist (residual/appearance/size/direction), cost breakdown bar 4 thành phần có số, ma trận LAPJV mini, streak counter. Xe B hiển thị 'reject trước cost' — không vẽ nó trong ma trận."
+  },
+  "qa": [
+    {"q": "Vì sao streak 2-3 frame?", "a": "Code bắt buộc evidence liên-tiếp [code]; tránh gán theo 1 frame nhiễu [suy luận]."},
+    {"q": "Entry-depth px vs residual cm trộn đơn vị?", "a": "Đúng — hai đơn vị khác nhau [code]; minh hoạ phải tách px-ảnh khỏi cm-map."},
+    {"q": "Handoff mở nhưng đích đã có GID?", "a": "_bound_handoff_merge_allowed: target≤3f → merge; source≤3f → cần same-view gallery ≤0.30; cả hai established → reject 'both_global_ids_established' (:3408-3440) [code]."}
+  ],
+  "certainty": "Cao toàn bộ gates/cost/LAPJV/streak/race [code]; lý do thiết kế [suy luận]."
+}

@@ -1,0 +1,16 @@
+{
+  "id": "tracklet-descriptor-cam2-f300",
+  "session": "session_hiep_sang8",
+  "cam": 2,
+  "frame": 300,
+  "source": "raw",
+  "draw": [
+    {
+      "type": "box",
+      "xyxy": [278, 258, 337, 359],
+      "color": "#0b57d0",
+      "label": "lid38 -> GID 2"
+    }
+  ],
+  "max_kb": 200
+}

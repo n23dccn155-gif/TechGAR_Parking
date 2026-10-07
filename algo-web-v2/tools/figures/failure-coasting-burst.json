@@ -1,0 +1,16 @@
+{
+  "id": "failure-coasting-burst",
+  "session": "verify_replay",
+  "cam": 2,
+  "frame": 51,
+  "source": ".analysis/verify-replay/sheets/session_hiep_toi4/sheet_0003.jpg (toi4 cam2 ~f51 burst)",
+  "image_path": "D:/TechGar2/.analysis/verify-replay/sheets/session_hiep_toi4/sheet_0003.jpg",
+  "out": "failure-coasting-burst.jpg",
+  "max_kb": 250,
+  "draw": [
+    {"type": "box", "xyxy": [1150, 185, 1255, 325], "color": "#ff3b30",
+     "label": "cụm ca-*coasting gidNULL trên nền trống", "label_at": [980, 350]},
+    {"type": "box", "xyxy": [748, 50, 845, 130], "color": "#ff3b30",
+     "label": "box coasting lơ lửng không xe", "label_at": [860, 60]}
+  ]
+}

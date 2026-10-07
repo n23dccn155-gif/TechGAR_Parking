@@ -1,0 +1,40 @@
+{
+  "id": "kalman",
+  "title": "Kalman vận tốc hằng (CV4)",
+  "tier": "T1",
+  "nodes": ["N3"],
+  "problem": "Detection nhiễu ±vài px mỗi frame và thỉnh thoảng mất hẳn. Muốn quỹ đạo mượt + dự đoán vị trí khi xe bị che, cần mô hình chuyển động — không chỉ 'nhớ bbox cuối'.",
+  "does": "Mỗi track giữ bộ lọc Kalman 4 trạng thái (x, y, vx, vy) với mô hình vận tốc hằng: predict() chạy TRƯỚC detection mỗi frame (N3 → _predict_tracks), correct() chạy SAU khi gán detection (N7). Measurement chỉ là tâm bbox; vận tốc là trạng thái ẩn học dần.",
+  "role": {"before": "Tracks tồn tại từ frame trước", "after": "Dự đoán vị trí cho cổng gán N6 + ghost cho coasting N7", "missing": "Không dự đoán → gate chỉ quanh vị trí CŨ → xe nhanh bị miss → ID mới liên tục"},
+  "where": [{"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "239-260", "symbol": "_predict_tracks"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2228", "symbol": "predict callsite trong process_frame"}, {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2170", "symbol": "_apply_detection → correct"}],
+  "why": "CV4 đủ cho xe trong bãi (vận tốc thấp, gần-đều) và rẻ; mô hình gia tốc/quay thêm trạng thái nhưng đo ồn nhiễu hơn lợi [suy luận]. Predict-trước-detect để cổng gán quanh vị trí ĐÚNG-LÚC, không phải frame trước.",
+  "steps": [
+    "Mỗi frame: predict() trên mọi track trước khi _detect chạy.",
+    "Detection mới đến → LAPJV gán (N6) quanh vị trí dự đoán.",
+    "Match → correct(tâm đo): state hợp nhất đo+dự đoán theo độ tin Q/R.",
+    "Prediction_source='kalman_prediction'; vị trí hiển thị = sau-correct.",
+    "Không match → giữ dự đoán vào nhánh coasting (T1-4)."
+  ],
+  "sourceRefs": [
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2228", "symbol": "process_frame", "note": "predict TRƯỚC _detect :2233"},
+    {"file": "backend/main_detect/src/techgar/motion_tracker.py", "line": "2250-2255", "symbol": "_apply_detection", "note": "correct SAU _assign :2249"}
+  ],
+  "realParams": [
+    {"name": "state", "value": "(x, y, vx, vy)", "unit": "CV4", "scope": "default", "ref": "motion_tracker.py:_new_kalman"},
+    {"name": "predict→detect→assign→correct", "value": "thứ tự cố định", "unit": "callsite", "scope": "runtime", "ref": "motion_tracker.py:2228-2255"}
+  ],
+  "storyboard": {
+    "scenarios": [{"id": "normal", "label": "Đo nhiễu → correct → mất đo", "seed": 3}, {"id": "edge", "label": "Predict không có đo", "seed": 3}],
+    "keyframes": [
+      {"id": "k1", "caption": "Xe sinh track: đo nhiễu tản quanh quỹ đạo thật; ellipse (bất định) còn to", "mode": "both", "state": {"state": "TENTATIVE"}},
+      {"id": "k2", "caption": "Correct sau mỗi match: ellipse co, vận tốc ẩn hội tụ → quỹ đạo mượt hơn đo thô", "mode": "both", "state": {"prediction_source": "kalman_prediction"}},
+      {"id": "k3", "caption": "Mất đo 2 frame: predict tiếp tục theo v, ellipse giãn — ghost vẫn đi đúng hướng", "mode": "both", "state": {"obs": "none"}},
+      {"id": "k4", "caption": "Đo lại → correct kéo state về gần đo mới; ellipse co lại", "mode": "both", "state": {"obs": "resumed"}}
+    ]
+  },
+  "qa": [
+    {"q": "Vì sao predict trước detect?", "a": "Để cổng gán N6 quanh vị trí dự kiến đúng-thời-điểm; nếu không, xe nhanh đã đi xa vị trí cũ."},
+    {"q": "Kalman có 'nhớ' hình dạng xe?", "a": "Không — chỉ (x,y,vx,vy); hình dạng/màu nằm ở appearance/histogram, thuật toán khác."}
+  ],
+  "certainty": "Cao [code] thứ tự predict/correct và state CV4; giá trị Q/R cụ thể không trích số — ghi giới hạn."
+}

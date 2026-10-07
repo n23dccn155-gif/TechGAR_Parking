@@ -1,0 +1,21 @@
+{
+  "id": "roi-cam2",
+  "session": "shared_map_01/cal-20261006-180750-46035b9a",
+  "cam": 2,
+  "frame": 0,
+  "image_path": "D:\\TechGar2\\backend\\main_detect\\config\\shared_map_01\\attempts\\cal-20261006-180750-46035b9a/capture_cam2.png",
+  "draw": [
+    {
+      "type": "polygon",
+      "pts": [[13, 716], [1253, 719], [1162, 82], [68, 103]],
+      "color": "#ffd23f",
+      "label": "ROI cam2"
+    },
+    {"type": "circle", "xy": [13, 716], "r": 10, "color": "#ffd23f", "label": "P1"},
+    {"type": "circle", "xy": [1253, 719], "r": 10, "color": "#ffd23f", "label": "P2"},
+    {"type": "circle", "xy": [1162, 82], "r": 10, "color": "#ffd23f", "label": "P3"},
+    {"type": "circle", "xy": [68, 103], "r": 10, "color": "#ffd23f", "label": "P4"},
+    {"type": "box", "xyxy": [0, 0, 120, 90], "color": "#d64545", "label": "ngoai ROI"}
+  ],
+  "max_kb": 220
+}
