@@ -10,8 +10,8 @@ several frames after the vehicle crossed a camera border.
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import cv2
 import numpy as np
@@ -34,6 +34,10 @@ EDGE_ADJACENCY = {
     ("cam4", "top"): "cam2", ("cam4", "left"): "cam3",
 }
 OPPOSITE_EDGE = {"left": "right", "right": "left", "top": "bottom", "bottom": "top"}
+
+#: P26: biên độ dịch chuyển tối đa (px) trên 4 mẫu ``history`` gần nhất để coi
+#: một fragment là "đứng yên tuyệt đối". Xe đang chạy vượt xa ngưỡng này.
+STATIONARY_AT_REST_PX: float = 4.0
 
 
 @dataclass
@@ -99,6 +103,15 @@ class GlobalIdentityState:
     # and are promoted to full GID only after meeting evidence criteria.
     # This prevents premature merge/slot-binding when evidence is insufficient.
     provisional_since_frame: Optional[int] = None
+    # Frame -> world position where this identity was actually *measured* (a
+    # detector observation), never a Kalman projection.  Two identities that
+    # were both measured in the same frame are provably two different cars:
+    # one vehicle cannot be in two places at once.  Used by
+    # ``_reconcile_dormant_duplicates`` to refuse folding them together.
+    # Bounded by ``_identity_measurement_history_frames``.
+    measured_world_by_frame: Dict[int, Tuple[float, float]] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -160,6 +173,9 @@ class CrossCameraManager:
         dormant_match_distance: float = 160.0,
         dormant_appearance_threshold: Optional[float] = None,
         tracklet_gallery_size: int = 24,
+        slot_width_world: float = 0.0,
+        legacy_dormant_merge_overlap: bool = False,
+        legacy_young_source_merge_window: bool = False,
         new_identity_min_observations: int = 5,
         new_identity_unusual_size_observations: int = 12,
         new_identity_min_displacement_ratio: float = 0.15,
@@ -185,6 +201,14 @@ class CrossCameraManager:
         # jitter between two fragments of the same vehicle.
         reid_reachable_speed_scale: float = 1.5,
         reid_reachable_margin: Optional[float] = None,
+        # P16k (#8a): absolute physical ceiling on how far a dormant identity
+        # could have travelled, in world units per second.  The calibrated
+        # measurement already bounds this by the identity's *measured* speed,
+        # which is useless when the old track was stopped and a different car
+        # then receives its Global ID.  Default 20 km/h converted to world
+        # units by the caller (5.556 m/s at k=2.0895 => 116.1 world units/s).
+        dormant_reid_max_speed_world_per_s: Optional[float] = None,
+        legacy_dormant_reid: bool = False,
         # Stationary re-acquisition (F1-design rev2).  A parked car whose
         # local track starved while motionless is unreachable for the
         # dormant and world-trajectory passes (``same_camera_stale`` veto +
@@ -195,6 +219,16 @@ class CrossCameraManager:
         # gates, with persistent deferral for ambiguous or contested spots.
         # Disabled by default; flag-off is bit-identical to the old code.
         enable_stationary_reacquire: bool = False,
+        # P26 (lead duyet 5.2): cho phep fragment dang bi dong bang
+        # (``frozen_ambiguous`` / ``coasting`` / ``occluded_prediction``) van
+        # duoc xet lai GID cu, mien la no da co bang chung thi giac that
+        # (>=5 khung hinh thay, >=2 mau appearance) va dung yen tuyet doi tren
+        # vi tri cuoi cua GID do. Tat bang ``--legacy-stationary-frozen``.
+        stationary_resume_frozen: bool = True,
+        # P26 (lead duyet, huong b): xe dung yen tuyet doi du lau duoc giu
+        # identity qua ``_parked_reservations`` (khong can slot tu binder).
+        # Tat bang ``--legacy-stationary-reserve``.
+        stationary_reserve_hold: bool = True,
         stationary_reacquire_core_distance: float = 3.0,
         stationary_reacquire_distance: float = 5.0,
         stationary_reacquire_appearance_distance: float = 0.30,
@@ -281,12 +315,50 @@ class CrossCameraManager:
             ),
         )
         self.dormant_match_distance = max(1.0, float(dormant_match_distance))
+        # P16k (#8): tighten dormant re-id.
+        self.legacy_dormant_reid = bool(legacy_dormant_reid)
+        self.dormant_reid_max_speed_world_per_s = (
+            max(0.0, float(dormant_reid_max_speed_world_per_s))
+            if dormant_reid_max_speed_world_per_s is not None
+            else None
+        )
         self.dormant_appearance_threshold = float(
             dormant_appearance_threshold
             if dormant_appearance_threshold is not None
             else min(0.75, self.appearance_threshold + 0.15)
         )
+        # How many frames of *measured* world positions to keep per identity.
+        # Only used to prove that two identities were observed simultaneously
+        # (see ``_reconcile_dormant_duplicates``), so a few seconds is plenty.
+        self._identity_measurement_history_frames = 90
+        # P16e: refuse to fold two dormant records that were both *measured*
+        # in the same frame far apart (two real cars, not one broken track).
+        self.legacy_dormant_merge_overlap = bool(legacy_dormant_merge_overlap)
+        # P18a/L-B: a Global ID minted in the neighbour camera a few seconds
+        # before the handoff opened may be folded into the older identity
+        # (see ``_bound_handoff_merge_allowed``).  Legacy = only <= 3 frames.
+        self.legacy_young_source_merge_window = bool(
+            legacy_young_source_merge_window
+        )
+        self.young_source_merge_window_frames = 60
+        self._ever_parked_gids: Set[int] = set()
+        # Pairs of Global IDs that were provably two vehicles: both measured in
+        # the same frame while further apart than one slot.  Recorded while the
+        # evidence is fresh (see ``_record_simultaneous_conflicts``) because a
+        # dormant identity stops being observed, so a short rolling history
+        # would have dropped the proof by the time the merge is attempted.
+        self._simultaneous_conflict_pairs: Set[frozenset] = set()
+        # "Far apart" scale = one parking slot width.  When the calibration
+        # carries no slot polygons, fall back to the duplicate-merge distance
+        # so the guard degrades to the previous (tighter) notion of far.
+        self.slot_width_world = float(
+            slot_width_world
+            if slot_width_world and slot_width_world > 0.0
+            else self.cross_camera_duplicate_distance
+        )
         self.enable_stationary_reacquire = bool(enable_stationary_reacquire)
+        self.stationary_resume_frozen = bool(stationary_resume_frozen)
+        self.stationary_reserve_hold = bool(stationary_reserve_hold)
         self.stationary_reacquire_core_distance = max(
             0.1, float(stationary_reacquire_core_distance)
         )
@@ -696,9 +768,35 @@ class CrossCameraManager:
             provisional_since_frame=(
                 frame_idx if previous is None else previous.provisional_since_frame
             ),
+            measured_world_by_frame=self._measurement_history(
+                previous, frame_idx, world
+            ),
         )
         self._identities[global_id] = state
         return state
+
+    def _measurement_history(
+        self,
+        previous: Optional[GlobalIdentityState],
+        frame_idx: int,
+        world: Tuple[float, float],
+    ) -> Dict[int, Tuple[float, float]]:
+        """Append one measured world position, keeping the history bounded.
+
+        Entries older than ``_identity_measurement_history_frames`` are dropped;
+        the history only needs to answer "were these two identities ever
+        observed at the same time, far apart?".
+        """
+        history: Dict[int, Tuple[float, float]] = {}
+        if previous is not None:
+            history.update(previous.measured_world_by_frame)
+        history[int(frame_idx)] = (float(world[0]), float(world[1]))
+        horizon = int(frame_idx) - self._identity_measurement_history_frames
+        if len(history) > self._identity_measurement_history_frames:
+            history = {
+                frame: point for frame, point in history.items() if frame >= horizon
+            }
+        return history
 
     def _set_identity_dormant(
         self,
@@ -779,6 +877,17 @@ class CrossCameraManager:
         reservation_to_release = None
         if global_id in self._parked_reservations:
             reservation = self._parked_reservations[global_id]
+            # P26 (huong b): reservation do "xe dung yen" tao ra chi de KEO DAI
+            # thoi gian giu identity, KHONG phai bang chung da roi o. No khong
+            # duoc chan viec bind fragment dung yen ngay tren vi tri cu.
+            if reservation.get("source") == "stationary_hold":
+                # Chi keo dai retention; khong kiem tra quyen "departure proof".
+                previous_processing_frame = self._processing_frame_idx
+                self._processing_frame_idx = int(frame_idx)
+                try:
+                    return self._bind(cam_id, local_track_id, global_id)
+                finally:
+                    self._processing_frame_idx = previous_processing_frame
             if source != "parking_departure_token":
                 raise ValueError(
                     f"Global #{global_id} is parked and may only be recovered "
@@ -916,6 +1025,111 @@ class CrossCameraManager:
     def parked_global_ids(self) -> set[int]:
         return set(self._parked_reservations)
 
+    def register_stationary_reservations(
+        self,
+        all_tracks: Dict[str, dict],
+        frame_idx: int,
+    ) -> List[int]:
+        """P26 (lead duyet, huong b): giu identity cua xe DUNG YEN that su.
+
+        V049 sang_5p đo được: identity #1 đỗ ở S016 nhưng **không bao giờ** vào
+        ``_parked_reservations`` (0 lần trong cả clip), nên nhánh miễn trừ "xe
+        đỗ" trong ``_same_camera_recovery_is_stale`` không áp dụng và nó bị dọn
+        theo cửa sổ 12 s của xe đang chạy ⇒ fragment đứng yên sau đó (local 15)
+        không còn GID để nhận, xe quay lại mang GID 22.
+
+        Hàm này tạo một reservation **tổng hợp** (không cần slot) cho identity
+        đang được một fragment ĐỨNG YÊN TUYỆT ĐỐI giữ, với các điều kiện chặt:
+
+        * fragment đã được thấy thật >= ``fragment_visible_count >= 5``,
+        * đứng yên tuyệt đối (biên độ <= ``STATIONARY_AT_REST_WORLD``),
+        * có appearance ổn định (>= 2 mẫu, khoảng cách giữa các mẫu nhỏ),
+        * identity **không** đang bị một fragment ĐANG CHẠY giữ (veto G6),
+        * không phải xe đang nằm trên làn có vận tốc đáng kể.
+
+        Trả danh sách global_id vừa được giữ. Không đổi bất kỳ ngưỡng nhận dạng
+        nào; chỉ kéo dài *thời gian giữ* identity.
+        """
+        held: List[int] = []
+        if not self.stationary_reserve_hold:
+            return held
+
+        # Một identity chỉ được coi là "đỗ" khi KHÔNG có fragment đang chạy nào
+        # cùng giữ nó — đây là veto G6.
+        moving_holders = set()
+        for (cam_id, local_id), raw_gid in self._local_to_global.items():
+            track = all_tracks.get(cam_id, {}).get(local_id)
+            if track is None:
+                continue
+            if not self._track_is_stationary(track):
+                moving_holders.add(self._canonical_id(raw_gid))
+
+        seen: set[int] = set()
+        for cam_id, tracks in all_tracks.items():
+            for local_id, track in tracks.items():
+                raw_gid = self._local_to_global.get((cam_id, int(local_id)))
+                if raw_gid is None:
+                    continue
+                global_id = self._canonical_id(raw_gid)
+                if global_id in seen:
+                    continue
+                if global_id in moving_holders:
+                    continue
+                if not self._track_is_stationary(track):
+                    continue
+                if int(getattr(track, "fragment_visible_count", 0) or 0) < 5:
+                    continue
+                if len(appearance_samples(track)) < 2:
+                    continue
+                identity = self._identities.get(global_id)
+                if identity is None or identity.state in {"exited", "expired"}:
+                    continue
+                try:
+                    world = self._track_world(cam_id, track)
+                except (cv2.error, KeyError, np.linalg.LinAlgError, ValueError):
+                    continue
+                seen.add(global_id)
+                previous = self._parked_reservations.get(global_id)
+                self._parked_reservations[global_id] = {
+                    "global_id": int(global_id),
+                    "camera_id": str(cam_id),
+                    "slot_id": (previous or {}).get("slot_id"),
+                    "state": "parked",
+                    "source": "stationary_hold",
+                    "world": [float(world[0]), float(world[1])],
+                    "since_frame": int(
+                        (previous or {}).get("since_frame", frame_idx)
+                    ),
+                }
+                held.append(int(global_id))
+                self._event(
+                    "stationary_reservation_held",
+                    frame_idx,
+                    global_id,
+                    camera=str(cam_id),
+                    local_track_id=int(local_id),
+                    world=[round(float(world[0]), 3), round(float(world[1]), 3)],
+                )
+        return held
+
+    def _track_is_stationary(self, track) -> bool:
+        """P26: fragment có đứng yên tuyệt đối không (dùng ``history`` thô)."""
+        history = getattr(track, "history", None) or []
+        points: List[Tuple[float, float]] = []
+        for entry in list(history)[-4:]:
+            if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+                continue
+            try:
+                points.append((float(entry[0]), float(entry[1])))
+            except (TypeError, ValueError):
+                continue
+        if len(points) < 3:
+            return False
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        spread = max(max(xs) - min(xs), max(ys) - min(ys))
+        return spread <= STATIONARY_AT_REST_PX
+
     def sync_parked_reservations(
         self,
         reservations: Iterable[dict],
@@ -1019,6 +1233,7 @@ class CrossCameraManager:
 
         previously_parked = set(self._parked_reservations)
         for global_id, reservation in selected.items():
+            self._ever_parked_gids.add(int(global_id))
             previous = self._parked_reservations.get(global_id)
             if previous is None or previous.get("slot_id") != reservation.get("slot_id"):
                 self._event(
@@ -1053,6 +1268,14 @@ class CrossCameraManager:
             self.trajectory.set_parked(global_id, True, origin=origin)
 
         for global_id in set(self._parked_reservations) - set(selected):
+            # P26 (lead duyet, huong b): reservation do
+            # ``register_stationary_reservations`` tao ra la **nguon su that
+            # rieng** (xe dung yen tuyet doi), khong do binder cung cap, nen
+            # vong sync nay khong duoc xoa no chi vi no khong nam trong
+            # ``selected``. Neu xoa, cua so 12 s lai don identity nhu truoc.
+            existing = self._parked_reservations.get(global_id) or {}
+            if existing.get("source") == "stationary_hold":
+                continue
             identity = self._identities.get(global_id)
             if identity is not None and identity.state in {"parked", "recovery_pending"}:
                 identity.state = "dormant"
@@ -1110,6 +1333,54 @@ class CrossCameraManager:
             if timestamp is not None and np.isfinite(float(timestamp))
         ]
         return max(timestamps) if timestamps else None
+
+    def _frozen_member_kept(self, track) -> bool:
+        """P26: fragment đang đóng băng nhưng là bằng chứng thật của cùng xe.
+
+        ``frozen_ambiguous`` / ``coasting`` / ``occluded_prediction`` nghĩa là
+        *không có detection mới* — không có nghĩa là xe đã biến mất. Nếu fragment
+        đã thực sự được thấy >=5 khung hình và có >=2 mẫu appearance thì nó vẫn
+        là cùng chiếc xe, nên không được cắt binding chỉ vì một fragment khác
+        cùng camera "thắng" bảng xếp hạng owner.
+
+        KHÔNG dùng cho fragment đang chạy: trạng thái ``matched`` không nằm trong
+        tập này, nên luật cũ (cắt bớt) vẫn áp dụng nguyên vẹn.
+        """
+        if str(getattr(track, "association_state", "matched")) not in {
+            "frozen_ambiguous",
+            "coasting",
+            "occluded_prediction",
+        }:
+            return False
+        if int(getattr(track, "fragment_visible_count", 0) or 0) < 5:
+            return False
+        return len(appearance_samples(track)) >= 2
+
+    def restore_local_binding(
+        self,
+        cam_id: str,
+        local_track_id: int,
+        global_id: int,
+        frame_idx: int,
+    ) -> None:
+        """P26: gắn lại binding vừa bị ``detach_parked_local_tracks`` gỡ.
+
+        Chỉ dùng cho fragment đang đứng yên tại chỗ và đã có bằng chứng thị
+        giác thật (xem ``_frozen_member_kept``), tức cùng một chiếc xe chứ
+        không phải fragment rác đang chiếm ô.
+        """
+        key = (str(cam_id), int(local_track_id))
+        canonical = self._canonical_id(global_id)
+        self._local_to_global[key] = canonical
+        self._local_binding_frames[key] = int(frame_idx)
+        self._gid_members.setdefault(canonical, set()).add(key)
+        self._event(
+            "parked_local_track_binding_restored",
+            frame_idx,
+            canonical,
+            camera=str(cam_id),
+            local_track_id=int(local_track_id),
+        )
 
     def detach_parked_local_tracks(self, frame_idx: int) -> List[Tuple[str, int, int]]:
         """Detach local fragments so a parked track cannot steal a new bbox."""
@@ -3275,6 +3546,23 @@ class CrossCameraManager:
                     continue
                 if self._same_camera_motion_duplicate(kept_track, track):
                     continue
+                # P26 (lead duyet 5.2): mot fragment dang bi dong bang nhung
+                # VAN dung yen ngay tren vi tri cuoi cua chinh GID nay la
+                # bang chung that cua cung mot chiec xe (V049/local60 f567:
+                # vua duoc cap GID 1 o f562-566 thi bi cat o day, roi ca hai
+                # fragment deu chet => xe quay lai voi GID moi).
+                #
+                # Chi giu lai khi CA HAI dung:
+                #   * fragment kia dang dong bang va khong tu chay di
+                #     (frozen_ambiguous / coasting / occluded_prediction),
+                #   * no da co bang chung thi giac that (>=5 khung thay,
+                #     >=2 mau appearance) -- khong phai Kalman placeholder.
+                # Khong noi long gi them: neu fragment that su dang chay thi
+                # `_same_camera_motion_duplicate`/veto ben tren da xu ly.
+                if self.stationary_resume_frozen and self._frozen_member_kept(
+                    track
+                ):
+                    continue
                 key = (cam_id, local_id)
                 removed = self._local_to_global.pop(key, None)
                 if removed is None:
@@ -3506,6 +3794,47 @@ class CrossCameraManager:
             ):
                 return True, "provisional_source_same_view", proof
             return False, "provisional_source_without_same_view_proof", proof
+
+        # P18a/L-B (K2: V002 left the lot as GID5 while its session was GID2).
+        # The neighbour camera minted a new GID for the same car ``source_age``
+        # frames before the handoff could open, then every frame hit
+        # ``both_global_ids_established``.  A young source may fold into an
+        # older target when ALL of the following hold:
+        #  (a) a live handoff entry for exactly this camera pair (``entry``);
+        #  (b) the pair already survived ``_candidate_cost`` (call site);
+        #  (c) the source GID never parked and holds no parked reservation;
+        #  (d) the two identities were never *measured* in the same frame far
+        #      apart (one car cannot be in two places - same proof as P16e).
+        if (
+            not self.legacy_young_source_merge_window
+            and source_age <= self.young_source_merge_window_frames
+            and target_age > source_age
+            and entry.source_cam != entry.target_cam
+        ):
+            source_identity = self._identities.get(source_global_id)
+            target_identity = self._identities.get(target_global_id)
+            never_parked = (
+                source_global_id not in self._parked_reservations
+                and source_global_id not in self._ever_parked_gids
+            )
+            separation = (
+                self._simultaneous_separation(
+                    source_identity,
+                    target_identity,
+                    float(self.slot_width_world),
+                )
+                if source_identity is not None and target_identity is not None
+                else (0, 0.0)
+            )
+            proof.update(
+                young_source_never_parked=bool(never_parked),
+                young_source_simultaneous_separation=(
+                    None if separation is None else round(float(separation[1]), 3)
+                ),
+            )
+            if never_parked and separation is None:
+                return True, "young_source_cross_camera", proof
+            return False, "young_source_failed_guard", proof
 
         return False, "both_global_ids_established", proof
 
@@ -4565,6 +4894,7 @@ class CrossCameraManager:
         all_tracks: Dict[str, dict],
         frame_idx: int,
         camera_timestamps_s: Optional[Dict[str, float]],
+        candidate_keys: Optional[set[Tuple[str, int]]] = None,
     ) -> set[Tuple[str, int]]:
         """Last-resort re-acquisition of *stationary* vehicles.
 
@@ -4588,8 +4918,49 @@ class CrossCameraManager:
             for cam_id, tracks in all_tracks.items()
             for local_id, track in tracks.items()
             if (cam_id, local_id) not in self._local_to_global
-            and self._is_allocatable(track)
-            and self._has_fresh_detection(track)
+            and (candidate_keys is None or (cam_id, local_id) in candidate_keys)
+            and (
+                self._is_allocatable(track)
+                or (
+                    candidate_keys is not None
+                    and (cam_id, local_id) in candidate_keys
+                    and getattr(getattr(track, "status", None), "value", getattr(track, "status", None)) == "tentative"
+                    and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                    and getattr(track, "association_state", "matched") == "matched"
+                )
+                # P26 (lead duyet 5.2): fragment bi dong bang/coasting van duoc
+                # xet NEU no la mot fragment DA THAY THAT (>=2 mau appearance,
+                # da tung co detection) va khong phai chi la Kalman placeholder.
+                # Dieu kien "dung yen tuyet doi tren vi tri cuoi cua GID" van
+                # duoc kiem o vong duyet identities ben duoi (distance core +
+                # appearance <=0.30 + GID khong song o cam nao + veto G6).
+                # Khong ha nguong toan cuc: chi mo cua cho fragment da co bang
+                # chung thi giac rieng.
+                or (
+                    self.stationary_resume_frozen
+                    and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                    and len(appearance_samples(track)) >= 2
+                    and str(getattr(track, "association_state", "matched"))
+                    in {
+                        "frozen_ambiguous",
+                        "coasting",
+                        "occluded_prediction",
+                    }
+                )
+            )
+            and (
+                self._has_fresh_detection(track)
+                # P26: chi fragment DANG DONG BANG moi duoc di tiep vao vong
+                # xet khi no da co bang chung thi giac that; fragment dang chay
+                # van phai qua `_has_fresh_detection` nhu cu.
+                or (
+                    self.stationary_resume_frozen
+                    and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                    and len(appearance_samples(track)) >= 2
+                    and str(getattr(track, "association_state", "matched"))
+                    in {"frozen_ambiguous", "coasting", "occluded_prediction"}
+                )
+            )
         ]
         identities = [
             identity
@@ -4634,6 +5005,19 @@ class CrossCameraManager:
                 len(appearance_samples(track)) >= 2
                 and len(frag_samples) >= self.trajectory.min_observations
             )
+            # P26: mot fragment dang bi dong bang (khong con nhan detection nen
+            # `provisional_samples` dung lai) van du chin neu da tung thay >=5
+            # khung hinh va co >=2 mau appearance. CHI ap dung cho fragment
+            # dang dong bang -- fragment dang chay phai giu luat cu, neu khong
+            # veto `fragment_moving` se bi vo hieu hoa.
+            frozen_fragment = str(
+                getattr(track, "association_state", "matched")
+            ) in {"frozen_ambiguous", "coasting", "occluded_prediction"}
+            if not mature and self.stationary_resume_frozen and frozen_fragment:
+                mature = (
+                    len(appearance_samples(track)) >= 2
+                    and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                )
             if not mature:
                 # Too young to prove a stationary re-acquisition.  If any
                 # retained identity still screens positive, defer minting
@@ -4979,10 +5363,34 @@ class CrossCameraManager:
                         )
                         for sample in tail_samples
                     )
+                elapsed, uses_seconds = self._identity_elapsed(
+                    identity, frame_idx, timestamp_s
+                )
+                # A stopped lane car may disappear before the old velocity
+                # estimate has decayed. Accept only its deferred, same-camera
+                # fragment near the last measured position after a real gap,
+                # with a mature short path and especially strong appearance.
+                stopped_lane_return = (
+                    candidate_keys is not None
+                    and key in candidate_keys
+                    and identity.last_camera == cam_id
+                    and not members
+                    and gid not in self._parked_reservations
+                    and uses_seconds and elapsed >= 3.0
+                    and distance <= self.stationary_reacquire_core_distance
+                    and len(frag_samples) >= 5
+                    # The retained gallery deduplicates near-identical views;
+                    # a single source sample can still be compared against
+                    # multiple independently sampled fragment observations.
+                    and appearance_match.sample_pairs >= 2
+                    and appearance_match.distance <= 0.23
+                    and not fragment_moving
+                )
                 stationary_history = (
                     velocity_norm <= self.stationary_reacquire_velocity
                     or tail_span <= self.stationary_reacquire_tail_span
                     or gid in self._parked_reservations
+                    or stopped_lane_return
                 )
                 if not stationary_history:
                     reject(
@@ -4990,13 +5398,20 @@ class CrossCameraManager:
                         velocity_norm=round(velocity_norm, 3),
                         tail_span=round(tail_span, 3),
                         world_distance=round(distance, 3),
+                        fragment_samples=len(frag_samples),
+                        fragment_appearance_samples=len(appearance_samples(track)),
+                        appearance_support=appearance_match.support,
+                        appearance_sample_pairs=appearance_match.sample_pairs,
+                        appearance_distance=round(float(appearance_match.distance), 4),
+                        elapsed=round(float(elapsed), 3),
+                        elapsed_uses_seconds=uses_seconds,
+                        member_count=len(members),
+                        has_reservation=gid in self._parked_reservations,
+                        fragment_span=round(frag_span, 3),
                         identity_last_world=last_world_field,
                         member_drift_window=member_drift_window,
                     )
                     continue
-                elapsed, uses_seconds = self._identity_elapsed(
-                    identity, frame_idx, timestamp_s
-                )
                 qualified.append(
                     {
                         "gid": gid,
@@ -5705,6 +6120,77 @@ class CrossCameraManager:
             ),
         )
 
+    def _dormant_reid_physically_impossible(
+        self,
+        identity: GlobalIdentityState,
+        candidate_world: Tuple[float, float],
+        elapsed_s: float,
+    ) -> Optional[Tuple[float, float]]:
+        """Refuse a dormant re-id the old identity could not have reached.
+
+        Returns ``(distance, limit)`` when the candidate is physically out of
+        range, else ``None``.
+
+        **Real-world reason.** A vehicle cannot exceed the speed limit of the
+        car park.  If the new fragment is further from the old identity's last
+        *measured* position than ``v_max * t_dormant + margin``, it is a
+        different car, whatever the appearance gallery says - and the gallery
+        is weak by definition at toy-car resolution (84x44 px).  The margin is
+        at least one parking slot so calibration error and occlusion cannot
+        produce a false rejection.
+
+        ``v_max`` is an absolute ceiling (default 20 km/h, see the constructor
+        argument), not the old track's measured speed: a *stopped* track has
+        measured speed ~0 and would otherwise look unreachable for any motion,
+        or - worse - a slow old track lets a fast new car inherit its ID.
+        """
+        if self.legacy_dormant_reid:
+            return None
+        max_speed = self.dormant_reid_max_speed_world_per_s
+        if max_speed is None or max_speed <= 0.0:
+            return None
+        last_world = identity.last_world
+        if last_world is None:
+            return None
+        distance = float(np.linalg.norm(np.subtract(candidate_world, last_world)))
+        limit = max_speed * max(0.0, float(elapsed_s)) + max(
+            float(self.slot_width_world), 1.0
+        )
+        if distance > limit:
+            return distance, limit
+        return None
+
+    def _dormant_reid_slot_contradiction(
+        self,
+        identity: GlobalIdentityState,
+        candidate_slot_id: Optional[str],
+    ) -> Optional[str]:
+        """Refuse when the old identity still owns a *vision-confirmed* other slot.
+
+        Returns the reserved slot id when it contradicts, else ``None``.
+
+        **Real-world reason (and why the vision confirmation is mandatory).**
+        If the same Global ID is still parked in slot A and vision still sees
+        a car there, a fragment in slot B cannot be that vehicle: it never
+        left.  But a reservation alone is not proof - while a car is driving
+        away the reservation can still exist for a moment, and refusing re-id
+        then would break its identity (the departure token exists precisely to
+        bridge that).  So the check only fires while vision confirms occupancy.
+        """
+        if self.legacy_dormant_reid:
+            return None
+        reservation = self._parked_reservations.get(int(identity.global_id))
+        if not reservation:
+            return None
+        if not reservation.get("vision_occupied"):
+            return None
+        slot_id = str(reservation.get("slot_id") or "")
+        if not slot_id:
+            return None
+        if candidate_slot_id is not None and str(candidate_slot_id) == slot_id:
+            return None
+        return slot_id
+
     def _identity_is_established(
         self,
         identity: GlobalIdentityState,
@@ -5993,6 +6479,47 @@ class CrossCameraManager:
                     recent_reid_window=recent_reid_window,
                     has_target_camera_history=has_target_camera_history,
                 )
+                # P16k (#8a): absolute physical ceiling.  The limit above is
+                # calibrated to this identity's *measured* speed, which is ~0
+                # for a stopped track; that is exactly how a different car
+                # inherited the old Global ID.  Refuse anything the car park
+                # speed limit could not have covered in the dormant time.
+                elapsed_seconds = (
+                    float(elapsed) if uses_seconds else float(elapsed) / float(
+                        max(1e-6, self.effective_camera_fps(cam_id))
+                    )
+                )
+                impossible = self._dormant_reid_physically_impossible(
+                    identity, world, elapsed_seconds
+                )
+                if impossible is not None:
+                    measured_distance, unreachable_limit = impossible
+                    self._record_dormant_rejection(
+                        identity,
+                        frame_idx,
+                        cam_id,
+                        local_id,
+                        "physically_unreachable",
+                        last_position_distance=round(measured_distance, 3),
+                        reachable_limit=round(unreachable_limit, 3),
+                        elapsed_seconds=round(elapsed_seconds, 3),
+                    )
+                    continue
+                # P16k (#8b): the old identity is still parked - and still seen
+                # - in another slot, so this fragment is a different car.
+                contradiction_slot = self._dormant_reid_slot_contradiction(
+                    identity, None
+                )
+                if contradiction_slot is not None:
+                    self._record_dormant_rejection(
+                        identity,
+                        frame_idx,
+                        cam_id,
+                        local_id,
+                        "reserved_in_other_slot",
+                        reserved_slot=str(contradiction_slot),
+                    )
+                    continue
                 # A motion-mask fragment can restart just beyond the
                 # calibrated radius. Allow only a small same-camera margin
                 # when appearance, size, maturity and a short gap agree.
@@ -7887,6 +8414,97 @@ class CrossCameraManager:
             if frame_idx - value[1] <= 1
         }
 
+    def _record_simultaneous_conflicts(self, frame_idx: int) -> None:
+        """Remember Global-ID pairs proven to be two vehicles *this* frame.
+
+        A pair is proven when both identities were measured in the same frame
+        and their measured positions are further apart than one parking slot.
+        Recording happens while both are still being observed, because once
+        they go dormant no new measurements arrive and the rolling history is
+        pruned - the merge is attempted much later, on dormancy anchors alone.
+        """
+        if self.legacy_dormant_merge_overlap:
+            return
+        if self.slot_width_world <= 0.0:
+            return
+        observed: List[Tuple[int, Tuple[float, float]]] = []
+        for global_id, identity in self._identities.items():
+            if self._canonical_id(global_id) != global_id:
+                continue
+            point = identity.measured_world_by_frame.get(int(frame_idx))
+            if point is None:
+                continue
+            observed.append((int(global_id), point))
+        for index, (left_id, left_point) in enumerate(observed):
+            for right_id, right_point in observed[index + 1:]:
+                if left_id == right_id:
+                    continue
+                distance = float(
+                    np.linalg.norm(np.subtract(left_point, right_point))
+                )
+                if distance <= self.slot_width_world:
+                    continue
+                pair = frozenset((left_id, right_id))
+                if pair in self._simultaneous_conflict_pairs:
+                    continue
+                self._simultaneous_conflict_pairs.add(pair)
+                self._event(
+                    "dormant_duplicate_merge_conflict_recorded",
+                    frame_idx,
+                    left_id,
+                    possible_duplicate_global_id=right_id,
+                    separation=round(distance, 3),
+                    slot_width=round(float(self.slot_width_world), 3),
+                )
+
+    def _simultaneous_separation(
+        self,
+        left: GlobalIdentityState,
+        right: GlobalIdentityState,
+        min_separation: float,
+    ) -> Optional[Tuple[int, float]]:
+        """Prove whether these two identities were ever two vehicles at once.
+
+        Returns ``(frame, distance)`` when they were measured in the same frame
+        further apart than ``min_separation``, or ``None`` otherwise.
+
+        **Why this is proof of two vehicles (real-world reason).** The history
+        only records *measurements* - an entry exists because a detector
+        produced a bounding box in that frame.  Kalman predictions, coasted
+        tracks and re-armed identities never write to it.  Two identities
+        measured in the same frame are therefore two separate objects seen at
+        the same instant: one car cannot be in two places at once.  A single
+        vehicle whose track broke has no such frame, so it can still be merged.
+
+        The durable record in ``_simultaneous_conflict_pairs`` is consulted
+        first, because it is captured while both tracks are alive; the rolling
+        per-identity history is only a fallback for recently seen pairs.
+
+        ``legacy_dormant_merge_overlap`` disables the guard.
+        """
+        if self.legacy_dormant_merge_overlap:
+            return None
+        if min_separation <= 0.0:
+            return None
+        if frozenset((int(left.global_id), int(right.global_id))) in (
+            self._simultaneous_conflict_pairs
+        ):
+            return 0, float(min_separation) + 1.0
+        left_history = left.measured_world_by_frame
+        right_history = right.measured_world_by_frame
+        if not left_history or not right_history:
+            return None
+        shared = sorted(set(left_history) & set(right_history))
+        for frame in shared:
+            left_point = left_history[frame]
+            right_point = right_history[frame]
+            distance = float(
+                np.linalg.norm(np.subtract(left_point, right_point))
+            )
+            if distance > min_separation:
+                return frame, distance
+        return None
+
     def _reconcile_dormant_duplicates(self, frame_idx: int) -> None:
         """Fold two dormant records for one vehicle back into one Global ID.
 
@@ -7950,6 +8568,25 @@ class CrossCameraManager:
                     appearance_match.support < 1
                     or appearance_match.distance > appearance_limit
                 ):
+                    continue
+                # P16e: two identities that were both *measured* in the same
+                # frame, far apart, are provably two different cars - one
+                # vehicle cannot be in two places at once.  Refuse the pair
+                # before it can ever accumulate merge evidence.
+                conflict = self._simultaneous_separation(
+                    left, right, self.slot_width_world
+                )
+                if conflict is not None:
+                    self._event(
+                        "dormant_duplicate_merge_rejected",
+                        frame_idx,
+                        left_id,
+                        possible_duplicate_global_id=right_id,
+                        reason="simultaneously_measured_far_apart",
+                        frame=conflict[0],
+                        separation=round(conflict[1], 3),
+                        slot_width=round(float(self.slot_width_world), 3),
+                    )
                     continue
                 neighbours[left_id].add(right_id)
                 neighbours[right_id].add(left_id)
@@ -8228,12 +8865,55 @@ class CrossCameraManager:
         deferred_dormant = self._match_dormant_identities(
             post_handoff_tracks, frame_idx, camera_timestamps_s
         )
+        # A strong near-stationary fragment can be deliberately held by the
+        # dormant pass while still tentative (V049/local60). Give the guarded
+        # stationary pass the original unprotected observations, including
+        # those holds, before filtering them out of downstream passes.
+        #
+        # P26 (lead duyet 5.2): khi `stationary_resume_frozen` bat, them cac
+        # fragment dang dong bang (frozen_ambiguous / coasting /
+        # occluded_prediction) nhung da co bang chung thi giac that vao tap
+        # ung vien, thay vi bo han `candidate_keys`. KHONG dung None: cac
+        # fragment tentative cua luot dormant van phai di qua dung duong cua no.
+        stationary_keys = deferred_dormant
+        if self.stationary_resume_frozen:
+            stationary_keys = set(deferred_dormant)
+            for cam_key, cam_tracks in post_handoff_tracks.items():
+                for local_key, cam_track in cam_tracks.items():
+                    if (cam_key, local_key) in self._local_to_global:
+                        continue
+                    if str(
+                        getattr(cam_track, "association_state", "matched")
+                    ) not in {
+                        "frozen_ambiguous",
+                        "coasting",
+                        "occluded_prediction",
+                    }:
+                        continue
+                    if int(
+                        getattr(cam_track, "fragment_visible_count", 0) or 0
+                    ) < 5:
+                        continue
+                    if len(appearance_samples(cam_track)) < 2:
+                        continue
+                    stationary_keys.add((str(cam_key), int(local_key)))
+
+        early_stationary_deferred = (
+            self._match_stationary_reacquire(
+                post_handoff_tracks,
+                frame_idx,
+                camera_timestamps_s,
+                candidate_keys=stationary_keys,
+            )
+            if self.enable_stationary_reacquire and stationary_keys
+            else set()
+        )
         post_dormant_tracks = {
             cam_id: {
                 local_track_id: track
                 for local_track_id, track in tracks.items()
                 if (
-                    (cam_id, local_track_id) not in deferred_dormant
+                    (cam_id, local_track_id) not in (deferred_dormant | early_stationary_deferred)
                     or (cam_id, local_track_id) in self._local_to_global
                 )
             }
@@ -8538,6 +9218,12 @@ class CrossCameraManager:
         self._refresh_identity_states(
             all_tracks, frame_idx, camera_timestamps_s
         )
+        # P16e: capture "these two were seen apart at the same instant" while
+        # both tracks are still alive; the merge check runs long after they go
+        # dormant and can no longer collect that evidence itself.  Must run
+        # *after* ``_refresh_identity_states`` - that call records this frame's
+        # measured positions.
+        self._record_simultaneous_conflicts(frame_idx)
 
         current_time_s = max((camera_timestamps_s or {}).values(), default=None)
         self.cleanup(frame_idx, current_time_s)

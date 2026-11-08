@@ -412,6 +412,30 @@ def median_slot_length(payload: dict) -> Optional[float]:
     return float(np.median(lengths))
 
 
+def median_slot_width(payload: dict) -> Optional[float]:
+    """Median **short** edge of the calibrated parking slots, in world units.
+
+    Used to decide that two simultaneous measurements are far enough apart to
+    be two different cars: one vehicle cannot occupy two spots at once.
+    """
+    slots = payload.get("parking_slots_world") or {}
+    groups = list(slots.values()) if isinstance(slots, dict) else [slots]
+    widths = []
+    for group in groups:
+        for slot in group or ():
+            polygon = slot.get("polygon") if isinstance(slot, dict) else None
+            if not polygon or len(polygon) < 3:
+                continue
+            points = np.asarray(polygon, dtype=np.float32)
+            if points.ndim != 2 or points.shape[1] != 2:
+                continue
+            (_center, (width, height), _angle) = cv2.minAreaRect(points)
+            widths.append(min(float(width), float(height)))
+    if not widths:
+        return None
+    return float(np.median(widths))
+
+
 def derive_matching_defaults(payload: dict) -> dict:
     """Matching distances implied by the calibrated slot geometry."""
     slot_length = median_slot_length(payload)
@@ -758,14 +782,33 @@ def sync_parking_identity_reservations(
             frame_idx,
             manager.canonical_global_id,
         )
-    for camera_id, local_id, _global_id in manager.detach_parked_local_tracks(
+    # P26 (lead duyet 5.2): KHONG detach mot fragment dang bi dong bang nhung
+    # van duoc thay that (>=5 khung, >=2 mau appearance) tai dung cho, chi vi
+    # GID cua no vua duoc ghi nhan la "da do" (reservation). Do duoc tren V049
+    # sang_5p: ca GID #1 va #13 cung bi ghi "[slot-park] dung trong S016";
+    # reservation cat binding cua fragment dang dung yen => track chet =>
+    # xe quay lai voi GID moi (11 -> 22).
+    keep = set()
+    if getattr(manager, "stationary_resume_frozen", False):
+        for camera_id, tracker in trackers.items():
+            live_tracks = getattr(tracker, "_tracks", None) or {}
+            for local_id, track in live_tracks.items():
+                if not manager._frozen_member_kept(track):
+                    continue
+                keep.add((camera_id, int(local_id)))
+    for camera_id, local_id, global_id in manager.detach_parked_local_tracks(
         frame_idx
     ):
+        if (camera_id, int(local_id)) in keep:
+            # Gan lai binding vua bi go (track van la cung chiec xe dang do).
+            manager.restore_local_binding(
+                camera_id, int(local_id), global_id, frame_idx
+            )
+            continue
         tracker = trackers.get(camera_id)
         if tracker is not None:
             tracker.suspend_track(local_id, reason="parked")
     return accepted
-
 
 def cancel_observed_recovery_tokens(
     global_ids: dict[str, dict[int, int]],
@@ -1754,6 +1797,10 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", default=str(PROJECT_ROOT / "runtime_output_two_camera"))
     parser.add_argument("--session-dir", help="Thu muc ghi video/JSONL hai camera; phai chua ton tai")
     parser.add_argument(
+        "--debug-video-only", action="store_true",
+        help="Chi ghi video debug, khong ghi raw, predictions hay telemetry session",
+    )
+    parser.add_argument(
         "--no-session-video",
         action="store_true",
         help="Chi ghi timestamp/predictions khi replay, khong sao chep lai raw/debug MP4",
@@ -1783,6 +1830,70 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-parking-debug", action="store_true", help="An cua so threshold pixel de giam tai")
     parser.add_argument("--parking-fps", type=float, default=2.0)
     parser.add_argument("--legacy-parking-filter", action="store_true", help="Replay baseline border filter and frame smoothing")
+    parser.add_argument("--legacy-static-color-rescue", action="store_true", help="Tat nhan lai xe mau dung yen it dac trung")
+    parser.add_argument(
+        "--legacy-dormant-reid",
+        action="store_true",
+        help=(
+            "Tat 2 chan siet dormant re-id (P16k): (a) khoang cach vuot qua "
+            "toc do toi da vat ly, (b) GID cu con giu o khac dang co xe. "
+            "Mac dinh = hanh vi moi (co chan)."
+        ),
+    )
+    parser.add_argument(
+        "--dormant-reid-max-speed-kmh",
+        type=float,
+        default=20.0,
+        help=(
+            "Toc do toi da cua bai xe (km/h) dung cho chan (a) cua P16k. "
+            "20 km/h la gioi han hop ly trong bai do; doi ra don vi world bang k."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-young-source-merge-window",
+        action="store_true",
+        help=(
+            "Chi cho gop GID nguon moi vao GID cu khi nguon <= 3 frame tuoi (hanh vi "
+            "truoc P18a/L-B). Mac dinh = cho gop khi nguon <= 60 frame, chua tung do, "
+            "chua tung cung duoc do o hai cho khac nhau."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-dormant-merge-overlap",
+        action="store_true",
+        help=(
+            "Tat chan merge khi hai identity cung duoc DO trong cung frame o hai "
+            "vi tri cach nhau > be rong o (hanh vi truoc P16e, gop nham 2 xe). "
+            "Mac dinh = hanh vi moi (co chan)."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-token-key-reuse",
+        action="store_true",
+        help=(
+            "Cho phep track local cua token da het han khong thu hoi GID duoc "
+            "token cua o khac nhan lai lam ung vien (hanh vi truoc P16d, giu "
+            "protected_local_keys cong don). Mac dinh = khong nhan lai."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-token-continuation-range",
+        action="store_true",
+        help=(
+            "Cho phep token khoi hanh noi manh track xa toi 2.25 duong cheo o "
+            "ngay ca khi xe chu van dang do (hanh vi truoc P18a/L-A). Mac dinh = "
+            "chi noi trong 0.35 duong cheo khi xe chu con do."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-departure-token-distance",
+        action="store_true",
+        help=(
+            "Tat gioi han khoang cach cua token khoi hanh: track da roi o qua "
+            "xa van gia han token va giu protected_local_keys (hanh vi truoc P16, "
+            "gay dut GID). Mac dinh = hanh vi moi (co gioi han)."
+        ),
+    )
     parser.add_argument("--parking-enter-ratio", type=float, default=0.12)
     parser.add_argument("--parking-exit-ratio", type=float, default=0.08)
     parser.add_argument("--parking-occupied-seconds", type=float, default=0.5)
@@ -1952,8 +2063,46 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--identity-retention-seconds", type=float, default=60.0)
     parser.add_argument(
         "--enable-stationary-reacquire",
+        dest="enable_stationary_reacquire",
         action="store_true",
+        default=True,
         help="Bat nhanh re-acquire cuoi cho xe do yen mat track (tranh mint GID trung cho cung mot xe)",
+    )
+    parser.add_argument(
+        "--legacy-stationary-reacquire",
+        dest="enable_stationary_reacquire",
+        action="store_false",
+        help="Tat stationary reacquire, tro ve hanh vi cu",
+    )
+    parser.add_argument(
+        "--legacy-stationary-frozen",
+        dest="stationary_resume_frozen",
+        action="store_false",
+        default=True,
+        help=(
+            "Tat P26: fragment dang dong bang (frozen_ambiguous/coasting/occluded_prediction) "
+            "KHONG duoc xet lai GID cu (ve hanh vi truoc P26)"
+        ),
+    )
+    parser.add_argument(
+        "--legacy-stationary-ttl",
+        dest="hold_stationary_fragment_ttl",
+        action="store_false",
+        default=True,
+        help=(
+            "Tat P26: fragment dung yen da duoc thay that se bi TTL don nhu cu "
+            "(truoc P26, xe do roi nhich lai bi cap GID moi)"
+        ),
+    )
+    parser.add_argument(
+        "--legacy-stationary-reserve",
+        dest="stationary_reserve_hold",
+        action="store_false",
+        default=True,
+        help=(
+            "Tat P26: xe dung yen tuyet doi KHONG duoc giu identity qua "
+            "_parked_reservations (ve hanh vi truoc P26)"
+        ),
     )
     parser.add_argument(
         "--identity-retention-moving-seconds",
@@ -2105,23 +2254,26 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 reported_fps if np.isfinite(reported_fps) and reported_fps > 0.0 else 25.0
             )
         if session_dir is not None:
+            if args.debug_video_only and args.no_session_video:
+                raise ValueError("--debug-video-only khong dung cung --no-session-video")
             session_dir.mkdir(parents=True)
             session_created = True
             if not args.no_session_video:
                 for camera_id, (width, height) in sizes.items():
                     fps = float(captures[camera_id].get(cv2.CAP_PROP_FPS)) or 25.0
                     writers[camera_id] = (
-                        cv2.VideoWriter(str(session_dir / f"raw_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
+                        None if args.debug_video_only else cv2.VideoWriter(str(session_dir / f"raw_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
                         cv2.VideoWriter(str(session_dir / f"debug_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
                     )
-            timestamps_file = (session_dir / "frame_timestamps.csv").open("w", newline="", encoding="utf-8-sig")
-            performance_file = (session_dir / "performance.csv").open("w", newline="", encoding="utf-8-sig")
-            predictions_file = (session_dir / "predictions.jsonl").open("w", encoding="utf-8")
-            csv.writer(timestamps_file).writerow([
-                "frame_idx", "capture_unix_ns", "wall_time_iso",
-                "cam1_monotonic_ns", "cam2_monotonic_ns", "camera_skew_ms",
-            ])
-            csv.writer(performance_file).writerow(["frame_idx", "total_processing_ms", "tracking_pipeline_ms"])
+            if not args.debug_video_only:
+                timestamps_file = (session_dir / "frame_timestamps.csv").open("w", newline="", encoding="utf-8-sig")
+                performance_file = (session_dir / "performance.csv").open("w", newline="", encoding="utf-8-sig")
+                predictions_file = (session_dir / "predictions.jsonl").open("w", encoding="utf-8")
+                csv.writer(timestamps_file).writerow([
+                    "frame_idx", "capture_unix_ns", "wall_time_iso",
+                    "cam1_monotonic_ns", "cam2_monotonic_ns", "camera_skew_ms",
+                ])
+                csv.writer(performance_file).writerow(["frame_idx", "total_processing_ms", "tracking_pipeline_ms"])
             ground_truth_headers = {
                 "ground_truth_slots.csv": [
                     "schema_version", "camera_id", "slot_id", "start_frame",
@@ -2161,7 +2313,22 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         world_unit = str(calibration_payload.get("world", {}).get("unit", "source_video_pixel"))
         derived_matching = derive_matching_defaults(calibration_payload)
         slot_length_world = median_slot_length(calibration_payload) or 0.0
+        slot_width_world = median_slot_width(calibration_payload) or 0.0
         world_unit_label = "cm" if world_unit == "cm" else "u"
+        # P16k (#8a): the dormant re-id speed ceiling must be in the *world*
+        # unit of this calibration.  Newer calibrations carry
+        # ``world_scale_k`` (world units per metre, sim = 2.0895); older real
+        # sessions do not, so fall back to the standard 2.50 m parking bay
+        # width implied by the calibrated slot geometry.  Both paths yield
+        # world units per metre, so the ceiling is independent of the camera.
+        world_scale_k = calibration_payload.get("world_scale_k")
+        if not isinstance(world_scale_k, (int, float)) or world_scale_k <= 0:
+            world_scale_k = (
+                float(slot_width_world) / 2.50 if slot_width_world > 0 else 1.0
+            )
+        dormant_reid_max_speed_world = (
+            max(0.0, float(args.dormant_reid_max_speed_kmh)) / 3.6
+        ) * float(world_scale_k)
         shared_map_anchor = str(
             tracking_defaults.get("shared_map_anchor", "bottom_center")
         )
@@ -2251,6 +2418,14 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             dormant_match_distance=dormant_match_distance,
             dormant_appearance_threshold=args.dormant_appearance_threshold,
             tracklet_gallery_size=args.global_gallery_max_samples,
+            # P16e: a slot width in world units is the scale of "far apart" for
+            # the simultaneous-measurement guard.  Falls back to the manager's
+            # duplicate distance when the calibration has no slot polygons.
+            slot_width_world=slot_width_world,
+            legacy_dormant_merge_overlap=args.legacy_dormant_merge_overlap,
+            legacy_young_source_merge_window=args.legacy_young_source_merge_window,
+            dormant_reid_max_speed_world_per_s=dormant_reid_max_speed_world,
+            legacy_dormant_reid=args.legacy_dormant_reid,
             new_identity_min_observations=args.new_identity_min_observations,
             new_identity_unusual_size_observations=(
                 args.new_identity_unusual_size_observations
@@ -2264,7 +2439,13 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             camera_fps=initial_camera_fps,
             trajectory_history_seconds=args.trajectory_history_seconds,
             enable_stationary_reacquire=getattr(
-                args, "enable_stationary_reacquire", False
+                args, "enable_stationary_reacquire", True
+            ),
+            stationary_resume_frozen=getattr(
+                args, "stationary_resume_frozen", True
+            ),
+            stationary_reserve_hold=getattr(
+                args, "stationary_reserve_hold", True
             ),
         )
         slot_files = {"cam1": args.slots_cam1, "cam2": args.slots_cam2}
@@ -2278,6 +2459,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 core_scale=0.80,
                 stable_evidence=not args.legacy_parking_filter,
                 selective_line_filter=not args.legacy_parking_filter,
+                static_color_rescue=not args.legacy_static_color_rescue,
                 exit_ratio_thr=args.parking_exit_ratio,
                 occupied_seconds=args.parking_occupied_seconds,
                 empty_seconds=args.parking_empty_seconds,
@@ -2363,6 +2545,15 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 arrival_processing_grace_seconds=(
                     args.slot_arrival_processing_grace_seconds
                 ),
+                # P16c: a fragment that has driven beyond the recovery gate is
+                # no longer the vehicle that left this slot, so it must not keep
+                # the token (nor ``protected_local_keys``) alive.  The flag
+                # restores the pre-P16 behaviour for one release.
+                legacy_departure_token_distance=(
+                    args.legacy_departure_token_distance
+                ),
+                legacy_token_key_reuse=args.legacy_token_key_reuse,
+                legacy_token_continuation_range=args.legacy_token_continuation_range,
             )
             for camera_id in frames
         }
@@ -2377,6 +2568,9 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 enable_spatial_appearance=not args.no_spatial_appearance,
                 min_visible_count=args.min_visible_count,
                 lost_track_ttl=args.lost_track_ttl,
+                hold_stationary_fragment_ttl=getattr(
+                    args, "hold_stationary_fragment_ttl", True
+                ),
                 history_len=90,
                 min_area=args.motion_min_area,
                 max_distance=args.motion_max_distance,
@@ -2790,6 +2984,10 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 protected_local_keys=protected_local_keys,
                 protected_global_ids=pending_arrival_global_ids,
             )
+            # P26 (lead duyet, huong b): xe dung yen tuyet doi du lau duoc giu
+            # identity qua `_parked_reservations`, de cua so 12 s cua xe dang
+            # chay khong don no (V049: identity #1 bi don o ~f670 => mat GID).
+            manager.register_stationary_reservations(observable, frame_index)
 
             cancel_observed_recovery_tokens(
                 global_ids,
@@ -3004,18 +3202,17 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 for camera_id, (raw_writer, debug_writer) in writers.items():
                     raw_frame = frames[camera_id]
                     debug_frame = debug_frames[camera_id]
-                    recording_actions.extend([
-                        counted_recording_action(
+                    if raw_writer is not None:
+                        recording_actions.append(counted_recording_action(
                             recording_counts,
                             f"raw_{camera_id}",
                             lambda writer=raw_writer, frame=raw_frame: writer.write(frame),
-                        ),
-                        counted_recording_action(
+                        ))
+                    recording_actions.append(counted_recording_action(
                             recording_counts,
                             f"debug_{camera_id}",
                             lambda writer=debug_writer, frame=debug_frame: writer.write(frame),
-                        ),
-                    ])
+                        ))
             if predictions_file is not None:
                 capture_ns = (
                     replay_timing.capture_unix_ns
@@ -3182,7 +3379,8 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             for capture in captures.values():
                 capture.release()
         for raw_writer, debug_writer in writers.values():
-            raw_writer.release()
+            if raw_writer is not None:
+                raw_writer.release()
             debug_writer.release()
         for output in (timestamps_file, performance_file, predictions_file):
             if output is not None:
@@ -3320,14 +3518,18 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     "spatial_appearance": not args.no_spatial_appearance,
                 },
                 "files": {
-                    "predictions": "predictions.jsonl",
-                    "timestamps": "frame_timestamps.csv",
+                    **({} if args.debug_video_only else {
+                        "predictions": "predictions.jsonl",
+                        "timestamps": "frame_timestamps.csv",
+                    }),
                     "ground_truth_slots": "ground_truth_slots.csv",
                     "ground_truth_events": "ground_truth_events.csv",
                     "ground_truth_identity": "ground_truth_identity.csv",
                     **({
-                        "raw_cam1": "raw_cam1.mp4",
-                        "raw_cam2": "raw_cam2.mp4",
+                        **({} if args.debug_video_only else {
+                            "raw_cam1": "raw_cam1.mp4",
+                            "raw_cam2": "raw_cam2.mp4",
+                        }),
                         "debug_cam1": "debug_cam1.mp4",
                         "debug_cam2": "debug_cam2.mp4",
                     } if writers else {}),

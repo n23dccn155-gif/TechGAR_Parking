@@ -4,6 +4,16 @@ Production mode consumes the two-camera runtime snapshot and keys every
 session by ``vehicles[].global_id``. A missing observation never closes a
 session. The session is deleted only when that Global ID crosses the configured
 physical exit line in the accepted direction.
+
+P16i (lỗi #7, ``REPORT_P16g.md`` §3): một xe đỗ lâu trong bãi có
+``identity.last_seen_time`` **đứng yên** (tracker chuyển động bỏ xe đứng yên),
+rồi nhảy một bước lớn khi xe rời ô. Bản cũ bỏ mọi snapshot có
+``last_seen_time`` không tăng và coi bước nhảy đó là "không liên tục", nên xe
+đi ra qua vạch mà không có ``[EXIT]`` — lỗi có thật ngoài đời, không chỉ ở sim.
+Mặc định mới: giữ nguyên luật ``[ENTRY]``/``[EXIT]``, chỉ coi **chuyển động thật
+của vị trí** (khi thời gian quan sát đứng yên) là bằng chứng mới và cho bước
+nhảy thời gian sau lúc đỗ đi qua luật liên tục. ``--legacy-stale-last-seen``
+trả lại hành vi cũ.
 """
 
 from __future__ import annotations
@@ -53,6 +63,10 @@ LEGACY_GATE_CONFIG = ROOT_DIR / "frontend" / "public" / "gate_roi.json"
 DEFAULT_GATE_CONFIG = BASE_DIR / "main_detect" / "config" / "gate_zones.json"
 PARKING_STATUS_SAMPLE = ROOT_DIR / "frontend" / "public" / "parking_status_sample.json"
 DEFAULT_RUNTIME_URL = "http://127.0.0.1:8001/api/runtime/snapshot"
+
+#: Ngưỡng dịch chuyển (đơn vị world, thường là cm) để coi vị trí vehicle **thật sự đổi**
+#: khi ``last_seen_time`` đứng yên — xem ``accept_stale_source`` (P16i).
+STALE_SOURCE_MOVE_EPS = 1e-3
 
 _LATEST_RUNTIME_LOCK = threading.RLock()
 _latest_runtime_snapshot: Optional[dict[str, Any]] = None
@@ -319,6 +333,7 @@ class GateSessionCoordinator:
         parked_confirm_seconds: float = 2.0,
         clock: Callable[[], float] = time.monotonic,
         allow_legacy: bool = False,
+        accept_stale_source: bool = True,
     ) -> None:
         self.gate_config = {
             "coordinate_space": str(gate_config.get("coordinate_space", "world")),
@@ -336,6 +351,12 @@ class GateSessionCoordinator:
         self._last_frame_index: Optional[int] = None
         self.runtime_id: Optional[str] = None
         self.allow_legacy = allow_legacy
+        #: Xe đỗ lâu làm ``identity.last_seen_time`` đứng yên; khi nó rời ô, vị trí vẫn
+        #: đổi trong khi thời gian quan sát chưa nhích.  ``True`` (mặc định, P16i): coi
+        #: chuyển động thật đó là bằng chứng mới để không mất lượt ``[EXIT]``
+        #: (``REPORT_P16g.md`` §3, lỗi #7).  ``False`` = hành vi cũ, giữ cho
+        #: ``--legacy-stale-last-seen``.
+        self.accept_stale_source = accept_stale_source
         self.identity_conflicts: set[int] = set()
         self._episode_cursors: dict[str, tuple[int, str, str, float, int]] = {}
         self.episode_diagnostics: dict[int, str] = {}
@@ -477,13 +498,50 @@ class GateSessionCoordinator:
             source_time = (float(source_time) if isinstance(source_time, (int, float))
                            and math.isfinite(source_time) else None)
             previous_source_time = self._last_source_observed_at.get(global_id)
-            if observed and source_time is not None and previous_source_time is not None:
-                if source_time <= previous_source_time:
-                    continue  # A newer snapshot can still contain old vehicle evidence.
-            source_is_continuous = (source_time is None or
-                                    (previous_source_time is not None and
-                                     0 < source_time - previous_source_time <= 1.0))
             previous_observed_at = self._last_observed_at.get(global_id)
+            # A parked vehicle keeps ``identity.last_seen_time`` frozen (the motion
+            # tracker stops reporting a stationary car), so the same timestamp can
+            # come with a genuinely new measured position while the car drives off
+            # the parking spot.  Before P16i that was dropped as "old evidence" and
+            # the vehicle stayed frozen at its pre-parking position forever, losing
+            # its [EXIT] at the exit line (REPORT_P16g.md §3, lỗi #7).  A repeated
+            # timestamp with an unchanged position is still old evidence, and
+            # ``--legacy-stale-last-seen`` restores the old rule.
+            moved = (
+                previous is not None
+                and math.hypot(
+                    position["x"] - previous["x"], position["y"] - previous["y"]
+                ) > STALE_SOURCE_MOVE_EPS
+            )
+            #: Chỉ áp dụng cho xe **đã có phiên**: đó là ca xe đỗ trong bãi rồi ra.
+            #: Luật tạo ``[ENTRY]`` giữ nguyên — bằng chứng cũ (thời gian quan sát
+            #: đứng yên/lùi) vẫn không được tạo phiên mới, đúng hợp đồng
+            #: ``test_gate_uses_source_observation_time_not_http_arrival_speed``.
+            fresh_motion = (
+                moved
+                and self.accept_stale_source
+                and find_session_by_global_id(global_id, runtime_id=runtime_id) is not None
+            )
+            source_repeated = (
+                observed
+                and source_time is not None
+                and previous_source_time is not None
+                and source_time <= previous_source_time
+            )
+            if source_repeated and not fresh_motion:
+                continue  # A newer snapshot can still contain old vehicle evidence.
+            source_is_continuous = (
+                source_time is None
+                or (previous_source_time is not None and
+                    0 < source_time - previous_source_time <= 1.0)
+                # Xe đỗ lâu: ``last_seen_time`` đứng yên rồi nhảy một bước lớn (47 s ở
+                # session_hiep_sang8).  Vẫn là cùng một chuỗi quan sát khi controller
+                # thấy xe trong <= 1 s gần nhất và vị trí thật sự đổi; nếu không, bước
+                # nhảy đúng lúc qua vạch làm mất [EXIT].
+                or (fresh_motion
+                    and previous_observed_at is not None
+                    and now - previous_observed_at <= 1.0)
+            )
             observation_is_continuous = (
                 observed
                 and previous is not None
@@ -864,6 +922,14 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--port", type=int, default=8000)
     result.add_argument("--poll-interval", type=float, default=0.25)
     result.add_argument("--parked-confirm-seconds", type=float, default=2.0)
+    result.add_argument(
+        "--legacy-stale-last-seen",
+        action="store_true",
+        help=(
+            "hành vi trước P16i: bỏ mọi snapshot có last_seen_time không tăng và coi "
+            "bước nhảy thời gian sau khi xe đỗ là không liên tục (mặc định: tắt)"
+        ),
+    )
     return result
 
 
@@ -882,6 +948,7 @@ def main() -> None:
         gate_config,
         parked_confirm_seconds=args.parked_confirm_seconds,
         allow_legacy=args.source is not None,
+        accept_stale_source=not args.legacy_stale_last_seen,
     )
     api_thread = threading.Thread(target=start_api_server, args=(args.port,), daemon=True)
     api_thread.start()

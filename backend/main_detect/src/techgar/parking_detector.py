@@ -115,6 +115,7 @@ class ParkingDetector:
         occupied_seconds: float = 0.5,
         empty_seconds: float = 1.0,
         selective_line_filter: bool = True,
+        static_color_rescue: bool = True,
     ):
         self.base_gamma = base_gamma
         self.base_clahe = base_clahe
@@ -134,6 +135,8 @@ class ParkingDetector:
         self.occupied_seconds = max(0.0, float(occupied_seconds))
         self.empty_seconds = max(0.0, float(empty_seconds))
         self.selective_line_filter = bool(selective_line_filter)
+        self.static_color_rescue = bool(static_color_rescue)
+        self._static_color_previous: Dict[str, Tuple[np.ndarray, float]] = {}
         self.core_rescue_raw_ratio = 0.30
         self._stable_slots: dict = {}
         self._accepted_timestamp = float('-inf')
@@ -226,6 +229,7 @@ class ParkingDetector:
         return None
 
     def _compute_rois(self, img_shape: Tuple[int, ...]) -> None:
+        self._static_color_previous.clear()
         h, w = img_shape[:2]
         sx = w / self._img_w_ref
         sy = h / self._img_h_ref
@@ -427,6 +431,47 @@ class ParkingDetector:
         )
         return central_blob or textured_dense_blob
 
+    def _has_static_color_rescue(self, frame: np.ndarray, roi: _PrecomputedROI) -> bool:
+        """Require a persistent colored body and dark detail inside the slot core.
+
+        This is additional evidence for low-texture colored cars, not a lower
+        ensemble threshold. Consecutive parking samples must agree spatially;
+        a solid-colored surface, line or moving blob is insufficient alone.
+        """
+        x1, y1, x2, y2 = roi.bbox
+        hsv = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+        core = roi.core_mask > 0
+        area = int(np.count_nonzero(core))
+        if not area:
+            self._static_color_previous.pop(roi.slot_id, None)
+            return False
+        saturation, value = hsv[:, :, 1], hsv[:, :, 2]
+        colored = core & (saturation > 80) & (value > 35)
+        dark = core & (value < 70)
+        values = value[core]
+        dark_ratio = float(np.count_nonzero(dark)) / area
+        color_ratio = float(np.count_nonzero(colored)) / area
+        if color_ratio < 0.40 or dark_ratio < 0.18:
+            self._static_color_previous.pop(roi.slot_id, None)
+            return False
+        contrast = float(np.percentile(values, 90)) - float(np.percentile(values, 10))
+        if contrast < 35.0:
+            self._static_color_previous.pop(roi.slot_id, None)
+            return False
+        count, _, stats, _ = cv2.connectedComponentsWithStats(
+            colored.astype(np.uint8), connectivity=8
+        )
+        if count < 2 or int(np.max(stats[1:, cv2.CC_STAT_AREA])) < 0.30 * area:
+            self._static_color_previous.pop(roi.slot_id, None)
+            return False
+        previous = self._static_color_previous.get(roi.slot_id)
+        self._static_color_previous[roi.slot_id] = (colored.copy(), dark_ratio)
+        if previous is None or previous[0].shape != colored.shape:
+            return False
+        union = int(np.count_nonzero(colored | previous[0]))
+        overlap = int(np.count_nonzero(colored & previous[0])) / max(1, union)
+        return overlap >= 0.65 and abs(dark_ratio - previous[1]) <= 0.12
+
     def _get_gamma_lut(self, gamma: float) -> np.ndarray:
         gamma = round(gamma, 1)
         if gamma not in self._lut_cache:
@@ -532,6 +577,7 @@ class ParkingDetector:
         # ── Pass 1: Threshold + Center Cluster ──
         required_votes = total_combinations // 2
         is_free_list = [True] * len(self._rois)
+        static_rescues = [False] * len(self._rois)
 
         for i, roi in enumerate(self._rois):
             if roi is None:
@@ -539,14 +585,19 @@ class ParkingDetector:
             is_free = empty_votes[i] >= required_votes
 
             evidence = base_evidence[i]
+            static_rescue = (
+                self.static_color_rescue
+                and self._has_static_color_rescue(frame, roi)
+            )
             if (
                 is_free
                 and evidence is not None
-                and self._has_core_rescue(evidence)
+                and (self._has_core_rescue(evidence) or static_rescue)
             ):
                 is_free = False
 
             is_free_list[i] = is_free
+            static_rescues[i] = static_rescue
 
         # ── Pass 2: Edge Recheck ──
         if self.use_edge_recheck:
@@ -588,7 +639,8 @@ class ParkingDetector:
                         "empty_votes": empty_votes[i],
                         "exit_empty_votes": exit_votes[i],
                         "required_votes": required_votes,
-                        "rescue": self._has_core_rescue(base_evidence[i]),
+                        "rescue": self._has_core_rescue(base_evidence[i]) or static_rescues[i],
+                        "static_color_rescue": static_rescues[i],
                         "instant_occupied": not is_free_list[i],
                         "enter_ratio": float(self.ratio_thr),
                         "exit_ratio": float(min(self.ratio_thr, self.exit_ratio_thr)),

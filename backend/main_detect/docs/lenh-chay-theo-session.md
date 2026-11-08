@@ -58,12 +58,28 @@ Vẽ mask cho cam live (setup hiện tại, ghi vào config chính):
 
 ## 3. Vẽ lại ô đỗ (parking slots)
 
+Luôn truyền `--output` rõ ràng. Chạy không có `--output` thì tool ghi vào
+`config\parking_slots.json` (mặc định) và nạp lại file đó nếu có; phím `q` hoặc
+`Esc` đều lưu file ngay, kể cả khi chỉ muốn thoát.
+
+Vẽ thử / quay demo (KHÔNG đụng config thật; `--reset` để bắt đầu từ trống):
+
 ```powershell
-.\.venv\Scripts\python.exe .\tools\ParkingSpacePicker_ve_js.py
+mkdir experiment_test\output\roi_demo -Force
+.\.venv\Scripts\python.exe .\tools\ParkingSpacePicker_ve_js.py `
+  --image "experiment_test\output\roi_demo\cam1_frame.png" `
+  --output "experiment_test\output\roi_demo\parking_slots_cam1_demo.json" `
+  --reset --row A
 ```
 
-(lưu thẳng vào `config\sessions\<session>\parking_slots_camN.json` khi làm
-việc với video cũ — vd_18 cần cả slots_cam2, live15 cần cả 2.)
+Vẽ thật cho một session cũ — chỉ khi chủ đích ghi đè (sao lưu file cũ trước);
+vd_18 cần cả slots_cam2, live15 cần cả 2:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\ParkingSpacePicker_ve_js.py `
+  --video "experiment_test\output\<SESSION_VIDEO>\raw_cam1.mp4" `
+  --output "config\sessions\<session>\parking_slots_cam1.json"
+```
 
 ## 4. Vẽ / hiệu chuẩn đường giao chung (calibrate_map)
 

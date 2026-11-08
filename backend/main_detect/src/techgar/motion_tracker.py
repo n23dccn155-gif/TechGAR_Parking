@@ -27,6 +27,10 @@ from .tracklet_descriptor import (
 from .vehicle_tracker import TrackStatus, TrackedVehicle
 from .occlusion_guard import OcclusionGuard
 
+#: P26: biên độ dịch chuyển tối đa (px) trong vài mẫu gần nhất để coi một
+#: fragment là "đứng yên tại chỗ". Xe đang chạy vượt xa ngưỡng này rất nhanh.
+STATIONARY_AT_REST_PX: float = 4.0
+
 
 class MotionVehicleTracker:
     """Tracker không phụ thuộc model, tối ưu cho camera cố định có xe chuyển động."""
@@ -35,6 +39,10 @@ class MotionVehicleTracker:
         self,
         min_visible_count: int = 3,
         lost_track_ttl: int = 90,
+        # P26 (lead duyet 5.2): giu fragment dung yen da duoc thay that khi
+        # detector bo mat no vai giay (xe do roi nhich lai). Tat bang
+        # ``--legacy-stationary-ttl``.
+        hold_stationary_fragment_ttl: bool = True,
         history_len: int = 10,
         min_area: int = 650,
         min_width: int = 22,
@@ -96,6 +104,7 @@ class MotionVehicleTracker:
     ):
         self.min_visible_count = max(1, min_visible_count)
         self.lost_track_ttl = max(1, lost_track_ttl)
+        self.hold_stationary_fragment_ttl = bool(hold_stationary_fragment_ttl)
         self.history_len = max(2, history_len)
         self.min_area = min_area
         self.min_width = min_width
@@ -2172,6 +2181,44 @@ class MotionVehicleTracker:
         if len(track.history) > self.history_len:
             track.history = track.history[-self.history_len:]
 
+    def _stationary_at_rest(self, track) -> bool:
+        """P26: fragment có đang đứng yên tại chỗ không.
+
+        ``track.history`` là deque các ``point`` dạng ``(x, y)``, chỉ được nối
+        thêm khi có **detection mới**. Khi detector bỏ dấu xe (xe vừa dừng),
+        history đứng im — nên phải xét các mẫu **cuối** của nó, và chịu được
+        việc cửa sổ trượt cắt mất phần đầu.
+
+        Đây là điều kiện *thêm* để giữ fragment sống qua TTL; nó không nới
+        lỏng bất kỳ ngưỡng nhận dạng nào.
+        """
+        history = getattr(track, "history", None) or []
+        points: list[tuple[float, float]] = []
+        for entry in list(history)[-4:]:
+            if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+                continue
+            try:
+                points.append((float(entry[0]), float(entry[1])))
+            except (TypeError, ValueError):
+                continue
+        if len(points) < 2:
+            return False
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        spread = max(max(xs) - min(xs), max(ys) - min(ys))
+        if spread <= STATIONARY_AT_REST_PX:
+            return True
+        # Cửa sổ trượt có thể vắt qua đúng lúc xe đang chạy → dừng. Xe đã dừng
+        # thì các mẫu CUỐI gần như trùng nhau; kiểm thêm hai mẫu cuối cùng.
+        if len(points) >= 2:
+            last, previous = points[-1], points[-2]
+            if (
+                abs(last[0] - previous[0]) <= STATIONARY_AT_REST_PX
+                and abs(last[1] - previous[1]) <= STATIONARY_AT_REST_PX
+            ):
+                return True
+        return False
+
     def suspend_track(self, track_id: int, reason: str = "parked") -> Optional[TrackedVehicle]:
         """Remove a parked local fragment from ordinary motion association."""
         track = self._tracks.pop(int(track_id), None)
@@ -2302,9 +2349,28 @@ class MotionVehicleTracker:
             if track.status == TrackStatus.CONFIRMED:
                 track.status = TrackStatus.LOST
                 self._newly_lost_tracks.append((track_id, track))
+            # P26 (lead duyet 5.2): mot fragment DA THAY THAT (>=5 khung hinh)
+            # dang dung yen tai cho khong duoc TTL don di chi vi detector bo
+            # mat no vai giay. Do duoc tren V049 sang_5p: local 11 duoc cap
+            # GID 1 o f562-566, roi bi TTL `_tracks.pop` o f678 => binding mo
+            # coi => xe quay lai voi GID 22.
+            #
+            # Ap dung cho CA HAI nhanh TTL: dem theo frame VA dem theo giay
+            # (``_lost_beyond_ttl_seconds`` mac dinh 1.5 s -- day chinh la
+            # nhanh da giet local 11 o f678, vi luc do invisible chi ~13 frame
+            # nhung da qua 4,4 giay).
+            hold_stationary = (
+                self.hold_stationary_fragment_ttl
+                and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                and self._stationary_at_rest(track)
+            )
             if (
                 track.consecutive_invisible_count > self.lost_track_ttl
-                or self._lost_beyond_ttl_seconds(track)
+                and not hold_stationary
+                or (
+                    self._lost_beyond_ttl_seconds(track)
+                    and not hold_stationary
+                )
             ):
                 expired.append(track_id)
         expired_tracks = []  # Danh sách tracks vừa expire frame này
@@ -2380,12 +2446,35 @@ class MotionVehicleTracker:
         camera.  ``active_tracks`` deliberately hides tentative tracks from the
         UI and JSON, while this view lets the global-ID manager bind an old ID
         before local confirmation completes.
+
+        P26 (lead duyet 5.2): một fragment **đã từng được thấy thật** (>=5
+        khung hình) và đang **đứng yên tại chỗ** vẫn được coi là quan sát được
+        dù frame này detector không trả về nó. Nếu không, binding GID vừa cấp
+        sẽ rơi ngay khi `consecutive_invisible_count` thành 1 — đúng lỗi V049
+        sang_5p (local 11 được cấp GID 1 ở f562-566 rồi mất ở f567, xe quay
+        lại mang GID 22).
+
+        KHÔNG mở cho fragment đang chạy: ``_stationary_at_rest`` đòi biên độ
+        dịch chuyển <= ``STATIONARY_AT_REST_PX`` trên các mẫu gần nhất.
         """
+        def _held(candidate) -> bool:
+            """P26: fragment đứng yên, đã thấy thật, giữ dù detector bỏ dấu."""
+            return (
+                self.hold_stationary_fragment_ttl
+                and int(getattr(candidate, "fragment_visible_count", 0) or 0) >= 5
+                and self._stationary_at_rest(candidate)
+            )
+
         return {
             track_id: track
             for track_id, track in self._tracks.items()
-            if track.consecutive_invisible_count == 0
-            and track.status in (TrackStatus.TENTATIVE, TrackStatus.CONFIRMED)
+            if (track.consecutive_invisible_count == 0 or _held(track))
+            and (
+                track.status in (TrackStatus.TENTATIVE, TrackStatus.CONFIRMED)
+                # P26: xe đứng yên vừa bị chuyển LOST vẫn là cùng chiếc xe;
+                # giữ nó trong khung nhìn của bộ cấp GID để không mất GID.
+                or (track.status == TrackStatus.LOST and _held(track))
+            )
         }
 
     @property

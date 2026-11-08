@@ -238,6 +238,9 @@ class SlotVehicleBinder:
         recovery_min_movement_px: float = 3.0,
         recovery_min_outward_px: float = 1.5,
         recovery_min_radial_gain_px: float = 0.75,
+        legacy_departure_token_distance: bool = False,
+        legacy_token_key_reuse: bool = False,
+        legacy_token_continuation_range: bool = False,
         arrival_lookback_seconds: float = 1.5,
         arrival_min_samples: int = 3,
         arrival_vision_confirmations: int = 2,
@@ -302,6 +305,20 @@ class SlotVehicleBinder:
         self.recovery_min_radial_gain_px = max(
             0.0,
             float(recovery_min_radial_gain_px),
+        )
+        # Escape hatch (SPEC_P16 R6): restore the pre-P16 behaviour where any
+        # recently observed fragment could keep a departure token alive no
+        # matter how far it had driven from the slot.
+        # P16d: local keys whose token expired without recovering a GID.  Another
+        # slot's token must not adopt them again (see ``_note_abandoned_keys``).
+        self.legacy_token_key_reuse = bool(legacy_token_key_reuse)
+        # P18a/L-A: escape hatch for the owner-still-parked continuation cap.
+        self.legacy_token_continuation_range = bool(
+            legacy_token_continuation_range
+        )
+        self._abandoned_candidate_keys: Set[int] = set()
+        self.legacy_departure_token_distance = bool(
+            legacy_departure_token_distance
         )
         self.arrival_lookback_seconds = max(0.25, float(arrival_lookback_seconds))
         self.arrival_min_samples = max(2, int(arrival_min_samples))
@@ -371,6 +388,10 @@ class SlotVehicleBinder:
                 "state": "parked",
                 "center": tuple(binding.center),
                 "bbox": tuple(state.last_bbox) if state and state.last_bbox else None,
+                # P16k (b): the coordinator may only refuse a dormant re-id on
+                # this reservation while vision still confirms a vehicle in the
+                # slot.  A car that is already driving away must stay re-usable.
+                "vision_occupied": bool(binding.vision_occupied),
                 "appearance": self._copy_appearance(
                     state.last_appearance if state is not None else None
                 ),
@@ -1446,6 +1467,20 @@ class SlotVehicleBinder:
         stationary_drift = max(5.0, self.stationary_drift_ratio * bbox_diagonal)
         return robust_drift <= stationary_drift
 
+    def _note_abandoned_keys(self, token: DepartureToken) -> None:
+        """Remember the fragments of a token that expired unrecovered.
+
+        Real-world reason: a fragment that hovered near a slot but never became a
+        qualified departure (a car driving down the aisle) would otherwise be
+        adopted by the *next* slot's token, and each adoption reserves the track
+        in ``protected_local_keys`` (no GID) for a full retention window.
+        Called only on the expiry path (recovery never completed); a successful
+        recovery pops the token elsewhere, so a fragment here lost its GID anyway.
+        """
+        if self.legacy_token_key_reuse:
+            return
+        self._abandoned_candidate_keys.update(token.candidates)
+
     def _create_departure_token(
         self,
         binding: SlotBinding,
@@ -1646,10 +1681,38 @@ class SlotVehicleBinder:
         fragment inside the expanding gate is still accumulating recovery
         evidence.  With no fresh or qualified evidence the departure is
         stalled/abandoned and the token dies on time.
+
+        **Distance bound (real-world reason, not a sim tuning knob).** A
+        fragment only counts as evidence while it is still plausibly *the
+        vehicle that left this slot*.  A car that has already driven away
+        across the lot is a different vehicle by definition, so keeping the
+        token alive for it both extends the token to its hard deadline and -
+        worse - keeps the track listed in ``protected_local_keys``, which
+        excludes it from every Global-ID assignment path
+        (``cross_camera_manager.py:8168/8177``).  The track then runs with
+        ``canonical_gid=None`` and its Global ID breaks.
+
+        The bound reuses the **same** radius the candidate matcher already
+        applies (``slot_diagonal * recovery_max_expand_ratio``, see
+        ``batch_recover_ids``), so a fragment that could never have been
+        matched in the first place can no longer keep the token alive.  No
+        new constant is introduced.
         """
         fresh_evidence = False
         qualified_evidence = False
-        for evidence in token.candidates.values():
+        for key, evidence in token.candidates.items():
+            # A fragment beyond the recovery gate can never consume this token
+            # (the matcher rejects it with ``origin_outside_max_gate``), so it
+            # must not keep the token alive either - neither as fresh nor as
+            # qualified evidence.  Without this the token lives to its hard
+            # deadline on the strength of a completely different vehicle.
+            #
+            # Cross-camera evidence keeps its exemption on purpose: its pixel
+            # centre lives in the *other* camera's image, so measuring it
+            # against this token's polygon would reject a legitimate handoff
+            # (the same slot has two different pixel projections).
+            if not self._evidence_within_token_gate(evidence, token):
+                continue
             age_s = now_s - evidence.last_seen_s
             if age_s <= self.false_empty_grace_seconds:
                 fresh_evidence = True
@@ -1668,6 +1731,29 @@ class SlotVehicleBinder:
             # vision sample (``departure_not_yet_confirmed``).
             return "departure_not_yet_confirmed"
         return "candidate_evidence_in_progress"
+
+    def _evidence_within_token_gate(
+        self,
+        evidence: RecoveryCandidateEvidence,
+        token: DepartureToken,
+    ) -> bool:
+        """Is this evidence still close enough to be a candidate for ``token``?
+
+        Applies the same radius as the candidate matcher
+        (``slot_diagonal * recovery_max_expand_ratio``); ``legacy`` mode keeps
+        the old unbounded behaviour for one release so a deployment can fall
+        back without a code change.
+        """
+        if self.legacy_departure_token_distance:
+            return True
+        center = evidence.last_center
+        if center is None:
+            return True
+        max_radius = token.slot_diagonal * self.recovery_max_expand_ratio
+        signed = self._signed_polygon_distance(center, token.polygon)
+        # ``signed`` is positive inside the polygon, negative outside, and its
+        # magnitude is the distance to the nearest edge.
+        return not (signed < 0.0 and -signed > max_radius)
 
     def _rank_fragment_continuations(
         self,
@@ -1864,6 +1950,7 @@ class SlotVehicleBinder:
                     reason="provisional_expired_owner_still_parked",
                 )
                 continue
+            self._note_abandoned_keys(token)
             if token.candidates:
                 # Diagnostic hardening: surface mid-qualification candidates
                 # that were still attached when the token died, so the
@@ -2875,6 +2962,8 @@ class SlotVehicleBinder:
             radius = self._token_radius(token, timestamp_s)
             max_radius = token.slot_diagonal * self.recovery_max_expand_ratio
             for column, key in enumerate(candidate_keys):
+                if key in self._abandoned_candidate_keys:
+                    continue
                 data = candidate_data[key]
                 source_camera = data["source_camera"]
                 if (
@@ -2902,6 +2991,20 @@ class SlotVehicleBinder:
                     continuation_limit = max(
                         20.0, 0.35 * token.slot_diagonal
                     )
+                    # P18a/L-A: a provisional (pre-departure) token whose owner
+                    # is still parked and visible cannot be continued by a
+                    # fragment born far from the dead one - that is another
+                    # car passing by (K2: V003 hijacked by V002's token).
+                    owner_binding = self._bindings.get(token.slot_id)
+                    owner_still_parked = (
+                        not self.legacy_token_continuation_range
+                        and token.predeparture
+                        and not token.confirmed_empty
+                        and owner_binding is not None
+                        and owner_binding.vision_occupied
+                        and owner_binding.vehicle_id == token.global_id
+                        and owner_binding.tracking_state == "parked"
+                    )
                     possible_sources = []
                     for old_key, old_evidence in token.candidates.items():
                         if old_key in live_keys:
@@ -2920,7 +3023,9 @@ class SlotVehicleBinder:
                         ):
                             continue
                         source_limit = (
-                            max(continuation_limit, 1.50 * token.slot_diagonal)
+                            continuation_limit
+                            if owner_still_parked
+                            else max(continuation_limit, 1.50 * token.slot_diagonal)
                             if old_evidence.qualified_predeparture
                             else (
                                 max(continuation_limit, 2.25 * token.slot_diagonal)
