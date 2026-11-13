@@ -21,7 +21,7 @@
     "edge_thr": 0.25,
     "use_edge_recheck": false,
     "border_ignore_ratio": 0.12,
-    "line_min_span_ratio": 0.45,
+    "line_min_span_ratio": 0.25,
     "line_max_thickness_ratio": 0.18,
     "core_scale": 0.79,
     "core_ratio_threshold": 0.18,

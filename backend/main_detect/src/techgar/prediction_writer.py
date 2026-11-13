@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import copy
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Optional
 
@@ -54,17 +55,37 @@ class _RollingEventDelta:
     events, unlike a global content-hash set.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, cache_fingerprints: bool = False) -> None:
         self._previous: tuple[tuple[int, str], ...] = ()
+        self._cache_fingerprints = cache_fingerprints
+        self._fingerprint_cache = {}
         # Retaining the objects prevents CPython from recycling an id while it
         # still participates in the next rolling-window overlap comparison.
         self._previous_events: tuple[Mapping[str, Any], ...] = ()
 
     def take(self, events: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
         current_events = list(events)
-        current = tuple(
-            (id(event), _event_fingerprint(event)) for event in current_events
-        )
+        if self._cache_fingerprints:
+            cache = {}
+            items = []
+            for event in current_events:
+                key = id(event)
+                prior = self._fingerprint_cache.get(key)
+                try:
+                    unchanged = prior is not None and prior[0] is event and event == prior[1]
+                    unchanged = bool(unchanged)
+                except (ValueError, TypeError):
+                    unchanged = False
+                if unchanged:
+                    entry = prior
+                else:
+                    entry = (event, copy.deepcopy(event), _event_fingerprint(event))
+                cache[key] = entry
+                items.append((key, entry[2]))
+            self._fingerprint_cache = cache
+            current = tuple(items)
+        else:
+            current = tuple((id(event), _event_fingerprint(event)) for event in current_events)
         max_overlap = min(len(self._previous), len(current))
         overlap = 0
         for size in range(max_overlap, 0, -1):
@@ -79,8 +100,9 @@ class _RollingEventDelta:
 class PredictionV3Builder:
     """Stateful builder for one schema-v3 JSONL stream."""
 
-    def __init__(self) -> None:
-        self._manager_events = _RollingEventDelta()
+    def __init__(self, *, cache_event_fingerprints: bool = False) -> None:
+        self._cache_event_fingerprints = cache_event_fingerprints
+        self._manager_events = _RollingEventDelta(cache_fingerprints=cache_event_fingerprints)
         self._parking_events: dict[str, _RollingEventDelta] = {}
         self._next_event_serial = 1
 
@@ -407,7 +429,7 @@ class PredictionV3Builder:
         rows = []
         for camera_id, binder in sorted(binders.items()):
             stream = self._parking_events.setdefault(
-                str(camera_id), _RollingEventDelta()
+                str(camera_id), _RollingEventDelta(cache_fingerprints=self._cache_event_fingerprints)
             )
             for event in stream.take(binder.events):
                 rows.append(self._normalise_event(
@@ -435,6 +457,7 @@ class PredictionV3Builder:
         registry: Mapping[str, Any],
         parking_recovery: Sequence[Mapping[str, Any]],
         parked_identity_reservations: Mapping[int, Mapping[str, Any]],
+        omit_observations: bool = False,
     ) -> dict[str, Any]:
         """Build one JSON-safe frame without changing live runtime state."""
         canonicalize = getattr(manager, "canonical_global_id", int)
@@ -442,7 +465,7 @@ class PredictionV3Builder:
             registry, canonicalize
         )
         slots, ownerships = self._slots(binders, canonicalize)
-        observations = self._observations(
+        observations = [] if omit_observations else self._observations(
             frame_idx=frame_idx,
             trackers=trackers,
             global_ids=global_ids,

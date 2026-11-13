@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+import os
 import time
 from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple
 
@@ -199,9 +200,43 @@ class SlotBinding:
     vision_evidence_timestamp_s: Optional[float] = None
 
 
+#: P35/T2b: `TECHGAR_PROFILE=1` cung bat bo dem thoi gian cua binder, de tach
+#: phan nao trong khoi "cross" cua two_camera.py cham dan theo thoi gian.
+_BINDER_PROFILE = os.environ.get("TECHGAR_PROFILE") == "1"
+_BINDER_PROFILE_ACC: Dict[str, float] = {}
+_BINDER_PROFILE_FRAMES = 0
+
+
+def _binder_profile_add(section: str, elapsed_s: float) -> None:
+    if not _BINDER_PROFILE:
+        return
+    _BINDER_PROFILE_ACC[section] = (
+        _BINDER_PROFILE_ACC.get(section, 0.0) + elapsed_s
+    )
+
+
+def _binder_profile_report() -> None:
+    global _BINDER_PROFILE_FRAMES
+    if not _BINDER_PROFILE:
+        return
+    _BINDER_PROFILE_FRAMES += 1
+    if _BINDER_PROFILE_FRAMES % 300:
+        return
+    parts = " ".join(
+        f"{name}={value / _BINDER_PROFILE_FRAMES * 1000.0:.1f}ms"
+        for name, value in sorted(
+            _BINDER_PROFILE_ACC.items(), key=lambda item: -item[1]
+        )
+    )
+    print(
+        f"[p35-binder] frames={_BINDER_PROFILE_FRAMES} {parts}",
+        flush=True,
+    )
+    _BINDER_PROFILE_ACC.clear()
+
+
 class SlotVehicleBinder:
     """Maintain global-ID to parking-slot assignments.
-
     The class accepts either one camera or a shared, full-frame coordinate
     space.  Call :meth:`update_tracks` on every frame and :meth:`update_vision`
     whenever the slower ensemble parking detector runs.
@@ -241,6 +276,19 @@ class SlotVehicleBinder:
         legacy_departure_token_distance: bool = False,
         legacy_token_key_reuse: bool = False,
         legacy_token_continuation_range: bool = False,
+        # P29 (V060 toi_5p): mot token cua o A khong duoc "nhan" mot fragment
+        # dang DO VAO o B ben canh.  Ban kinh token
+        # (``slot_diagonal * recovery_max_expand_ratio`` ~ 0.85 duong cheo o)
+        # phu gan het o ke ben, nen xe dang vao o canh bi giu
+        # ``canonical_gid = None`` suot trong khi token cho bang chung "xe roi
+        # o" - bang chung ma xe dang do KHONG BAO GIO tao ra duoc.
+        # Do duoc tren V060/S054: local cam1#82 bi token S056 (GID 3) giu tu
+        # f4623 toi f4722 (91 frame), trong khi no cach tam S054 36.7 px va
+        # cach tam S056 99.5 px.
+        # Bat: chi giu fragment cho token khi o cua token la o GAN NHAT voi
+        # fragment (hoac fragment da chung minh duoc la dang roi o do). Tat
+        # bang ``--legacy-token-foreign-slot-capture``.
+        token_foreign_slot_guard: bool = True,
         arrival_lookback_seconds: float = 1.5,
         arrival_min_samples: int = 3,
         arrival_vision_confirmations: int = 2,
@@ -320,6 +368,9 @@ class SlotVehicleBinder:
         self.legacy_departure_token_distance = bool(
             legacy_departure_token_distance
         )
+        # P29 (V060 toi_5p): xem ``SlotVehicleBinder.token_foreign_slot_guard``.
+        self.token_foreign_slot_guard = bool(token_foreign_slot_guard)
+        self._token_foreign_slot_rejections: Set[Tuple[Hashable, str]] = set()
         self.arrival_lookback_seconds = max(0.25, float(arrival_lookback_seconds))
         self.arrival_min_samples = max(2, int(arrival_min_samples))
         self.arrival_vision_confirmations = max(
@@ -338,6 +389,12 @@ class SlotVehicleBinder:
 
         self._bindings: Dict[str, SlotBinding] = {}
         self._vehicle_to_slot: Dict[int, str] = {}
+        # 1113 (core2/core2l): a parked GID accepted for another camera's
+        # binding of the SAME slot id.  With defer_to_foreign_owner on, this
+        # binder does not re-claim it (the claim was rejected every ~1.2 s,
+        # flickering "[slot-park]" ~490 times per car on toi_10p).
+        self.defer_to_foreign_owner = False
+        self._foreign_owner_slot: Dict[int, str] = {}
         self._vehicle_states: Dict[int, VehicleParkingState] = {}
         self._pending_release: Dict[str, Tuple[int, int]] = {}
         self._departure_tokens: Dict[str, DepartureToken] = {}
@@ -430,6 +487,13 @@ class SlotVehicleBinder:
             int(canonicalize(int(global_id))): dict(reservation)
             for global_id, reservation in accepted.items()
         }
+        own_cameras = {str(b.camera_id) for b in self._bindings.values()}
+        self._foreign_owner_slot = {
+            gid: str(res.get("slot_id"))
+            for gid, res in canonical_accepted.items()
+            if res.get("state") == "parked"
+            and str(res.get("camera_id")) not in own_cameras
+        }
 
         for binding in self._bindings.values():
             if binding.vehicle_id is None:
@@ -511,6 +575,13 @@ class SlotVehicleBinder:
         """
         self._last_timestamp_s = float(timestamp_s)
         protected: Set[Hashable] = set()
+        # P35/T2b: slot diagonals are static; the old loop recomputed them for
+        # every (fragment, slot) pair on every frame.
+        diagonals = {
+            id(binding): self._slot_diagonal(binding.polygon)
+            for binding in self._bindings.values()
+            if binding.polygon is not None
+        }
         for key, track in unbound_tracks.items():
             bbox = self._optional_bbox(track, "recovery_bbox") or self._track_bbox(track)
             point = self._optional_point(track, "recovery_position") or self._bottom_center(bbox)
@@ -523,7 +594,9 @@ class SlotVehicleBinder:
                     or binding.camera_id not in (None, camera_id)
                 ):
                     continue
-                diagonal = self._slot_diagonal(binding.polygon)
+                diagonal = diagonals.get(
+                    id(binding), self._slot_diagonal(binding.polygon)
+                )
                 signed = self._signed_polygon_distance(point, binding.polygon)
                 overlap = self._raw_vehicle_overlap(bbox, binding.polygon)
                 initial_radius = diagonal * self.recovery_initial_expand_ratio
@@ -537,6 +610,19 @@ class SlotVehicleBinder:
             if len(choices) > 1 and choices[1][0] - choices[0][0] < 0.15:
                 continue
             binding = choices[0][1]
+            # P29 (V060 toi_5p): do not open a token for a fragment that is
+            # arriving into a *nearer* neighbouring slot.  A genuine departure
+            # is still exempt because ``_token_is_foreign_to_point`` returns
+            # False for any fragment still inside the token's own slot, which
+            # is where a leaving car always starts.
+            if self._token_is_foreign_to_point(
+                point,
+                binding.slot_id,
+                binding.camera_id,
+                binding.polygon,
+                binding.center,
+            ):
+                continue
             existing = self._departure_tokens.get(binding.slot_id)
             if existing is None:
                 self._create_departure_token(
@@ -638,6 +724,7 @@ class SlotVehicleBinder:
         """
         now_s = self._last_timestamp_s if timestamp_s is None else float(timestamp_s)
         self._cleanup_tokens(now_s)
+        _t_export = time.perf_counter() if _BINDER_PROFILE else 0.0
         exported: List[dict] = []
         for token in sorted(self._departure_tokens.values(), key=lambda item: item.slot_id):
             exported.append(
@@ -674,6 +761,8 @@ class SlotVehicleBinder:
                     ],
                 }
             )
+        if _BINDER_PROFILE:
+            _binder_profile_add("export_tokens", time.perf_counter() - _t_export)
         return exported
 
     def recovery_candidate_keys(self) -> Set[Hashable]:
@@ -731,11 +820,43 @@ class SlotVehicleBinder:
         return abs(float(cv2.contourArea(np.asarray(polygon, dtype=np.float32))))
 
     def _overlap_geometry(self, bbox: BBox, binding: SlotBinding) -> Optional[dict]:
+        return self._overlap_geometry_cached(bbox, binding)
+
+    def _overlap_geometry_cached(
+        self,
+        bbox: BBox,
+        binding: SlotBinding,
+        slot_area: Optional[float] = None,
+        slot_box: Optional[Tuple[int, int, int, int]] = None,
+    ) -> Optional[dict]:
+        """P35/T2b: identical result to the original, minus repeated geometry.
+
+        ``slot_area`` (``_polygon_area``) and the polygon's bounding rect only
+        depend on the slot, but the old code recomputed both for every
+        (track, slot) pair in :meth:`_batch_match` - an O(tracks x slots) sweep
+        whose inputs never change.  Callers that already know them pass them in;
+        everyone else keeps the original behaviour exactly.
+        """
         if binding.polygon is None:
+            return None
+        if slot_box is None:
+            slot_box = cv2.boundingRect(np.asarray(binding.polygon, dtype=np.float32))
+        # P35/T2b: cheap reject before the polygon intersection.  If the vehicle
+        # box and the slot's bounding rect do not overlap, the polygons cannot
+        # intersect, so ``vehicle_overlap`` would be 0 and the result is a
+        # guaranteed ``None`` - identical outcome, far cheaper.
+        sx, sy, sw, sh = slot_box
+        if (
+            bbox[0] + bbox[2] <= sx
+            or sx + sw <= bbox[0]
+            or bbox[1] + bbox[3] <= sy
+            or sy + sh <= bbox[1]
+        ):
             return None
         vehicle_polygon = self._bbox_polygon(bbox)
         vehicle_area = max(1.0, bbox[2] * bbox[3])
-        slot_area = max(1.0, self._polygon_area(binding.polygon))
+        if slot_area is None:
+            slot_area = max(1.0, self._polygon_area(binding.polygon))
         try:
             intersection_area, _ = cv2.intersectConvexConvex(
                 vehicle_polygon.astype(np.float32),
@@ -753,7 +874,9 @@ class SlotVehicleBinder:
         if not qualifies:
             return None
 
-        x, y, w, h = cv2.boundingRect(np.asarray(binding.polygon, dtype=np.float32))
+        if slot_box is None:
+            slot_box = cv2.boundingRect(np.asarray(binding.polygon, dtype=np.float32))
+        x, y, w, h = slot_box
         slot_diagonal = max(1.0, float(np.hypot(w, h)))
         center_distance = float(np.hypot(center[0] - binding.center[0], center[1] - binding.center[1]))
         center_proximity = max(0.0, 1.0 - center_distance / slot_diagonal)
@@ -996,14 +1119,56 @@ class SlotVehicleBinder:
             reason=str(reason),
         )
 
+    def _cached_slot_geometry(self, binding):
+        polygon = binding.polygon
+        signature = tuple((float(p[0]), float(p[1])) for p in polygon)
+        cache = getattr(self, '_perf_geometry_cache', None)
+        if cache is None:
+            cache = self._perf_geometry_cache = {}
+        entry = cache.get(binding.slot_id)
+        if entry is None or entry[0] != signature:
+            entry = (signature, max(1.0, self._polygon_area(polygon)),
+                     cv2.boundingRect(np.asarray(polygon, dtype=np.float32)),
+                     self._slot_diagonal(polygon))
+            cache[binding.slot_id] = entry
+        return entry[1:]
+
     def _best_arrival_slot(self, bbox: BBox) -> Optional[Tuple[str, float]]:
         center = (bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0)
         candidates = []
         for binding in self._bindings.values():
             if binding.polygon is None or binding.vehicle_id is not None:
                 continue
-            overlap = self._raw_vehicle_overlap(bbox, binding.polygon)
-            diagonal = self._slot_diagonal(binding.polygon)
+            # P35/T2b: bounding-rect reject before the polygon intersection.
+            # Non-overlapping rects cannot intersect, so ``overlap`` would be 0
+            # and the remaining gate needs ``signed >= -0.15 * diagonal``; keep
+            # that second condition exactly as it was.
+            if getattr(self, 'perf_geometry_cache', False):
+                _, slot_box, diagonal = self._cached_slot_geometry(binding)
+                sx, sy, sw, sh = slot_box
+                pad = 0.15 * diagonal
+                # The signed-distance test cannot pass outside this padded box;
+                # retain overlapping vehicle boxes for the independent overlap gate.
+                if (center[0] < sx - pad or center[0] > sx + sw + pad or
+                    center[1] < sy - pad or center[1] > sy + sh + pad):
+                    if (bbox[0] + bbox[2] <= sx or sx + sw <= bbox[0] or
+                        bbox[1] + bbox[3] <= sy or sy + sh <= bbox[1]):
+                        continue
+            else:
+                slot_box = cv2.boundingRect(np.asarray(binding.polygon, dtype=np.float32))
+            sx, sy, sw, sh = slot_box
+            rect_overlaps = not (
+                bbox[0] + bbox[2] <= sx
+                or sx + sw <= bbox[0]
+                or bbox[1] + bbox[3] <= sy
+                or sy + sh <= bbox[1]
+            )
+            if rect_overlaps:
+                overlap = self._raw_vehicle_overlap(bbox, binding.polygon)
+            else:
+                overlap = 0.0
+            if not getattr(self, 'perf_geometry_cache', False):
+                diagonal = self._slot_diagonal(binding.polygon)
             signed = self._signed_polygon_distance(center, binding.polygon)
             if overlap < 0.08 and signed < -0.15 * diagonal:
                 continue
@@ -1304,26 +1469,161 @@ class SlotVehicleBinder:
         return winner.global_id
 
     def _batch_match(self, active_tracks: Dict[int, object]) -> Dict[int, Tuple[str, dict]]:
+        # P35/T2b: `bindings` is the whole slot set and this runs per track, so
+        # the cost is O(tracks x slots) every frame.
         track_ids = sorted(int(global_id) for global_id in active_tracks)
         bindings = [binding for binding in self._bindings.values() if binding.polygon is not None]
         if not track_ids or not bindings:
             return {}
 
         invalid_cost = 10.0
-        costs = np.full((len(track_ids), len(bindings)), invalid_cost, dtype=np.float64)
+        # G6A: only --perf-optimize/core2l enables the sparse LAP path.  Keep
+        # the full assignment untouched for other runtimes and comparisons.
+        sparse = bool(getattr(self, "perf_sparse_match", False))
+        costs = None if sparse else np.full(
+            (len(track_ids), len(bindings)), invalid_cost, dtype=np.float64
+        )
+        sparse_costs: Dict[Tuple[int, int], float] = {}
         geometries: Dict[Tuple[int, int], dict] = {}
+        # P35/T2b: slot areas are static; computing the polygon area for every
+        # (track, slot) pair is pure repeated work.
+        if getattr(self, 'perf_geometry_cache', False):
+            cached_geometry = {id(binding): self._cached_slot_geometry(binding) for binding in bindings}
+            slot_areas = {key: value[0] for key, value in cached_geometry.items()}
+            slot_boxes = {key: value[1] for key, value in cached_geometry.items()}
+        else:
+            slot_areas = {id(binding): max(1.0, self._polygon_area(binding.polygon)) for binding in bindings}
+            slot_boxes = {id(binding): cv2.boundingRect(np.asarray(binding.polygon, dtype=np.float32)) for binding in bindings}
+        fast_boxes = (np.asarray([slot_boxes[id(binding)] for binding in bindings], dtype=np.float64)
+                      if getattr(self, 'fast_batch_match', False) else None)
+        # Core2l perf path: use the cheap bbox candidate filter up front.  A
+        # parked track that touches only its own slot, with no other track
+        # touching that slot, must keep that assignment in the full LAP.  It
+        # needs just one overlap calculation and never enters the LAP matrix.
+        # The bbox test is conservative: ambiguous parked cars still take the
+        # regular matching path (including possible exit_pending transitions).
+        fixed: Dict[int, int] = {}
+        sparse_boxes = {}
+        sparse_columns = {}
+        if sparse:
+            candidate_boxes = fast_boxes if fast_boxes is not None else np.asarray(
+                [slot_boxes[id(binding)] for binding in bindings], dtype=np.float64
+            )
+            column_rows: Dict[int, List[int]] = {}
+            for row, global_id in enumerate(track_ids):
+                bbox = self._track_bbox(active_tracks[global_id])
+                sparse_boxes[row] = bbox
+                if np.isfinite(bbox).all():
+                    x, y, w, h = bbox
+                    columns = [int(col) for col in np.flatnonzero(
+                        (x + w > candidate_boxes[:, 0])
+                        & (candidate_boxes[:, 0] + candidate_boxes[:, 2] > x)
+                        & (y + h > candidate_boxes[:, 1])
+                        & (candidate_boxes[:, 1] + candidate_boxes[:, 3] > y)
+                    )]
+                else:
+                    columns = []
+                sparse_columns[row] = columns
+                for col in columns:
+                    column_rows.setdefault(col, []).append(row)
+
+            for row, global_id in enumerate(track_ids):
+                state = self._vehicle_states.get(global_id)
+                if state is None or state.parked_slot_id is None:
+                    continue
+                columns = sparse_columns[row]
+                if len(columns) != 1:
+                    continue
+                column = columns[0]
+                binding = bindings[column]
+                if (
+                    binding.slot_id != state.parked_slot_id
+                    or self._vehicle_to_slot.get(global_id) != state.parked_slot_id
+                    or len(column_rows[column]) != 1
+                ):
+                    continue
+                geometry = self._overlap_geometry_cached(
+                    sparse_boxes[row], binding,
+                    slot_area=slot_areas[id(binding)],
+                    slot_box=slot_boxes[id(binding)],
+                )
+                if geometry is None:
+                    continue
+                score = min(1.0, geometry['score'] + 0.15)
+                if 1.0 - score < 0.95:
+                    fixed[row] = column
+                    geometries[(row, column)] = geometry
+
         for row, global_id in enumerate(track_ids):
-            bbox = self._track_bbox(active_tracks[global_id])
+            if row in fixed:
+                continue
+            bbox = sparse_boxes[row] if sparse else self._track_bbox(active_tracks[global_id])
             current_slot = self._vehicle_to_slot.get(global_id)
-            for column, binding in enumerate(bindings):
-                geometry = self._overlap_geometry(bbox, binding)
+            columns = sparse_columns[row] if sparse else range(len(bindings))
+            if not sparse and fast_boxes is not None and np.isfinite(bbox).all():
+                x,y,w,h = bbox
+                columns = np.flatnonzero((x+w > fast_boxes[:,0]) &
+                    (fast_boxes[:,0]+fast_boxes[:,2] > x) & (y+h > fast_boxes[:,1]) &
+                    (fast_boxes[:,1]+fast_boxes[:,3] > y))
+            for column in columns:
+                column = int(column)
+                binding = bindings[column]
+                geometry = self._overlap_geometry_cached(
+                    bbox,
+                    binding,
+                    slot_area=slot_areas[id(binding)],
+                    slot_box=slot_boxes[id(binding)],
+                )
                 if geometry is None:
                     continue
                 score = geometry["score"]
                 if current_slot == binding.slot_id:
                     score = min(1.0, score + 0.15)
-                costs[row, column] = 1.0 - score
+                cost = 1.0 - score
+                if sparse:
+                    # Edges beyond cost_limit cannot be selected by lapjv.
+                    if cost <= 0.95:
+                        sparse_costs[(row, column)] = cost
+                else:
+                    costs[row, column] = cost
                 geometries[(row, column)] = geometry
+
+        if sparse:
+            row_edges: Dict[int, List[int]] = {}
+            for row, column in sparse_costs:
+                row_edges.setdefault(row, []).append(column)
+
+            remaining_rows = [
+                row for row in range(len(track_ids))
+                if row not in fixed and row in row_edges
+            ]
+            remaining_cols = sorted({
+                col for row in remaining_rows for col in row_edges[row]
+            })
+            matches = {
+                track_ids[row]: (bindings[column].slot_id, geometries[(row, column)])
+                for row, column in fixed.items()
+            }
+            if remaining_rows and remaining_cols:
+                small_costs = np.full(
+                    (len(remaining_rows), len(remaining_cols)),
+                    invalid_cost, dtype=np.float64,
+                )
+                column_map = {column: idx for idx, column in enumerate(remaining_cols)}
+                for small_row, row in enumerate(remaining_rows):
+                    for column in row_edges[row]:
+                        small_costs[small_row, column_map[column]] = sparse_costs[(row, column)]
+                _, row_to_col, _ = lapjv(small_costs, extend_cost=True, cost_limit=0.95)
+                for small_row, small_column in enumerate(row_to_col):
+                    if small_column < 0:
+                        continue
+                    row = remaining_rows[small_row]
+                    column = remaining_cols[int(small_column)]
+                    if (row, column) in sparse_costs:
+                        matches[track_ids[row]] = (
+                            bindings[column].slot_id, geometries[(row, column)]
+                        )
+            return matches
 
         _, row_to_col, _ = lapjv(costs, extend_cost=True, cost_limit=0.95)
         matches: Dict[int, Tuple[str, dict]] = {}
@@ -1334,11 +1634,45 @@ class SlotVehicleBinder:
             matches[global_id] = (bindings[column].slot_id, geometries[(row, column)])
         return matches
 
+    def _perf_observations(self, state: VehicleParkingState):
+        """Reuse one immutable snapshot for both stationary checks in a frame.
+
+        The observation deque only changes by append/popleft/clear in this
+        binder.  Both checks can share the same tuple until either endpoint or
+        its length changes; no stale statistics survive a new observation.
+        """
+        if not getattr(self, "perf_stopped_cache", False):
+            return state.observations
+        history = state.observations
+        key = (len(history), id(history[0]) if history else None,
+               id(history[-1]) if history else None)
+        cache = getattr(state, "_perf_history_snapshot", None)
+        if cache is None or cache[0] != key:
+            cache = (key, tuple(history))
+            state._perf_history_snapshot = cache
+        return cache[1]
+
     def _is_stopped(self, state: VehicleParkingState, slot_id: str, now_s: float) -> Tuple[bool, int]:
+        if not getattr(self, "perf_stopped_cache", False):
+            return self._is_stopped_uncached(state, slot_id, now_s)
+        # A result is reused only for precisely the same data and time.  In
+        # particular, advancing a frame invalidates it even for a parked car.
+        history = self._perf_observations(state)
+        key = (slot_id, now_s, id(history), self.stop_seconds,
+               self.min_stop_samples, self.policy,
+               self.stationary_radius_ratio, self.stationary_drift_ratio)
+        cache = getattr(state, "_perf_stopped_result", None)
+        if cache is not None and cache[0] == key:
+            return cache[1]
+        result = self._is_stopped_uncached(state, slot_id, now_s)
+        state._perf_stopped_result = (key, result)
+        return result
+
+    def _is_stopped_uncached(self, state: VehicleParkingState, slot_id: str, now_s: float) -> Tuple[bool, int]:
         window_start = now_s - self.stop_seconds
         samples = [
             item
-            for item in state.observations
+            for item in self._perf_observations(state)
             if item.timestamp_s >= window_start
             and (self.policy != "vision_primary" or item.fresh)
         ]
@@ -1436,7 +1770,7 @@ class SlotVehicleBinder:
             return False
         samples = [
             item
-            for item in state.observations
+            for item in self._perf_observations(state)
             if item.fresh
             and item.timestamp_s >= state.strong_overlap_since
             and item.slot_id == slot_id
@@ -1732,6 +2066,62 @@ class SlotVehicleBinder:
             return "departure_not_yet_confirmed"
         return "candidate_evidence_in_progress"
 
+    def _token_is_foreign_to_point(
+        self,
+        point: Point,
+        slot_id: str,
+        camera_id: Optional[str],
+        polygon: Optional[np.ndarray],
+        center: Point,
+        first_point: Optional[Point] = None,
+    ) -> bool:
+        """P29 (V060 toi_5p): is this an *arrival next door*, not a departure?
+
+        A departure token's recovery radius is ``slot_diagonal *
+        recovery_max_expand_ratio`` (0.85 by default), which also covers the
+        neighbouring bay.  A vehicle parking into that neighbour is then held
+        ``canonical_gid = None`` for as long as the token waits for
+        "the car left slot A" evidence it can never produce, because it is not
+        leaving - it is arriving next door.
+
+        Measured on V060/S054 (toi_5p): cam1 local#82 sat 36.7 px from S054's
+        centre and 99.5 px from S056's centre, yet S056's predeparture token
+        (GID 3) protected it from f4623 to f4722 (91 frames) and it never got
+        an identity.
+
+        **A real departure is never refused.**  The test requires the fragment
+        to have been outside this slot for its whole life (``first_point`` also
+        outside); a car that actually leaves slot A starts inside A, so it
+        still owns the token even after it has driven past the neighbouring
+        bay.
+        """
+        if not self.token_foreign_slot_guard or polygon is None:
+            return False
+        if self._signed_polygon_distance(point, polygon) >= 0.0:
+            # The fragment is literally inside the token's own slot: a
+            # departure candidate, never a foreign arrival.
+            return False
+        if first_point is not None and self._signed_polygon_distance(
+            first_point, polygon
+        ) >= -0.20 * float(
+            np.hypot(
+                np.ptp(np.asarray(polygon, dtype=np.float64)[:, 0]),
+                np.ptp(np.asarray(polygon, dtype=np.float64)[:, 1]),
+            )
+        ):
+            # It was born at/near this slot: this is the departing car.
+            return False
+        own_distance = float(np.linalg.norm(np.subtract(point, center)))
+        for other_slot_id, binding in self._bindings.items():
+            if other_slot_id == slot_id or binding.polygon is None:
+                continue
+            if binding.camera_id not in (None, camera_id):
+                continue
+            distance = float(np.linalg.norm(np.subtract(point, binding.center)))
+            if distance < own_distance:
+                return True
+        return False
+
     def _evidence_within_token_gate(
         self,
         evidence: RecoveryCandidateEvidence,
@@ -2004,6 +2394,12 @@ class SlotVehicleBinder:
             )
 
     def _bind_vehicle(self, global_id: int, slot_id: str, frame_idx: int, overlap: float, stopped_ms: int) -> None:
+        if (
+            self.defer_to_foreign_owner
+            and self._foreign_owner_slot.get(int(global_id)) == str(slot_id)
+            and self._vehicle_to_slot.get(global_id) is None
+        ):
+            return
         old_slot = self._vehicle_to_slot.get(global_id)
         if old_slot is not None and old_slot != slot_id:
             self._release_vehicle(global_id, frame_idx, reason="reassigned")
@@ -2140,6 +2536,7 @@ class SlotVehicleBinder:
         coordinate_offset: Point = (0.0, 0.0),
     ) -> None:
         """Update motion/slot state from canonical global tracks every frame."""
+        _t_bind = time.perf_counter() if _BINDER_PROFILE else 0.0
         self._last_frame_idx = max(self._last_frame_idx, int(frame_idx))
         self._last_timestamp_s = max(self._last_timestamp_s, float(timestamp_s))
 
@@ -2164,8 +2561,10 @@ class SlotVehicleBinder:
         for global_id, state in self._vehicle_states.items():
             if global_id not in normalized and state.strong_overlap_since is not None:
                 self._reset_strong_overlap(state)
-
         matches = self._batch_match(normalized)
+        if _BINDER_PROFILE:
+            _binder_profile_add("batch_match", time.perf_counter() - _t_bind)
+            _t_bind = time.perf_counter()
         max_history_seconds = max(2.0, self.stop_seconds * 2.5)
         self._cleanup_arrival_claims(timestamp_s)
         for claim_global_id in {
@@ -2381,6 +2780,9 @@ class SlotVehicleBinder:
 
         self._cleanup_pending(frame_idx)
         self._cleanup_tokens(timestamp_s)
+        if _BINDER_PROFILE:
+            _binder_profile_add("tail", time.perf_counter() - _t_bind)
+            _binder_profile_report()
 
     def notify_track_lost(
         self,
@@ -2868,6 +3270,7 @@ class SlotVehicleBinder:
         can supply a perspective-correct ``recovery_size_ratio``.
         """
         result = RecoveryBatchResult()
+        _t_recover = time.perf_counter() if _BINDER_PROFILE else 0.0
         if self.policy != "vision_primary" or not unbound_tracks:
             return result
 
@@ -3094,6 +3497,36 @@ class SlotVehicleBinder:
                     and original_overlap <= 0.0
                     and not continuing_candidate
                 ):
+                    continue
+                # P29 (V060 toi_5p): a token must not hold a fragment that is
+                # visibly parking into a *nearer* neighbouring slot.  Without
+                # this, the arriving car keeps ``canonical_gid = None`` for as
+                # long as the token waits for evidence of a departure.
+                #
+                # Only a *known* origin can prove "this was never in the
+                # slot"; an unknown origin must not block a real departure.
+                if (
+                    not continuing_candidate
+                    and data["first_position"] is not None
+                    and self._token_is_foreign_to_point(
+                        point,
+                        token.slot_id,
+                        token.camera_id,
+                        token.polygon,
+                        token.center,
+                        first_point=data["first_position"],
+                    )
+                ):
+                    rejection_key = (key, token.slot_id)
+                    if rejection_key not in self._token_foreign_slot_rejections:
+                        self._token_foreign_slot_rejections.add(rejection_key)
+                        self._event(
+                            "departure_token_foreign_slot_released",
+                            global_id=token.global_id,
+                            slot_id=token.slot_id,
+                            local_key=repr(key),
+                            point=[round(float(point[0]), 2), round(float(point[1]), 2)],
+                        )
                     continue
                 protected_pairs.add((row, column))
                 result.protected_local_keys.add(key)
@@ -3671,6 +4104,10 @@ class SlotVehicleBinder:
             result.recovered_ids[key] = global_id
             result.protected_local_keys.discard(key)
 
+        if _BINDER_PROFILE:
+            _binder_profile_add(
+                "batch_recover", time.perf_counter() - _t_recover
+            )
         return result
 
     def consume_recovery_match(

@@ -1,0 +1,1685 @@
+{
+ "schema": 1,
+ "name": "Tối 20 phút (ổn định)",
+ "description": "Kịch bản dài 20 phút (ĐÚNG 1200 s, không đuôi) để đo độ ổn định: 40 xe đỗ sẵn, xe vào mỗi 8 s (đỗ 60–240 s rồi ra), mỗi 30 s một xe đỗ sẵn rời. Ngừng nhận xe mới ở 880 s và ngừng lệnh rời ở 1000 s để xe cuối kịp đỗ/ra trước khi hết video. Xe không kịp ra thì đỗ tới hết. Không nhiễu camera.",
+ "lot": "pucpr",
+ "seed": 8002,
+ "car_scale": 1.1,
+ "default_speed_kmh": 10,
+ "camera_mode": "2cam",
+ "initial": {
+  "n_parked": 40,
+  "placement": [
+   {
+    "slot": "S027",
+    "car_id": "V001",
+    "model": "hatch",
+    "color": "sand"
+   },
+   {
+    "slot": "S087",
+    "car_id": "V002",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S062",
+    "car_id": "V003",
+    "model": "hatch",
+    "color": "red"
+   },
+   {
+    "slot": "S068",
+    "car_id": "V004",
+    "model": "suv",
+    "color": "white"
+   },
+   {
+    "slot": "S052",
+    "car_id": "V005",
+    "model": "sedan",
+    "color": "white"
+   },
+   {
+    "slot": "S033",
+    "car_id": "V006",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S091",
+    "car_id": "V007",
+    "model": "sedan",
+    "color": "sand"
+   },
+   {
+    "slot": "S046",
+    "car_id": "V008",
+    "model": "suv",
+    "color": "sand"
+   },
+   {
+    "slot": "S095",
+    "car_id": "V009",
+    "model": "hatch",
+    "color": "silver"
+   },
+   {
+    "slot": "S045",
+    "car_id": "V010",
+    "model": "hatch",
+    "color": "red"
+   },
+   {
+    "slot": "S044",
+    "car_id": "V011",
+    "model": "hatch",
+    "color": "silver"
+   },
+   {
+    "slot": "S098",
+    "car_id": "V012",
+    "model": "hatch",
+    "color": "red"
+   },
+   {
+    "slot": "S004",
+    "car_id": "V013",
+    "model": "suv",
+    "color": "white"
+   },
+   {
+    "slot": "S001",
+    "car_id": "V014",
+    "model": "sedan",
+    "color": "silver"
+   },
+   {
+    "slot": "S061",
+    "car_id": "V015",
+    "model": "suv",
+    "color": "green"
+   },
+   {
+    "slot": "S023",
+    "car_id": "V016",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S083",
+    "car_id": "V017",
+    "model": "sedan",
+    "color": "silver"
+   },
+   {
+    "slot": "S048",
+    "car_id": "V018",
+    "model": "hatch",
+    "color": "green"
+   },
+   {
+    "slot": "S092",
+    "car_id": "V019",
+    "model": "sedan",
+    "color": "silver"
+   },
+   {
+    "slot": "S088",
+    "car_id": "V020",
+    "model": "sedan",
+    "color": "green"
+   },
+   {
+    "slot": "S022",
+    "car_id": "V021",
+    "model": "sedan",
+    "color": "white"
+   },
+   {
+    "slot": "S018",
+    "car_id": "V022",
+    "model": "sedan",
+    "color": "blue"
+   },
+   {
+    "slot": "S078",
+    "car_id": "V023",
+    "model": "sedan",
+    "color": "green"
+   },
+   {
+    "slot": "S039",
+    "car_id": "V024",
+    "model": "sedan",
+    "color": "black"
+   },
+   {
+    "slot": "S006",
+    "car_id": "V025",
+    "model": "sedan",
+    "color": "blue"
+   },
+   {
+    "slot": "S041",
+    "car_id": "V026",
+    "model": "sedan",
+    "color": "white"
+   },
+   {
+    "slot": "S029",
+    "car_id": "V027",
+    "model": "sedan",
+    "color": "silver"
+   },
+   {
+    "slot": "S035",
+    "car_id": "V028",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S097",
+    "car_id": "V029",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S036",
+    "car_id": "V030",
+    "model": "hatch",
+    "color": "gray"
+   },
+   {
+    "slot": "S013",
+    "car_id": "V031",
+    "model": "hatch",
+    "color": "silver"
+   },
+   {
+    "slot": "S071",
+    "car_id": "V032",
+    "model": "hatch",
+    "color": "black"
+   },
+   {
+    "slot": "S007",
+    "car_id": "V033",
+    "model": "sedan",
+    "color": "white"
+   },
+   {
+    "slot": "S024",
+    "car_id": "V034",
+    "model": "hatch",
+    "color": "blue"
+   },
+   {
+    "slot": "S089",
+    "car_id": "V035",
+    "model": "suv",
+    "color": "sand"
+   },
+   {
+    "slot": "S037",
+    "car_id": "V036",
+    "model": "suv",
+    "color": "green"
+   },
+   {
+    "slot": "S065",
+    "car_id": "V037",
+    "model": "suv",
+    "color": "black"
+   },
+   {
+    "slot": "S031",
+    "car_id": "V038",
+    "model": "hatch",
+    "color": "silver"
+   },
+   {
+    "slot": "S069",
+    "car_id": "V039",
+    "model": "sedan",
+    "color": "white"
+   },
+   {
+    "slot": "S064",
+    "car_id": "V040",
+    "model": "hatch",
+    "color": "green"
+   }
+  ]
+ },
+ "env": {
+  "preset": "E6",
+  "keyframes": [
+   {
+    "t_s": 0.0,
+    "hour": 19.0,
+    "weather": "sun",
+    "intensity": 0.8
+   },
+   {
+    "t_s": 1200,
+    "hour": 19.333333333333332,
+    "weather": "sun",
+    "intensity": 0.8
+   }
+  ]
+ },
+ "noise": {
+  "shake": {
+   "on": false,
+   "level": 0.5
+  },
+  "grain": {
+   "on": false,
+   "level": 0.5
+  },
+  "jpeg": {
+   "on": false,
+   "level": 0.5
+  },
+  "downscale": {
+   "on": false,
+   "level": 0.5
+  },
+  "fps_drop": {
+   "on": false,
+   "level": 0.5
+  },
+  "flare": {
+   "on": false,
+   "level": 0.5
+  },
+  "drops": {
+   "on": false,
+   "level": 0.5
+  },
+  "smudge": {
+   "on": false,
+   "level": 0.5
+  },
+  "white_balance": {
+   "on": false,
+   "level": 0.5
+  },
+  "seed": 8002
+ },
+ "events": [
+  {
+   "frame": 125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "black",
+    "park_s": 104
+   }
+  },
+  {
+   "frame": 325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 157
+   }
+  },
+  {
+   "frame": 525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "green",
+    "park_s": 173
+   }
+  },
+  {
+   "frame": 725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "red",
+    "park_s": 88
+   }
+  },
+  {
+   "frame": 750,
+   "type": "leave",
+   "params": {
+    "car_id": "V001"
+   }
+  },
+  {
+   "frame": 925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "gray",
+    "park_s": 72
+   }
+  },
+  {
+   "frame": 1125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 237
+   }
+  },
+  {
+   "frame": 1325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 233
+   }
+  },
+  {
+   "frame": 1500,
+   "type": "leave",
+   "params": {
+    "car_id": "V002"
+   }
+  },
+  {
+   "frame": 1525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "silver",
+    "park_s": 176
+   }
+  },
+  {
+   "frame": 1725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "black",
+    "park_s": 147
+   }
+  },
+  {
+   "frame": 1925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "green",
+    "park_s": 135
+   }
+  },
+  {
+   "frame": 2125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "gray",
+    "park_s": 140
+   }
+  },
+  {
+   "frame": 2250,
+   "type": "leave",
+   "params": {
+    "car_id": "V003"
+   }
+  },
+  {
+   "frame": 2325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "blue",
+    "park_s": 211
+   }
+  },
+  {
+   "frame": 2525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "blue",
+    "park_s": 225
+   }
+  },
+  {
+   "frame": 2725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "sand",
+    "park_s": 126
+   }
+  },
+  {
+   "frame": 2925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "sand",
+    "park_s": 231
+   }
+  },
+  {
+   "frame": 3000,
+   "type": "leave",
+   "params": {
+    "car_id": "V004"
+   }
+  },
+  {
+   "frame": 3125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "white",
+    "park_s": 153
+   }
+  },
+  {
+   "frame": 3325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "white",
+    "park_s": 173
+   }
+  },
+  {
+   "frame": 3525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "black",
+    "park_s": 153
+   }
+  },
+  {
+   "frame": 3725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "red",
+    "park_s": 165
+   }
+  },
+  {
+   "frame": 3750,
+   "type": "leave",
+   "params": {
+    "car_id": "V005"
+   }
+  },
+  {
+   "frame": 3925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "silver",
+    "park_s": 210
+   }
+  },
+  {
+   "frame": 4125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 220
+   }
+  },
+  {
+   "frame": 4325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 212
+   }
+  },
+  {
+   "frame": 4500,
+   "type": "leave",
+   "params": {
+    "car_id": "V006"
+   }
+  },
+  {
+   "frame": 4525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "black",
+    "park_s": 230
+   }
+  },
+  {
+   "frame": 4725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 239
+   }
+  },
+  {
+   "frame": 4925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "green",
+    "park_s": 206
+   }
+  },
+  {
+   "frame": 5125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "silver",
+    "park_s": 230
+   }
+  },
+  {
+   "frame": 5250,
+   "type": "leave",
+   "params": {
+    "car_id": "V007"
+   }
+  },
+  {
+   "frame": 5325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "sand",
+    "park_s": 65
+   }
+  },
+  {
+   "frame": 5525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "black",
+    "park_s": 238
+   }
+  },
+  {
+   "frame": 5725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "silver",
+    "park_s": 165
+   }
+  },
+  {
+   "frame": 5925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "silver",
+    "park_s": 231
+   }
+  },
+  {
+   "frame": 6000,
+   "type": "leave",
+   "params": {
+    "car_id": "V008"
+   }
+  },
+  {
+   "frame": 6125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "gray",
+    "park_s": 165
+   }
+  },
+  {
+   "frame": 6325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "white",
+    "park_s": 164
+   }
+  },
+  {
+   "frame": 6525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "silver",
+    "park_s": 132
+   }
+  },
+  {
+   "frame": 6725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "blue",
+    "park_s": 128
+   }
+  },
+  {
+   "frame": 6750,
+   "type": "leave",
+   "params": {
+    "car_id": "V009"
+   }
+  },
+  {
+   "frame": 6925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "white",
+    "park_s": 98
+   }
+  },
+  {
+   "frame": 7125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 147
+   }
+  },
+  {
+   "frame": 7325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "red",
+    "park_s": 238
+   }
+  },
+  {
+   "frame": 7500,
+   "type": "leave",
+   "params": {
+    "car_id": "V010"
+   }
+  },
+  {
+   "frame": 7525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "white",
+    "park_s": 240
+   }
+  },
+  {
+   "frame": 7725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "blue",
+    "park_s": 148
+   }
+  },
+  {
+   "frame": 7925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "blue",
+    "park_s": 131
+   }
+  },
+  {
+   "frame": 8125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "gray",
+    "park_s": 64
+   }
+  },
+  {
+   "frame": 8250,
+   "type": "leave",
+   "params": {
+    "car_id": "V011"
+   }
+  },
+  {
+   "frame": 8325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "gray",
+    "park_s": 79
+   }
+  },
+  {
+   "frame": 8525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "red",
+    "park_s": 118
+   }
+  },
+  {
+   "frame": 8725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "silver",
+    "park_s": 61
+   }
+  },
+  {
+   "frame": 8925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "silver",
+    "park_s": 148
+   }
+  },
+  {
+   "frame": 9000,
+   "type": "leave",
+   "params": {
+    "car_id": "V012"
+   }
+  },
+  {
+   "frame": 9125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "sedan",
+    "color": "red",
+    "park_s": 134
+   }
+  },
+  {
+   "frame": 9325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "black",
+    "park_s": 143
+   }
+  },
+  {
+   "frame": 9525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 198
+   }
+  },
+  {
+   "frame": 9725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 117
+   }
+  },
+  {
+   "frame": 9750,
+   "type": "leave",
+   "params": {
+    "car_id": "V013"
+   }
+  },
+  {
+   "frame": 9925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "gray",
+    "park_s": 129
+   }
+  },
+  {
+   "frame": 10125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "gray",
+    "park_s": 77
+   }
+  },
+  {
+   "frame": 10325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "green",
+    "park_s": 204
+   }
+  },
+  {
+   "frame": 10500,
+   "type": "leave",
+   "params": {
+    "car_id": "V014"
+   }
+  },
+  {
+   "frame": 10525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "blue",
+    "park_s": 152
+   }
+  },
+  {
+   "frame": 10725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "blue",
+    "park_s": 158
+   }
+  },
+  {
+   "frame": 10925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "white",
+    "park_s": 136
+   }
+  },
+  {
+   "frame": 11125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "blue",
+    "park_s": 63
+   }
+  },
+  {
+   "frame": 11250,
+   "type": "leave",
+   "params": {
+    "car_id": "V015"
+   }
+  },
+  {
+   "frame": 11325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "white",
+    "park_s": 232
+   }
+  },
+  {
+   "frame": 11525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "sand",
+    "park_s": 130
+   }
+  },
+  {
+   "frame": 11725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "sand",
+    "park_s": 64
+   }
+  },
+  {
+   "frame": 11925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "black",
+    "park_s": 140
+   }
+  },
+  {
+   "frame": 12000,
+   "type": "leave",
+   "params": {
+    "car_id": "V016"
+   }
+  },
+  {
+   "frame": 12125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "green",
+    "park_s": 234
+   }
+  },
+  {
+   "frame": 12325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "white",
+    "park_s": 113
+   }
+  },
+  {
+   "frame": 12525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 217
+   }
+  },
+  {
+   "frame": 12725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 130
+   }
+  },
+  {
+   "frame": 12750,
+   "type": "leave",
+   "params": {
+    "car_id": "V017"
+   }
+  },
+  {
+   "frame": 12925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "red",
+    "park_s": 167
+   }
+  },
+  {
+   "frame": 13125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "white",
+    "park_s": 99
+   }
+  },
+  {
+   "frame": 13325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "gray",
+    "park_s": 76
+   }
+  },
+  {
+   "frame": 13500,
+   "type": "leave",
+   "params": {
+    "car_id": "V018"
+   }
+  },
+  {
+   "frame": 13525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "silver",
+    "park_s": 96
+   }
+  },
+  {
+   "frame": 13725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "silver",
+    "park_s": 110
+   }
+  },
+  {
+   "frame": 13925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "green",
+    "park_s": 221
+   }
+  },
+  {
+   "frame": 14125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "suv",
+    "color": "silver",
+    "park_s": 65
+   }
+  },
+  {
+   "frame": 14250,
+   "type": "leave",
+   "params": {
+    "car_id": "V019"
+   }
+  },
+  {
+   "frame": 14325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "white",
+    "park_s": 177
+   }
+  },
+  {
+   "frame": 14525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "silver",
+    "park_s": 65
+   }
+  },
+  {
+   "frame": 14725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "sedan",
+    "color": "blue",
+    "park_s": 144
+   }
+  },
+  {
+   "frame": 14925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "white",
+    "park_s": 165
+   }
+  },
+  {
+   "frame": 15000,
+   "type": "leave",
+   "params": {
+    "car_id": "V020"
+   }
+  },
+  {
+   "frame": 15125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "sedan",
+    "color": "red",
+    "park_s": 78
+   }
+  },
+  {
+   "frame": 15325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "green",
+    "park_s": 117
+   }
+  },
+  {
+   "frame": 15525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "sand",
+    "park_s": 161
+   }
+  },
+  {
+   "frame": 15725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "sand",
+    "park_s": 68
+   }
+  },
+  {
+   "frame": 15750,
+   "type": "leave",
+   "params": {
+    "car_id": "V021"
+   }
+  },
+  {
+   "frame": 15925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "suv",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 16125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "white"
+   }
+  },
+  {
+   "frame": 16325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 16500,
+   "type": "leave",
+   "params": {
+    "car_id": "V022"
+   }
+  },
+  {
+   "frame": 16525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "red"
+   }
+  },
+  {
+   "frame": 16725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "white"
+   }
+  },
+  {
+   "frame": 16925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "white"
+   }
+  },
+  {
+   "frame": 17125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "red"
+   }
+  },
+  {
+   "frame": 17250,
+   "type": "leave",
+   "params": {
+    "car_id": "V023"
+   }
+  },
+  {
+   "frame": 17325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "sand",
+    "park_s": 63
+   }
+  },
+  {
+   "frame": 17525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "sand"
+   }
+  },
+  {
+   "frame": 17725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 17925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 18000,
+   "type": "leave",
+   "params": {
+    "car_id": "V024"
+   }
+  },
+  {
+   "frame": 18125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 18325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 18525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "sand"
+   }
+  },
+  {
+   "frame": 18725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "suv",
+    "color": "sand"
+   }
+  },
+  {
+   "frame": 18750,
+   "type": "leave",
+   "params": {
+    "car_id": "V025"
+   }
+  },
+  {
+   "frame": 18925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 19125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "green"
+   }
+  },
+  {
+   "frame": 19325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "black"
+   }
+  },
+  {
+   "frame": 19500,
+   "type": "leave",
+   "params": {
+    "car_id": "V026"
+   }
+  },
+  {
+   "frame": 19525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "hatch",
+    "color": "sand"
+   }
+  },
+  {
+   "frame": 19725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "sedan",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 19925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 12,
+    "model": "hatch",
+    "color": "gray"
+   }
+  },
+  {
+   "frame": 20125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 9,
+    "model": "sedan",
+    "color": "blue"
+   }
+  },
+  {
+   "frame": 20250,
+   "type": "leave",
+   "params": {
+    "car_id": "V027"
+   }
+  },
+  {
+   "frame": 20325,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "sedan",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 20525,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "suv",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 20725,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 11,
+    "model": "hatch",
+    "color": "gray"
+   }
+  },
+  {
+   "frame": 20925,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "silver"
+   }
+  },
+  {
+   "frame": 21000,
+   "type": "leave",
+   "params": {
+    "car_id": "V028"
+   }
+  },
+  {
+   "frame": 21125,
+   "type": "add_car",
+   "params": {
+    "slot": "random_free",
+    "speed_kmh": 10,
+    "model": "hatch",
+    "color": "white"
+   }
+  },
+  {
+   "frame": 21750,
+   "type": "leave",
+   "params": {
+    "car_id": "V029"
+   }
+  },
+  {
+   "frame": 22500,
+   "type": "leave",
+   "params": {
+    "car_id": "V030"
+   }
+  },
+  {
+   "frame": 23250,
+   "type": "leave",
+   "params": {
+    "car_id": "V031"
+   }
+  },
+  {
+   "frame": 24000,
+   "type": "leave",
+   "params": {
+    "car_id": "V032"
+   }
+  },
+  {
+   "frame": 24750,
+   "type": "leave",
+   "params": {
+    "car_id": "V033"
+   }
+  }
+ ],
+ "duration_frames": 30000
+}

@@ -1,0 +1,2129 @@
+{
+  "A3": {
+    "carId": "V042",
+    "cars": [
+      {
+        "id": "V001",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -20.0601,
+          "y": -2.5874,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S070",
+        "route_s": 69.088989,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V002",
+        "model": "suv",
+        "color": "white",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": -20.7613,
+          "y": 25.6305,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S009",
+        "route_s": 105.0799,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V003",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 21.5107,
+          "y": 14.7049,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S037",
+        "route_s": 145.435405,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V004",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 9.4487,
+          "y": 14.4339,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S032",
+        "route_s": 133.55582,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V005",
+        "model": "suv",
+        "color": "silver",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -7.9767,
+          "y": -11.3161,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S097",
+        "route_s": 70.565035,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V006",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 4.6239,
+          "y": 14.3254,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S030",
+        "route_s": 128.761242,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V007",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -25.2873,
+          "y": -2.5267,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S068",
+        "route_s": 74.264643,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V008",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -19.5,
+          "y": 13.7834,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S024",
+        "route_s": 105.006117,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V009",
+        "model": "suv",
+        "color": "silver",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -8.1851,
+          "y": 8.6169,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S052",
+        "route_s": 56.910099,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V010",
+        "model": "hatch",
+        "color": "green",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -5.1227,
+          "y": -11.3751,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S098",
+        "route_s": 67.704154,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V011",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -22.9952,
+          "y": 8.6164,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S046",
+        "route_s": 71.719033,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V012",
+        "model": "hatch",
+        "color": "blue",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -18.5471,
+          "y": 25.6969,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S010",
+        "route_s": 107.327473,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V013",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 23.9036,
+          "y": 8.6182,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S065",
+        "route_s": 24.819712,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V014",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -18.0585,
+          "y": 8.6165,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S048",
+        "route_s": 66.782939,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V015",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 0.8486,
+          "y": -2.8304,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S078",
+        "route_s": 48.416167,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V016",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 14.6675,
+          "y": 26.6933,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S022",
+        "route_s": 141.109342,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V017",
+        "model": "hatch",
+        "color": "white",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 16.4985,
+          "y": 8.6179,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S062",
+        "route_s": 32.22292,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V018",
+        "model": "suv",
+        "color": "red",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 7.0363,
+          "y": 14.3797,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S031",
+        "route_s": 131.155675,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V019",
+        "model": "sedan",
+        "color": "sand",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 8.0243,
+          "y": 26.494,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S001",
+        "route_s": 134.3497,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V020",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -25.4636,
+          "y": 8.6163,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S045",
+        "route_s": 74.189699,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V021",
+        "model": "suv",
+        "color": "blue",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -3.2483,
+          "y": 8.6171,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S054",
+        "route_s": 51.967777,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V022",
+        "model": "hatch",
+        "color": "gray",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 16.882,
+          "y": 26.7597,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S003",
+        "route_s": 143.303992,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V023",
+        "model": "hatch",
+        "color": "sand",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -3.0474,
+          "y": 26.1619,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S016",
+        "route_s": 123.029435,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V024",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 4.1567,
+          "y": 8.6174,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S057",
+        "route_s": 44.568899,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V025",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 3.4622,
+          "y": -2.8608,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S079",
+        "route_s": 45.835332,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V026",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 26.3355,
+          "y": 14.8133,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S039",
+        "route_s": 150.253213,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V027",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -22.2466,
+          "y": -11.0211,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S092",
+        "route_s": 84.977589,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V028",
+        "model": "suv",
+        "color": "white",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 21.3109,
+          "y": 26.8926,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S005",
+        "route_s": 147.866219,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V029",
+        "model": "hatch",
+        "color": "silver",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -7.476,
+          "y": 26.029,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S014",
+        "route_s": 118.591669,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V030",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 9.0934,
+          "y": 8.6176,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S059",
+        "route_s": 39.627881,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V031",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 19.0964,
+          "y": 26.8262,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S004",
+        "route_s": 145.61497,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V032",
+        "model": "hatch",
+        "color": "sand",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -5.2617,
+          "y": 26.0955,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S015",
+        "route_s": 120.844061,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V033",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -20.5268,
+          "y": 8.6164,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S047",
+        "route_s": 69.252567,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V034",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -9.8504,
+          "y": 14.0002,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S044",
+        "route_s": 114.513398,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V035",
+        "model": "hatch",
+        "color": "sand",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 13.9165,
+          "y": -2.9823,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S083",
+        "route_s": 35.502527,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V036",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -2.2687,
+          "y": -11.4341,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S099",
+        "route_s": 64.708716,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V037",
+        "model": "hatch",
+        "color": "gray",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -5.0256,
+          "y": 14.1086,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S026",
+        "route_s": 119.310024,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V038",
+        "model": "sedan",
+        "color": "sand",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 5.81,
+          "y": 26.4276,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S020",
+        "route_s": 132.103871,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V039",
+        "model": "suv",
+        "color": "white",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 25.7398,
+          "y": 27.0254,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S007",
+        "route_s": 152.372114,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V040",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -12.2193,
+          "y": -2.6786,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S073",
+        "route_s": 61.33658,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V041",
+        "model": "sedan",
+        "color": "black",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -21.9124,
+          "y": 13.7292,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S023",
+        "route_s": 102.683592,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V042",
+        "model": "suv",
+        "color": "white",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 12.005432,
+          "y": 19.01189,
+          "th": 0.000003
+        },
+        "v": 2.16,
+        "state": "driving_to_slot",
+        "slot": "S038",
+        "route_s": 132.936027,
+        "desired_speed_mps": 3.0555555555555554,
+        "route": {
+          "aisles": [
+            "A2",
+            "V_west_n",
+            "V_west",
+            "A1"
+          ],
+          "points": [],
+          "length_m": 0,
+          "target": {
+            "kind": "slot",
+            "slot": "S038"
+          }
+        }
+      },
+      {
+        "id": "V046",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 6.6251,
+          "y": 8.6175,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S058",
+        "route_s": 42.096418,
+        "desired_speed_mps": 2.5
+      }
+    ]
+  },
+  "B1": {
+    "carId": "V051",
+    "cars": [
+      {
+        "id": "V001",
+        "model": "suv",
+        "color": "green",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -10.6534,
+          "y": 8.6168,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S051",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V002",
+        "model": "suv",
+        "color": "green",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 3.5956,
+          "y": 26.3612,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S019",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V003",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 21.5107,
+          "y": 14.7049,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S037",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V005",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -22.2466,
+          "y": -11.0211,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S092",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V007",
+        "model": "suv",
+        "color": "blue",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 14.6675,
+          "y": 26.6933,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S022",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V009",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 8.0243,
+          "y": 26.494,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S001",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V010",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 23.5253,
+          "y": 26.959,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S006",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V011",
+        "model": "suv",
+        "color": "red",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 21.3109,
+          "y": 26.8926,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S005",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V012",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -7.476,
+          "y": 26.029,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S014",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V013",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 21.7572,
+          "y": -3.0734,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S086",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V014",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 0.8486,
+          "y": -2.8304,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S078",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V015",
+        "model": "hatch",
+        "color": "red",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 14.0301,
+          "y": 8.6178,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S061",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V016",
+        "model": "suv",
+        "color": "silver",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 14.2735,
+          "y": 14.5423,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S034",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V017",
+        "model": "suv",
+        "color": "red",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -25.2873,
+          "y": -2.5267,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S068",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V018",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -0.2008,
+          "y": 14.217,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S028",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V019",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 5.81,
+          "y": 26.4276,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S020",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V020",
+        "model": "hatch",
+        "color": "green",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -25.4636,
+          "y": 8.6163,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S045",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V021",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 18.9669,
+          "y": 8.618,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S063",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V024",
+        "model": "suv",
+        "color": "black",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": -3.0474,
+          "y": 26.1619,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S016",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V025",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -12.2628,
+          "y": 13.946,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S043",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V026",
+        "model": "hatch",
+        "color": "sand",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -2.2687,
+          "y": -11.4341,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S099",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V027",
+        "model": "hatch",
+        "color": "white",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 19.0983,
+          "y": 14.6507,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S036",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V028",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 21.4352,
+          "y": 8.6181,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S064",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V029",
+        "model": "hatch",
+        "color": "silver",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 0.5853,
+          "y": -11.4931,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S100",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V030",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 24.3708,
+          "y": -3.1038,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S087",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V031",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -5.1227,
+          "y": -11.3751,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S098",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V032",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -6.9921,
+          "y": -2.7393,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S075",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V033",
+        "model": "hatch",
+        "color": "blue",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -15.5901,
+          "y": 8.6166,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S049",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V034",
+        "model": "sedan",
+        "color": "sand",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 26.9844,
+          "y": -3.1341,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S088",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V035",
+        "model": "suv",
+        "color": "blue",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 6.6251,
+          "y": 8.6175,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S058",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V036",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 4.6239,
+          "y": 14.3254,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S030",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V037",
+        "model": "hatch",
+        "color": "green",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -21.9124,
+          "y": 13.7292,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S023",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V038",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -4.3786,
+          "y": -2.7697,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S076",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V039",
+        "model": "suv",
+        "color": "white",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": -9.6902,
+          "y": 25.9626,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S013",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V040",
+        "model": "hatch",
+        "color": "blue",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 23.9231,
+          "y": 14.7591,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S038",
+        "route_s": 0,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V042",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 16.882,
+          "y": 26.7597,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S003",
+        "route_s": 143.298686,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V043",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -0.8331,
+          "y": 26.2283,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S017",
+        "route_s": 125.348422,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V044",
+        "model": "sedan",
+        "color": "silver",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -27.9009,
+          "y": -2.4963,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S067",
+        "route_s": 76.851357,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V046",
+        "model": "hatch",
+        "color": "green",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -14.6752,
+          "y": 13.8918,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S042",
+        "route_s": 109.749469,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V047",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 1.3813,
+          "y": 26.2947,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S018",
+        "route_s": 127.598084,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V048",
+        "model": "hatch",
+        "color": "silver",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -25.1005,
+          "y": -10.9621,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S091",
+        "route_s": 87.946256,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V049",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -7.9767,
+          "y": -11.3161,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S097",
+        "route_s": 70.562792,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V050",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -5.7167,
+          "y": 8.617,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S053",
+        "route_s": 54.434018,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V051",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -0.106447,
+          "y": 19.011887,
+          "th": 0.000004
+        },
+        "v": 2.777778,
+        "state": "driving_to_slot",
+        "slot": "S033",
+        "route_s": 120.830146,
+        "desired_speed_mps": 2.7777777777777777,
+        "route": {
+          "aisles": [
+            "A2",
+            "V_west_n",
+            "V_west",
+            "A1"
+          ],
+          "points": [],
+          "length_m": 0,
+          "target": {
+            "kind": "slot",
+            "slot": "S033"
+          }
+        }
+      },
+      {
+        "id": "V053",
+        "model": "hatch",
+        "color": "gray",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -0.78,
+          "y": 8.6172,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S055",
+        "route_s": 49.504043,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V054",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 23.9036,
+          "y": 8.6182,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S065",
+        "route_s": 24.814934,
+        "desired_speed_mps": 3.333333333333333
+      }
+    ]
+  },
+  "A2": {
+    "carId": "V024",
+    "cars": [
+      {
+        "id": "V001",
+        "model": "suv",
+        "color": "sand",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -9.8504,
+          "y": 14.0002,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S044",
+        "route_s": 114.508719,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V002",
+        "model": "hatch",
+        "color": "red",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 5.81,
+          "y": 26.4276,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S020",
+        "route_s": 132.101871,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V003",
+        "model": "hatch",
+        "color": "gray",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -2.6132,
+          "y": 14.1628,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S027",
+        "route_s": 121.602195,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V004",
+        "model": "suv",
+        "color": "white",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -6.9921,
+          "y": -2.7393,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S075",
+        "route_s": 56.173311,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V005",
+        "model": "suv",
+        "color": "blue",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": 13.9165,
+          "y": -2.9823,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S083",
+        "route_s": 35.502232,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V006",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 19.0983,
+          "y": 14.6507,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S036",
+        "route_s": 143.038953,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V007",
+        "model": "suv",
+        "color": "silver",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -25.1005,
+          "y": -10.9621,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S091",
+        "route_s": 87.946426,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V008",
+        "model": "sedan",
+        "color": "green",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 9.0934,
+          "y": 8.6176,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S059",
+        "route_s": 39.629833,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V009",
+        "model": "suv",
+        "color": "gray",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": 10.2387,
+          "y": 26.5604,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S002",
+        "route_s": 136.607331,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V010",
+        "model": "suv",
+        "color": "silver",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -25.4636,
+          "y": 8.6163,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S045",
+        "route_s": 74.18932,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V011",
+        "model": "sedan",
+        "color": "sand",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 14.0301,
+          "y": 8.6178,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S061",
+        "route_s": 34.695523,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V012",
+        "model": "suv",
+        "color": "white",
+        "length": 4.506063,
+        "width": 1.8216,
+        "scale": 0.958737,
+        "pose": {
+          "x": -16.3329,
+          "y": 25.7634,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S011",
+        "route_s": 109.577984,
+        "desired_speed_mps": 3.0555555555555554
+      },
+      {
+        "id": "V013",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 11.5618,
+          "y": 8.6177,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S060",
+        "route_s": 37.162833,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V014",
+        "model": "sedan",
+        "color": "red",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -22.6737,
+          "y": -2.5571,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S069",
+        "route_s": 71.675973,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V015",
+        "model": "suv",
+        "color": "blue",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -7.9767,
+          "y": -11.3161,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S097",
+        "route_s": 70.566864,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V016",
+        "model": "hatch",
+        "color": "green",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 8.6893,
+          "y": -2.9215,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S081",
+        "route_s": 40.67061,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V017",
+        "model": "sedan",
+        "color": "sand",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 21.4352,
+          "y": 8.6181,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S064",
+        "route_s": 27.287743,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V018",
+        "model": "sedan",
+        "color": "white",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -7.476,
+          "y": 26.029,
+          "th": 1.600465
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S014",
+        "route_s": 118.592551,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V019",
+        "model": "hatch",
+        "color": "sand",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -14.8329,
+          "y": -2.6482,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S072",
+        "route_s": 63.917721,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V020",
+        "model": "sedan",
+        "color": "gray",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": 9.4487,
+          "y": 14.4339,
+          "th": -1.548329
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S032",
+        "route_s": 133.561189,
+        "desired_speed_mps": 2.5
+      },
+      {
+        "id": "V021",
+        "model": "suv",
+        "color": "black",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -0.78,
+          "y": 8.6172,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S055",
+        "route_s": 49.500991,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V023",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": -10.6534,
+          "y": 8.6168,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S051",
+        "route_s": 59.375228,
+        "desired_speed_mps": 2.7777777777777777
+      },
+      {
+        "id": "V024",
+        "model": "suv",
+        "color": "white",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -16.969325,
+          "y": 19.012168,
+          "th": -0.000025
+        },
+        "v": 3.333333,
+        "state": "driving_to_slot",
+        "slot": "S026",
+        "route_s": 103.981247,
+        "desired_speed_mps": 3.333333333333333,
+        "route": {
+          "aisles": [
+            "A2",
+            "V_west_n",
+            "V_west",
+            "A1"
+          ],
+          "points": [],
+          "length_m": 0,
+          "target": {
+            "kind": "slot",
+            "slot": "S026"
+          }
+        }
+      },
+      {
+        "id": "V025",
+        "model": "suv",
+        "color": "red",
+        "length": 4.7,
+        "width": 1.9,
+        "scale": 1,
+        "pose": {
+          "x": -13.6846,
+          "y": -11.1981,
+          "th": 1.550104
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S095",
+        "route_s": 76.311149,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V026",
+        "model": "sedan",
+        "color": "blue",
+        "length": 4.6,
+        "width": 1.8,
+        "scale": 1,
+        "pose": {
+          "x": -20.5268,
+          "y": 8.6164,
+          "th": 1.570835
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S047",
+        "route_s": 69.251752,
+        "desired_speed_mps": 3.333333333333333
+      },
+      {
+        "id": "V027",
+        "model": "hatch",
+        "color": "black",
+        "length": 4,
+        "width": 1.75,
+        "scale": 1,
+        "pose": {
+          "x": 0.8486,
+          "y": -2.8304,
+          "th": -1.582403
+        },
+        "v": 0,
+        "state": "parked",
+        "slot": "S078",
+        "route_s": 48.422182,
+        "desired_speed_mps": 2.7777777777777777
+      }
+    ]
+  }
+}

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -116,6 +117,7 @@ class ParkingDetector:
         empty_seconds: float = 1.0,
         selective_line_filter: bool = True,
         static_color_rescue: bool = True,
+        legacy_border_filter: bool = False,
     ):
         self.base_gamma = base_gamma
         self.base_clahe = base_clahe
@@ -136,6 +138,10 @@ class ParkingDetector:
         self.empty_seconds = max(0.0, float(empty_seconds))
         self.selective_line_filter = bool(selective_line_filter)
         self.static_color_rescue = bool(static_color_rescue)
+        self.legacy_border_filter = bool(
+            legacy_border_filter
+            or os.environ.get("TECHGAR_LEGACY_BORDER_FILTER") == "1"
+        )
         self._static_color_previous: Dict[str, Tuple[np.ndarray, float]] = {}
         self.core_rescue_raw_ratio = 0.30
         self._stable_slots: dict = {}
@@ -164,6 +170,8 @@ class ParkingDetector:
         self._rois: List[Optional[_PrecomputedROI]] = []
         self._smoother: Optional[TemporalSmoother] = None
         self._lut_cache: Dict[float, np.ndarray] = {}
+        self._clahe_cache: Dict[Tuple[float, int], cv2.CLAHE] = {}
+        self._ensemble_crops: List[Tuple[int, int, int, int, List[int]]] = []
         self._initialized = False
 
     @property
@@ -207,6 +215,8 @@ class ParkingDetector:
             1.0,
             max(0.0, float(values.get("core_component_threshold", self.core_component_threshold))),
         )
+        if "legacy_border_filter" in values:
+            self.legacy_border_filter = bool(values["legacy_border_filter"])
         if old_geometry != (self.border_ignore_ratio, self.core_scale):
             self._initialized = False
 
@@ -318,6 +328,28 @@ class ParkingDetector:
             )
 
         self._smoother = TemporalSmoother(len(self._rois), self.smoothing_frames)
+        # The ensemble only reads slot bboxes.  Group nearby slots into
+        # horizontal strips, leaving a 17px halo for the complete pipeline:
+        # Gaussian(1) + adaptiveThreshold(12) + median(2) + dilate(1).
+        # CLAHE must still see the entire image (its tile histograms depend
+        # on full-frame geometry), but subsequent operations can use strips.
+        strips: List[Tuple[int, int, int, int, List[int]]] = []
+        for i, roi in enumerate(self._rois):
+            if roi is None or roi.analysis_area == 0:
+                continue
+            x1, y1, x2, y2 = roi.bbox
+            strips.append((max(0, x1 - 17), max(0, y1 - 17),
+                           min(w, x2 + 17), min(h, y2 + 17), [i]))
+        strips.sort(key=lambda item: item[1])
+        merged: List[Tuple[int, int, int, int, List[int]]] = []
+        for x1, y1, x2, y2, indices in strips:
+            if merged and y1 <= merged[-1][3]:
+                px1, py1, px2, py2, pindices = merged[-1]
+                merged[-1] = (min(px1, x1), py1, max(px2, x2),
+                              max(py2, y2), pindices + indices)
+            else:
+                merged.append((x1, y1, x2, y2, indices))
+        self._ensemble_crops = merged
         for state in self._stable_slots.values():
             state.update(pending=None, count=0)
         self._initialized = True
@@ -329,8 +361,13 @@ class ParkingDetector:
         full_evidence: bool = True,
     ) -> _ROIEvidence:
         """Remove thin boundary-connected components while preserving central blobs."""
-        raw_masked = cv2.bitwise_and(roi_threshold, roi_threshold, mask=roi.mask)
-        raw_ratio = cv2.countNonZero(raw_masked) / max(1, roi.area)
+        # Variant votes need only the filtered area; raw evidence is recorded
+        # once by the base pass, not 25 times for every slot.
+        if full_evidence:
+            raw_masked = cv2.bitwise_and(roi_threshold, roi_threshold, mask=roi.mask)
+            raw_ratio = cv2.countNonZero(raw_masked) / max(1, roi.area)
+        else:
+            raw_ratio = 0.0
 
         filtered = cv2.bitwise_and(
             roi_threshold, roi_threshold, mask=roi.analysis_mask
@@ -380,12 +417,31 @@ class ParkingDetector:
                 points = np.column_stack((xs, ys)).astype(np.float32)
                 vx, vy, cx, cy = cv2.fitLine(points, cv2.DIST_HUBER, 0, .01, .01).ravel()
                 residual = np.abs((xs - cx) * vy - (ys - cy) * vx)
-                half_width = max(1.5, min(analysis_min_dimension * .04,
-                                        float(np.percentile(residual, 60)) + .75))
-                thickness = cv2.distanceTransform(component, cv2.DIST_L2, 5)
-                # Thick vehicle regions are protected even when attached to
-                # a thin straight stripe. Dilate protection to retain edges.
-                protected = np.uint8(thickness > half_width + 1.0) * 255
+                if self.legacy_border_filter:
+                    half_width = max(1.5, min(analysis_min_dimension * .04,
+                                            float(np.percentile(residual, 60)) + .75))
+                    thickness = cv2.distanceTransform(component, cv2.DIST_L2, 5)
+                    # Thick vehicle regions are protected even when attached to
+                    # a thin straight stripe. Dilate protection to retain edges.
+                    protected = np.uint8(thickness > half_width + 1.0) * 255
+                else:
+                    max_line_half_width = max(
+                        2.5,
+                        analysis_min_dimension * (self.line_max_thickness_ratio * 0.5),
+                    )
+                    half_width = max(
+                        1.5,
+                        min(
+                            max_line_half_width,
+                            float(np.percentile(residual, 60)) + .75,
+                        ),
+                    )
+                    thickness = cv2.distanceTransform(component, cv2.DIST_L2, 5)
+                    min_vehicle_thickness = max(
+                        half_width * 2.0,
+                        analysis_min_dimension * 0.10,
+                    )
+                    protected = np.uint8(thickness > min_vehicle_thickness) * 255
                 protected = cv2.dilate(protected, np.ones((5, 5), np.uint8))
                 remove = (residual <= half_width + .75) & (protected[ys, xs] == 0)
                 filtered[ys[remove], xs[remove]] = 0
@@ -481,6 +537,14 @@ class ParkingDetector:
             )
         return self._lut_cache[gamma]
 
+    def _get_clahe(self, clip_limit: float, grid: int) -> cv2.CLAHE:
+        key = (clip_limit, grid)
+        if key not in self._clahe_cache:
+            self._clahe_cache[key] = cv2.createCLAHE(
+                clipLimit=clip_limit, tileGridSize=(grid, grid)
+            )
+        return self._clahe_cache[key]
+
     def detect(
         self,
         frame: np.ndarray,
@@ -508,10 +572,7 @@ class ParkingDetector:
         base_evidence: List[Optional[_ROIEvidence]] = [None] * len(self._rois)
         vote_masks: List[Optional[np.ndarray]] = [None] * len(self._rois)
 
-        base_clahe_filter = cv2.createCLAHE(
-            clipLimit=max(0.1, base_clahe),
-            tileGridSize=(clahe_grid, clahe_grid),
-        )
+        base_clahe_filter = self._get_clahe(max(0.1, base_clahe), clahe_grid)
         base_light = base_clahe_filter.apply(l_channel)
         base_light = cv2.LUT(base_light, self._get_gamma_lut(max(0.1, base_gamma)))
         base_threshold = cv2.adaptiveThreshold(
@@ -542,37 +603,39 @@ class ParkingDetector:
 
         for dc in delta_clahe:
             c_val = max(0.1, base_clahe + dc)
-            clahe = cv2.createCLAHE(clipLimit=c_val, tileGridSize=(clahe_grid, clahe_grid))
+            clahe = self._get_clahe(c_val, clahe_grid)
             l_clahe = clahe.apply(l_channel)
 
             for dg in delta_gamma:
                 g_val = max(0.1, base_gamma + dg)
                 lut = self._get_gamma_lut(g_val)
-                l_gamma = cv2.LUT(l_clahe, lut)
+                for cx1, cy1, cx2, cy2, indices in self._ensemble_crops:
+                    l_gamma = cv2.LUT(l_clahe[cy1:cy2, cx1:cx2], lut)
+                    blur = cv2.GaussianBlur(l_gamma, (3, 3), 1)
+                    thresh = cv2.adaptiveThreshold(
+                        blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                        cv2.THRESH_BINARY_INV, 25, 16,
+                    )
+                    median = cv2.medianBlur(thresh, 5)
+                    dilated = cv2.dilate(median, kernel, iterations=1)
 
-                blur = cv2.GaussianBlur(l_gamma, (3, 3), 1)
-                thresh = cv2.adaptiveThreshold(
-                    blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16
-                )
-                median = cv2.medianBlur(thresh, 5)
-                dilated = cv2.dilate(median, kernel, iterations=1)
-
-                for i, roi in enumerate(self._rois):
-                    if roi is None or roi.analysis_area == 0:
-                        continue
-                    x1, y1, x2, y2 = roi.bbox
-                    roi_thresh = dilated[y1:y2, x1:x2]
-                    # Filter each variant independently: a bridge in the base
-                    # image must not veto all 25 independent pixel counts.
-                    if self.selective_line_filter:
-                        filtered = self._filter_roi_threshold(roi_thresh, roi, full_evidence=False).filtered_mask
-                    else:
-                        filtered = cv2.bitwise_and(roi_thresh, roi_thresh, mask=vote_masks[i])
-                    ratio = cv2.countNonZero(filtered) / roi.analysis_area
-                    if ratio < ratio_thr:
-                        empty_votes[i] += 1
-                    if ratio < min(self.ratio_thr, self.exit_ratio_thr):
-                        exit_votes[i] += 1
+                    for i in indices:
+                        roi = self._rois[i]
+                        x1, y1, x2, y2 = roi.bbox
+                        roi_thresh = dilated[y1-cy1:y2-cy1, x1-cx1:x2-cx1]
+                        # Filter each variant independently: a bridge in the
+                        # base image must not veto all 25 pixel counts.
+                        if self.selective_line_filter:
+                            ratio = self._filter_roi_threshold(
+                                roi_thresh, roi, full_evidence=False
+                            ).filtered_ratio
+                        else:
+                            filtered = cv2.bitwise_and(roi_thresh, roi_thresh, mask=vote_masks[i])
+                            ratio = cv2.countNonZero(filtered) / roi.analysis_area
+                        if ratio < ratio_thr:
+                            empty_votes[i] += 1
+                        if ratio < min(self.ratio_thr, self.exit_ratio_thr):
+                            exit_votes[i] += 1
 
         # ── Pass 1: Threshold + Center Cluster ──
         required_votes = total_combinations // 2

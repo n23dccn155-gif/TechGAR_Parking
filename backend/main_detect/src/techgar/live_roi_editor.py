@@ -346,8 +346,19 @@ class LiveROIEditor:
         return view
 
     def render_guide(self) -> np.ndarray:
-        panel = np.full((VIEW_HEIGHT, GUIDE_WIDTH, 3), (28, 30, 32), dtype=np.uint8)
         state = self.state
+        cache_key = (
+            self.enabled,
+            self.frozen[self.active_camera],
+            self.active_camera,
+            state.row,
+            self._next_slot_id(state),
+            tuple(sorted(self.dirty_camera_ids)),
+        )
+        if getattr(self, "_cached_guide_key", None) == cache_key and getattr(self, "_cached_guide", None) is not None:
+            return self._cached_guide
+
+        panel = np.full((VIEW_HEIGHT, GUIDE_WIDTH, 3), (28, 30, 32), dtype=np.uint8)
         mode = "EDIT ROI" if self.enabled else "LIVE TRACKING"
         stream = "FROZEN VIEW" if self.frozen[self.active_camera] else "LIVE VIEW"
         dirty = ", ".join(camera_id.upper() for camera_id in sorted(self.dirty_camera_ids)) or "none"
@@ -376,8 +387,15 @@ class LiveROIEditor:
             if text:
                 cv2.putText(panel, text, (10, y), cv2.FONT_HERSHEY_SIMPLEX, scale, color, 1, cv2.LINE_AA)
             y += 19
+        self._cached_guide_key = cache_key
+        self._cached_guide = panel
         return panel
 
     def compose_main_view(self, camera_views: dict[str, np.ndarray]) -> np.ndarray:
-        views = [cv2.resize(camera_views[camera_id], (VIEW_WIDTH, VIEW_HEIGHT)) for camera_id in ("cam1", "cam2")]
+        views = []
+        for camera_id in ("cam1", "cam2"):
+            view = camera_views[camera_id]
+            if view.shape[1] != VIEW_WIDTH or view.shape[0] != VIEW_HEIGHT:
+                view = cv2.resize(view, (VIEW_WIDTH, VIEW_HEIGHT))
+            views.append(view)
         return np.hstack([views[0], views[1], self.render_guide()])

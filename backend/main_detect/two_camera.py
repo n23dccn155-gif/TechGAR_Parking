@@ -7,15 +7,20 @@ files and drives the shared-map tracking, slot binding, and runtime API.
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
+import gzip
 import hashlib
 import importlib.metadata
 import json
 import os
+import queue
 import subprocess
 import sys
 import time
+import threading
 import uuid
+from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,9 +38,16 @@ if str(SRC_DIR) not in sys.path:
 
 from techgar.cross_camera_manager import CrossCameraManager
 from techgar.latest_frame_capture import LatestFrameCapture
+from techgar.latest_render_queue import LatestRenderQueue
+from techgar.async_video_process import AsyncVideoProcess
 from techgar.live_roi_editor import LiveROIEditor, MAIN_WINDOW
 from techgar.motion_tracker import MotionVehicleTracker
+from techgar.overlay_interpolation import draw_boxes, interpolate_box
 from techgar.parking_detector import ParkingDetector
+from techgar.parking_event_scheduler import ParkingEventScheduler
+from techgar.parking_process import (
+    ParkingProcessPool, restore_process_affinity, split_live_parking_affinity,
+)
 from techgar.prediction_writer import PredictionV3Builder
 from techgar.runtime_contract import build_runtime_snapshot
 from techgar.slot_vehicle_binder import SlotVehicleBinder
@@ -152,7 +164,13 @@ class ReplaySession:
         "cam2_monotonic_ns",
     }
 
-    def __init__(self, session_dir: Path, capture_factory: Callable = cv2.VideoCapture) -> None:
+    def __init__(
+        self,
+        session_dir: Path,
+        capture_factory: Callable = cv2.VideoCapture,
+        prefetch_capacity: int = 16,
+        start_frame: int = 1,
+    ) -> None:
         self.session_dir = Path(session_dir).resolve()
         if not self.session_dir.is_dir():
             raise FileNotFoundError(f"Khong tim thay replay session: {self.session_dir}")
@@ -161,7 +179,11 @@ class ReplaySession:
         if not timestamps_path.is_file():
             raise FileNotFoundError(f"Replay session thieu file: {timestamps_path}")
         self.timings = self._load_timings(timestamps_path)
-        self._next_index = 0
+        if not 1 <= start_frame <= len(self.timings):
+            raise ValueError(
+                f"--start-frame phai trong [1, {len(self.timings)}], nhan {start_frame}"
+            )
+        self._next_index = start_frame - 1
         self._eof_checked = False
         self.captures = {}
         try:
@@ -174,9 +196,32 @@ class ReplaySession:
                     capture.release()
                     raise RuntimeError(f"Khong mo duoc replay video: {video_path}")
                 self.captures[camera_id] = capture
+                if start_frame > 1:
+                    if not capture.set(cv2.CAP_PROP_POS_FRAMES, start_frame - 1):
+                        raise RuntimeError(
+                            f"Khong seek duoc {camera_id} toi frame {start_frame}"
+                        )
+                    position = capture.get(cv2.CAP_PROP_POS_FRAMES)
+                    if abs(position - (start_frame - 1)) > 0.5:
+                        raise RuntimeError(
+                            f"Seek {camera_id} sai vi tri: mong doi {start_frame - 1}, nhan {position}"
+                        )
         except Exception:
             self.release()
             raise
+
+        self._prefetch_capacity = max(0, int(prefetch_capacity))
+        self._queue: queue.Queue = queue.Queue(maxsize=max(1, self._prefetch_capacity))
+        self._stop_event = threading.Event()
+        self._eof_reached = False
+        self._thread: Optional[threading.Thread] = None
+        if self._prefetch_capacity > 0:
+            self._thread = threading.Thread(
+                target=self._prefetch_worker,
+                name="replay-session-prefetch",
+                daemon=True,
+            )
+            self._thread.start()
 
     @classmethod
     def _load_timings(cls, path: Path) -> list[ReplayFrameTiming]:
@@ -226,8 +271,80 @@ class ReplaySession:
             raise ValueError(f"Replay session khong co timestamp: {path}")
         return timings
 
+    def _prefetch_worker(self) -> None:
+        try:
+            for timing in self.timings[self._next_index:]:
+                if self._stop_event.is_set():
+                    return
+                frames = {}
+                for camera_id, capture in self.captures.items():
+                    ok, frame = capture.read()
+                    if not ok or frame is None:
+                        raise RuntimeError(
+                            f"Replay {camera_id} ket thuc som truoc frame {timing.frame_idx}"
+                        )
+                    frames[camera_id] = frame
+                sequences = {camera_id: timing.frame_idx for camera_id in frames}
+                item = (frames, sequences, dict(timing.camera_timestamps_ns), timing)
+                while not self._stop_event.is_set():
+                    try:
+                        self._queue.put(item, timeout=0.05)
+                        break
+                    except queue.Full:
+                        continue
+                if self._stop_event.is_set():
+                    return
+
+            if not self._stop_event.is_set():
+                extra_frames = {}
+                for camera_id, capture in self.captures.items():
+                    ok, frame = capture.read()
+                    extra_frames[camera_id] = bool(ok and frame is not None)
+                if any(extra_frames.values()):
+                    cameras = ", ".join(
+                        camera_id for camera_id, has_frame in extra_frames.items() if has_frame
+                    )
+                    raise RuntimeError(
+                        "Replay video co nhieu frame hon frame_timestamps.csv: " + cameras
+                    )
+
+            while not self._stop_event.is_set():
+                try:
+                    self._queue.put(None, timeout=0.05)
+                    break
+                except queue.Full:
+                    continue
+        except Exception as exc:
+            while not self._stop_event.is_set():
+                try:
+                    self._queue.put(exc, timeout=0.05)
+                    break
+                except queue.Full:
+                    continue
+
     def read_pair(self) -> Optional[tuple[dict, dict, dict, ReplayFrameTiming]]:
         """Return the next atomic frame pair, or ``None`` at an exact clean EOF."""
+        if self._prefetch_capacity > 0:
+            if self._eof_reached:
+                return None
+            while True:
+                try:
+                    item = self._queue.get(timeout=0.1)
+                    break
+                except queue.Empty:
+                    if self._thread is not None and not self._thread.is_alive():
+                        raise RuntimeError("Replay prefetch worker da ket thuc dot ngot")
+                    if self._stop_event.is_set():
+                        return None
+            if isinstance(item, Exception):
+                self._eof_reached = True
+                raise item
+            if item is None:
+                self._eof_reached = True
+                return None
+            self._next_index += 1
+            return item
+
         if self._next_index >= len(self.timings):
             if not self._eof_checked:
                 extra_frames = {}
@@ -258,10 +375,139 @@ class ReplaySession:
         return frames, sequences, dict(timing.camera_timestamps_ns), timing
 
     def release(self) -> None:
+        self._stop_event.set()
+        if hasattr(self, "_queue"):
+            while not self._queue.empty():
+                try:
+                    self._queue.get_nowait()
+                except (queue.Empty, AttributeError):
+                    break
+        if getattr(self, "_thread", None) is not None and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
         for capture in self.captures.values():
             capture.release()
         self.captures.clear()
 
+
+def warmup_replay_motion(
+    replay: ReplaySession, trackers: dict, first_pair: tuple, start_frame: int,
+) -> tuple:
+    """Train only camera-local MOG2/temporal history before a replay seek.
+
+    Leave track association, global identities, binder, and parking untouched.
+    Use relative indices ending at zero so the next processed frame is one.
+    """
+    pair = first_pair
+    warmed = 0
+    while pair[3].frame_idx < start_frame:
+        frames, _sequences, timestamps_ns, timing = pair
+        for camera_id, tracker in trackers.items():
+            tracker.prepare_motion_frame(
+                frames[camera_id], timestamps_ns[camera_id] / 1e9,
+                timing.frame_idx - start_frame + 1,
+            )
+        warmed += 1
+        pair = replay.read_pair()
+        if pair is None:
+            raise RuntimeError(f"Replay ket thuc khi warm-up truoc frame {start_frame}")
+    if pair[3].frame_idx != start_frame:
+        raise RuntimeError(
+            f"Replay seek sai timestamp: mong doi {start_frame}, nhan {pair[3].frame_idx}"
+        )
+    if warmed:
+        print(f"[P35_SEEK] start_frame={start_frame} mog2_warmup_frames={warmed}", flush=True)
+    return pair
+
+
+class MotionReadAhead:
+    """One pending pair: decode and precompute motion while cross/IO runs.
+
+    Only camera-local background/temporal masks advance in the worker. The
+    caller still runs association and all cross-camera identity updates in
+    strictly increasing frame order, after the previous frame is finished.
+    """
+
+    def __init__(self, read_pair: Callable, trackers: dict, motion_pool: ThreadPoolExecutor):
+        self._read_pair = read_pair
+        self._trackers = trackers
+        self._motion_pool = motion_pool
+        self._worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="motion-read-ahead")
+        self._pending: Optional[Future] = None
+
+    def start_next(self) -> None:
+        if self._pending is not None:
+            raise RuntimeError("Motion read-ahead already has a pending frame")
+        self._pending = self._worker.submit(self._prepare_next)
+
+    def _prepare_next(self) -> Optional[tuple]:
+        pair = self._read_pair()
+        if pair is None:
+            return None
+        frames, sequences, timestamps_ns, timing = pair
+        tasks = {
+            camera_id: self._motion_pool.submit(
+                tracker.prepare_motion_frame,
+                frames[camera_id],
+                timestamps_ns[camera_id] / 1e9,
+                tracker.frame_index + 1,
+            )
+            for camera_id, tracker in self._trackers.items()
+        }
+        prepared = {camera_id: task.result() for camera_id, task in tasks.items()}
+        return frames, sequences, timestamps_ns, timing, prepared
+
+    def take_next(self) -> Optional[tuple]:
+        pending = self._pending
+        if pending is None:
+            raise RuntimeError("Motion read-ahead has no pending frame")
+        try:
+            return pending.result()
+        finally:
+            self._pending = None
+
+    def close(self) -> None:
+        self._worker.shutdown(wait=True)
+
+
+class Core2LDropReadAhead(MotionReadAhead):
+    """Select one non-stale source pair, then detect it off the main thread.
+
+    Only detector instances are touched here; camera views and the identity
+    engine are updated by the main thread after take_next(). A selected pair is
+    committed even if it becomes stale while its detection is in flight.
+    """
+    def __init__(self, replay, trackers, motion_pool, wall_started, source_started,
+                 clock=time.monotonic):
+        super().__init__(replay.read_pair, trackers, motion_pool)
+        self.replay = replay
+        self.wall_started = wall_started
+        self.source_started = source_started
+        self.clock = clock
+        self.dropped = 0
+
+    def _prepare_next(self):
+        pair = self._read_pair()
+        if pair is None:
+            return None
+        while self.replay._next_index < len(self.replay.timings):
+            timing = pair[3]
+            due = self.wall_started + max(timing.camera_timestamps_ns.values()) / 1e9 - self.source_started
+            if self.clock() - due <= 0.300:
+                break
+            pair = self._read_pair()
+            if pair is None:
+                raise RuntimeError('Replay ended while discarding stale pair')
+            self.dropped += 1
+        frames, sequences, timestamps_ns, timing = pair
+        tasks = {
+            camera_id: self._motion_pool.submit(
+                tracker.detector.step, frames[camera_id], timing.frame_idx,
+                timestamps_ns[camera_id] / 1e9)
+            for camera_id, tracker in self._trackers.items()
+        }
+        return frames, sequences, timestamps_ns, timing, {
+            camera_id: task.result() for camera_id, task in tasks.items()
+        }
 
 def save_json(path: Path, payload: dict, *, tolerate_lock: bool = False) -> bool:
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -279,6 +525,271 @@ def save_json(path: Path, payload: dict, *, tolerate_lock: bool = False) -> bool
                 time.sleep(0.01 * (attempt + 1))
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _copy_json_snapshot(value):
+    """Copy JSON-shaped snapshots without deepcopy's per-scalar dispatch."""
+    kind = type(value)
+    if kind is dict:
+        return {key: _copy_json_snapshot(item) for key, item in value.items()}
+    if kind is list:
+        return [_copy_json_snapshot(item) for item in value]
+    if kind is tuple:
+        return tuple(_copy_json_snapshot(item) for item in value)
+    if kind in (str, int, float, bool, type(None)):
+        return value
+    return copy.deepcopy(value)
+
+
+class RuntimeJsonWriter:
+    """One bounded disk worker: coalesce status, preserve every recording frame."""
+
+    def __init__(self, *, fast_snapshot: bool = False, capacity: int = 2) -> None:
+        if not 1 <= capacity <= 256:
+            raise ValueError('prediction queue capacity must be between 1 and 256')
+        self._fast_snapshot = fast_snapshot
+        self._capacity = capacity
+        self.prediction_wait_count = 0
+        self.prediction_wait_ms = 0.0
+        self.prediction_queue_peak = 0
+        self._condition = threading.Condition()
+        self._pending = deque()
+        self._closing = False
+        self._errors: list[Exception] = []
+        self._sync_lock = threading.Lock()
+        self._sync_fallback = False
+        self._inflight = None
+        self._inflight_position = None
+        self._inflight_count = None
+        self._worker = threading.Thread(target=self._run, name="techgar-json", daemon=False)
+        self._worker.start()
+
+    def _submit(self, kind: str, data: object, *, final: bool = False) -> None:
+        with self._condition:
+            if self._closing:
+                raise RuntimeError("RuntimeJsonWriter already closed")
+            if kind == "status":
+                # Only the newest pending status matters. The executing batch
+                # can finish independently without writes arriving out of order.
+                self._pending = deque(item for item in self._pending if item[0] != "status")
+            waited_at = None
+            while len(self._pending) >= self._capacity and self._worker.is_alive():
+                if kind == "status" and not final:
+                    return  # Two mandatory prediction frames have priority.
+                # Wake periodically: a worker killed by BaseException will not
+                # notify this condition, and the producer must not hang.
+                if kind == 'prediction' and waited_at is None:
+                    waited_at = time.perf_counter()
+                    self.prediction_wait_count += 1
+                self._condition.wait(timeout=0.1)
+            if waited_at is not None:
+                self.prediction_wait_ms += (time.perf_counter() - waited_at) * 1000.0
+            if kind == "status":
+                # Freeze the snapshot on the producer thread; nested binder
+                # and recovery structures can change on the next frame.
+                data = copy.deepcopy(data)
+            self._pending.append((kind, data, final))
+            self.prediction_queue_peak = max(self.prediction_queue_peak, len(self._pending))
+            if self._worker.is_alive():
+                self._condition.notify_all()
+                return
+            if not self._sync_fallback:
+                self._sync_fallback = True
+                print("Canh bao: JSON worker da dung, chuyen sang ghi dong bo", flush=True)
+        self._flush_sync()
+
+    def submit_status(self, files: list[tuple[Path, dict]], *, final: bool = False) -> None:
+        self._submit("status", files, final=final)
+
+    def submit_prediction(
+        self, output, payload: dict, counts: dict[str, int]
+    ) -> None:
+        # Freeze references before the main thread mutates live trackers.
+        snapshot = _copy_json_snapshot(payload) if self._fast_snapshot else copy.deepcopy(payload)
+        self._submit("prediction", (output, snapshot, counts))
+
+    @staticmethod
+    def _write_item(item) -> None:
+        kind, data, final = item
+        if kind == "status":
+            for path, payload in data:
+                if not save_json(path, payload, tolerate_lock=not final):
+                    print(f"Canh bao: JSON runtime dang bi khoa: {path}", flush=True)
+        else:
+            output, payload, counts = data
+            output.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            counts["predictions"] = counts.get("predictions", 0) + 1
+
+    def _flush_sync(self) -> None:
+        """Replay pending writes in FIFO order once the worker has died."""
+        with self._sync_lock:
+            while True:
+                with self._condition:
+                    if self._inflight is not None:
+                        item = self._inflight
+                        self._inflight = None
+                        if item[0] == "prediction":
+                            output, _, counts = item[1]
+                            if self._inflight_position is not None:
+                                # A worker can die midway through write().
+                                # Rewind the last line before replaying it.
+                                output.seek(self._inflight_position)
+                                output.truncate()
+                                counts["predictions"] = self._inflight_count
+                            elif (self._inflight_count is not None
+                                  and counts.get("predictions", 0) != self._inflight_count):
+                                # Non-seekable sink, write already completed.
+                                continue
+                    elif self._pending:
+                        item = self._pending.popleft()
+                    else:
+                        return
+                self._write_item(item)
+
+    def _run(self) -> None:
+        while True:
+            with self._condition:
+                while not self._pending and not self._closing:
+                    self._condition.wait()
+                if not self._pending:
+                    return
+                item = self._pending.popleft()
+                self._inflight = item
+                self._inflight_position = None
+                self._inflight_count = None
+                self._condition.notify_all()
+            handled = False
+            try:
+                if item[0] == "prediction":
+                    output, _, counts = item[1]
+                    self._inflight_count = counts.get("predictions", 0)
+                    try:
+                        self._inflight_position = output.tell()
+                    except (AttributeError, OSError, ValueError):
+                        pass  # A non-seekable test/stream sink.
+                self._write_item(item)
+                handled = True
+            except Exception as exc:
+                with self._condition:
+                    self._errors.append(exc)
+                print(f"Loi ghi JSON nen: {exc!r}", flush=True)
+                handled = True
+            finally:
+                # A BaseException still kills the worker; keep its in-flight
+                # item for synchronous recovery by the producer or close().
+                if handled:
+                    with self._condition:
+                        self._inflight = None
+                        self._condition.notify_all()
+
+    def close(self, final_status: Optional[list[tuple[Path, dict]]] = None) -> None:
+        if final_status is not None:
+            self.submit_status(final_status, final=True)
+        with self._condition:
+            self._closing = True
+            self._condition.notify_all()
+        self._worker.join()
+        if not self._worker.is_alive():
+            if (self._inflight is not None or self._pending) and not self._sync_fallback:
+                self._sync_fallback = True
+                print("Canh bao: JSON worker da dung, flush dong bo khi dong", flush=True)
+            self._flush_sync()
+        if self._errors:
+            raise RuntimeError("Background JSON write failed") from self._errors[0]
+
+
+class AsyncDebugVideoWriter:
+    """Bounded background worker for encoding and writing debug video frames.
+
+    Decouples cv2.VideoWriter compression from the main tracking loop:
+      (1) Bounded queue, frames are copied (.copy()) before enqueueing.
+      (2) FIFO ordering preserved; flushes all pending frames before releasing writers.
+      (3) Queue-full condition explicitly counted (no silent drops), printed at
+          run end, and recorded in performance.csv.
+    """
+
+    def __init__(self, maxsize: int = 128) -> None:
+        self._maxsize = maxsize
+        self._queue: queue.Queue = queue.Queue(maxsize=maxsize)
+        self._dropped_frames = 0
+        self._dropped_by_camera: dict[str, int] = {}
+        self._closing = False
+        self._lock = threading.Lock()
+        self._worker = threading.Thread(
+            target=self._run, name="techgar-debug-video", daemon=False
+        )
+        self._worker.start()
+
+    @property
+    def dropped_count(self) -> int:
+        with self._lock:
+            return self._dropped_frames
+
+    @property
+    def dropped_by_camera(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._dropped_by_camera)
+
+    def submit(
+        self,
+        camera_id: str,
+        writer: cv2.VideoWriter,
+        frame: np.ndarray,
+        counts: dict[str, int],
+    ) -> None:
+        if self._closing:
+            return
+        frame_copy = frame.copy()
+        try:
+            self._queue.put_nowait((camera_id, writer, frame_copy, counts))
+        except queue.Full:
+            with self._lock:
+                self._dropped_frames += 1
+                self._dropped_by_camera[camera_id] = (
+                    self._dropped_by_camera.get(camera_id, 0) + 1
+                )
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            if item is None:
+                self._queue.task_done()
+                break
+            camera_id, writer, frame, counts = item
+            try:
+                writer.write(frame)
+                counts[f"debug_{camera_id}"] = counts.get(f"debug_{camera_id}", 0) + 1
+            except Exception as exc:
+                print(f"Loi ghi video debug {camera_id}: {exc!r}", flush=True)
+            finally:
+                self._queue.task_done()
+
+    def close(self) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        self._queue.put(None)
+        self._worker.join()
+
+
+def runtime_status_files(
+    output_dir: Path, timestamp: str, frame_index: int, parking_by_camera: dict,
+    registry: dict, recovery_diagnostics: dict, calibration_path: Path,
+) -> list[tuple[Path, dict]]:
+    files = [
+        (output_dir / f"parking_status_{camera_id}.json", {
+            "timestamp": timestamp, "frame_index": frame_index,
+            "camera_id": camera_id, "parking_slots": camera_parking,
+        })
+        for camera_id, camera_parking in parking_by_camera.items()
+    ]
+    files.append((output_dir / "global_vehicle_registry.json", {
+        "timestamp": timestamp, "frame_index": frame_index,
+        "calibration": str(calibration_path),
+        "parking_recovery": recovery_diagnostics,
+        **registry,
+    }))
+    return files
 
 
 def load_calibration(path: Path) -> tuple[dict, dict, dict, dict]:
@@ -555,6 +1066,52 @@ def select_moving_tracks(
         moving_tracks[local_id] = track
         shown_ids[local_id] = global_id
     return moving_tracks, shown_ids
+
+
+def dropped_frame_overlay_boxes(
+    previous: Optional[tuple[int, dict]],
+    source_frame_idx: int,
+    moving_tracks: dict,
+    shown_ids: dict[int, int],
+) -> tuple[list[tuple[float, float, float, float]], tuple[int, dict]]:
+    """Display-only boxes at skipped source indices between two real sightings.
+
+    Match by local track and unchanged GID; never use predicted/occluded tracks.
+    Limit old gaps and drawings so a stalled stream cannot flood the overlay.
+    Returned snapshots contain only primitive values, never live track objects.
+    """
+    observations = {}
+    for local_id, track in moving_tracks.items():
+        if (local_id not in shown_ids
+                or int(getattr(track, "consecutive_invisible_count", 0)) != 0
+                or getattr(track, "observation_kind", "detection") != "detection"):
+            continue
+        x, y, width, height = (float(value) for value in track.bbox)
+        observations[local_id] = (
+            int(shown_ids[local_id]), (x, y, x + width, y + height),
+        )
+
+    boxes = []
+    if previous is not None:
+        previous_idx, previous_observations = previous
+        gap = int(source_frame_idx) - int(previous_idx)
+        if 1 < gap <= 12:
+            for local_id, (global_id, current_box) in observations.items():
+                earlier = previous_observations.get(local_id)
+                if earlier is None or earlier[0] != global_id:
+                    continue
+                for skipped_idx in range(max(previous_idx + 1, source_frame_idx - 3), source_frame_idx):
+                    boxes.append(interpolate_box(
+                        earlier[1], previous_idx, current_box, source_frame_idx, skipped_idx,
+                    ))
+    return boxes, (int(source_frame_idx), observations)
+
+
+def is_interpolated_overlay_enabled(args: argparse.Namespace) -> bool:
+    """CLI overrides the environment; both leave F3 disabled by default."""
+    requested = getattr(args, "interpolate_overlay", None)
+    return (os.environ.get("TECHGAR_F3_OVERLAY") == "1"
+            if requested is None else bool(requested))
 
 
 def _track_bbox(track) -> tuple[float, float, float, float]:
@@ -1635,11 +2192,24 @@ def process_parking_frame(
     detector: ParkingDetector,
     frame: np.ndarray,
     include_debug: bool,
-) -> tuple[list, tuple[np.ndarray, np.ndarray] | None, float]:
+) -> tuple[list, bool, float]:
     """Run slow parking work outside the live display loop."""
+    profile_worker = os.environ.get("TECHGAR_PROFILE") == "1"
+    if profile_worker:
+        worker_started = time.perf_counter()
+        worker_cpu_started = time.thread_time()
     results = detector.detect(frame, apply_smoothing=not detector.stable_evidence)
-    debug = detector.build_debug_images(frame) if include_debug else None
-    return results, debug, time.monotonic()
+    if profile_worker:
+        worker_wall_ms = (time.perf_counter() - worker_started) * 1000.0
+        if worker_wall_ms >= 300.0:
+            print(
+                f"[P35_PARKING_WORKER] wall={worker_wall_ms:.1f}ms "
+                f"cpu={(time.thread_time() - worker_cpu_started) * 1000.0:.1f}ms",
+                flush=True,
+            )
+    # Coordinator draws once, after accept_evidence has updated stable state.
+    # Drawing here and again on acceptance doubles this work every parking job.
+    return results, include_debug, time.monotonic()
 
 
 def freeze_runtime_render_payload(
@@ -1679,7 +2249,10 @@ def freeze_runtime_render_payload(
 
 def render_runtime_frame(frame: np.ndarray, payload: dict) -> np.ndarray:
     """Render a frozen overlay without touching tracker/manager state."""
-    output = frame
+    # F3 drawing lives only in the copy returned to the UI/stream renderer.
+    skipped_boxes = payload.get("f3_interpolated_boxes")
+    output = (draw_boxes(frame, skipped_boxes, color=(0, 180, 255), thickness=1)
+              if skipped_boxes else frame)
     roi_points = payload.get("roi_points")
     if roi_points is not None:
         cv2.polylines(output, [roi_points], True, (0, 255, 255), 2, cv2.LINE_AA)
@@ -1773,12 +2346,69 @@ def resolve_slot_arrival_lookback_seconds(args: argparse.Namespace) -> float:
 
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Hai camera that: tracking, parking va Global ID")
+    parser.add_argument('--render-async', action='store_true',
+                        help='Render va ghi video bat dong bo; q/Esc de thoat, khong ho tro sua ROI truc tiep')
+    parser.add_argument('--render-every', type=int, default=1,
+                        help='Che do render-async: render moi N frame (mac dinh 1)')
+    parser.add_argument('--render-preview-scale', type=float, default=1.0,
+                        help='Che do render-async: ti le anh hien thi (mac dinh 1.0)')
+    parser.add_argument('--render-replay-process', action='store_true', help='Replay only: render in a process that reads source video by frame index')
+    parser.add_argument('--render-video-scale', type=float, default=1.0, help='Replay render process video scale')
+    parser.add_argument('--render-video-codec', choices=('mp4v','MJPG'), default='mp4v')
+    parser.add_argument(
+        "--identity-kernel", choices=("legacy", "world", "core2", "core2l"), default="legacy",
+        help="Identity association: legacy (default), P37 world, or core2",
+    )
+    parser.add_argument('--m1l-decode-config', default=str(PROJECT_ROOT.parent.parent / '.orca/core2/m1l/run_gpu1/decode_config.json'))
+    parser.add_argument('--binder-fast', action='store_true', help='Opt-in vectorized binder candidate filtering')
+    parser.add_argument('--perf-optimize', action='store_true', help='Opt-in core2l prediction and binder optimizations')
+    parser.add_argument('--core2-dump-async', action='store_true', help='Opt-in bounded lossless dump writer thread')
+    parser.add_argument('--predictions-gzip', action='store_true', help='Write session predictions as gzip JSONL')
+    parser.add_argument('--public-id-split', action='store_true', help='Use separate public ID ranges for parked and entering vehicles (core2l only)')
+    parser.add_argument('--public-id-map', help='Write internal-to-public ID mapping as a new JSON file')
+    parser.add_argument('--prediction-queue-capacity', type=int, default=2, choices=range(1, 257),
+                        metavar='N', help='Bounded FIFO prediction queue (default 2; max 256)')
+    parser.add_argument('--perf-stages', action='store_true', help='Opt-in per-frame core2l performance stage timings')
+    parser.add_argument(
+        "--identity-kernel-dump",
+        default=None,
+        metavar="FILE",
+        help=(
+            "P37/T6c DEBUG: write exactly what the world adapter feeds the kernel "
+            "each frame (source frame, timestamp, cam, local id, bbox, world, "
+            "track_state, prediction_source) plus the GID the kernel returned. "
+            "Requires --identity-kernel world. One JSON object per line."
+        ),
+    )
+    parser.add_argument("--core2-dump", default=None, metavar="FILE",
+                        help="B0: capture pre-association detector Blobs as jsonl.gz")
     parser.add_argument("--cam1-url")
     parser.add_argument("--cam2-url")
     parser.add_argument("--replay-async-vision", action="store_true",
                         help="Use the live vision worker path while replaying (non-deterministic scheduling)")
     parser.add_argument("--replay-realtime", action="store_true",
                         help="Pace replay using recorded timestamps without dropping source frames")
+    parser.add_argument("--start-frame", type=int, default=1,
+                        help="Replay from 1-based frame N; warm up MOG2 on up to 150 earlier pairs")
+    parser.add_argument(
+        "--replay-stride",
+        type=int,
+        default=1,
+        help=(
+            "P36 TEST-ONLY: process only every N-th replay source pair (1 = every "
+            "frame, the default). Decoded pairs that are skipped are never fed to "
+            "the trackers, reproducing live drop-rate conditions deterministically. "
+            "Only valid with --replay-session / --camN-video; requires "
+            "--no-replay-realtime (no pacing) so results depend only on the stride."
+        ),
+    )
+    parser.add_argument("--replay-drop-frames", action=argparse.BooleanOptionalAction,
+                        default=None,
+                        help="Drop replay pairs >300ms late in live mode (use --no-replay-drop-frames for aligned diagnostics)")
+    parser.add_argument("--replay-drop-readahead", action="store_true",
+                        help="core2l only: select realtime replay pairs and detect one pair ahead")
+    parser.add_argument("--no-motion-pipeline", action="store_true",
+                        help="Disable motion read-ahead for deterministic A/B diagnostics")
     parser.add_argument(
         "--replay-session",
         help=(
@@ -1790,6 +2420,24 @@ def make_parser() -> argparse.ArgumentParser:
         "--live-mode",
         action="store_true",
         help="Cong bo source_mode='live' ngay ca khi replay video de frontend va gate controller nhan nhu camera realtime",
+    )
+    parser.add_argument(
+        "--fast-motion",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Opt in to half-scale MOG2/temporal ROI (disabled by default, including --live-mode)",
+    )
+    parser.add_argument(
+        "--replay-prefetch-frames",
+        type=int,
+        default=1,
+        help="So frame cap dem truoc trong bo doc replay (thread prefetch queue)",
+    )
+    parser.add_argument(
+        "--display-scale",
+        type=float,
+        default=None,
+        help="Ti le thu phong cua so live display (mac dinh 0.5 khi --live-mode, 1.0 khi khong live)",
     )
     parser.add_argument("--slots-cam1", required=True)
     parser.add_argument("--slots-cam2", required=True)
@@ -1829,6 +2477,14 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-parking-debug", action="store_true", help="An cua so threshold pixel de giam tai")
     parser.add_argument("--parking-fps", type=float, default=2.0)
+    parser.add_argument(
+        "--parking-schedule", choices=("periodic", "event"), default="periodic",
+        help="Parking sampling: existing periodic schedule or local-track/binder events",
+    )
+    parser.add_argument(
+        "--parking-idle-period", type=float, default=5.0,
+        help="Seconds between background scans per camera in event schedule",
+    )
     parser.add_argument("--legacy-parking-filter", action="store_true", help="Replay baseline border filter and frame smoothing")
     parser.add_argument("--legacy-static-color-rescue", action="store_true", help="Tat nhan lai xe mau dung yen it dac trung")
     parser.add_argument(
@@ -1886,6 +2542,24 @@ def make_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--legacy-token-foreign-slot-capture",
+        action="store_true",
+        help=(
+            "Cho phep token cua o A giu manh track dang DO VAO o B ben canh "
+            "(hanh vi truoc P29: V060/S054 bi token S056 giu canonical_gid=None "
+            "91 frame). Mac dinh = chi giu khi o cua token la o gan nhat."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-split-vehicle-echo",
+        action="store_true",
+        help=(
+            "Tat viec gop hai nua cua MOT xe bi frame-differencing tach doi "
+            "trong cung camera (hanh vi truoc P29: V040 toi_5p doi GID 1 -> 5). "
+            "Mac dinh = gop (giu mot GID)."
+        ),
+    )
+    parser.add_argument(
         "--legacy-departure-token-distance",
         action="store_true",
         help=(
@@ -1913,6 +2587,10 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json-fps", type=float, default=5.0)
     parser.add_argument("--max-frames", type=int, default=0)
     parser.add_argument("--no-display", action="store_true")
+    parser.add_argument(
+        "--interpolate-overlay", action=argparse.BooleanOptionalAction, default=None,
+        help="F3: draw skipped source-frame boxes (default OFF; TECHGAR_F3_OVERLAY=1)",
+    )
     parser.add_argument("--min-visible-count", type=int, default=3)
     parser.add_argument("--lost-track-ttl", type=int, default=90)
     parser.add_argument("--motion-min-area", type=int, default=650)
@@ -2152,11 +2830,61 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sync-catchup-reads", type=int, default=3)
     parser.add_argument("--opencv-threads", type=int, default=1,
                         help="So luong OpenCV threads moi tien trinh; 1 tranh tranh chap voi hai vision workers")
+    parser.add_argument(
+        "--debug-video-queue-size",
+        type=int,
+        default=128,
+        help="Kich thuoc hang doi bo dem ghi debug video sang thread rieng (mac dinh = 128 frame)",
+    )
     return parser
 
 
+def validate_async_render(identity_kernel, runtime_publisher):
+    if identity_kernel not in ('core2', 'core2l') or runtime_publisher is not None:
+        raise ValueError('--render-async chi ho tro core2/core2l, khong ho tro runtime publisher')
+
+
 def run(args: argparse.Namespace, runtime_publisher=None) -> None:
+    perf_stages = bool(getattr(args, 'perf_stages', False))
+    if perf_stages and (args.identity_kernel != 'core2l' or not args.session_dir or args.debug_video_only):
+        raise ValueError('--perf-stages requires core2l and a predictions-enabled session')
+    render_async = bool(getattr(args, 'render_async', False))
+    render_every = int(getattr(args, 'render_every', 1))
+    preview_scale = float(getattr(args, 'render_preview_scale', 1.0))
+    render_replay_process = bool(getattr(args, 'render_replay_process', False))
+    video_scale = float(getattr(args, 'render_video_scale', 1.0))
+    video_codec = getattr(args, 'render_video_codec', 'mp4v')
+    if render_replay_process and (not render_async or not args.replay_session or args.no_session_video):
+        raise ValueError('--render-replay-process requires --render-async, --replay-session and session video')
+    if not 0 < video_scale <= 1 or (not render_replay_process and (video_scale != 1.0 or video_codec != 'mp4v')):
+        raise ValueError('video scale/codec require --render-replay-process; scale must be in (0,1]')
+    if render_every < 1 or not 0 < preview_scale <= 1:
+        raise ValueError('render-every >= 1 and 0 < render-preview-scale <= 1 required')
+    if not render_async and (render_every != 1 or preview_scale != 1.0):
+        raise ValueError('render-every and render-preview-scale require --render-async')
+    if args.public_id_split and args.identity_kernel != 'core2l':
+        raise ValueError('--public-id-split requires --identity-kernel core2l')
+    if args.public_id_map and not args.public_id_split:
+        raise ValueError('--public-id-map requires --public-id-split')
+    if args.public_id_map and Path(args.public_id_map).exists():
+        raise FileExistsError(args.public_id_map)
     cv2.setNumThreads(max(1, int(getattr(args, "opencv_threads", 1))))
+    f3_overlay_enabled = is_interpolated_overlay_enabled(args)
+    profile_enabled = os.environ.get("TECHGAR_PROFILE") == "1" or perf_stages
+    profile_interval = max(1, int(os.environ.get('TECHGAR_PROFILE_INTERVAL', '100')))
+    profile_totals = {}
+    profile_maximums = {}
+    profile_imshow_ms = [0.0]
+    profile_original_imshow = cv2.imshow
+    if profile_enabled:
+        # Measure GUI calls without changing the display path owned by T3.
+        def profiled_imshow(*args, **kwargs):
+            before = time.perf_counter()
+            try:
+                return profile_original_imshow(*args, **kwargs)
+            finally:
+                profile_imshow_ms[0] += (time.perf_counter() - before) * 1000.0
+        cv2.imshow = profiled_imshow
     arrival_lookback_seconds = resolve_slot_arrival_lookback_seconds(args)
     replay_session_path = (
         Path(args.replay_session).resolve() if args.replay_session else None
@@ -2166,10 +2894,33 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             raise ValueError(
                 "--replay-session khong duoc dung chung voi --cam1-url/--cam2-url"
             )
+        if (getattr(args, "replay_drop_frames", False)
+                and not (getattr(args, "replay_realtime", False) or getattr(args, "live_mode", False))):
+            raise ValueError("--replay-drop-frames can --replay-realtime hoac --live-mode")
     elif not args.cam1_url or not args.cam2_url:
         raise ValueError(
             "Can ca --cam1-url va --cam2-url, hoac dung --replay-session"
         )
+    if getattr(args, "start_frame", 1) != 1 and replay_session_path is None:
+        raise ValueError("--start-frame chi ho tro replay session")
+    replay_stride = int(getattr(args, "replay_stride", 1) or 1)
+    if replay_stride < 1:
+        raise ValueError("--replay-stride phai >= 1")
+    if replay_stride > 1:
+        # P36 test-only path. Kept deliberately narrow so the default behaviour
+        # (stride 1) is untouched: no stride logic runs at all unless asked.
+        if replay_session_path is None:
+            raise ValueError("--replay-stride chi ho tro replay session")
+        if getattr(args, "replay_realtime", False) or getattr(args, "live_mode", False):
+            raise ValueError(
+                "--replay-stride khong duoc dung voi --replay-realtime/--live-mode "
+                "(pace/skip se lam ket qua khong tat dinh)"
+            )
+        if getattr(args, "replay_drop_frames", False):
+            raise ValueError(
+                "--replay-stride khong duoc dung voi --replay-drop-frames "
+                "(ca hai deu bo frame, ket qua se khong tat dinh)"
+            )
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -2190,6 +2941,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
     recorded_frame_count = 0
     recording_counts: dict[str, int] = {}
     recording_write_interrupted = False
+    debug_video_writer: Optional[AsyncDebugVideoWriter] = None
+    async_render_worker = None
+    async_video_process = None
+    stage_timers = None
+    async_video_specs = {}
+    async_render_stop = threading.Event()
     session_created = False
     status = "failed"
     started_at = datetime.now().astimezone()
@@ -2198,14 +2955,29 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
     tuning_panel = None
     roi_editor = None
     parking_executor = None
+    parking_worker_affinity_mask = None
+    parking_affinity_restore = None
+    motion_executor = None
+    motion_pipeline = None
+    status_writer: Optional[RuntimeJsonWriter] = None
     replay = None
     replay_completed = False
     replay_timing = None
-    prediction_builder = PredictionV3Builder()
+    prediction_builder = PredictionV3Builder(cache_event_fingerprints=(
+        bool(getattr(args, 'perf_optimize', False)) and args.identity_kernel == 'core2l'))
+    display_scale = getattr(args, "display_scale", None)
+    if display_scale is None:
+        display_scale = 0.5 if getattr(args, "live_mode", False) else 1.0
+    display_scale = max(0.1, min(2.0, float(display_scale)))
     
     try:
         if replay_session_path is not None:
-            replay = ReplaySession(replay_session_path)
+            start_frame = getattr(args, "start_frame", 1)
+            replay = ReplaySession(
+                replay_session_path,
+                prefetch_capacity=getattr(args, "replay_prefetch_frames", 1),
+                start_frame=max(1, start_frame - 150),
+            )
             captures = replay.captures
             first_pair = replay.read_pair()
             if first_pair is None:  # Guarded by the non-empty timestamp validation.
@@ -2261,19 +3033,46 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             if not args.no_session_video:
                 for camera_id, (width, height) in sizes.items():
                     fps = float(captures[camera_id].get(cv2.CAP_PROP_FPS)) or 25.0
-                    writers[camera_id] = (
-                        None if args.debug_video_only else cv2.VideoWriter(str(session_dir / f"raw_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
-                        cv2.VideoWriter(str(session_dir / f"debug_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
-                    )
+                    if render_async:
+                        if not args.debug_video_only:
+                            async_video_specs[f'raw_{camera_id}'] = (str(session_dir / f'raw_{camera_id}.{ "avi" if render_replay_process and video_codec == "MJPG" else "mp4"}'), fps / render_every, (width, height))
+                        async_video_specs[f'debug_{camera_id}'] = (str(session_dir / f'debug_{camera_id}.{ "avi" if render_replay_process and video_codec == "MJPG" else "mp4"}'), fps / render_every, (width, height))
+                        writers[camera_id] = (None if args.debug_video_only else True, True)
+                    else:
+                        writers[camera_id] = (
+                            None if args.debug_video_only else cv2.VideoWriter(str(session_dir / f"raw_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
+                            cv2.VideoWriter(str(session_dir / f"debug_{camera_id}.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)),
+                        )
+                    if not args.debug_video_only:
+                        recording_counts[f"raw_{camera_id}"] = 0
+                    recording_counts[f"debug_{camera_id}"] = 0
+                queue_size = int(getattr(args, "debug_video_queue_size", 128) or 128)
+                if not render_async:
+                    debug_video_writer = AsyncDebugVideoWriter(maxsize=queue_size)
             if not args.debug_video_only:
                 timestamps_file = (session_dir / "frame_timestamps.csv").open("w", newline="", encoding="utf-8-sig")
                 performance_file = (session_dir / "performance.csv").open("w", newline="", encoding="utf-8-sig")
-                predictions_file = (session_dir / "predictions.jsonl").open("w", encoding="utf-8")
+                predictions_file = (gzip.open(session_dir / 'predictions.jsonl.gz', 'wt', compresslevel=1, encoding='utf-8', newline='\n')
+                                    if getattr(args, 'predictions_gzip', False) else
+                                    (session_dir / "predictions.jsonl").open("w", encoding="utf-8"))
+                recording_counts["timestamps"] = 0
+                recording_counts["performance"] = 0
+                recording_counts["predictions"] = 0
                 csv.writer(timestamps_file).writerow([
                     "frame_idx", "capture_unix_ns", "wall_time_iso",
                     "cam1_monotonic_ns", "cam2_monotonic_ns", "camera_skew_ms",
                 ])
-                csv.writer(performance_file).writerow(["frame_idx", "total_processing_ms", "tracking_pipeline_ms"])
+                perf_header = [
+                    "frame_idx", "total_processing_ms", "tracking_pipeline_ms", "debug_video_dropped_frames"
+                ]
+                if perf_stages:
+                    perf_header += ['source_frame_idx','read_pace_ms','parking_apply_ms','parking_total_ms',
+                        'motion_wall_ms','detect_cam1_ms','detect_cam2_ms','decode_cam1_ms','decode_cam2_ms',
+                        'homography_cam1_ms','homography_cam2_ms','fuse_ms','engine_ms','binder_ms',
+                        'cross_wall_ms','prediction_build_ms','render_ms','write_submit_ms','track_count','blob_count','snapshot_submit_ms']
+                    if args.replay_drop_readahead:
+                        perf_header.append('total_incl_submit_ms')
+                csv.writer(performance_file).writerow(perf_header)
             ground_truth_headers = {
                 "ground_truth_slots.csv": [
                     "schema_version", "camera_id", "slot_id", "start_frame",
@@ -2396,58 +3195,103 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             adjacency[("cam1", str(custom_masks["cam1"]["handoff_edge"]))] = "cam2"
             adjacency[("cam2", str(custom_masks["cam2"]["handoff_edge"]))] = "cam1"
 
-        manager = CrossCameraManager(
-            camera_sizes=sizes,
-            camera_crops={camera_id: (0, 0, *size) for camera_id, size in sizes.items()},
-            camera_transforms=transforms,
-            edge_adjacency=adjacency,
-            overlap_regions=overlap_regions,
-            custom_masks=custom_masks,
-            handoff_ttl=args.handoff_ttl,
-            match_distance=handoff_match_distance,
-            appearance_threshold=args.handoff_appearance_threshold,
-            relaxed_appearance_threshold=args.handoff_relaxed_appearance_threshold,
-            cross_camera_duplicate_distance=cross_camera_duplicate_distance,
-            cross_camera_defer_frames=args.cross_camera_defer_frames,
-            lookahead_frames=args.handoff_lookahead_frames,
-            prediction_radius=handoff_prediction_radius,
-            min_direction_cosine=args.handoff_min_direction_cosine,
-            identity_retention_frames=args.identity_retention_frames,
-            identity_retention_seconds=args.identity_retention_seconds,
-            identity_retention_moving_seconds=args.identity_retention_moving_seconds,
-            dormant_match_distance=dormant_match_distance,
-            dormant_appearance_threshold=args.dormant_appearance_threshold,
-            tracklet_gallery_size=args.global_gallery_max_samples,
-            # P16e: a slot width in world units is the scale of "far apart" for
-            # the simultaneous-measurement guard.  Falls back to the manager's
-            # duplicate distance when the calibration has no slot polygons.
-            slot_width_world=slot_width_world,
-            legacy_dormant_merge_overlap=args.legacy_dormant_merge_overlap,
-            legacy_young_source_merge_window=args.legacy_young_source_merge_window,
-            dormant_reid_max_speed_world_per_s=dormant_reid_max_speed_world,
-            legacy_dormant_reid=args.legacy_dormant_reid,
-            new_identity_min_observations=args.new_identity_min_observations,
-            new_identity_unusual_size_observations=(
-                args.new_identity_unusual_size_observations
-            ),
-            new_identity_min_displacement_ratio=(
-                args.new_identity_min_displacement_ratio
-            ),
-            exit_zones=exit_zones,
-            world_unit=world_unit,
-            shared_map_anchor=shared_map_anchor,
-            camera_fps=initial_camera_fps,
-            trajectory_history_seconds=args.trajectory_history_seconds,
-            enable_stationary_reacquire=getattr(
-                args, "enable_stationary_reacquire", True
-            ),
-            stationary_resume_frozen=getattr(
-                args, "stationary_resume_frozen", True
-            ),
-            stationary_reserve_hold=getattr(
-                args, "stationary_reserve_hold", True
-            ),
-        )
+        if args.identity_kernel not in ("core2", "core2l"):
+            manager = CrossCameraManager(
+                camera_sizes=sizes,
+                camera_crops={camera_id: (0, 0, *size) for camera_id, size in sizes.items()},
+                camera_transforms=transforms,
+                edge_adjacency=adjacency,
+                overlap_regions=overlap_regions,
+                custom_masks=custom_masks,
+                handoff_ttl=args.handoff_ttl,
+                match_distance=handoff_match_distance,
+                appearance_threshold=args.handoff_appearance_threshold,
+                relaxed_appearance_threshold=args.handoff_relaxed_appearance_threshold,
+                cross_camera_duplicate_distance=cross_camera_duplicate_distance,
+                cross_camera_defer_frames=args.cross_camera_defer_frames,
+                lookahead_frames=args.handoff_lookahead_frames,
+                prediction_radius=handoff_prediction_radius,
+                min_direction_cosine=args.handoff_min_direction_cosine,
+                identity_retention_frames=args.identity_retention_frames,
+                identity_retention_seconds=args.identity_retention_seconds,
+                identity_retention_moving_seconds=args.identity_retention_moving_seconds,
+                dormant_match_distance=dormant_match_distance,
+                dormant_appearance_threshold=args.dormant_appearance_threshold,
+                tracklet_gallery_size=args.global_gallery_max_samples,
+                # P16e: a slot width in world units is the scale of "far apart" for
+                # the simultaneous-measurement guard.  Falls back to the manager's
+                # duplicate distance when the calibration has no slot polygons.
+                slot_width_world=slot_width_world,
+                legacy_dormant_merge_overlap=args.legacy_dormant_merge_overlap,
+                legacy_young_source_merge_window=args.legacy_young_source_merge_window,
+                dormant_reid_max_speed_world_per_s=dormant_reid_max_speed_world,
+                legacy_dormant_reid=args.legacy_dormant_reid,
+                new_identity_min_observations=args.new_identity_min_observations,
+                new_identity_unusual_size_observations=(
+                    args.new_identity_unusual_size_observations
+                ),
+                new_identity_min_displacement_ratio=(
+                    args.new_identity_min_displacement_ratio
+                ),
+                exit_zones=exit_zones,
+                world_unit=world_unit,
+                shared_map_anchor=shared_map_anchor,
+                camera_fps=initial_camera_fps,
+                trajectory_history_seconds=args.trajectory_history_seconds,
+                enable_stationary_reacquire=getattr(
+                    args, "enable_stationary_reacquire", True
+                ),
+                stationary_resume_frozen=getattr(
+                    args, "stationary_resume_frozen", True
+                ),
+                stationary_reserve_hold=getattr(
+                    args, "stationary_reserve_hold", True
+                ),
+                split_vehicle_echo=not getattr(
+                    args, "legacy_split_vehicle_echo", False
+                ),
+            )
+        if args.identity_kernel == "world":
+            if world_unit != "cm":
+                raise ValueError(
+                    f"--identity-kernel world requires a cm calibration, got {world_unit!r}"
+                )
+            if getattr(args, "identity_kernel_dump", None):
+                # P37/T6c debug: chi co nghia o world mode. Ghi ro thay vi bo qua.
+                print(
+                    f"[P37_T6C] dump adapter -> {args.identity_kernel_dump}",
+                    flush=True,
+                )
+            gates_path = calibration_path.parent / "gate_zones.json"
+            if not gates_path.is_file():
+                raise FileNotFoundError(
+                    f"--identity-kernel world requires gate_zones.json next to calibration: {gates_path}"
+                )
+            from techgar.world_identity_adapter import WorldIdentityAdapter
+            from techgar.world_identity_kernel import GroundGeometry
+
+            gate_zones = json.loads(gates_path.read_text(encoding="utf-8"))
+            if gate_zones.get("unit") != "cm":
+                raise ValueError(f"World gate zones must use cm: {gates_path}")
+            manager = WorldIdentityAdapter(
+                GroundGeometry.from_config(calibration_payload, gate_zones),
+                transforms,
+                bootstrap_first_frame=True,
+                dump_path=getattr(args, "identity_kernel_dump", None),
+            )
+        elif args.identity_kernel == "core2":
+            from techgar.core2.adapter import Core2Adapter, make_engine
+            gates_path = calibration_path.parent / "gate_zones.json"
+            gate_zones = json.loads(gates_path.read_text(encoding="utf-8"))
+            manager = Core2Adapter(make_engine(calibration_payload, gate_zones))
+        elif args.identity_kernel == "core2l":
+            from techgar.core2.adapter import Core2Adapter
+            from techgar.core2.adapter_l import load_m1l_config, make_engine_l
+            m1l_config = load_m1l_config(args.m1l_decode_config)
+            gates_path = calibration_path.parent / 'gate_zones.json'
+            gate_zones = json.loads(gates_path.read_text(encoding='utf8'))
+            manager = Core2Adapter(make_engine_l(transforms, gate_zones, frame_sizes=sizes,
+                **({'public_id_split': True} if args.public_id_split else {})))
         slot_files = {"cam1": args.slots_cam1, "cam2": args.slots_cam2}
         detectors = {
             camera_id: ParkingDetector(
@@ -2466,10 +3310,17 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             )
             for camera_id, slot_file in slot_files.items()
         }
-        if replay is None or getattr(args, "replay_async_vision", False):
-            parking_executor = ThreadPoolExecutor(
-                max_workers=2, thread_name_prefix="parking"
-            )
+        # --camN-video resolves to a recorded replay for timestamp accuracy.
+        # When served through the Runtime API, this is an interactive video
+        # stream: expensive parking detection must not stall its frame loop.
+        # Explicit --replay-session keeps the deterministic synchronous path.
+        parking_async = (
+            replay is None
+            or bool(getattr(args, "replay_async_vision", False))
+            or (runtime_publisher is not None and bool(getattr(args, "cam1_video", None)))
+        )
+        if args.parking_schedule == "event" and not parking_async:
+            print("[P38_PARKING_EVENT] Replay dong bo giu lich periodic de bao toan golden", flush=True)
         profile_path = Path(args.detector_profile).resolve()
         replay_detector_profile = None
         if replay_session_path is not None:
@@ -2513,6 +3364,19 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 if tuning_panel is not None:
                     cv2.setTrackbarPos(f"{camera_id.upper()} Ratio %", tuning_panel.WINDOW,
                                       int(round(detector.ratio_thr * 100)))
+        if parking_async:
+            # One low-priority child, never more than one pending parking job.
+            # Replay/golden continues through the synchronous branch below.
+            if getattr(args, "live_mode", False):
+                # P38/AB2: P38_PARKING_AFFINITY=0 disables the CPU-mask split for
+                # A/B measurement. Default (unset) keeps the F2a-FIX behaviour.
+                if os.environ.get("P38_PARKING_AFFINITY", "1") != "0":
+                    cpu_split = split_live_parking_affinity()
+                    if cpu_split is not None:
+                        parking_worker_affinity_mask, parking_affinity_restore = cpu_split
+            parking_executor = ParkingProcessPool(
+                slot_files, detectors, affinity_mask=parking_worker_affinity_mask
+            )
         binders = {
             camera_id: SlotVehicleBinder(
                 policy="vision_primary",
@@ -2554,10 +3418,26 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 ),
                 legacy_token_key_reuse=args.legacy_token_key_reuse,
                 legacy_token_continuation_range=args.legacy_token_continuation_range,
+                token_foreign_slot_guard=not args.legacy_token_foreign_slot_capture,
             )
             for camera_id in frames
         }
-        if not args.no_display:
+        if getattr(args, 'binder_fast', False):
+            for binder in binders.values():
+                binder.fast_batch_match = True
+        if args.identity_kernel in ('core2', 'core2l'):
+            for binder in binders.values():
+                binder.defer_to_foreign_owner = True
+        if getattr(args, 'perf_optimize', False) and args.identity_kernel == 'core2l':
+            for binder in binders.values():
+                binder.perf_geometry_cache = True
+                # G6A A/B baseline: keep the existing perf-optimize behavior
+                # (including prediction serialization and geometry cache),
+                # but disable only the new binder paths for parity checks.
+                if os.environ.get('TECHGAR_G6A_LEGACY_BINDER') != '1':
+                    binder.perf_sparse_match = True
+                    binder.perf_stopped_cache = True
+        if not args.no_display and not render_async:
             roi_editor = LiveROIEditor(slot_files, sizes)
             cv2.namedWindow(MAIN_WINDOW, cv2.WINDOW_NORMAL)
             cv2.setMouseCallback(MAIN_WINDOW, roi_editor.handle_mouse)
@@ -2599,6 +3479,31 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             )
             for camera_id in frames
         }
+        for tracker in trackers.values():
+            tracker.fast_motion = bool(args.fast_motion)
+
+        core2_dump = None
+        core2_last_t = None
+        if getattr(args, "core2_dump", None):
+            from techgar.core2.capture import core_version, tap_detector
+            from techgar.core2.dump import BlobDumpWriter
+            if world_unit != "cm":
+                raise ValueError("--core2-dump requires cm calibration")
+            if args.identity_kernel not in ("core2", "core2l"):
+                core2_captured = {camera_id: tap_detector(tracker)
+                                  for camera_id, tracker in trackers.items()}
+            core2_dump = BlobDumpWriter(
+                args.core2_dump, video=str(replay_session_path or "live"),
+                stride=replay_stride, cameras={0: "cam1", 1: "cam2"},
+                core_version=core_version(), provenance=("core2_m1l" if args.identity_kernel == "core2l" else "core2_m1" if args.identity_kernel == "core2"
+                                                         else "legacy_detector_pre_association"),
+                engine_inputs=({'calibration': calibration_payload, 'gates': gate_zones}
+                               if args.identity_kernel in ("core2", "core2l") else None))
+            if getattr(args, 'core2_dump_async', False):
+                from techgar.core2.dump import AsyncBlobDumpWriter
+                core2_dump = AsyncBlobDumpWriter(core2_dump)
+        elif getattr(args, 'core2_dump_async', False):
+            raise ValueError('--core2-dump-async requires --core2-dump')
         
         # Motion observation ROI can intentionally be smaller than the map
         # coverage/handoff ROI passed to CrossCameraManager above.  Defaulting
@@ -2621,11 +3526,110 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             else:
                 trackers[cam_id].roi_mask = detectors[cam_id].get_global_mask(frames[cam_id].shape)
 
+        if args.identity_kernel == "core2":
+            from techgar.core2.adapter import CameraView
+            trackers = {camera_id: CameraView(index, transforms[camera_id], trackers[camera_id].roi_mask)
+                        for index, camera_id in enumerate(("cam1", "cam2"))}
+            manager.views = trackers
+        elif args.identity_kernel == 'core2l':
+            from techgar.core2.adapter_l import CameraViewL
+            model_path = PROJECT_ROOT.parent.parent / m1l_config['model']['onnx']
+            trackers = {camera_id: CameraViewL(index, transforms[camera_id], trackers[camera_id].roi_mask,
+                                               model_path, args.m1l_decode_config)
+                        for index, camera_id in enumerate(('cam1', 'cam2'))}
+            manager.views = trackers
+        if perf_stages:
+            from techgar.core2.perf_stages import StageTimers
+            stage_timers = StageTimers()
+            stage_timers.install(trackers, manager, binders)
+
+        if replay is not None and getattr(args, "start_frame", 1) > 1:
+            frames, capture_sequences, capture_timestamps_ns, replay_timing = (
+                warmup_replay_motion(replay, trackers, first_pair, args.start_frame)
+            )
+        if replay is not None and replay_stride > 1:
+            # P36: the warmup pair above IS the first processed frame, and the
+            # stride skipping itself lives inside `read_next_source_pair` (which
+            # is what feeds every later frame). Doing an extra skip here would
+            # consume the pair that function is about to read and make the first
+            # step stride+2 instead of stride.
+            print(
+                f"[P36_STRIDE] stride={replay_stride} "
+                f"first_processed={replay_timing.frame_idx}",
+                flush=True,
+            )
+
+        # Run the independent camera trackers on two persistent workers.
+        motion_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="motion-camera")
+
+        def read_next_source_pair():
+            if replay is not None:
+                pair = replay.read_pair()
+                if replay_stride <= 1 or pair is None:
+                    return pair
+                # P36 stride: consume and DISCARD the extra source pairs so the
+                # trackers only ever see every N-th one - the same condition a
+                # live pipeline produces when it cannot keep up. Decoding happens
+                # either way, so skipped pairs cost the same read local motion
+                # never sees; therefore they are dropped here, before
+                # ``MotionReadAhead`` would run MOG2 on them.
+                current = pair
+                for _ in range(replay_stride - 1):
+                    current = replay.read_pair()
+                    if current is None:
+                        return None
+                return current
+            next_frames = {}
+            next_sequences = {}
+            next_timestamps = {}
+            for camera_id, capture in captures.items():
+                try:
+                    if isinstance(capture, LatestFrameCapture):
+                        frame, sequence, timestamp_ns = capture.read_latest_timed(
+                            after_sequence=capture_sequences[camera_id], timeout=5.0
+                        )
+                    else:
+                        ok, frame = capture.read()
+                        if not ok or frame is None:
+                            raise TimeoutError()
+                        sequence = frame_index
+                        timestamp_ns = time.monotonic_ns()
+                except TimeoutError:
+                    print(f"End of stream reached for {camera_id}.")
+                    return None
+                next_frames[camera_id] = frame
+                next_sequences[camera_id] = sequence
+                next_timestamps[camera_id] = timestamp_ns
+            synchronize_live_frames(
+                captures, next_frames, next_sequences, next_timestamps,
+                args.max_camera_skew_ms, args.sync_catchup_reads,
+            )
+            return next_frames, next_sequences, next_timestamps, None
+
+        # Realtime replay with skipping must consume its source in the pacing
+        # loop. All other modes allow one camera pair in flight, so masks for
+        # N+1 overlap cross-camera identity/JSON/render for N.
+        replay_drop_override = getattr(args, "replay_drop_frames", None)
+        use_replay_drop = replay is not None and (
+            bool(getattr(args, "live_mode", False))
+            if replay_drop_override is None else bool(replay_drop_override)
+        )
+        if not getattr(args, "no_motion_pipeline", False) and not use_replay_drop:
+            motion_pipeline = MotionReadAhead(read_next_source_pair, trackers, motion_executor)
+        if args.replay_drop_readahead and (
+            not use_replay_drop or args.no_motion_pipeline or args.identity_kernel != "core2l"
+        ):
+            raise ValueError("--replay-drop-readahead requires core2l, replay drop and motion pipeline")
+
         slot_results = {camera_id: [] for camera_id in frames}
         threshold_debug = {}
         last_parking_at = {camera_id: 0.0 for camera_id in frames}
         last_json_at = 0.0
-        last_json_warning_at = 0.0
+        status_writer = RuntimeJsonWriter(fast_snapshot=bool(getattr(args, 'perf_optimize', False)),
+                                          capacity=args.prediction_queue_capacity)
+        # F3 history is used only by the display branch. It never enters the
+        # motion tracker, binder, identity registry, or predictions writer.
+        previous_overlay_measurements = {"cam1": None, "cam2": None}
         parking_futures: dict[str, PendingParkingJob] = {}
         parking_pipeline = {
             camera_id: {
@@ -2640,24 +3644,171 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             }
             for camera_id in frames
         }
+        parking_event = (
+            ParkingEventScheduler(
+                detectors, idle_period_s=args.parking_idle_period,
+                started_at_s=time.monotonic(),
+            )
+            if parking_async and args.parking_schedule == "event" else None
+        )
+        parking_event_fallback = False
 
+        def parking_failover(reason: str) -> None:
+            """Recover a hung/broken event worker, then use existing periodic pacing."""
+            nonlocal parking_executor, parking_event_fallback
+            if parking_event is None or parking_event_fallback:
+                return
+            parking_event_fallback = True
+            print(f"[P38_PARKING_WARNING] event -> periodic: {reason}", flush=True)
+            for camera_id, pending in list(parking_futures.items()):
+                binders[camera_id].finish_vision_job(pending.job_id, accepted=False)
+                parking_event.completed(camera_id, time.monotonic(), accepted=False)
+                parking_pipeline[camera_id].update({
+                    "state": "degraded", "last_rejection_reason": "event_worker_failover",
+                })
+            parking_futures.clear()
+            old = parking_executor
+            parking_executor = None
+            if old is not None:
+                # A pool with a stuck child cannot be joined synchronously.
+                # Terminate it before shutting down to avoid orphaning a worker.
+                try:
+                    for proc in (getattr(old._pool, "_processes", None) or {}).values():
+                        if proc.is_alive():
+                            proc.terminate()
+                except Exception as exc:
+                    print(f"[P38_PARKING_WARNING] terminate failed: {exc}", flush=True)
+                try:
+                    old.shutdown(wait=False)
+                except Exception as exc:
+                    print(f"[P38_PARKING_WARNING] shutdown failed: {exc}", flush=True)
+            try:
+                parking_executor = ParkingProcessPool(
+                    slot_files, detectors, affinity_mask=parking_worker_affinity_mask,
+                )
+            except Exception as exc:
+                print(f"[P38_PARKING_WARNING] restart failed: {exc}", flush=True)
+            for camera_id in last_parking_at:
+                last_parking_at[camera_id] = 0.0
+
+        if render_async:
+            validate_async_render(args.identity_kernel, runtime_publisher)
+            async_window_created = [False]
+            if async_video_specs:
+                async_video_process = AsyncVideoProcess(async_video_specs, capacity=2, replay_dir=replay_session_path if render_replay_process else None,
+                    scale=video_scale, codec=video_codec, display=render_replay_process and not args.no_display, preview_scale=preview_scale)
+            def render_async_snapshot(snapshot):
+                rendered = {}
+                video_packet = {}
+                for camera_id in ('cam1', 'cam2'):
+                    source = snapshot['frames'][camera_id]
+                    rendered[camera_id] = render_runtime_frame(source.copy(), snapshot['payloads'][camera_id])
+                    if camera_id in writers:
+                        raw_writer, debug_writer = writers[camera_id]
+                        if raw_writer is not None:
+                            video_packet[f'raw_{camera_id}'] = source
+                        if debug_writer is not None:
+                            video_packet[f'debug_{camera_id}'] = rendered[camera_id]
+                if video_packet and not async_video_process.submit(video_packet):
+                    raise RuntimeError('async video process stopped')
+                if not args.no_display:
+                    if not async_window_created[0]:
+                        cv2.namedWindow(MAIN_WINDOW, cv2.WINDOW_NORMAL)
+                        async_window_created[0] = True
+                    main_view = np.hstack([cv2.resize(rendered[c], (max(1, int(640*preview_scale)), max(1, int(360*preview_scale)))) for c in ('cam1', 'cam2')])
+                    if display_scale != 1.0:
+                        main_view = cv2.resize(main_view, (max(160, int(main_view.shape[1]*display_scale)),
+                                                          max(90, int(main_view.shape[0]*display_scale))))
+                    cv2.imshow(MAIN_WINDOW, main_view)
+                    if (cv2.waitKey(1) & 0xff) in (27, ord('q'), ord('Q')):
+                        async_render_stop.set()
+            if not render_replay_process:
+                async_render_worker = LatestRenderQueue(render_async_snapshot)
         replay_wall_started = time.monotonic()
         replay_source_started = max(capture_timestamps_ns.values()) / 1_000_000_000.0
+        if args.replay_drop_readahead:
+            motion_pipeline = Core2LDropReadAhead(
+                replay, trackers, motion_executor, replay_wall_started, replay_source_started)
+        replay_dropped_pairs = 0
         while True:
+            if (async_render_stop.is_set() or
+                    (render_replay_process and async_video_process is not None and async_video_process.stop_requested)):
+                break
             started = time.perf_counter()
             stream_ended = False
+            prepared_motion = {}
             if frame_index:
-                if replay is not None:
+                if motion_pipeline is not None:
+                    previous_replay_index = replay_timing.frame_idx if replay_timing is not None else None
+                    prepared_pair = motion_pipeline.take_next()
+                    if prepared_pair is None:
+                        replay_completed = replay is not None
+                        break
+                    frames, capture_sequences, capture_timestamps_ns, replay_timing, prepared_motion = prepared_pair
+                    if args.replay_drop_readahead:
+                        replay_dropped_pairs = motion_pipeline.dropped
+                    # P36: with a stride the source index advances by more than
+                    # one per processed frame, so the invariant becomes "strictly
+                    # increasing" instead of "exactly +1". Stride 1 keeps the
+                    # original (stronger) check untouched.
+                    if replay is not None:
+                        if replay_stride <= 1 and not args.replay_drop_readahead:
+                            if replay_timing.frame_idx != previous_replay_index + 1:
+                                raise RuntimeError(
+                                    "Replay frame index khong dong bo: "
+                                    f"mong doi {previous_replay_index + 1}, "
+                                    f"nhan {replay_timing.frame_idx}"
+                                )
+                        elif replay_timing.frame_idx <= previous_replay_index:
+                            raise RuntimeError(
+                                "Replay frame index khong tang khi dung --replay-stride: "
+                                f"truoc {previous_replay_index}, "
+                                f"nhan {replay_timing.frame_idx}"
+                            )
+                elif replay is not None:
+                    previous_replay_index = replay_timing.frame_idx
                     pair = replay.read_pair()
                     if pair is None:
                         replay_completed = True
                         break
+                    if replay_stride > 1:
+                        # P36: consume and discard the stride-1 extra pairs here
+                        # too, so the no-pipeline path drops the same sources.
+                        for _ in range(replay_stride - 1):
+                            pair = replay.read_pair()
+                            if pair is None:
+                                break
+                        if pair is None:
+                            replay_completed = True
+                            break
                     frames, capture_sequences, capture_timestamps_ns, replay_timing = pair
-                    if replay_timing.frame_idx != frame_index + 1:
+                    if replay_stride <= 1:
+                        if replay_timing.frame_idx != previous_replay_index + 1:
+                            raise RuntimeError(
+                                "Replay frame index khong dong bo: "
+                                f"mong doi {previous_replay_index + 1}, "
+                                f"nhan {replay_timing.frame_idx}"
+                            )
+                    elif replay_timing.frame_idx <= previous_replay_index:
                         raise RuntimeError(
-                            "Replay frame index khong dong bo: "
-                            f"mong doi {frame_index + 1}, nhan {replay_timing.frame_idx}"
+                            "Replay frame index khong tang khi dung --replay-stride: "
+                            f"truoc {previous_replay_index}, "
+                            f"nhan {replay_timing.frame_idx}"
                         )
+                    if use_replay_drop:
+                        # Never process a stale pair when a newer one exists.
+                        # Decode forward until the newest pair is at most
+                        # 300 ms late; MOG2 deliberately skips those sources
+                        # only in explicit realtime/drop mode.
+                        while replay._next_index < len(replay.timings):
+                            current_due = replay_wall_started + (
+                                max(replay_timing.camera_timestamps_ns.values()) / 1e9
+                                - replay_source_started
+                            )
+                            if time.monotonic() - current_due <= 0.300:
+                                break
+                            frames, capture_sequences, capture_timestamps_ns, replay_timing = replay.read_pair()
+                            replay_dropped_pairs += 1
                 else:
                     for camera_id, capture in captures.items():
                         try:
@@ -2695,11 +3846,19 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 if replay is not None
                 else time.monotonic()
             )
-            if replay is not None and getattr(args, "replay_realtime", False):
+            if replay is not None and (
+                getattr(args, "replay_realtime", False) or getattr(args, "live_mode", False)
+            ):
                 due = replay_wall_started + now - replay_source_started
                 while time.monotonic() < due:
                     time.sleep(min(0.05, max(0.0, due - time.monotonic())))
             frame_ready_at = time.perf_counter()
+            if profile_enabled:
+                profile_read_ms = (frame_ready_at - started) * 1000.0
+                profile_future_done_ms = 0.0
+                profile_future_result_ms = 0.0
+                profile_debug_ms = 0.0
+                profile_imshow_ms[0] = 0.0
             if (
                 tuning_panel is not None
                 and replay_detector_profile is None
@@ -2709,12 +3868,21 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
 
             for binder in binders.values():
                 binder.begin_frame()
+            if profile_enabled:
+                profile_parking_started = time.perf_counter()
+                profile_parking_cpu_started = time.thread_time()
+                profile_parking_accept_ms = 0.0
+                profile_parking_bind_ms = 0.0
+                profile_parking_copy_ms = 0.0
+                profile_parking_submit_ms = 0.0
+                profile_parking_completed = 0
+                profile_parking_scheduled = 0
 
             # Apply parking evidence before identity allocation.  A completed
             # occupied->empty result may create a five-second recovery token;
             # processing it later would let a just-created local track consume
             # a fresh, incorrect Global ID first.
-            if replay is not None and not getattr(args, "replay_async_vision", False):
+            if not parking_async:
                 for camera_id, detector in detectors.items():
                     camera_now = camera_timestamps_s[camera_id]
                     parking_due = (
@@ -2726,7 +3894,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     include_parking_debug = (
                         not args.no_display and not args.no_parking_debug
                     )
-                    result, debug_images, completed_at_s = process_parking_frame(
+                    result, debug_requested, completed_at_s = process_parking_frame(
                         detector,
                         frames[camera_id],
                         include_parking_debug,
@@ -2742,8 +3910,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     })
                     if not detector.accept_evidence(result, camera_now, frame_index):
                         continue
-                    if debug_images is not None:
+                    if debug_requested:
+                        if profile_enabled:
+                            profile_debug_started = time.perf_counter()
                         debug_images = detector.build_debug_images()
+                        if profile_enabled:
+                            profile_debug_ms += (time.perf_counter() - profile_debug_started) * 1000.0
                     slot_results[camera_id] = result
                     binders[camera_id].update_vision(
                         result,
@@ -2751,22 +3923,35 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         camera_now,
                         camera_id=camera_id,
                     )
-                    if debug_images is not None:
+                    if debug_requested:
                         threshold_debug[camera_id] = debug_images
                     last_parking_at[camera_id] = camera_now
             else:
                 for camera_id, job in list(parking_futures.items()):
-                    if not job.future.done():
+                    if profile_enabled:
+                        profile_check_started = time.perf_counter()
+                    is_done = job.future.done()
+                    if profile_enabled:
+                        profile_future_done_ms += (time.perf_counter() - profile_check_started) * 1000.0
+                    if not is_done:
                         continue
                     health = parking_pipeline[camera_id]
                     parking_futures.pop(camera_id, None)
                     try:
-                        completed_results, debug_images, completed_at_s = job.future.result()
+                        if profile_enabled:
+                            profile_result_started = time.perf_counter()
+                        # A completed future is harvested without waiting for parking.
+                        completed_results, debug_requested, completed_at_s, debug_cache = job.future.result(timeout=0)
+                        if profile_enabled:
+                            profile_future_result_ms += (time.perf_counter() - profile_result_started) * 1000.0
                     except Exception as error:
                         binders[camera_id].finish_vision_job(job.job_id, accepted=False)
                         health.update({"state": "degraded", "last_rejection_reason": "worker_error",
                                        "error": str(error), "applied_frame_idx": int(frame_index)})
                         health["dropped_results"] += 1
+                        if parking_event is not None and not parking_event_fallback:
+                            parking_event.completed(camera_id, time.monotonic(), accepted=False)
+                            parking_failover(f"worker result failed ({camera_id}): {error}")
                         continue
                     result_age_s = max(
                         0.0,
@@ -2793,17 +3978,38 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         health["dropped_results"] = int(health["dropped_results"]) + 1
                         health["last_rejection_reason"] = "result_too_old"
                         binders[camera_id].finish_vision_job(job.job_id, accepted=False)
+                        if parking_event is not None and not parking_event_fallback:
+                            parking_event.completed(camera_id, time.monotonic(), accepted=False)
+                            parking_failover(f"worker job exceeded result age ({camera_id})")
                         continue
                     detector = detectors[camera_id]
-                    if not detector.accept_evidence(completed_results, job.timestamp_s, job.frame_idx):
+                    if debug_cache is not None:
+                        # Pickle preserves the SlotResult aliases shared with
+                        # the worker's cache, so accepted evidence colours the
+                        # exact same debug image as the synchronous detector.
+                        detector._debug_cache = debug_cache
+                    if profile_enabled:
+                        profile_accept_started = time.perf_counter()
+                    accepted = detector.accept_evidence(completed_results, job.timestamp_s, job.frame_idx)
+                    if profile_enabled:
+                        profile_parking_accept_ms += (time.perf_counter() - profile_accept_started) * 1000.0
+                    if not accepted:
                         health["state"] = "degraded"
                         health["dropped_results"] = int(health["dropped_results"]) + 1
                         health["last_rejection_reason"] = "evidence_not_monotonic"
                         binders[camera_id].finish_vision_job(job.job_id, accepted=False)
+                        if parking_event is not None and not parking_event_fallback:
+                            parking_event.completed(camera_id, time.monotonic(), accepted=False)
                         continue
-                    if debug_images is not None:
+                    if debug_requested:
+                        if profile_enabled:
+                            profile_debug_started = time.perf_counter()
                         debug_images = detector.build_debug_images()
+                        if profile_enabled:
+                            profile_debug_ms += (time.perf_counter() - profile_debug_started) * 1000.0
                     slot_results[camera_id] = completed_results
+                    if profile_enabled:
+                        profile_bind_started = time.perf_counter()
                     binders[camera_id].update_vision(
                         slot_results[camera_id],
                         frame_index,
@@ -2812,31 +4018,64 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         evidence_frame_idx=job.frame_idx,
                         evidence_timestamp_s=job.timestamp_s,
                     )
-                    if debug_images is not None:
+                    if profile_enabled:
+                        profile_parking_bind_ms += (time.perf_counter() - profile_bind_started) * 1000.0
+                        profile_parking_completed += 1
+                    if debug_requested:
                         threshold_debug[camera_id] = debug_images
                     health["state"] = "healthy"
                     health["last_rejection_reason"] = None
                     health["last_accepted_monotonic_s"] = time.monotonic()
                     binders[camera_id].finish_vision_job(job.job_id, accepted=True)
+                    if parking_event is not None and not parking_event_fallback:
+                        parking_event.completed(camera_id, time.monotonic(), accepted=True)
 
                 include_parking_debug = (
                     not args.no_display and not args.no_parking_debug
                 )
-                for camera_id, detector in detectors.items():
+                # There is no backlog: once the child is free, choose the
+                # oldest-serviced camera and sample its newest source frame.
+                # At most one child job is in flight across both cameras.
+                if parking_event is not None and not parking_event_fallback:
+                    selected = parking_event.next_camera(time.monotonic())
+                    parking_order = [selected] if selected is not None else []
+                else:
+                    parking_order = sorted(detectors, key=lambda cam: last_parking_at[cam])
+                for camera_id in parking_order:
+                    if parking_futures:
+                        break
+                    detector = detectors[camera_id]
                     camera_now = camera_timestamps_s[camera_id]
                     parking_due = (
-                        camera_now - last_parking_at[camera_id]
+                        True if parking_event is not None and not parking_event_fallback
+                        else camera_now - last_parking_at[camera_id]
                         >= 1.0 / max(args.parking_fps, 0.01)
                     )
                     if camera_id in parking_futures or not parking_due:
                         continue
                     submitted_at_s = time.monotonic()
-                    future = parking_executor.submit(
-                        process_parking_frame,
-                        detector,
-                        frames[camera_id].copy(),
-                        include_parking_debug,
-                    )
+                    if profile_enabled:
+                        profile_copy_started = time.perf_counter()
+                    frame_copy = frames[camera_id].copy()
+                    if profile_enabled:
+                        profile_parking_copy_ms += (time.perf_counter() - profile_copy_started) * 1000.0
+                        profile_submit_started = time.perf_counter()
+                    try:
+                        future = parking_executor.submit(
+                            camera_id, frame_copy, include_parking_debug,
+                            detector_parameters(detector),
+                        )
+                    except Exception as error:
+                        parking_pipeline[camera_id].update({
+                            "state": "degraded", "last_rejection_reason": "worker_submit_error",
+                            "error": str(error),
+                        })
+                        if parking_event is not None and not parking_event_fallback:
+                            parking_failover(f"worker submit failed ({camera_id}): {error}")
+                        continue
+                    if profile_enabled:
+                        profile_parking_submit_ms += (time.perf_counter() - profile_submit_started) * 1000.0
+                        profile_parking_scheduled += 1
                     job_id = f"{camera_id}:{frame_index}"
                     parking_futures[camera_id] = PendingParkingJob(
                         future=future,
@@ -2854,6 +4093,8 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     if parking_pipeline[camera_id]["state"] == "waiting":
                         parking_pipeline[camera_id]["state"] = "processing"
                     last_parking_at[camera_id] = camera_now
+                    if parking_event is not None and not parking_event_fallback:
+                        parking_event.submitted(camera_id, submitted_at_s)
 
                 for camera_id, health in parking_pipeline.items():
                     job = parking_futures.get(camera_id)
@@ -2867,6 +4108,33 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     if age > args.parking_max_result_age_seconds:
                         health["state"] = "degraded"
                         health["last_rejection_reason"] = "worker_over_deadline"
+                if parking_event is not None and not parking_event_fallback:
+                    overdue = next((camera_id for camera_id, job in parking_futures.items()
+                                    if time.monotonic() - job.submitted_at_s
+                                    > max(1.0, float(args.parking_max_result_age_seconds))), None)
+                    if overdue is not None:
+                        parking_failover(f"worker job overdue ({overdue})")
+                    elif parking_executor is not None:
+                        processes = (getattr(parking_executor._pool, "_processes", None) or {})
+                        if any(process.exitcode is not None for process in processes.values()):
+                            parking_failover("parking child process exited")
+
+            if profile_enabled:
+                profile_parking_ms = (time.perf_counter() - profile_parking_started) * 1000.0
+                profile_parking_cpu_ms = (time.thread_time() - profile_parking_cpu_started) * 1000.0
+                if profile_parking_ms >= 300.0:
+                    print(
+                        f"[P35_PARKING_SPIKE] frame={frame_index} parking={profile_parking_ms:.1f}ms "
+                        f"main_cpu={profile_parking_cpu_ms:.1f}ms "
+                        f"future_done={profile_future_done_ms:.1f}ms "
+                        f"future_result={profile_future_result_ms:.1f}ms "
+                        f"accept={profile_parking_accept_ms:.1f}ms "
+                        f"binder={profile_parking_bind_ms:.1f}ms "
+                        f"copy={profile_parking_copy_ms:.1f}ms "
+                        f"submit={profile_parking_submit_ms:.1f}ms "
+                        f"completed={profile_parking_completed} scheduled={profile_parking_scheduled}",
+                        flush=True,
+                    )
 
             # A parked Global ID is a durable slot owner, not an ordinary LOST
             # motion track. Detach its old local fragment before association so
@@ -2878,17 +4146,71 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 frame_index,
             )
 
-            for camera_id, tracker in trackers.items():
-                _, _, expired = tracker.process_frame(
+            if profile_enabled:
+                profile_motion_started = time.perf_counter()
+            # Compute all recovery regions on the identity-owning thread.
+            # Both tracker workers then operate exclusively on their own cam.
+            priority_regions = {
+                camera_id: build_recovery_priority_regions(
+                    camera_id, binders, transforms, camera_timestamps_s
+                )
+                for camera_id in trackers
+            }
+            motion_futures = {
+                camera_id: motion_executor.submit(
+                    tracker.process_frame,
                     frames[camera_id],
                     timestamp_s=camera_timestamps_s[camera_id],
-                    priority_regions=build_recovery_priority_regions(
-                        camera_id,
-                        binders,
-                        transforms,
-                        camera_timestamps_s,
+                    priority_regions=priority_regions[camera_id],
+                    prepared_motion=prepared_motion.get(camera_id),
+                    source_frame_idx=(
+                        replay_timing.frame_idx if replay_timing is not None
+                        else capture_sequences[camera_id]
                     ),
                 )
+                for camera_id, tracker in trackers.items()
+                if not (args.replay_drop_readahead and prepared_motion)
+            }
+            # Join both cameras before sending loss/expiry to the manager.
+            motion_results = {
+                camera_id: future.result()
+                for camera_id, future in motion_futures.items()
+            }
+            if args.replay_drop_readahead and prepared_motion:
+                for camera_id, tracker in trackers.items():
+                    tracker.frame_index += 1
+                    tracker.blobs = prepared_motion[camera_id]
+                    motion_results[camera_id] = ({}, None, [])
+            if core2_dump is not None or args.identity_kernel in ("core2", "core2l"):
+                from techgar.core2.capture import make_blobs
+                import math
+                core2_t = max(camera_timestamps_s.values())
+                if core2_last_t is not None and core2_t <= core2_last_t:
+                    core2_t = math.nextafter(core2_last_t, math.inf)
+                core2_source_frame = (replay_timing.frame_idx if replay_timing is not None
+                                      else frame_index)
+                if args.identity_kernel in ("core2", "core2l"):
+                    core2_blobs = {index: trackers[camera_id].blobs
+                                   for index, camera_id in enumerate(("cam1", "cam2"))}
+                else:
+                    core2_blobs = {
+                        index: make_blobs(core2_captured[camera_id], index, core2_source_frame,
+                                          camera_timestamps_s[camera_id], transforms[camera_id])
+                        for index, camera_id in enumerate(("cam1", "cam2"))
+                    }
+                if core2_dump is not None:
+                    core2_dump.write_step(core2_t, frame_index, core2_source_frame, core2_blobs)
+                if args.identity_kernel in ("core2", "core2l"):
+                    manager.set_inputs(core2_blobs, core2_t, core2_source_frame)
+                core2_last_t = core2_t
+            if parking_event is not None and not parking_event_fallback:
+                event_now_s = time.monotonic()
+                for camera_id, tracker in trackers.items():
+                    parking_event.observe_tracks(
+                        camera_id, tracker.all_tracks, frames[camera_id].shape, event_now_s,
+                    )
+            for camera_id, tracker in trackers.items():
+                _, _, expired = motion_results[camera_id]
                 for local_id, track in tracker.newly_lost_tracks:
                     lost_global_id = manager.get_global_id(camera_id, local_id)
                     manager.notify_track_lost(
@@ -2917,6 +4239,16 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         roi_edge_starved=bool(getattr(track, "roi_edge_starved", False)),
                     )
 
+            # Read/decode and precompute N+1 masks during N's cross/binder/IO.
+            # Queue capacity is one future; no future tracker association can
+            # run until the main loop has completed all identity updates for N.
+            if (motion_pipeline is not None
+                    and (not args.max_frames or frame_index < args.max_frames)):
+                motion_pipeline.start_next()
+
+            if profile_enabled:
+                profile_motion_ms = (time.perf_counter() - profile_motion_started) * 1000.0
+                profile_cross_started = time.perf_counter()
             observable = {camera_id: tracker.observable_tracks for camera_id, tracker in trackers.items()}
             manager.sync_occluded_identities({
                 manager.canonical_global_id(gid)
@@ -2935,44 +4267,49 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 frame_index,
                 camera_timestamps_s,
             )
-            for owner_camera, binder in binders.items():
-                unbound = {}
-                for source_camera, tracks in observable.items():
-                    for local_id, track in tracks.items():
-                        if manager.get_global_id(source_camera, local_id) is not None:
-                            continue
-                        try:
-                            unbound[(source_camera, int(local_id))] = (
-                                build_recovery_track_payload(
-                                    track,
-                                    source_camera,
-                                    owner_camera,
-                                    transforms,
-                                    shared_map_anchor=shared_map_anchor,
+            if args.identity_kernel in ("world", "core2", "core2l"):
+                # L1-L5 owns identity and recovery. Legacy predeparture tokens
+                # cannot introduce external GIDs or fake world observations.
+                protected_local_keys, recovery_diagnostics = set(), []
+            else:
+                for owner_camera, binder in binders.items():
+                    unbound = {}
+                    for source_camera, tracks in observable.items():
+                        for local_id, track in tracks.items():
+                            if manager.get_global_id(source_camera, local_id) is not None:
+                                continue
+                            try:
+                                unbound[(source_camera, int(local_id))] = (
+                                    build_recovery_track_payload(
+                                        track,
+                                        source_camera,
+                                        owner_camera,
+                                        transforms,
+                                        shared_map_anchor=shared_map_anchor,
+                                    )
                                 )
-                            )
-                        except (
-                            cv2.error,
-                            KeyError,
-                            np.linalg.LinAlgError,
-                            ValueError,
-                        ):
-                            continue
-                binder.prepare_predeparture_tokens(
-                    unbound,
-                    camera_timestamps_s[owner_camera],
-                    camera_id=owner_camera,
+                            except (
+                                cv2.error,
+                                KeyError,
+                                np.linalg.LinAlgError,
+                                ValueError,
+                            ):
+                                continue
+                    binder.prepare_predeparture_tokens(
+                        unbound,
+                        camera_timestamps_s[owner_camera],
+                        camera_id=owner_camera,
+                    )
+                protected_local_keys, recovery_diagnostics = recover_departing_vehicle_ids(
+                    observable,
+                    manager,
+                    binders,
+                    transforms,
+                    frame_index,
+                    camera_timestamps_s,
+                    args.slot_recovery_max_expand_ratio,
+                    shared_map_anchor=shared_map_anchor,
                 )
-            protected_local_keys, recovery_diagnostics = recover_departing_vehicle_ids(
-                observable,
-                manager,
-                binders,
-                transforms,
-                frame_index,
-                camera_timestamps_s,
-                args.slot_recovery_max_expand_ratio,
-                shared_map_anchor=shared_map_anchor,
-            )
             pending_arrival_global_ids = {
                 int(global_id)
                 for binder in binders.values()
@@ -2984,6 +4321,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 protected_local_keys=protected_local_keys,
                 protected_global_ids=pending_arrival_global_ids,
             )
+            if args.identity_kernel in ("core2", "core2l"):
+                for notification, gid in manager.take_binder_notifications():
+                    for camera_id, binder in binders.items():
+                        callback = binder.notify_track_lost if notification == "lost" else binder.notify_track_expired
+                        callback(gid, frame_index, camera_timestamps_s[camera_id])
             # P26 (lead duyet, huong b): xe dung yen tuyet doi du lau duoc giu
             # identity qua `_parked_reservations`, de cua so 12 s cua xe dang
             # chay khong don no (V049: identity #1 bi don o ~f670 => mat GID).
@@ -3010,6 +4352,8 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     camera_id=camera_id,
                 )
                 binder.finalize_arrivals(frame_index, camera_timestamps_s[camera_id])
+                if parking_event is not None and not parking_event_fallback:
+                    parking_event.observe_binder(camera_id, binder.events, time.monotonic())
 
             parked_reservations = sync_parking_identity_reservations(
                 binders,
@@ -3017,33 +4361,27 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 trackers,
                 frame_index,
             )
+            if profile_enabled:
+                profile_cross_ms = (time.perf_counter() - profile_cross_started) * 1000.0
 
             confirmed = {camera_id: trackers[camera_id].confirmed_tracks for camera_id in trackers}
             registry = manager.to_json(confirmed)
             if now - last_json_at >= 1.0 / max(args.json_fps, 0.01):
+                if profile_enabled:
+                    profile_json_started = time.perf_counter()
                 timestamp = (
                     replay_timing.wall_time_iso
                     if replay is not None and replay_timing.wall_time_iso
                     else datetime.now().astimezone().isoformat(timespec="milliseconds")
                 )
-                json_write_ok = True
                 parking_by_camera = {}
                 for camera_id in frames:
                     camera_parking = binders[camera_id].to_json(camera_id=camera_id)
                     parking_by_camera[camera_id] = camera_parking
-                    json_write_ok &= save_json(output_dir / f"parking_status_{camera_id}.json", {
-                        "timestamp": timestamp, "frame_index": frame_index, "camera_id": camera_id,
-                        "parking_slots": camera_parking,
-                    }, tolerate_lock=True)
-                json_write_ok &= save_json(output_dir / "global_vehicle_registry.json", {
-                    "timestamp": timestamp, "frame_index": frame_index,
-                    "calibration": str(calibration_path),
-                    "parking_recovery": recovery_diagnostics,
-                    **registry,
-                }, tolerate_lock=True)
-                if not json_write_ok and now - last_json_warning_at >= 5.0:
-                    print("Canh bao: JSON runtime dang bi khoa; bo qua mot lan cap nhat.")
-                    last_json_warning_at = now
+                status_writer.submit_status(runtime_status_files(
+                    output_dir, timestamp, frame_index, parking_by_camera,
+                    registry, recovery_diagnostics, calibration_path,
+                ))
                 if runtime_publisher is not None:
                     cam1_ns = capture_timestamps_ns.get("cam1", 0)
                     cam2_ns = capture_timestamps_ns.get("cam2", 0)
@@ -3075,7 +4413,13 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         )
                     )
                 last_json_at = now
+                if profile_enabled:
+                    profile_json_ms = (time.perf_counter() - profile_json_started) * 1000.0
+            elif profile_enabled:
+                profile_json_ms = 0.0
 
+            if profile_enabled:
+                profile_render_started = time.perf_counter()
             tracking_frames = {}
             debug_frames = {}
             stream_needed = {
@@ -3083,14 +4427,24 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 getattr(runtime_publisher, "needs_frame", lambda _camera: True)(camera_id)
                 for camera_id in ("cam1", "cam2")
             }
-            if not args.no_display or writers or any(stream_needed.values()):
+            needs_rendered_frames = (
+                not args.no_display
+                or any(dw is not None for _, dw in writers.values())
+                or any(stream_needed.values())
+            )
+            if needs_rendered_frames and not render_async:
                 parked_global_ids = {
                     global_id
                     for binder in binders.values()
                     for global_id in binder.get_all_parked_vehicle_ids()
                 }
                 for camera_id in ("cam1", "cam2"):
-                    if args.no_display and camera_id not in writers and not stream_needed[camera_id]:
+                    cam_needs_debug = (
+                        not args.no_display
+                        or (camera_id in writers and writers[camera_id][1] is not None)
+                        or stream_needed[camera_id]
+                    )
+                    if not cam_needs_debug:
                         continue
                     moving_tracks, shown_ids = select_moving_tracks(
                         trackers[camera_id].active_tracks,
@@ -3098,6 +4452,18 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         parked_global_ids,
                         manager.canonical_global_id,
                     )
+                    interpolated_boxes = []
+                    if f3_overlay_enabled:
+                        source_idx = (
+                            int(replay_timing.frame_idx) if replay_timing is not None
+                            else int(capture_sequences[camera_id])
+                        )
+                        interpolated_boxes, previous_overlay_measurements[camera_id] = (
+                            dropped_frame_overlay_boxes(
+                                previous_overlay_measurements[camera_id], source_idx,
+                                moving_tracks, shown_ids,
+                            )
+                        )
                     roi_points = None
                     if args.show_tracking_roi:
                         roi_data = tracking_rois.get(camera_id)
@@ -3130,6 +4496,8 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                             roi_points=roi_points,
                             trails=trails,
                         )
+                        if interpolated_boxes:
+                            render_payload["f3_interpolated_boxes"] = tuple(interpolated_boxes)
                         runtime_publisher.publish_frame(
                             camera_id,
                             frames[camera_id],
@@ -3173,6 +4541,12 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         confirmed_label="moving",
                         point_color=(255, 0, 0),
                     )
+                    if interpolated_boxes:
+                        # Drawing allocates a copy; the source frame and track
+                        # objects used for identity have already been consumed.
+                        debug = draw_boxes(
+                            debug, interpolated_boxes, color=(0, 180, 255), thickness=1,
+                        )
                     cv2.putText(
                         debug,
                         f"Frame: {frame_index}",
@@ -3197,8 +4571,34 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                                 else datetime.now().astimezone().isoformat(timespec="milliseconds")
                             ),
                         )
+            stage_render_ms = (time.perf_counter() - profile_render_started) * 1000.0 if perf_stages else 0.0
             recording_actions: list[Callable[[], object]] = []
-            if writers:
+            snapshot_started = time.perf_counter() if perf_stages else 0.0
+            if render_async and (frame_index - 1) % render_every == 0 and (not args.no_display or writers):
+                parked = {gid for binder in binders.values() for gid in binder.get_all_parked_vehicle_ids()}
+                frozen = {}
+                for camera_id in ('cam1', 'cam2'):
+                    moving, shown = select_moving_tracks(trackers[camera_id].active_tracks,
+                                                        global_ids.get(camera_id, {}), parked,
+                                                        manager.canonical_global_id)
+                    roi_data = tracking_rois.get(camera_id) if args.show_tracking_roi else None
+                    roi_points = (np.asarray([(int(p['x']), int(p['y'])) for p in roi_data['polygon']],
+                                             dtype=np.int32) if roi_data is not None else None)
+                    trails = (manager.motion_trail_polylines(camera_id, frames[camera_id].shape[:2])
+                              if args.show_motion_trails else [])
+                    frozen[camera_id] = freeze_runtime_render_payload(moving_tracks=moving, shown_ids=shown,
+                        slot_results=slot_results[camera_id], frame_index=frame_index, roi_points=roi_points,
+                        trails=trails)
+                snapshot = ({'source_frame_idx': replay_timing.frame_idx, 'payloads': frozen} if render_replay_process else
+                            {'frames': {c: frames[c].copy() for c in ('cam1','cam2')}, 'payloads': frozen})
+                render_target = async_video_process if render_replay_process else async_render_worker
+                submit_render = (render_target.submit_nonblocking
+                                 if args.replay_drop_readahead and render_replay_process
+                                 else render_target.submit)
+                if not submit_render(snapshot):
+                    raise RuntimeError('async render worker stopped')
+            snapshot_submit_ms = (time.perf_counter() - snapshot_started) * 1000.0 if perf_stages else 0.0
+            if writers and not render_async:
                 for camera_id, (raw_writer, debug_writer) in writers.items():
                     raw_frame = frames[camera_id]
                     debug_frame = debug_frames[camera_id]
@@ -3208,7 +4608,14 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                             f"raw_{camera_id}",
                             lambda writer=raw_writer, frame=raw_frame: writer.write(frame),
                         ))
-                    recording_actions.append(counted_recording_action(
+                    if debug_video_writer is not None:
+                        recording_actions.append(
+                            lambda cid=camera_id, wr=debug_writer, f=debug_frame: debug_video_writer.submit(
+                                cid, wr, f, recording_counts
+                            )
+                        )
+                    else:
+                        recording_actions.append(counted_recording_action(
                             recording_counts,
                             f"debug_{camera_id}",
                             lambda writer=debug_writer, frame=debug_frame: writer.write(frame),
@@ -3232,6 +4639,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     f"{wall_time_iso},"
                     f"{cam1_ns},{cam2_ns},{camera_skew_ms:.3f}\n"
                 )
+                prediction_build_started = time.perf_counter() if perf_stages else 0.0
                 prediction_payload = prediction_builder.build_frame(
                     frame_idx=frame_index,
                     capture_unix_ns=capture_ns,
@@ -3245,7 +4653,27 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     registry=registry,
                     parking_recovery=recovery_diagnostics,
                     parked_identity_reservations=parked_reservations,
+                    omit_observations=(getattr(args, 'perf_optimize', False) and args.identity_kernel == 'core2l'),
                 )
+                if args.identity_kernel == "world":
+                    # L5: held state is a separate prediction, never an input
+                    # measurement or an observation with an invented GID.
+                    manager.attach_prediction_state(prediction_payload)
+                elif args.identity_kernel in ("core2", "core2l"):
+                    identity = manager.identity_prediction(frame_index)
+                    for key in ("observations", "held_vehicles", "identity_events", "core2"):
+                        prediction_payload[key] = identity[key]
+                    prediction_payload["source_frame_idx"] = identity["source_frame_idx"]
+                # P36/T22: predictions index the PROCESSED frame counter, which
+                # under --replay-stride is no longer the source frame. Record the
+                # source index too so a run can be mapped back onto ground truth
+                # (gt_frames.csv is keyed by source frame). Only added when a
+                # stride is in use, so default output is byte-identical.
+                if replay_stride > 1 and replay_timing is not None:
+                    prediction_payload["source_frame_idx"] = int(
+                        replay_timing.frame_idx
+                    )
+                    prediction_payload["replay_stride"] = int(replay_stride)
                 prediction_payload["parking_episodes"] = [
                     episode for binder in binders.values() for episode in binder.parking_episodes()
                 ]
@@ -3256,38 +4684,63 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     camera_id: dict(status)
                     for camera_id, status in parking_pipeline.items()
                 }
-                prediction_record = (
-                    json.dumps(prediction_payload, ensure_ascii=False) + "\n"
+                prediction_build_ms = (time.perf_counter() - prediction_build_started) * 1000.0 if perf_stages else 0.0
+                dropped_debug_count = (
+                    debug_video_writer.dropped_count
+                    if debug_video_writer is not None
+                    else 0
                 )
                 performance_record = (
                     f"{frame_index},"
                     f"{(time.perf_counter() - started) * 1000.0:.3f},"
-                    f"{(time.perf_counter() - frame_ready_at) * 1000.0:.3f}\n"
+                    f"{(time.perf_counter() - frame_ready_at) * 1000.0:.3f},"
+                    f"{dropped_debug_count}\n"
                 )
+                if perf_stages:
+                    values = stage_timers.snapshot()
+                    state = manager.engine.stats().get('tracks', {})
+                    stage_columns = [core2_source_frame, profile_read_ms,
+                        profile_parking_accept_ms + profile_parking_bind_ms, profile_parking_ms,
+                        profile_motion_ms, values.get('detect_cam1',0), values.get('detect_cam2',0),
+                        values.get('decode_cam1',0), values.get('decode_cam2',0),
+                        values.get('homography_cam1',0), values.get('homography_cam2',0),
+                        values.get('fuse',0), values.get('engine',0), values.get('binder',0),
+                        profile_cross_ms, prediction_build_ms, stage_render_ms,
+                        sum(len(trackers[c].blobs) for c in ('cam1','cam2')),
+                        sum(state.values()), snapshot_submit_ms]
+                    # Write-submit is filled immediately before this record is enqueued.
+                    stage_prefix = performance_record.rstrip('\n')
+                    write_started = time.perf_counter()
+                    def write_perf_stages():
+                        elapsed = (time.perf_counter()-write_started)*1000
+                        ordered = stage_columns[:17] + [elapsed, stage_columns[18], stage_columns[17], stage_columns[19]]
+                        if args.replay_drop_readahead:
+                            ordered.append((time.perf_counter()-started)*1000)
+                        performance_file.write(stage_prefix + ',' + ','.join(str(round(v,6)) for v in ordered) + '\n')
                 recording_actions.extend([
                     counted_recording_action(
                         recording_counts,
                         "timestamps",
                         lambda record=timestamp_record: timestamps_file.write(record),
                     ),
-                    counted_recording_action(
-                        recording_counts,
-                        "predictions",
-                        lambda record=prediction_record: predictions_file.write(record),
+                    lambda payload=prediction_payload: status_writer.submit_prediction(
+                        predictions_file, payload, recording_counts
                     ),
                     counted_recording_action(
                         recording_counts,
                         "performance",
-                        lambda record=performance_record: performance_file.write(record),
+                        write_perf_stages if perf_stages else lambda record=performance_record: performance_file.write(record),
                     ),
                 ])
             if recording_actions:
                 recording_interrupted = finish_recording_actions(recording_actions)
-                recorded_frame_count = min(recording_counts.values(), default=0)
+                identity_counts = [value for key, value in recording_counts.items()
+                                   if not (render_async and (key.startswith('debug_') or key.startswith('raw_')))]
+                recorded_frame_count = min(identity_counts or list(recording_counts.values()), default=0)
                 if recording_interrupted:
                     recording_write_interrupted = True
                     raise KeyboardInterrupt
-            if not args.no_display:
+            if not args.no_display and not render_async:
                 camera_views = {}
                 for camera_id in ("cam1", "cam2"):
                     source = tracking_frames[camera_id] if roi_editor.enabled else debug_frames[camera_id]
@@ -3295,14 +4748,21 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     if roi_editor.enabled:
                         view = roi_editor.render_camera(camera_id, view, slot_results[camera_id])
                     camera_views[camera_id] = view
-                cv2.imshow(MAIN_WINDOW, roi_editor.compose_main_view(camera_views))
+                main_view = roi_editor.compose_main_view(camera_views)
+                if display_scale != 1.0:
+                    target_w = max(160, int(round(main_view.shape[1] * display_scale)))
+                    target_h = max(90, int(round(main_view.shape[0] * display_scale)))
+                    main_view = cv2.resize(main_view, (target_w, target_h))
+                cv2.imshow(MAIN_WINDOW, main_view)
                 if not args.no_parking_debug and set(threshold_debug) == {"cam1", "cam2"}:
+                    tw = max(120, int(round(480 * display_scale)))
+                    th = max(68, int(round(270 * display_scale)))
                     threshold_rows = []
                     for camera_id in ("cam1", "cam2"):
                         raw_view, filtered_view = threshold_debug[camera_id]
                         threshold_rows.append(np.hstack([
-                            cv2.resize(raw_view, (480, 270)),
-                            cv2.resize(filtered_view, (480, 270)),
+                            cv2.resize(raw_view, (tw, th)),
+                            cv2.resize(filtered_view, (tw, th)),
                         ]))
                     cv2.imshow(
                         "B/W pixels - raw | filtered (cam1 top, cam2 bottom)",
@@ -3311,8 +4771,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("s"), ord("S")):
                     if parking_futures:
-                        for job in parking_futures.values():
-                            job.future.result()
+                        for camera_id, job in parking_futures.items():
+                            try:
+                                job.future.result()
+                            finally:
+                                binders[camera_id].finish_vision_job(job.job_id, accepted=False)
                         parking_futures = {}
                     if tuning_panel is not None:
                         tuning_panel.apply()
@@ -3342,6 +4805,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                         if not args.no_parking_debug:
                             threshold_debug[camera_id] = detector.build_debug_images(frames[camera_id])
                         print(f"Da luu va ap dung ROI moi cho {camera_id}")
+                    if saved_camera_ids and parking_executor is not None:
+                        parking_executor.shutdown(wait=True)
+                        parking_executor = ParkingProcessPool(
+                            slot_files, detectors, affinity_mask=parking_worker_affinity_mask
+                        )
                 elif key in (ord("q"), ord("Q")):
                     saved_camera_ids = roi_editor.save()
                     if saved_camera_ids:
@@ -3351,6 +4819,46 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                     break
                 else:
                     roi_editor.handle_key(key)
+            if profile_enabled:
+                profile_values = {
+                    "read_pace": profile_read_ms,
+                    "parking": profile_parking_ms,
+                    "park_cpu": profile_parking_cpu_ms,
+                    "park_accept": profile_parking_accept_ms,
+                    "park_bind": profile_parking_bind_ms,
+                    "park_copy": profile_parking_copy_ms,
+                    "park_submit": profile_parking_submit_ms,
+                    "future_done": profile_future_done_ms,
+                    "future_result": profile_future_result_ms,
+                    "parking_debug": profile_debug_ms,
+                    "motion": profile_motion_ms,
+                    "cross": profile_cross_ms,
+                    "json_submit": profile_json_ms,
+                    "render": (time.perf_counter() - profile_render_started) * 1000.0,
+                    "imshow": profile_imshow_ms[0],
+                    "total": (time.perf_counter() - started) * 1000.0,
+                }
+                for key, value in profile_values.items():
+                    profile_totals[key] = profile_totals.get(key, 0.0) + value
+                    profile_maximums[key] = max(profile_maximums.get(key, 0.0), value)
+                if frame_index % profile_interval == 0:
+                    summary = " ".join(
+                        f"{key}={profile_totals[key]/profile_interval:.1f}/{profile_maximums[key]:.1f}ms"
+                        for key in profile_values
+                    )
+                    print(f"[P35_PROFILE] frames={frame_index-profile_interval+1}-{frame_index} avg/max {summary} "
+                          f"prediction_queue_wait_count={status_writer.prediction_wait_count} "
+                          f"prediction_queue_wait_ms={status_writer.prediction_wait_ms:.1f} "
+                          f"prediction_queue_peak={status_writer.prediction_queue_peak}/"
+                          f"{status_writer._capacity}", flush=True)
+                    if use_replay_drop:
+                        print(
+                            f"[P35_REPLAY_DROP] processed={frame_index} "
+                            f"source={replay_timing.frame_idx} dropped={replay_dropped_pairs}",
+                            flush=True,
+                        )
+                    profile_totals.clear()
+                    profile_maximums.clear()
             if args.max_frames and frame_index >= args.max_frames:
                 break
             if time.perf_counter() - started < 0.001:
@@ -3368,8 +4876,60 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             else "stopped_by_user"
         )
     finally:
+        if stage_timers is not None:
+            stage_timers.close()
+        if 'core2_dump' in locals() and core2_dump is not None:
+            core2_dump.close()
+        if 'parking_event' in locals() and parking_event is not None:
+            print(parking_event.summary(time.monotonic()), flush=True)
+        if replay is not None and 'replay_dropped_pairs' in locals() and use_replay_drop:
+            print(
+                f"[P35_REPLAY_DROP_FINAL] processed={frame_index} "
+                f"source={replay_timing.frame_idx if replay_timing else 0} "
+                f"dropped={replay_dropped_pairs}",
+                flush=True,
+            )
+        # P37/T6c: dong file dump cua world adapter neu dang mo.
+        if 'manager' in locals() and hasattr(manager, "close_dump"):
+            try:
+                manager.close_dump()
+            except Exception as exc:  # pragma: no cover - chi la debug
+                print(f"Loi dong identity-kernel dump: {exc!r}", flush=True)
+        if profile_enabled:
+            cv2.imshow = profile_original_imshow
         if parking_executor is not None:
             parking_executor.shutdown(wait=True)
+        restore_process_affinity(parking_affinity_restore)
+        if motion_pipeline is not None:
+            motion_pipeline.close()
+        if motion_executor is not None:
+            motion_executor.shutdown(wait=True)
+        if status_writer is not None:
+            try:
+                final_files = None
+                runtime_locals = locals()
+                if frame_index and all(name in runtime_locals for name in (
+                    "binders", "trackers", "manager", "recovery_diagnostics"
+                )):
+                    final_registry = manager.to_json({
+                        camera_id: tracker.confirmed_tracks
+                        for camera_id, tracker in trackers.items()
+                    })
+                    final_files = runtime_status_files(
+                        output_dir,
+                        datetime.now().astimezone().isoformat(timespec="milliseconds"),
+                        frame_index,
+                        {camera_id: binder.to_json(camera_id=camera_id)
+                         for camera_id, binder in binders.items()},
+                        final_registry, recovery_diagnostics, calibration_path,
+                    )
+                status_writer.close(final_files)
+            except Exception as exc:
+                print(f"Loi flush JSON runtime cuoi: {exc!r}", flush=True)
+                status = "failed"
+            identity_counts = [value for key, value in recording_counts.items()
+                               if not (render_async and (key.startswith('debug_') or key.startswith('raw_')))]
+            recorded_frame_count = min(identity_counts or list(recording_counts.values()), default=0)
         if tuning_panel is not None and replay is None:
             tuning_panel.apply()
             tuning_panel.save()
@@ -3378,17 +4938,46 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
         else:
             for capture in captures.values():
                 capture.release()
-        for raw_writer, debug_writer in writers.values():
-            if raw_writer is not None:
-                raw_writer.release()
-            debug_writer.release()
+        if async_render_worker is not None:
+            async_render_worker.close()
+            print(f'[ASYNC_RENDER] submitted={async_render_worker.submitted} rendered={async_render_worker.rendered} overwritten={async_render_worker.overwritten}', flush=True)
+        if async_video_process is not None:
+            video_counts = async_video_process.close()
+            recording_counts.update(video_counts)
+            if not any(k in recording_counts for k in ('timestamps', 'predictions', 'performance')):
+                recorded_frame_count = min(video_counts.values(), default=0)
+            print(f'[ASYNC_VIDEO] counts={video_counts} overwritten={async_video_process.dropped}', flush=True)
+        if debug_video_writer is not None:
+            debug_video_writer.close()
+            total_dropped_debug = debug_video_writer.dropped_count
+            if total_dropped_debug > 0:
+                print(
+                    f"[DEBUG_VIDEO] CANH BAO: da bo {total_dropped_debug} frame debug video do hang doi day",
+                    flush=True,
+                )
+                for cid, cnt in debug_video_writer.dropped_by_camera.items():
+                    print(f"[DEBUG_VIDEO]   {cid}: {cnt} frames bi bo", flush=True)
+            else:
+                print(f"[DEBUG_VIDEO] dropped_frames={total_dropped_debug}", flush=True)
+        if not render_async:
+            for raw_writer, debug_writer in writers.values():
+                if raw_writer is not None:
+                    raw_writer.release()
+                debug_writer.release()
         for output in (timestamps_file, performance_file, predictions_file):
             if output is not None:
                 output.close()
+        if args.public_id_map and 'manager' in locals() and hasattr(manager, 'engine'):
+            manager.engine.write_map(args.public_id_map)
         if session_created:
+            check_counts = {
+                k: v for k, v in recording_counts.items()
+                if not (render_async and (k.startswith('debug_') or k.startswith('raw_')))
+                and not (k.startswith("debug_") and debug_video_writer and debug_video_writer.dropped_count > 0)
+            }
             recording_counts_consistent = (
-                len(set(recording_counts.values())) <= 1
-                if recording_counts
+                len(set(check_counts.values())) <= 1
+                if check_counts
                 else True
             )
             if not recording_counts_consistent and status != "failed":
@@ -3410,6 +4999,11 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
             processing_elapsed_seconds = max(
                 0.0, time.monotonic() - processing_started_at
             )
+            recorded_frame_count = (
+                recording_counts.get("performance", min(check_counts.values(), default=0))
+                if check_counts
+                else recorded_frame_count
+            )
             save_json(session_dir / "session_info.json", {
                 "schema_version": 3,
                 "status": status,
@@ -3419,6 +5013,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 "processed_frames": recorded_frame_count,
                 "record_counts": recording_counts,
                 "record_counts_consistent": recording_counts_consistent,
+                "debug_video_dropped_frames": debug_video_writer.dropped_count if debug_video_writer is not None else 0,
                 "processing_elapsed_seconds": round(processing_elapsed_seconds, 3),
                 "processing_fps": round(
                     recorded_frame_count / processing_elapsed_seconds,
@@ -3519,7 +5114,7 @@ def run(args: argparse.Namespace, runtime_publisher=None) -> None:
                 },
                 "files": {
                     **({} if args.debug_video_only else {
-                        "predictions": "predictions.jsonl",
+                        "predictions": "predictions.jsonl.gz" if getattr(args, 'predictions_gzip', False) else "predictions.jsonl",
                         "timestamps": "frame_timestamps.csv",
                     }),
                     "ground_truth_slots": "ground_truth_slots.csv",

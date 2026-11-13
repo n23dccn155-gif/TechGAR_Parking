@@ -8,6 +8,8 @@ histogram để hạn chế đổi ID và hỗ trợ Re-ID ngắn hạn.
 
 from __future__ import annotations
 
+import math
+import os
 from collections import deque
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -26,6 +28,22 @@ from .tracklet_descriptor import (
 )
 from .vehicle_tracker import TrackStatus, TrackedVehicle
 from .occlusion_guard import OcclusionGuard
+
+# P38/BISECT (measurement only): env switches to disable T24 steps B3/B4 for one
+# run. Default OFF => unchanged behaviour.
+#   B3: stop a stale LOST track from emitting its old GID as a fresh observation
+#   B4: Kalman transition matrix follows the real source dt
+_P38_DISABLE_B3 = os.environ.get("P38_DISABLE_B3") == "1"
+_P38_DISABLE_B4 = os.environ.get("P38_DISABLE_B4") == "1"
+# P38/BISECT2: B5 stays ON. Measured on p37_score (sang494 s1/s4, toi2100 s1,
+# legacy+world): turning B5 off is WORSE in 5/6 configs
+#   sang494_s1 legacy 0/0/0 .9479 -> 2/1/0 .9240
+#   sang494_s4 world  4/4/1 .8744 -> 5/5/2 .8762 (IDSW/FRAG/MIX tang)
+#   toi2100_s1 world  1/1/0 .9008 -> 2/2/0 .8857
+# so the merged-competition freeze is load-bearing. The p28/V060 gain seen in the
+# full-run bisect is not worth these regressions.
+_ENABLE_B5_MERGED_FREEZE = True
+_P38_DISABLE_B5 = not _ENABLE_B5_MERGED_FREEZE
 
 #: P26: biên độ dịch chuyển tối đa (px) trong vài mẫu gần nhất để coi một
 #: fragment là "đứng yên tại chỗ". Xe đang chạy vượt xa ngưỡng này rất nhanh.
@@ -205,6 +223,13 @@ class MotionVehicleTracker:
             join_kernel_size if join_kernel_size % 2 else join_kernel_size + 1
         )
         self.motion_join_iterations = max(1, int(motion_join_iterations))
+        # Fixed OpenCV morphology kernels are shared by both mask pipelines.
+        self._motion_open_kernel = np.ones((3, 3), np.uint8)
+        self._motion_dilate_kernel = np.ones((5, 5), np.uint8)
+        self._motion_support_kernel = np.ones((17, 17), np.uint8)
+        self._motion_join_kernel = np.ones(
+            (self.motion_join_kernel_size, self.motion_join_kernel_size), np.uint8
+        )
         self.reid_ttl = max(reid_ttl, lost_track_ttl)
         self.homography = homography
         self.tracklet_max_samples = max(1, int(tracklet_max_samples))
@@ -214,7 +239,20 @@ class MotionVehicleTracker:
         self._exited_tracks: Dict[int, TrackedVehicle] = {}
         self._next_id = 1
         self._frame_idx = 0
+        # The tracker processes fewer frames than the source in live replay.
+        # Keep processed-frame counters for existing lifecycle/golden semantics,
+        # but use source-frame deltas for the physical motion model.
+        self._source_frame_idx = 0
+        self._last_source_frame_idx = None
+        self._source_dt = 1
+        self._last_kalman_dt = 1
         self.roi_mask: Optional[np.ndarray] = None
+        # MOG2 and temporal differences only need the observation ROI.  Keep
+        # the full-frame coordinates for association and cross-camera logic.
+        self.fast_motion = False
+        self.fast_motion_scale = 0.5
+        self._motion_roi_key = None
+        self._motion_roi_bounds = None
         # Keep enough samples for the 0.8 s slow-motion reference at common
         # DroidCam frame rates. Entries are (timestamp_s, frame_index, gray).
         self._gray_history = deque(maxlen=max(48, self.motion_long_frame_gap + 2))
@@ -248,6 +286,20 @@ class MotionVehicleTracker:
     def _predict_tracks(self):
         if self._predictions_frame != self._frame_idx:
             self._predictions = {}
+            # BISECT: `P38_DISABLE_B4=1` forces the pre-T24 fixed dt=1.
+            dt = 1.0 if _P38_DISABLE_B4 else float(self._source_dt)
+            for track in self._tracks.values():
+                kalman = track.kalman
+                # A new track starts with Kalman dt=1 even when the previous
+                # frame already used the current source stride. Check each
+                # matrix, not only the tracker's cached last dt.
+                if float(kalman.transitionMatrix[0, 2]) != dt:
+                    kalman.transitionMatrix[0, 2] = dt
+                    kalman.transitionMatrix[1, 3] = dt
+                    kalman.processNoiseCov = np.diag(
+                        [2.0 * dt * dt, 2.0 * dt * dt, 12.0 * dt, 12.0 * dt]
+                    ).astype(np.float32)
+            self._last_kalman_dt = self._source_dt
             for tid, track in self._tracks.items():
                 if str(getattr(track, "association_state", "")).startswith(
                     "suspended_"
@@ -268,7 +320,12 @@ class MotionVehicleTracker:
                     # A stopped car often leaves no foreground pixels.  Do not
                     # let its old velocity carry the identity along the path
                     # of a neighbouring moving car.
-                    merged_freeze = getattr(track, "last_ambiguous_kind", None) == "merged"
+                    merged_freeze = (
+                        getattr(track, "last_ambiguous_kind", None) == "merged"
+                    )
+                    if _P38_DISABLE_B5:
+                        # BISECT: pre-T24 behaviour -- no merged-competition freeze.
+                        merged_freeze = False
                     decay = float(
                         np.exp(-age / self.prediction_velocity_decay_seconds)
                     )
@@ -460,13 +517,20 @@ class MotionVehicleTracker:
     def _motion_between(current: np.ndarray, reference: np.ndarray, threshold: int) -> np.ndarray:
         """Return brightness-compensated change without treating a light shift as motion."""
         brightness_shift = MotionVehicleTracker._brightness_shift(current, reference)
-        adjusted_reference = np.clip(
-            reference.astype(np.float32) + brightness_shift,
-            0,
-            255,
-        ).astype(np.uint8)
+        # Gray inputs are uint8 and the median of integral differences is
+        # always integral or half-integral.  Casting the clipped float32
+        # expression to uint8 equals a saturating add of floor(shift), for
+        # *both* positive and negative offsets.  Avoid two full-frame float
+        # buffers while retaining exactly the same pixel values.
+        brightness_offset = int(np.floor(brightness_shift))
+        adjusted_reference = (
+            reference if brightness_offset == 0
+            else cv2.add(reference, (brightness_offset,))
+        )
         difference = cv2.absdiff(current, adjusted_reference)
-        _, return_mask = cv2.threshold(difference, threshold, 255, cv2.THRESH_BINARY)
+        _, return_mask = cv2.threshold(
+            difference, threshold, 255, cv2.THRESH_BINARY, difference
+        )
         return return_mask
 
     # Rows/columns kept when estimating the global brightness offset. The
@@ -532,6 +596,7 @@ class MotionVehicleTracker:
         self,
         frame: np.ndarray,
         timestamp_s: Optional[float] = None,
+        frame_idx: Optional[int] = None,
     ) -> np.ndarray:
         """Chỉ giữ pixel thực sự thay đổi giữa hai thời điểm.
 
@@ -548,7 +613,7 @@ class MotionVehicleTracker:
                 # Timestamp regression means a seek/reconnect. Do not compare
                 # the new frame with an unrelated point in the old stream.
                 self._gray_history.clear()
-        self._gray_history.append((valid_timestamp, self._frame_idx, gray))
+        self._gray_history.append((valid_timestamp, self._frame_idx if frame_idx is None else frame_idx, gray))
         references = (
             self._timestamp_references(valid_timestamp)
             if valid_timestamp is not None
@@ -561,23 +626,19 @@ class MotionVehicleTracker:
         # enough displacement for vehicles moving only a few pixels per frame.
         motion = np.zeros_like(gray)
         for reference in references:
-            motion = cv2.bitwise_or(
-                motion,
-                self._motion_between(gray, reference, self.motion_threshold),
+            cv2.bitwise_or(
+                motion, self._motion_between(gray, reference, self.motion_threshold),
+                dst=motion,
             )
-        motion = cv2.morphologyEx(motion, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-        motion = cv2.dilate(motion, np.ones((5, 5), np.uint8), iterations=2)
+        motion = cv2.morphologyEx(motion, cv2.MORPH_OPEN, self._motion_open_kernel)
+        motion = cv2.dilate(motion, self._motion_dilate_kernel, iterations=2)
         # Large closing kernels used to join two nearby moving toy cars into
         # one foreground contour.  Keep enough closing to repair one car's
         # broken silhouette, but not enough to bridge the lane between cars.
-        join_kernel = np.ones(
-            (self.motion_join_kernel_size, self.motion_join_kernel_size),
-            np.uint8,
-        )
         motion = cv2.morphologyEx(
             motion,
             cv2.MORPH_CLOSE,
-            join_kernel,
+            self._motion_join_kernel,
             iterations=self.motion_join_iterations,
         )
         return motion
@@ -660,13 +721,13 @@ class MotionVehicleTracker:
         x, y, width, height = box
         if selection.shape != (height, width):
             return None
-        selected = selection.astype(bool)
+        selected = selection > 0
         selected_count = int(np.count_nonzero(selected))
         if selected_count < self.shadow_min_pixels:
             return None
 
-        current_bgr = frame[y:y + height, x:x + width].astype(np.float32)[selected]
-        background_bgr = background[y:y + height, x:x + width].astype(np.float32)[selected]
+        current_bgr = frame[y:y + height, x:x + width][selected].astype(np.float32)
+        background_bgr = background[y:y + height, x:x + width][selected].astype(np.float32)
         luminance_weights = np.asarray([0.114, 0.587, 0.299], dtype=np.float32)
         current_luminance = current_bgr @ luminance_weights
         background_luminance = background_bgr @ luminance_weights
@@ -742,14 +803,15 @@ class MotionVehicleTracker:
     # background that already contains it.
     _background_refresh_interval = 10
 
-    def _background_reference(self) -> Optional[np.ndarray]:
+    def _background_reference(self, frame_idx: Optional[int] = None) -> Optional[np.ndarray]:
         """Learned background used to explain a blob as a cast shadow."""
         if not self.reject_cast_shadows:
             return None
+        current_frame = self._frame_idx if frame_idx is None else frame_idx
         age = (
             None
             if self._background_frame is None
-            else self._frame_idx - self._background_frame
+            else current_frame - self._background_frame
         )
         if self._background_image is not None and age is not None and (
             0 <= age < self._background_refresh_interval
@@ -762,19 +824,74 @@ class MotionVehicleTracker:
             self._background_image = background_getter()
         except cv2.error:
             self._background_image = None
-        self._background_frame = self._frame_idx
+        self._background_frame = current_frame
         return self._background_image
 
-    def _detect(
+    def _motion_crop_bounds(self, shape: Tuple[int, int]) -> Optional[Tuple[int, int, int, int]]:
+        """Crop with a halo for temporal blur, morphology and ROI context."""
+        roi = self.roi_mask
+        if roi is None or roi.shape != shape:
+            key = (None, shape, self.fast_motion, self.fast_motion_scale)
+        else:
+            key = (id(roi), shape, self.roi_context_padding_px, self.fast_motion, self.fast_motion_scale)
+        if key != self._motion_roi_key:
+            # A resized ROI requires a fresh MOG2/temporal history: the old
+            # model and its gray samples use a different coordinate system.
+            if self._motion_roi_key is not None:
+                self.bg_sub = cv2.createBackgroundSubtractorMOG2(
+                    history=700, varThreshold=32, detectShadows=True
+                )
+                self._gray_history.clear()
+                self._background_image = None
+                self._background_frame = None
+            self._motion_roi_key = key
+            self._motion_roi_bounds = None
+            if roi is not None and roi.shape == shape:
+                pixels = cv2.findNonZero(roi)
+                if pixels is not None:
+                    x, y, w, h = cv2.boundingRect(pixels)
+                    halo = max(48, self.roi_context_padding_px + 32)
+                    left, top = max(0, x - halo), max(0, y - halo)
+                    right, bottom = min(shape[1], x + w + halo), min(shape[0], y + h + halo)
+                    if (right - left) * (bottom - top) < shape[0] * shape[1]:
+                        self._motion_roi_bounds = (left, top, right, bottom)
+        return self._motion_roi_bounds
+
+    def prepare_motion_frame(
         self,
         frame: np.ndarray,
         timestamp_s: Optional[float] = None,
-        priority_regions: Optional[Sequence[Any]] = None,
-    ) -> Tuple[List[dict], np.ndarray]:
-        self._last_shadow_rejections = []
-        self._last_detection_rejections = []
-        background_image = self._background_reference()
-        raw_background_mask = self.bg_sub.apply(frame)
+        frame_idx: Optional[int] = None,
+    ) -> tuple:
+        """Precompute camera-local MOG2 and temporal masks before identity updates.
+
+        Call once per input frame, in source order. Track association and ROI
+        clipping happen later on the main frame barrier.
+        """
+        # Test/integrator background implementations may return a fixed
+        # full-size mask regardless of their input image dimensions.
+        bounds = (
+            self._motion_crop_bounds(frame.shape[:2])
+            if isinstance(self.bg_sub, cv2.BackgroundSubtractorMOG2)
+            else None
+        )
+        half_scale = self.fast_motion and isinstance(self.bg_sub, cv2.BackgroundSubtractorMOG2)
+        if half_scale and bounds is None:
+            bounds = (0, 0, frame.shape[1], frame.shape[0])
+        if bounds is None:
+            working_frame = frame
+        else:
+            left, top, right, bottom = bounds
+            working_frame = frame[top:bottom, left:right]
+        if half_scale:
+            scale = float(self.fast_motion_scale)
+            working_frame = cv2.resize(
+                working_frame,
+                (max(1, round(working_frame.shape[1] * scale)), max(1, round(working_frame.shape[0] * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
+        background_image = self._background_reference(frame_idx=frame_idx)
+        raw_background_mask = self.bg_sub.apply(working_frame)
         _, definite_foreground = cv2.threshold(
             raw_background_mask, 200, 255, cv2.THRESH_BINARY
         )
@@ -786,7 +903,6 @@ class MotionVehicleTracker:
         # learned background exists and the custom shadow discriminator is
         # enabled; temporal motion remains mandatory and real shadows are
         # rejected contour-by-contour below.
-        mog_shadow_markers = np.zeros_like(raw_background_mask)
         if self.reject_cast_shadows and background_image is not None:
             mog_shadow_markers = cv2.compare(
                 raw_background_mask, 127, cv2.CMP_EQ
@@ -795,11 +911,56 @@ class MotionVehicleTracker:
                 definite_foreground, mog_shadow_markers
             )
         else:
+            mog_shadow_markers = np.zeros_like(raw_background_mask)
             background_mask = definite_foreground
-        temporal_motion = self._temporal_motion_mask(frame, timestamp_s=timestamp_s)
+        # Keep the legacy two-argument call for normal synchronous frames,
+        # including custom/monkeypatched tracker implementations.
+        if frame_idx is None:
+            temporal_motion = self._temporal_motion_mask(working_frame, timestamp_s=timestamp_s)
+        else:
+            temporal_motion = self._temporal_motion_mask(
+                working_frame, timestamp_s=timestamp_s, frame_idx=frame_idx
+            )
+        if half_scale:
+            size = (right - left, bottom - top)
+            def expand(image, interpolation=cv2.INTER_NEAREST):
+                return None if image is None else cv2.resize(image, size, interpolation=interpolation)
+
+            background_image = expand(background_image, cv2.INTER_LINEAR)
+            mog_shadow_markers = expand(mog_shadow_markers)
+            background_mask = expand(background_mask)
+            temporal_motion = expand(temporal_motion)
         # Motion mask là cổng bắt buộc: foreground đứng yên không được thành xe.
-        support = cv2.dilate(temporal_motion, np.ones((17, 17), np.uint8), iterations=1)
+        support = cv2.dilate(temporal_motion, self._motion_support_kernel, iterations=1)
         mask = cv2.bitwise_and(background_mask, support)
+        if bounds is not None:
+            # Downstream shadow tests, track boxes and masks stay full-frame.
+            h, w = frame.shape[:2]
+            def restore(image):
+                if image is None:
+                    return None
+                output = np.zeros((h, w) + image.shape[2:], dtype=image.dtype)
+                output[top:bottom, left:right] = image
+                return output
+
+            background_image = restore(background_image)
+            mog_shadow_markers = restore(mog_shadow_markers)
+            temporal_motion = restore(temporal_motion)
+            mask = restore(mask)
+        return background_image, mog_shadow_markers, temporal_motion, mask
+
+    def _detect(
+        self,
+        frame: np.ndarray,
+        timestamp_s: Optional[float] = None,
+        priority_regions: Optional[Sequence[Any]] = None,
+        prepared_motion: Optional[tuple] = None,
+    ) -> Tuple[List[dict], np.ndarray]:
+        self._last_shadow_rejections = []
+        self._last_detection_rejections = []
+        if prepared_motion is None:
+            prepared_motion = self.prepare_motion_frame(frame, timestamp_s)
+        background_image, mog_shadow_markers, temporal_motion, mask = prepared_motion
         if self.roi_mask is not None:
             source_id = id(self.roi_mask)
             if (
@@ -823,15 +984,11 @@ class MotionVehicleTracker:
             # support inside the strict ROI below; this does not expand the
             # area in which unrelated blobs may create identities.
             mask = cv2.bitwise_and(mask, self._roi_context_mask)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-        join_kernel = np.ones(
-            (self.motion_join_kernel_size, self.motion_join_kernel_size),
-            np.uint8,
-        )
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self._motion_open_kernel)
         mask = cv2.morphologyEx(
             mask,
             cv2.MORPH_CLOSE,
-            join_kernel,
+            self._motion_join_kernel,
             iterations=self.motion_join_iterations,
         )
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -842,40 +999,42 @@ class MotionVehicleTracker:
         max_bbox_area = image_area * self.max_bbox_area_ratio
         priority_mask = self._priority_mask(frame.shape[:2], priority_regions)
         detections = []
+        min_possible_area = min(self.min_area, self.priority_min_area)
         for contour in contours:
-            area = cv2.contourArea(contour)
-            box = cv2.boundingRect(contour)
+            x, y, w, h = cv2.boundingRect(contour)
             # No normal or priority-region detection can pass below these
             # absolute limits. Reject it before allocating/filling a contour
             # mask for strict-ROI support. Exposure changes can create
             # hundreds of 3x3 speckles, and doing polygon work for all of them
             # caused avoidable latency without changing any valid detection.
             if (
-                area < min(self.min_area, self.priority_min_area)
-                or box[2] < self.min_width
-                or box[3] < self.min_height
+                w < self.min_width
+                or h < self.min_height
+                or (w * h) < min_possible_area
             ):
                 continue
+            area = cv2.contourArea(contour)
+            if area < min_possible_area:
+                continue
+            box = (x, y, w, h)
+            point = (x + w // 2, y + h)
             roi_support_pixels = None
             roi_support_ratio = 1.0
             roi_clipped = False
             roi_context_rescued = False
             roi_anchor_tolerated = False
+            contour_poly = None
             if self.roi_mask is not None:
-                x0, y0, width0, height0 = box
-                contour_selection = np.zeros((height0, width0), dtype=np.uint8)
-                local_contour = contour.reshape((-1, 2)) - np.asarray(
-                    [x0, y0], dtype=np.int32
-                )
+                contour_poly = np.zeros((h, w), dtype=np.uint8)
                 cv2.fillPoly(
-                    contour_selection,
-                    [local_contour.astype(np.int32)],
+                    contour_poly,
+                    [contour - [x, y]],
                     255,
                 )
-                component_pixels = max(1, cv2.countNonZero(contour_selection))
+                component_pixels = max(1, cv2.countNonZero(contour_poly))
                 strict_selection = cv2.bitwise_and(
-                    contour_selection,
-                    self.roi_mask[y0:y0 + height0, x0:x0 + width0],
+                    contour_poly,
+                    self.roi_mask[y:y + h, x:x + w],
                 )
                 roi_support_pixels = cv2.countNonZero(strict_selection)
                 roi_support_ratio = float(roi_support_pixels) / float(
@@ -899,13 +1058,13 @@ class MotionVehicleTracker:
                     anchor_in_context = False
                     if self._roi_context_mask is not None:
                         context_selection = cv2.bitwise_and(
-                            contour_selection,
+                            contour_poly,
                             self._roi_context_mask[
-                                y0:y0 + height0, x0:x0 + width0
+                                y:y + h, x:x + w
                             ],
                         )
                         context_support = cv2.countNonZero(context_selection)
-                        anchor_x, anchor_y = self._bottom_center(box)
+                        anchor_x, anchor_y = point
                         anchor_in_context = (
                             0 <= anchor_x < self._roi_context_mask.shape[1]
                             and 0 <= anchor_y < self._roi_context_mask.shape[0]
@@ -924,7 +1083,7 @@ class MotionVehicleTracker:
                             "roi_support_ratio": round(roi_support_ratio, 4),
                         })
                         self._roi_rejected_points.append(
-                            self._bottom_center(box)
+                            point
                         )
                         continue
                     roi_context_rescued = True
@@ -938,7 +1097,7 @@ class MotionVehicleTracker:
                            if self.enable_watershed else [])
                 if not regions:
                     self.occlusion_guard.activate(group, self._tracks)
-                    detections.append({'box': box, 'point': self._bottom_center(box),
+                    detections.append({'box': box, 'point': point,
                         'area': area, 'bbox_area': box[2]*box[3], 'hist': None,
                         'ambiguous_merged': True, 'occlusion_members': group.members,
                         'observation_kind': 'merged', 'priority': False,
@@ -963,7 +1122,6 @@ class MotionVehicleTracker:
                 continue
             if area > image_area * 0.22:
                 continue
-            x, y, w, h = cv2.boundingRect(contour)
             bbox_area = float(w * h)
             if (
                 w > max_bbox_width
@@ -982,8 +1140,6 @@ class MotionVehicleTracker:
             aspect_ratio = w / max(h, 1)
             if aspect_ratio < 0.25 or aspect_ratio > 5.0:
                 continue
-            box = (x, y, w, h)
-            point = self._bottom_center(box)
             # A component may extend into the bounded context band, but it was
             # admitted only after strict-ROI support was measured above.
             if self.roi_mask is not None:
@@ -1014,7 +1170,7 @@ class MotionVehicleTracker:
                         "box": (int(x), int(y), int(w), int(h)),
                         "anchor": (int(px), int(py)),
                     })
-                    self._roi_rejected_points.append((int(px), int(py)))
+                    self._roi_rejected_points.append(point)
                     cv2.drawContours(mask, [contour], -1, 0, thickness=cv2.FILLED)
                     continue
             is_priority = self._box_is_priority(priority_mask, box, point)
@@ -1026,17 +1182,15 @@ class MotionVehicleTracker:
             min_ratio = self.priority_motion_min_ratio if is_priority else self.motion_min_ratio
             if motion_pixels < min_pixels or motion_pixels / float(w * h) < min_ratio:
                 continue
-            contour_selection = np.zeros((h, w), dtype=np.uint8)
-            local_contour = contour.reshape((-1, 2)) - np.asarray(
-                [x, y], dtype=np.int32
-            )
-            cv2.fillPoly(
-                contour_selection,
-                [local_contour.astype(np.int32)],
-                255,
-            )
+            if contour_poly is None:
+                contour_poly = np.zeros((h, w), dtype=np.uint8)
+                cv2.fillPoly(
+                    contour_poly,
+                    [contour - [x, y]],
+                    255,
+                )
             contour_selection = cv2.bitwise_and(
-                contour_selection,
+                contour_poly,
                 mask[y:y + h, x:x + w],
             )
             shadow_marker_pixels = cv2.countNonZero(
@@ -1114,7 +1268,8 @@ class MotionVehicleTracker:
         appearance = cv2.compareHist(first["hist"], second["hist"], cv2.HISTCMP_BHATTACHARYYA)
         if appearance > 0.22:
             return False
-        distance = float(np.linalg.norm(np.subtract(first["point"], second["point"])))
+        p1, p2 = first["point"], second["point"]
+        distance = math.hypot(p1[0] - p2[0], p1[1] - p2[1])
         allowed_distance = max(24.0, 1.10 * max(min(first_w, first_h), min(second_w, second_h)))
         return distance <= allowed_distance and self._box_gap(first_box, second_box) <= 14.0
 
@@ -1129,10 +1284,9 @@ class MotionVehicleTracker:
         kept = []
         for detection in sorted(detections, key=lambda item: item["area"], reverse=True):
             if any(
-                not self._different_clean_owners(detection, existing)
-                and
-                self._same_motion_echo(detection, existing)
-                and self._iou(detection["box"], existing["box"]) >= 0.25
+                self._iou(detection["box"], existing["box"]) >= 0.25
+                and not self._different_clean_owners(detection, existing)
+                and self._same_motion_echo(detection, existing)
                 and cv2.compareHist(
                     detection["hist"], existing["hist"], cv2.HISTCMP_BHATTACHARYYA
                 ) <= 0.12
@@ -1231,8 +1385,11 @@ class MotionVehicleTracker:
         velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
         speed = float(np.hypot(velocity_x, velocity_y))
         extent = float(max(track.w, track.h))
+        dt = max(1, self._source_dt)
+        if dt > 1:
+            ceiling *= dt
         budget = (
-            speed * (invisible + 1) * self.velocity_gate_scale
+            speed * (invisible + dt) * self.velocity_gate_scale
             + self.velocity_gate_size_ratio * extent
         )
         floor = max(24.0, self.velocity_gate_size_ratio * extent)
@@ -1249,6 +1406,9 @@ class MotionVehicleTracker:
         if len(history) >= 2:
             steps = min(4, len(history) - 1)
             first, last = history[-1 - steps], history[-1]
+            source_frames = getattr(track, "history_source_frames", ())
+            if len(source_frames) == len(history):
+                steps = max(1, int(source_frames[-1]) - int(source_frames[-1 - steps]))
             return (last[0] - first[0]) / steps, (last[1] - first[1]) / steps
         return 0.0, 0.0
 
@@ -1274,7 +1434,7 @@ class MotionVehicleTracker:
         if excess_width <= 0.0 and excess_height <= 0.0:
             return True
         velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
-        span = self.motion_trail_elongation_frames
+        span = self.motion_trail_elongation_frames * max(1, self._source_dt)
         # Perspective and mask noise vary the silhouette by a fraction of the
         # vehicle even when it moves along one axis only.
         tolerance_width = 0.30 * float(track.w)
@@ -1326,6 +1486,12 @@ class MotionVehicleTracker:
                 0.0
                 <= self._current_timestamp_s - float(timestamp)
                 <= self.merged_reacquire_max_seconds
+            )
+        source_frame = getattr(track, "last_ambiguous_source_frame", None)
+        if source_frame is not None:
+            return (
+                0 <= self._source_frame_idx - int(source_frame)
+                <= int(round(self.merged_reacquire_max_seconds * 30.0))
             )
         frame = getattr(track, "last_ambiguous_frame", None)
         if frame is None:
@@ -1453,6 +1619,7 @@ class MotionVehicleTracker:
             for row in viable_rows:
                 track = self._tracks[track_ids[row]]
                 track.last_ambiguous_frame = int(self._frame_idx)
+                track.last_ambiguous_source_frame = int(self._source_frame_idx)
                 track.last_ambiguous_timestamp_s = self._current_timestamp_s
                 track.last_ambiguous_kind = "competition"
             costs[:, col] = 10.0
@@ -1701,6 +1868,8 @@ class MotionVehicleTracker:
                 self.prediction_max_distance_scale,
                 1.0 + min(invisible, 15) / 60.0,
             )
+            if self._source_dt > 1:
+                max_distance *= self._source_dt
             gate_distance = self._association_gate(track, invisible, max_distance)
             if stale_anchor_reacquire:
                 clean_w, clean_h = self._clean_size(track)
@@ -1722,6 +1891,21 @@ class MotionVehicleTracker:
                             "prediction_age_s": round(float(prediction_age), 3),
                         })
                     continue
+                if self._source_dt > 1 and not stale_anchor_reacquire:
+                    # A widened dt gate must not allow a similarly coloured
+                    # vehicle to jump behind a well-established trajectory.
+                    vx, vy = self._track_velocity_px_per_frame(track)
+                    speed = float(np.hypot(vx, vy))
+                    dx = float(detection["point"][0] - track.cx)
+                    dy = float(detection["point"][1] - track.cy)
+                    displacement = float(np.hypot(dx, dy))
+                    if (
+                        int(getattr(track, "total_visible_count", 0)) >= 3
+                        and speed >= 1.0
+                        and displacement > max(16.0, 0.6 * max(track.w, track.h))
+                        and (vx * dx + vy * dy) / max(1e-6, speed * displacement) < -0.35
+                    ):
+                        continue
                 iou = self._iou(predicted_box, detection["box"])
                 current_appearance_distance = (
                     histogram_distance(track.appearance, detection["hist"])
@@ -1903,6 +2087,7 @@ class MotionVehicleTracker:
             for track_id in compatible:
                 track = self._tracks[track_id]
                 track.last_ambiguous_frame = int(self._frame_idx)
+                track.last_ambiguous_source_frame = int(self._source_frame_idx)
                 track.last_ambiguous_timestamp_s = self._current_timestamp_s
                 track.last_ambiguous_kind = "merged"
             for row in range(len(track_ids)):
@@ -1935,9 +2120,14 @@ class MotionVehicleTracker:
                     adjusted_margin,
                 )
                 last_ambiguous_frame = getattr(track, "last_ambiguous_frame", None)
+                last_ambiguous_source_frame = getattr(track, "last_ambiguous_source_frame", None)
                 recently_ambiguous = (
                     last_ambiguous_frame is not None
-                    and int(self._frame_idx) - int(last_ambiguous_frame)
+                    and (
+                        int(self._source_frame_idx) - int(last_ambiguous_source_frame)
+                        if last_ambiguous_source_frame is not None
+                        else int(self._frame_idx) - int(last_ambiguous_frame)
+                    )
                     <= self.ambiguous_recovery_frames
                 )
                 pair_metrics = self._pair_metrics.get((track_id, col), {})
@@ -2050,6 +2240,9 @@ class MotionVehicleTracker:
         track.first_observation_point = point
         track.first_observation_bbox = box
         track.first_observation_frame = self._frame_idx
+        track.first_observation_source_frame = self._source_frame_idx
+        track.history_source_frames = [self._source_frame_idx]
+        track.last_observation_source_frame = self._source_frame_idx
         track.first_observation_timestamp_s = self._current_timestamp_s
         track.last_seen_timestamp_s = self._current_timestamp_s
         track.last_measured_center = (float(point[0]), float(point[1]))
@@ -2136,6 +2329,7 @@ class MotionVehicleTracker:
         track.fragment_area_history = fragment_areas[-12:]
         track.consecutive_invisible_count = 0
         track.last_seen_frame = self._frame_idx
+        track.last_observation_source_frame = self._source_frame_idx
         track.last_seen_timestamp_s = self._current_timestamp_s
         track.last_measured_center = (float(point[0]), float(point[1]))
         track.last_measured_timestamp_s = self._current_timestamp_s
@@ -2162,7 +2356,13 @@ class MotionVehicleTracker:
             if track.appearance is None:
                 track.appearance = detection['hist'].copy()
             else:
-                track.appearance = cv2.addWeighted(track.appearance, .75, detection['hist'], .25, 0)
+                if self._source_dt == 1:
+                    track.appearance = cv2.addWeighted(track.appearance, .75, detection['hist'], .25, 0)
+                else:
+                    retained = .75 ** self._source_dt
+                    track.appearance = cv2.addWeighted(
+                        track.appearance, retained, detection['hist'], 1.0 - retained, 0
+                    )
         if track.appearance_tracklet is None:
             track.appearance_tracklet = AppearanceTracklet(
                 max_samples=self.tracklet_max_samples,
@@ -2178,8 +2378,12 @@ class MotionVehicleTracker:
             track.priority_observation_count = getattr(track, "priority_observation_count", 0) + 1
         track.status = TrackStatus.CONFIRMED if self._is_confirmable(track) else TrackStatus.TENTATIVE
         track.history.append(point)
+        if not hasattr(track, "history_source_frames"):
+            track.history_source_frames = [self._frame_idx] * (len(track.history) - 1)
+        track.history_source_frames.append(self._source_frame_idx)
         if len(track.history) > self.history_len:
             track.history = track.history[-self.history_len:]
+            track.history_source_frames = track.history_source_frames[-self.history_len:]
 
     def _stationary_at_rest(self, track) -> bool:
         """P26: fragment có đang đứng yên tại chỗ không.
@@ -2253,6 +2457,8 @@ class MotionVehicleTracker:
         frame: np.ndarray,
         timestamp_s: Optional[float] = None,
         priority_regions: Optional[Sequence[Any]] = None,
+        prepared_motion: Optional[tuple] = None,
+        source_frame_idx: Optional[int] = None,
     ):
         """Process one frame while preserving the legacy three-value return.
 
@@ -2264,6 +2470,18 @@ class MotionVehicleTracker:
         candidate.
         """
         self._frame_idx += 1
+        source_idx = (
+            int(source_frame_idx)
+            if source_frame_idx is not None
+            else self._frame_idx
+        )
+        self._source_dt = (
+            max(1, source_idx - self._last_source_frame_idx)
+            if self._last_source_frame_idx is not None
+            else 1
+        )
+        self._source_frame_idx = source_idx
+        self._last_source_frame_idx = source_idx
         self._current_timestamp_s = (
             float(timestamp_s)
             if timestamp_s is not None and np.isfinite(timestamp_s)
@@ -2277,11 +2495,21 @@ class MotionVehicleTracker:
             self.occlusion_guard.prepare(self._tracks, predictions,
                 self._current_timestamp_s if self._current_timestamp_s is not None else self._frame_idx / 30.0,
                 self._frame_idx)
-        detections, mask = self._detect(
-            frame,
-            timestamp_s=self._current_timestamp_s,
-            priority_regions=priority_regions,
-        )
+        if prepared_motion is None:
+            # Preserve the existing override/monkeypatch signature for callers
+            # that do not opt into the read-ahead pipeline.
+            detections, mask = self._detect(
+                frame,
+                timestamp_s=self._current_timestamp_s,
+                priority_regions=priority_regions,
+            )
+        else:
+            detections, mask = self._detect(
+                frame,
+                timestamp_s=self._current_timestamp_s,
+                priority_regions=priority_regions,
+                prepared_motion=prepared_motion,
+            )
         for rejection in self._last_detection_rejections[:32]:
             self._last_association_events.append({
                 **dict(rejection),
@@ -2364,13 +2592,18 @@ class MotionVehicleTracker:
                 and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
                 and self._stationary_at_rest(track)
             )
-            if (
-                track.consecutive_invisible_count > self.lost_track_ttl
-                and not hold_stationary
-                or (
-                    self._lost_beyond_ttl_seconds(track)
-                    and not hold_stationary
-                )
+            # Source-frame TTL remains meaningful when live replay skips
+            # intermediate frames. At dt=1 it equals the legacy invisible
+            # count; timestamp TTL retains the existing P26 protection.
+            last_source_frame = getattr(track, "last_observation_source_frame", None)
+            invisible_source_frames = (
+                self._source_frame_idx - int(last_source_frame)
+                if last_source_frame is not None
+                else track.consecutive_invisible_count
+            )
+            if not hold_stationary and (
+                invisible_source_frames > self.lost_track_ttl
+                or self._lost_beyond_ttl_seconds(track)
             ):
                 expired.append(track_id)
         expired_tracks = []  # Danh sách tracks vừa expire frame này
@@ -2515,10 +2748,23 @@ class MotionVehicleTracker:
         for local_id, track in sorted(self._tracks.items()):
             velocity_x, velocity_y = self._track_velocity_px_per_frame(track)
             predicted_center = self._predictions.get(int(local_id))
+            # Keep the stale box for diagnostics/visualisation but never
+            # advertise its old GID as a fresh physical observation. P26's
+            # evidence-backed stationary hold retains its identity.
+            stale_ghost = (
+                track.status == TrackStatus.LOST
+                and getattr(track, "prediction_source", None) == "stale_prediction"
+                and not _P38_DISABLE_B3
+                and not (                    self.hold_stationary_fragment_ttl
+                    and int(getattr(track, "fragment_visible_count", 0) or 0) >= 5
+                    and self._stationary_at_rest(track)
+                )
+            )
             records.append({
                 "local_track_id": int(local_id),
                 "global_id": (
-                    int(global_ids[local_id]) if local_id in global_ids else None
+                    int(global_ids[local_id])
+                    if local_id in global_ids and not stale_ghost else None
                 ),
                 "bbox": [int(value) for value in track.bbox],
                 "center": [int(track.cx), int(track.cy)],

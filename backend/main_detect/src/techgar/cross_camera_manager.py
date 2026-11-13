@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+import os
+import time
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import cv2
@@ -21,9 +23,18 @@ from .tracklet_descriptor import (
     aggregate_appearance,
     appearance_samples,
     compare_tracklets,
+    compare_tracklets_cached,
     merge_appearance_samples,
 )
 from .trajectory_memory import TrajectorySample, WorldTrajectoryMemory
+
+# P38/BISECT (measurement only): env switches to disable the accumulated T24
+# steps B2..B5 for one run. All default OFF, so behaviour is unchanged unless a
+# variable is explicitly set. B1 is already disabled in `_bind()`.
+_P38_DISABLE_B2 = os.environ.get("P38_DISABLE_B2") == "1"  # source-frame evidence tick
+# P38/BISECT2: B5 stays ON -- see motion_tracker.py for the p37_score evidence.
+_ENABLE_B5_MERGED_FREEZE = True
+_P38_DISABLE_B5 = not _ENABLE_B5_MERGED_FREEZE
 
 
 # (source camera, exit edge) -> target camera for the simulated 2x2 layout.
@@ -38,6 +49,72 @@ OPPOSITE_EDGE = {"left": "right", "right": "left", "top": "bottom", "bottom": "t
 #: P26: biên độ dịch chuyển tối đa (px) trên 4 mẫu ``history`` gần nhất để coi
 #: một fragment là "đứng yên tuyệt đối". Xe đang chạy vượt xa ngưỡng này.
 STATIONARY_AT_REST_PX: float = 4.0
+
+#: P35/T2: `TECHGAR_PROFILE=1` bat bo dem thoi gian theo ham trong
+#: `update_all_tracks`. Moi 600 frame in mot bang ms/frame de tim ham CHAM DAN
+#: theo thoi gian (khong phai de lai trong production).
+_PROFILE_ENABLED = os.environ.get("TECHGAR_PROFILE") == "1"
+_PROFILE_SECTIONS = (
+    "sync_occluded",
+    "observe_trajectories",
+    "match_unique_cross_camera",
+    "match_dormant",
+    "match_stationary",
+    "match_world_trajectory",
+    "match_unbound_pairs",
+    "match_simultaneous_overlap",
+    "allocate_loop",
+    "merge_same_camera_dups",
+    "merge_cross_camera_dups",
+    "reconcile_dormant",
+    "resolve_same_camera",
+    "refresh_observe",
+    "refresh_views",
+    "refresh_states",
+    "refresh_identity_states",
+    "obs_world",
+    "obs_merge",
+    "obs_state",
+    "record_conflicts",
+    "cleanup",
+)
+_PROFILE_ACC: Dict[str, float] = {}
+_PROFILE_CALLS: Dict[str, int] = {}
+_PROFILE_FRAMES = 0
+
+
+def _profile_add(section: str, elapsed_s: float) -> None:
+    """P35/T2: cong don thoi gian mot phan cua update_all_tracks."""
+    if not _PROFILE_ENABLED:
+        return
+    _PROFILE_ACC[section] = _PROFILE_ACC.get(section, 0.0) + elapsed_s
+    _PROFILE_CALLS[section] = _PROFILE_CALLS.get(section, 0) + 1
+
+
+def _profile_report() -> None:
+    """P35/T2: in ms/frame trung binh moi 600 frame de thay ham cham dan."""
+    global _PROFILE_FRAMES
+    if not _PROFILE_ENABLED:
+        return
+    _PROFILE_FRAMES += 1
+    if _PROFILE_FRAMES % 600:
+        return
+    rows = sorted(_PROFILE_ACC.items(), key=lambda item: -item[1])
+    total = sum(_PROFILE_ACC.values()) or 1e-9
+    parts = [
+        f"{name}={value / _PROFILE_FRAMES * 1000.0:.1f}ms"
+        f"({value / total * 100.0:.0f}%,{_PROFILE_CALLS.get(name, 0)}c)"
+        for name, value in rows
+        if value > 0.0
+    ]
+    print(
+        f"[p35-profile] frames={_PROFILE_FRAMES} "
+        f"total={total / _PROFILE_FRAMES * 1000.0:.1f}ms/frame | "
+        + " ".join(parts)
+    )
+    _PROFILE_ACC.clear()
+    _PROFILE_CALLS.clear()
+
 
 
 @dataclass
@@ -63,6 +140,38 @@ class HandoffEntry:
     # Priority 6: Time-based TTL fields for more accurate handoff expiration
     created_at_time: Optional[float] = None
     updated_at_time: Optional[float] = None
+
+
+class _CachedBox:
+    """Minimal track interface for a bound local track that left the frame.
+
+    P29 (V040 toi_5p): only geometry is needed, so a cached box can be mixed
+    into the sibling list without changing the split-halves test.
+    """
+
+    __slots__ = ("x", "y", "w", "h", "cx", "cy", "observation_kind",
+                 "consecutive_invisible_count", "association_state")
+
+    def __init__(self, box: Tuple[int, int, int, int]):
+        self.x, self.y, self.w, self.h = (int(value) for value in box)
+        self.cx = self.x + self.w / 2.0
+        self.cy = self.y + self.h / 2.0
+        # A cached sibling is not measured this frame - exactly the state the
+        # split-halves gate is looking for.
+        self.observation_kind = "prediction"
+        self.consecutive_invisible_count = 1
+        self.association_state = "coasting"
+
+
+def _max_size(*sizes) -> Tuple[int, int]:
+    """Component-wise maximum of bbox sizes (P29 split-halves reference).
+
+    An identity can be bound to only *half* of a split vehicle, so the "one
+    vehicle" reference must never be smaller than the halves being compared.
+    """
+    widths = [int(size[0]) for size in sizes if size is not None and size[0]]
+    heights = [int(size[1]) for size in sizes if size is not None and size[1]]
+    return (max(widths) if widths else 0, max(heights) if heights else 0)
 
 
 @dataclass
@@ -241,6 +350,12 @@ class CrossCameraManager:
         stationary_reacquire_margin_appearance: float = 0.08,
         stationary_reacquire_member_drift: float = 2.0,
         stationary_reacquire_member_window: int = 10,
+        # P29 (V040 toi_5p): frame differencing can split ONE vehicle into two
+        # touching halves of similar area.  Both pre-existing echo gates miss
+        # that shape, so the trailing half used to be minted a second Global ID
+        # (GID 1 at the gate, GID 5 in the slot).  On by default; disable with
+        # ``--legacy-split-vehicle-echo``.
+        split_vehicle_echo: bool = True,
     ):
         self.camera_sizes = camera_sizes
         self.camera_crops = camera_crops
@@ -356,6 +471,8 @@ class CrossCameraManager:
             if slot_width_world and slot_width_world > 0.0
             else self.cross_camera_duplicate_distance
         )
+        # P29 (V040 toi_5p): xem ``CrossCameraManager.split_vehicle_echo``.
+        self.split_vehicle_echo = bool(split_vehicle_echo)
         self.enable_stationary_reacquire = bool(enable_stationary_reacquire)
         self.stationary_resume_frozen = bool(stationary_resume_frozen)
         self.stationary_reserve_hold = bool(stationary_reserve_hold)
@@ -428,7 +545,12 @@ class CrossCameraManager:
         # age: after a camera dropout an old local object may reappear while a
         # newer, correctly transferred fragment already owns the identity.
         self._local_binding_frames: Dict[Tuple[str, int], int] = {}
+        # P29 (V040 toi_5p): last box of each local track, so a sibling that
+        # ages into LOST next frame is still comparable to its other half.
+        self._last_local_boxes: Dict[Tuple[str, int], Tuple[int, int, int, int]] = {}
+        self._last_local_box_frames: Dict[Tuple[str, int], int] = {}
         self._processing_frame_idx: Optional[int] = None
+        self._evidence_source_frame_idx = 0
         self._gid_members: Dict[int, set[Tuple[str, int]]] = {}
         # Retired IDs are permanent aliases to the smaller canonical ID.  A
         # handoff/slot recovery that still references an old ID cannot revive it.
@@ -437,6 +559,16 @@ class CrossCameraManager:
         self._independent_local_pairs: dict[str, set] = {}
         self._occluded_global_ids: set[int] = set()
         self._ownership_tracks = None
+        # P35/T11: per-frame inverse index for `_has_confirmed_camera_member`.
+        # cam_id -> (ownership dict object, {canonical_gid: {local ids}}).  The
+        # object identity check is what invalidates it when a new frame hands in
+        # a new track dictionary.
+        self._confirmed_member_index: Dict[str, tuple] = {}
+        # Incremented by `_invalidate_member_index` whenever `_local_to_global`
+        # changes, so the index above can never serve a stale answer.
+        self._member_index_epoch: int = 0
+        # P35/T11: canonical GID -> [(camera, local id)] in binding order.
+        self._members_index: Optional[tuple] = None
         self._handoffs: List[HandoffEntry] = []
         self._identities: Dict[int, GlobalIdentityState] = {}
         self._cross_camera_deferred_since: Dict[Tuple[str, int], int] = {}
@@ -505,6 +637,11 @@ class CrossCameraManager:
         self._camera_bbox_samples: Dict[
             Tuple[int, str], List[Tuple[int, int]]
         ] = {}
+        # P35/T2: cache the O(n^2) gallery merges per (global_id, camera) so a
+        # frame that adds no new appearance sample does not recompute them.
+        self._gallery_merge_cache: Dict[
+            Tuple[int, str], Tuple[tuple, Tuple[np.ndarray, ...], Tuple[np.ndarray, ...]]
+        ] = {}
         self._camera_fps_bootstrap = {
             str(camera_id): float(np.clip(fps, 1.0, 60.0))
             for camera_id, fps in (camera_fps or {}).items()
@@ -552,7 +689,7 @@ class CrossCameraManager:
             self._global_aliases[old_id] = global_id
         return global_id
 
-    def _bind(self, cam_id: str, local_track_id: int, global_id: int) -> int:
+    def _bind(self, cam_id: str, local_track_id: int, global_id: int) -> Optional[int]:
         global_id = self._canonical_id(global_id)
         key = (cam_id, local_track_id)
         raw_previous = self._local_to_global.get(key)
@@ -561,6 +698,40 @@ class CrossCameraManager:
             if raw_previous is not None
             else None
         )
+        # A global identity may have only one live owner in each camera.
+        # Do this at bind time: resolving conflicts after handoff/re-ID has
+        # already let a second fragment claim the same identity is too late.
+        # P37: tat vi lam te IDSW, xoa khi WIK thay the
+        _ENABLE_SAME_CAMERA_BIND_GUARD = False
+        if _ENABLE_SAME_CAMERA_BIND_GUARD:
+            ownership = self._ownership_tracks or {}
+            camera_tracks = ownership.get(cam_id, {})
+            candidate = camera_tracks.get(local_track_id)
+            if candidate is not None:
+                for other_key, other_gid in tuple(self._local_to_global.items()):
+                    if (other_key == key or other_key[0] != cam_id
+                            or self._canonical_id(other_gid) != global_id):
+                        continue
+                    other = camera_tracks.get(other_key[1])
+                    if other is None:
+                        continue
+                    # Kalman-only coasting must never displace a newly observed
+                    # vehicle. Preserve P26 frozen fragments with real evidence.
+                    if (self._has_fresh_detection(candidate)
+                            and not self._has_fresh_detection(other)
+                            and not self._frozen_member_kept(other)):
+                        self._local_to_global.pop(other_key, None)
+                        self._gid_members.get(global_id, set()).discard(other_key)
+                        self._local_binding_frames.pop(other_key, None)
+                        self._invalidate_member_index()
+                        continue
+                    if previous != global_id:
+                        self._event(
+                            "same_camera_bind_deferred", self._processing_frame_idx or 0,
+                            global_id, camera=cam_id, local_track_id=local_track_id,
+                            incumbent_local_id=other_key[1],
+                        )
+                        return previous
         if previous is not None and previous != global_id:
             self._gid_members.get(previous, set()).discard(key)
         if previous != global_id or key not in self._local_binding_frames:
@@ -569,6 +740,7 @@ class CrossCameraManager:
                     self._processing_frame_idx
                 )
         self._local_to_global[key] = global_id
+        self._invalidate_member_index()
         self._gid_members.setdefault(global_id, set()).add(key)
         self.trajectory.promote(key, global_id)
         self._direction_reid_claims = {
@@ -592,10 +764,18 @@ class CrossCameraManager:
     def _copy_camera_galleries(
         identity: Optional[GlobalIdentityState],
     ) -> Dict[str, Tuple[np.ndarray, ...]]:
+        """P35/T2: share gallery samples instead of deep-copying them.
+
+        Gallery tuples are rebuilt, never mutated in place: every producer
+        (``merge_appearance_samples``) returns a *new* tuple, and the samples
+        inside are treated as read-only.  Copying each 16x16 float array for
+        every identity on every frame was pure overhead that grew with the
+        gallery size, which is exactly the "slower over time" symptom.
+        """
         if identity is None:
             return {}
         return {
-            camera_id: tuple(sample.copy() for sample in samples)
+            camera_id: tuple(samples)
             for camera_id, samples in identity.camera_appearance_samples.items()
         }
 
@@ -618,6 +798,90 @@ class CrossCameraManager:
             for (source, _edge), target in self.edge_adjacency.items()
         )
 
+    def _confirmed_members_by_camera(
+        self,
+        cam_id: str,
+        all_tracks: Dict[str, dict],
+    ) -> Dict[int, set]:
+        """P35/T11: canonical GID -> confirmed local ids in one camera.
+
+        ``_has_confirmed_camera_member`` used to walk every local track of the
+        camera per call.  ``_match_stationary_reacquire`` calls it for every
+        (fragment, identity) pair, i.e. **76 236** times in 2 100 frames, so
+        that scan was ~1.7 s.  The underlying map only changes between frames
+        (``_local_to_global`` and ``_is_confirmed`` are frame-stable), so build
+        the inverse index once per (frame, camera) and answer in O(1).
+
+        Invalidation is explicit rather than inferred: every mutation of
+        ``_local_to_global`` calls ``_invalidate_member_index`` (see the
+        ``_member_index_epoch`` counter below), because a bind/pop/re-canonicalise
+        mid-frame must not leave a stale answer behind.
+
+        Output is identical: the old loop returned True exactly when some local
+        track of ``cam_id`` other than ``exclude_local_id`` maps to ``global_id``
+        *and* is confirmed, which is precisely set membership here.
+        """
+        ownership_tracks = (
+            self._ownership_tracks
+            if self._ownership_tracks is not None
+            else all_tracks
+        )
+        cached = self._confirmed_member_index.get(cam_id)
+        if (
+            cached is not None
+            and cached[0] is ownership_tracks
+            and cached[1] == self._member_index_epoch
+        ):
+            return cached[2]
+        index: Dict[int, set] = {}
+        for local_track_id, track in ownership_tracks.get(cam_id, {}).items():
+            mapped = self._local_to_global.get((cam_id, local_track_id))
+            if mapped is None:
+                continue
+            if not self._is_confirmed(track):
+                continue
+            index.setdefault(self._canonical_id(mapped), set()).add(
+                int(local_track_id)
+            )
+        self._confirmed_member_index[cam_id] = (
+            ownership_tracks,
+            self._member_index_epoch,
+            index,
+        )
+        return index
+
+    def _members_by_global_index(self, all_tracks: Dict[str, dict]) -> Dict[int, list]:
+        """P35/T11: canonical GID -> [(camera, local id)] in binding order.
+
+        ``_match_stationary_reacquire`` walked **all** of ``_local_to_global``
+        for every (fragment, identity) pair just to collect one identity's
+        members, so the cost was O(pairs x bindings).  This builds the inverse
+        map once per frame instead.
+
+        Ordering is preserved exactly: the list is produced by iterating
+        ``_local_to_global`` in insertion order, which is the same order the old
+        per-pair loop visited.  That matters because the caller ``break``s on the
+        first divergent/moving member.
+
+        Invalidated by the same ``_member_index_epoch`` as the confirmed-member
+        index, i.e. on every ``_local_to_global`` mutation.
+        """
+        cached = self._members_index
+        if cached is not None and cached[1] == self._member_index_epoch:
+            return cached[2]
+        index: Dict[int, list] = {}
+        for (member_cam, member_lid), raw_gid in self._local_to_global.items():
+            index.setdefault(self._canonical_id(raw_gid), []).append(
+                (member_cam, member_lid)
+            )
+        self._members_index = (all_tracks, self._member_index_epoch, index)
+        return index
+
+    def _invalidate_member_index(self) -> None:
+        """P35/T11: ``_local_to_global`` changed, so the inverse index is stale."""
+        self._member_index_epoch += 1
+
+
     def _has_confirmed_camera_member(
         self,
         global_id: int,
@@ -633,20 +897,22 @@ class CrossCameraManager:
         *inside the same camera*. This guard is checked before handoff/overlap
         binding so a reverse handoff cannot attach an already-active ID to a
         neighbouring vehicle.
+
+        P35/T11: answered from a per-frame inverse index (see
+        ``_confirmed_members_by_camera``) instead of scanning the camera's
+        tracks on every call.  Same predicate, same answer.
         """
         global_id = self._canonical_id(global_id)
-        # Assignment passes receive filtered candidate dictionaries. Those
-        # dictionaries must never hide an owner already observed this frame.
-        ownership_tracks = self._ownership_tracks if self._ownership_tracks is not None else all_tracks
-        for local_track_id, track in ownership_tracks.get(cam_id, {}).items():
-            if exclude_local_id is not None and local_track_id == exclude_local_id:
-                continue
-            mapped = self._local_to_global.get((cam_id, local_track_id))
-            if mapped is None or self._canonical_id(mapped) != global_id:
-                continue
-            if self._is_confirmed(track):
-                return True
-        return False
+        members = self._confirmed_members_by_camera(cam_id, all_tracks).get(
+            global_id
+        )
+        if not members:
+            return False
+        if exclude_local_id is None:
+            return True
+        return any(
+            local_track_id != exclude_local_id for local_track_id in members
+        )
 
     def _is_provisional(self, global_id: int, frame_idx: int) -> bool:
         """Check if an identity is still in probation period.
@@ -673,6 +939,24 @@ class CrossCameraManager:
             for polygon in self.exit_zones.get(cam_id, [])
         )
 
+    @staticmethod
+    def _track_gallery_signature(track) -> Optional[tuple]:
+        """P35/T2: identity of the track's current appearance gallery.
+
+        ``merge_appearance_samples`` is an O(n^2) sweep (one histogram distance
+        per candidate pair) and it runs twice per identity per frame.  A local
+        track only gains a sample every ``sample_interval`` frames, so most
+        frames hand in exactly the same gallery.  This signature lets the
+        merge be skipped when nothing changed - the result is identical by
+        construction, it just avoids recomputing it.
+        """
+        descriptor = getattr(track, "appearance_tracklet", None)
+        samples = getattr(descriptor, "samples", None)
+        if samples is None:
+            return None
+        frames = getattr(descriptor, "sample_frames", None) or ()
+        return (len(samples), int(frames[-1]) if frames else -1)
+
     def _observe_identity(
         self,
         global_id: int,
@@ -683,15 +967,65 @@ class CrossCameraManager:
         timestamp_s: Optional[float],
     ) -> GlobalIdentityState:
         global_id = self._canonical_id(global_id)
+        _ts_obs = time.perf_counter() if _PROFILE_ENABLED else 0.0
         world = self._track_world(cam_id, track)
         velocity_world = self._world_velocity(cam_id, track)
         previous = self._identities.get(global_id)
+        if _PROFILE_ENABLED:
+            _profile_add("obs_world", time.perf_counter() - _ts_obs)
+            _ts_obs = time.perf_counter()
         camera_galleries = self._copy_camera_galleries(previous)
-        camera_galleries[cam_id] = merge_appearance_samples(
-            camera_galleries.get(cam_id, ()),
-            track,
-            self.tracklet_gallery_size,
+        # P35/T2: skip both O(n^2) gallery merges while the local track has no
+        # new appearance sample. The merged tuples are immutable, so reusing
+        # them is output-identical.
+        signature = self._track_gallery_signature(track)
+        cache_key = (global_id, cam_id)
+        cached = self._gallery_merge_cache.get(cache_key)
+        reused = (
+            cached is not None
+            and signature is not None
+            and cached[0] == signature
         )
+        if reused:
+            camera_galleries[cam_id] = cached[1]
+            gallery = cached[2]
+            appearance = cached[3] if len(cached) > 3 else None
+        else:
+            previous_camera_gallery = camera_galleries.get(cam_id, ())
+            previous_overall = (
+                previous.appearance_samples if previous is not None else ()
+            )
+            # P35/T2: ``merge_appearance_samples`` is O(n^2).  For an identity
+            # that has only ever been seen in this camera both merges start from
+            # the *same* base tuple, so their results are identical by
+            # construction - compute once and reuse.
+            # A single-camera identity's per-camera gallery and its overall
+            # gallery are built from the same samples, so the two merges are
+            # identical.  Checked by *camera count* (never by comparing numpy
+            # arrays, and not by length - two capped galleries can match).
+            single_camera_base = len(camera_galleries) <= 1
+            merged = merge_appearance_samples(
+                previous_camera_gallery,
+                track,
+                self.tracklet_gallery_size,
+            )
+            camera_galleries[cam_id] = merged
+            gallery = (
+                merged
+                if single_camera_base
+                else merge_appearance_samples(
+                    previous_overall,
+                    track,
+                    self.tracklet_gallery_size,
+                )
+            )
+            appearance = None
+            if signature is not None:
+                self._gallery_merge_cache[cache_key] = (
+                    signature,
+                    camera_galleries[cam_id],
+                    gallery,
+                )
         camera_bbox_sizes = dict(
             previous.camera_bbox_sizes if previous is not None else {}
         )
@@ -721,12 +1055,20 @@ class CrossCameraManager:
             )
         )
         camera_bbox_sizes[cam_id] = robust_size
-        gallery = merge_appearance_samples(
-            previous.appearance_samples if previous is not None else (),
-            track,
-            self.tracklet_gallery_size,
-        )
-        appearance = aggregate_appearance(gallery)
+        if _PROFILE_ENABLED:
+            _profile_add("obs_merge", time.perf_counter() - _ts_obs)
+            _ts_obs = time.perf_counter()
+        if appearance is None:
+            appearance = aggregate_appearance(gallery)
+            if signature is not None:
+                cached = self._gallery_merge_cache.get(cache_key)
+                if cached is not None and cached[0] == signature:
+                    self._gallery_merge_cache[cache_key] = (
+                        cached[0],
+                        cached[1],
+                        cached[2],
+                        appearance,
+                    )
         if appearance is None:
             appearance = self._appearance_snapshot(getattr(track, "appearance", None))
         velocity_per_second = previous.velocity_world_per_second if previous else (0.0, 0.0)
@@ -773,6 +1115,8 @@ class CrossCameraManager:
             ),
         )
         self._identities[global_id] = state
+        if _PROFILE_ENABLED:
+            _profile_add("obs_state", time.perf_counter() - _ts_obs)
         return state
 
     def _measurement_history(
@@ -1372,6 +1716,7 @@ class CrossCameraManager:
         key = (str(cam_id), int(local_track_id))
         canonical = self._canonical_id(global_id)
         self._local_to_global[key] = canonical
+        self._invalidate_member_index()
         self._local_binding_frames[key] = int(frame_idx)
         self._gid_members.setdefault(canonical, set()).add(key)
         self._event(
@@ -1390,6 +1735,7 @@ class CrossCameraManager:
             if global_id not in self._parked_reservations:
                 continue
             self._local_to_global.pop(key, None)
+            self._invalidate_member_index()
             self._local_binding_frames.pop(key, None)
             self._gid_members.get(global_id, set()).discard(key)
             detached.append((key[0], int(key[1]), global_id))
@@ -1864,7 +2210,7 @@ class CrossCameraManager:
             if identity is not None
             else ()
         )
-        match = compare_tracklets(track, gallery)
+        match = compare_tracklets_cached(track, gallery)
         return {
             "distance": (
                 float(match.distance) if match.support > 0 else None
@@ -2018,7 +2364,7 @@ class CrossCameraManager:
                 or not other_gallery
             ):
                 continue
-            other_match = compare_tracklets(track, other_gallery)
+            other_match = compare_tracklets_cached(track, other_gallery)
             other_size_reference = other_identity.camera_bbox_sizes.get(
                 str(camera_id), other_identity.bbox_size
             )
@@ -2438,7 +2784,7 @@ class CrossCameraManager:
             gallery = identity.camera_appearance_samples.get(
                 cam_id
             ) or identity.appearance_samples
-            appearance_match = compare_tracklets(track, gallery)
+            appearance_match = compare_tracklets_cached(track, gallery)
             if (
                 appearance_match.support < 1
                 or appearance_match.distance > 0.30
@@ -2888,7 +3234,7 @@ class CrossCameraManager:
 
     @staticmethod
     def _appearance_distance(left, right) -> float:
-        return compare_tracklets(left, right).distance
+        return compare_tracklets_cached(left, right).distance
 
     @staticmethod
     def _size_distance(first: Tuple[int, int], second: Tuple[int, int]) -> float:
@@ -3261,7 +3607,7 @@ class CrossCameraManager:
             if target_camera_reference
             else (entry.appearance_samples or entry.appearance)
         )
-        appearance_match = compare_tracklets(track, appearance_reference)
+        appearance_match = compare_tracklets_cached(track, appearance_reference)
         histogram_distance = appearance_match.distance
         appearance_distance = histogram_distance
 
@@ -3396,13 +3742,36 @@ class CrossCameraManager:
         store: Dict[tuple, Tuple[int, int]],
         key: tuple,
         frame_idx: int,
+        max_gap: int = 1,
     ) -> int:
         count, last_frame = store.get(key, (0, -999999))
         if last_frame == int(frame_idx):
             return count
-        count = count + 1 if int(frame_idx) - last_frame == 1 else 1
+        gap = int(frame_idx) - last_frame
+        count = count + 1 if 1 <= gap <= max_gap else 1
         store[key] = (count, int(frame_idx))
         return count
+
+    def _source_evidence_tick(self, frame_idx: int) -> int:
+        """Use source video frames for evidence, even when replay skips frames."""
+        # P38/BISECT: `P38_DISABLE_B2=1` reverts to the processed-frame tick
+        # (pre-T24 behaviour). Default off => unchanged behaviour.
+        if _P38_DISABLE_B2:
+            return int(frame_idx)
+        tracks_by_camera = self._ownership_tracks or {}
+        observed = [
+            int(getattr(track, "last_observation_source_frame", frame_idx))
+            for tracks in tracks_by_camera.values()
+            for track in tracks.values()
+            if self._has_fresh_detection(track)
+        ]
+        return max(int(frame_idx), self._evidence_source_frame_idx + 1,
+                   max(observed, default=int(frame_idx)))
+
+    def _evidence_window_frames(self, camera_id: Optional[str] = None) -> int:
+        # Half a second of original video, irrespective of processed stride.
+        fps = self._camera_fps_bootstrap.get(str(camera_id), 25.0)
+        return max(1, int(round(float(fps) * 0.5)))
 
     @staticmethod
     def _assignment_has_margin(
@@ -3481,7 +3850,11 @@ class CrossCameraManager:
         groups: Dict[Tuple[str, int], List[Tuple[int, object]]] = {}
         for cam_id, tracks in all_tracks.items():
             for local_id, track in tracks.items():
-                if not self._is_confirmed(track):
+                # LOST stale predictions can retain a GID and overlap a newly
+                # measured track; excluding them leaves a ghost identity live.
+                status = getattr(track, "status", None)
+                if (not self._is_confirmed(track)
+                        and getattr(status, "value", status) != "lost"):
                     continue
                 global_id = self._local_to_global.get((cam_id, local_id))
                 if global_id is None:
@@ -3494,7 +3867,9 @@ class CrossCameraManager:
             if len(members) < 2:
                 continue
             if all(
-                self._same_camera_motion_duplicate(left_track, right_track)
+                self._has_fresh_detection(left_track)
+                and self._has_fresh_detection(right_track)
+                and self._same_camera_motion_duplicate(left_track, right_track)
                 for index, (_left_id, left_track) in enumerate(members)
                 for _right_id, right_track in members[index + 1 :]
             ):
@@ -3514,7 +3889,7 @@ class CrossCameraManager:
 
             def owner_rank(member: Tuple[int, object]) -> tuple:
                 local_id, track = member
-                appearance_match = compare_tracklets(track, gallery)
+                appearance_match = compare_tracklets_cached(track, gallery)
                 appearance_distance = (
                     float(appearance_match.distance)
                     if appearance_match.support > 0
@@ -3532,6 +3907,9 @@ class CrossCameraManager:
                     getattr(track, "total_visible_count", 0)
                 )
                 return (
+                    0 if self._has_fresh_detection(track) else (
+                        1 if self._frozen_member_kept(track) else 2
+                    ),
                     appearance_distance,
                     size_distance,
                     -binding_frame,
@@ -3544,7 +3922,9 @@ class CrossCameraManager:
             for local_id, track in members:
                 if local_id == kept_local_id:
                     continue
-                if self._same_camera_motion_duplicate(kept_track, track):
+                if (self._has_fresh_detection(kept_track)
+                        and self._has_fresh_detection(track)
+                        and self._same_camera_motion_duplicate(kept_track, track)):
                     continue
                 # P26 (lead duyet 5.2): mot fragment dang bi dong bang nhung
                 # VAN dung yen ngay tren vi tri cuoi cua chinh GID nay la
@@ -3565,6 +3945,7 @@ class CrossCameraManager:
                     continue
                 key = (cam_id, local_id)
                 removed = self._local_to_global.pop(key, None)
+                self._invalidate_member_index()
                 if removed is None:
                     continue
                 self._gid_members.get(global_id, set()).discard(key)
@@ -3664,7 +4045,8 @@ class CrossCameraManager:
                     count = self._advance_consecutive_evidence(
                         self._cross_camera_conflict_evidence,
                         evidence_key,
-                        frame_idx,
+                        self._evidence_source_frame_idx,
+                        self._evidence_window_frames(),
                     )
                     if count < 2:
                         continue
@@ -3679,7 +4061,7 @@ class CrossCameraManager:
                             )
                             or identity.appearance_samples
                         )
-                    appearance_match = compare_tracklets(
+                    appearance_match = compare_tracklets_cached(
                         member_track, gallery
                     )
                     appearance_distance = (
@@ -3706,6 +4088,7 @@ class CrossCameraManager:
                 loser_key = (loser[0], loser[1])
                 if self._local_to_global.pop(loser_key, None) is None:
                     continue
+                self._invalidate_member_index()
                 self._gid_members.get(global_id, set()).discard(loser_key)
                 self._local_binding_frames.pop(loser_key, None)
                 self._event(
@@ -3728,7 +4111,7 @@ class CrossCameraManager:
         self._cross_camera_conflict_evidence = {
             key: value
             for key, value in self._cross_camera_conflict_evidence.items()
-            if frame_idx - value[1] <= 1
+            if self._evidence_source_frame_idx - value[1] <= self._evidence_window_frames()
         }
 
     def _bound_handoff_merge_allowed(
@@ -3778,7 +4161,7 @@ class CrossCameraManager:
                 if target_identity is not None
                 else ()
             )
-            same_view_match = compare_tracklets(
+            same_view_match = compare_tracklets_cached(
                 entry.appearance_samples or entry.appearance,
                 same_camera_gallery,
             )
@@ -4237,7 +4620,7 @@ class CrossCameraManager:
             gallery = identity.camera_appearance_samples.get(cam_id, ())
             if not gallery:
                 continue
-            appearance_match = compare_tracklets(track, gallery)
+            appearance_match = compare_tracklets_cached(track, gallery)
             current_tracklet_samples = len(appearance_samples(track))
             if (
                 appearance_match.support < 1
@@ -4385,7 +4768,7 @@ class CrossCameraManager:
         distance: float,
     ) -> Tuple[bool, object, float, bool, float]:
         """Evaluate appearance/size after a unique spatial pair is known."""
-        appearance_match = compare_tracklets(first_track, second_track)
+        appearance_match = compare_tracklets_cached(first_track, second_track)
         appearance_threshold = self.appearance_threshold
         adaptive_appearance = False
         if (
@@ -4493,7 +4876,7 @@ class CrossCameraManager:
             distance = float(
                 np.linalg.norm(np.subtract(world, claim["source_world"]))
             )
-            appearance_match = compare_tracklets(
+            appearance_match = compare_tracklets_cached(
                 track, claim["source_appearance_samples"]
             )
             size_distance = self._size_distance(
@@ -5045,7 +5428,7 @@ class CrossCameraManager:
                             or identity.appearance_samples
                         )
                         if gallery and appearance_samples(track):
-                            app_match = compare_tracklets(track, gallery)
+                            app_match = compare_tracklets_cached(track, gallery)
                             if (
                                 app_match is not None
                                 and app_match.distance <= 0.5
@@ -5111,12 +5494,9 @@ class CrossCameraManager:
 
                 # Cross-camera live members (bound, other camera).
                 members = []
-                for (member_cam, member_lid), raw_gid in (
-                    self._local_to_global.items()
-                ):
+                cross_camera_members = self._members_by_global_index(all_tracks)
+                for member_cam, member_lid in cross_camera_members.get(gid, ()):
                     if member_cam == cam_id:
-                        continue
-                    if self._canonical_id(raw_gid) != gid:
                         continue
                     member_track = all_tracks.get(member_cam, {}).get(
                         member_lid
@@ -5161,6 +5541,22 @@ class CrossCameraManager:
                             ),
                         )
 
+                # P35/T2b: ``compare_tracklets`` is an O(gallery^2) sweep and it
+                # used to run for every (fragment, identity) pair, even though
+                # the pass is *screened* if the distance is close OR appearance
+                # matches.  When the identity is far away and has no gallery for
+                # this camera, both screening conditions are predetermined to
+                # fail, so skip the expensive comparison.  Pure short-circuit:
+                # ``screened`` below is unchanged for every pair that still runs.
+                _very_far = (
+                    distance is not None
+                    and distance > 2.0 * self.stationary_reacquire_distance
+                )
+                target_gallery = identity.camera_appearance_samples.get(
+                    cam_id, ()
+                )
+                if _very_far and not target_gallery:
+                    continue
                 # Gallery resolution (rev2): a live-member identity or a
                 # cross-camera identity needs the *target* camera gallery;
                 # the source-camera fallback is only meaningful for a
@@ -5179,7 +5575,7 @@ class CrossCameraManager:
                 if gallery_missing:
                     target_gallery = identity.appearance_samples
                 appearance_match = (
-                    compare_tracklets(track, target_gallery)
+                    compare_tracklets_cached(track, target_gallery)
                     if target_gallery
                     else None
                 )
@@ -6285,7 +6681,7 @@ class CrossCameraManager:
             other_gallery = other.camera_appearance_samples.get(cam_id, ())
             if len(other_gallery) < 2:
                 continue
-            other_match = compare_tracklets(track, other_gallery)
+            other_match = compare_tracklets_cached(track, other_gallery)
             if (
                 other_match.support >= 2
                 and other_match.distance
@@ -6331,6 +6727,8 @@ class CrossCameraManager:
             if (cam_id, local_id) not in self._local_to_global
         ]
         deferred_keys: set[Tuple[str, int]] = set()
+        if not candidates:
+            return deferred_keys
         if self.enable_stationary_reacquire:
             # F1 1b / defect-2: a fragment once deferred for competing
             # dormant claims keeps its quarantine until fewer than two
@@ -6354,6 +6752,8 @@ class CrossCameraManager:
                 ]
                 for held_key in sorted(held_keys):
                     self._emit_stationary_hold_deferred(held_key, frame_idx)
+        if not candidates:
+            return deferred_keys
         identities = [
             identity
             for identity in self._identities.values()
@@ -6369,6 +6769,10 @@ class CrossCameraManager:
         invalid_cost = 10.0
         costs = np.full((len(identities), len(candidates)), invalid_cost, dtype=np.float64)
         details_by_pair = {}
+        # The homography transform is immutable during this pass, and each
+        # candidate's image-space box is unchanged. Cache its world point once
+        # per frame instead of projecting again for every dormant identity.
+        candidate_worlds: Dict[Tuple[str, int], Tuple[float, float]] = {}
         for row, identity in enumerate(identities):
             for col, (cam_id, local_id, track) in enumerate(candidates):
                 timestamp_s = (camera_timestamps_s or {}).get(cam_id)
@@ -6436,7 +6840,10 @@ class CrossCameraManager:
                     if same_camera
                     else self._predicted_identity_world(identity, frame_idx, timestamp_s)
                 )
-                world = self._track_world(cam_id, track)
+                world_key = (cam_id, local_id)
+                if world_key not in candidate_worlds:
+                    candidate_worlds[world_key] = self._track_world(cam_id, track)
+                world = candidate_worlds[world_key]
                 predicted_distance = float(
                     np.linalg.norm(np.subtract(world, predicted))
                 )
@@ -6525,7 +6932,7 @@ class CrossCameraManager:
                 # when appearance, size, maturity and a short gap agree.
                 same_camera_reentry_proof = False
                 if same_camera and has_target_camera_history:
-                    preliminary_match = compare_tracklets(
+                    preliminary_match = compare_tracklets_cached(
                         track, target_camera_gallery
                     )
                     preliminary_size = self._rotation_invariant_size_distance(
@@ -6619,7 +7026,7 @@ class CrossCameraManager:
                     if has_target_camera_history
                     else (identity.appearance_samples or identity.appearance)
                 )
-                appearance_match = compare_tracklets(track, appearance_reference)
+                appearance_match = compare_tracklets_cached(track, appearance_reference)
                 appearance = appearance_match.distance
                 if appearance_match.support <= 0:
                     self._record_dormant_rejection(
@@ -7450,7 +7857,7 @@ class CrossCameraManager:
                         "target_camera_gallery_missing",
                     )
                     continue
-                appearance_match = compare_tracklets(track, gallery)
+                appearance_match = compare_tracklets_cached(track, gallery)
                 if (
                     appearance_match.support <= 0
                     or appearance_match.distance
@@ -7795,7 +8202,7 @@ class CrossCameraManager:
                 distance = float(np.linalg.norm(np.subtract(left_world, right_world)))
                 if distance > self.match_distance:
                     continue
-                appearance_match = compare_tracklets(left_track, right_track)
+                appearance_match = compare_tracklets_cached(left_track, right_track)
                 appearance = appearance_match.distance
                 if (
                     appearance_match.support <= 0
@@ -7908,7 +8315,7 @@ class CrossCameraManager:
                 other_world = self._track_world(other_cam, other_track)
                 if np.linalg.norm(np.subtract(world, other_world)) > self.match_distance:
                     continue
-                appearance_match = compare_tracklets(track, other_track)
+                appearance_match = compare_tracklets_cached(track, other_track)
                 if (
                     appearance_match.support > 0
                     and appearance_match.distance <= self.appearance_threshold
@@ -7918,18 +8325,25 @@ class CrossCameraManager:
         return None
 
     def _same_camera_motion_duplicate(self, first, second) -> bool:
-        """Return strong echo evidence without merging two merely touching cars."""
-        first_box = (first.x, first.y, first.w, first.h)
-        second_box = (second.x, second.y, second.w, second.h)
+        """Return strong echo evidence without merging two merely touching cars.
+
+        P35/T6: the gates below are a pure conjunction, so their order does not
+        change the outcome - but it changes what it *costs*.  ``appearance``
+        costs one full ``compare_tracklets`` (~550 us at a 12-sample gallery),
+        while every other gate is float arithmetic over four bbox numbers.
+        Measured on sang_5p: 53.3 % of the 5 793 calls were rejected on area
+        ratio alone and a further 7.5 % on gap/distance/IoU/velocity, i.e.
+        60.7 % of the expensive comparisons could be skipped by evaluating the
+        cheap geometry first.  Every pair that still reaches ``appearance``
+        evaluates exactly the same predicates in the same AND, so the returned
+        boolean is unchanged for every input pair.
+        """
         first_area = max(1, first.w * first.h)
         second_area = max(1, second.w * second.h)
         if min(first_area, second_area) / max(first_area, second_area) < 0.55:
             return False
-        appearance = self._appearance_distance(first, second)
-        if appearance > min(self.appearance_threshold, 0.25):
-            return False
-        ax, ay, aw, ah = first_box
-        bx, by, bw, bh = second_box
+        ax, ay, aw, ah = first.x, first.y, first.w, first.h
+        bx, by, bw, bh = second.x, second.y, second.w, second.h
         gap_x = max(ax - (bx + bw), bx - (ax + aw), 0)
         gap_y = max(ay - (by + bh), by - (ay + ah), 0)
         if np.hypot(gap_x, gap_y) > 14.0:
@@ -7964,7 +8378,101 @@ class CrossCameraManager:
             cosine = float(np.dot(first_velocity, second_velocity) / (first_norm * second_norm))
             if cosine < 0.60:
                 return False
+        # Only now is the appearance comparison actually decisive.
+        appearance = self._appearance_distance(first, second)
+        if appearance > min(self.appearance_threshold, 0.25):
+            return False
         return True
+
+    def _same_camera_split_vehicle_echo(
+        self, first, second, reference_size: Optional[Tuple[int, int]] = None
+    ) -> bool:
+        """P29 (V040 toi_5p): are these two blobs the two halves of one car?
+
+        Frame differencing can split a single vehicle into two touching blobs
+        of *similar* area (a leading and a trailing half).  Both existing echo
+        gates miss that shape: ``_same_camera_partial_echo`` needs a fragment
+        <= 45 % of the primary, and ``_same_camera_motion_duplicate`` needs
+        IoU >= 0.20 or a history overlap - each half is only ~50 % of the car.
+        The trailing half was then aged into ``prediction`` while the leading
+        half kept the Global ID, and it received a *second* one: exactly the
+        V040 defect (GID 1 at the gate, GID 5 in the slot).
+
+        Structural gates, always:
+
+        * combined area <= 1.70x the larger half.  Two halves of one car never
+          exceed that (V040 measured 1.55 - 1.76 across f683/f684), while two
+          cars of similar size sum to ~2.0x however they are arranged - that is
+          what keeps two cars parked in adjacent bays apart.  An exactly even
+          split is deliberately refused: it is numerically indistinguishable
+          from two cars.
+        * the two halves must be comparable (smaller >= 0.50 x larger), which
+          rejects "a full car next to a lamp/edge fragment" (f904: 84x60 vs
+          39x43).
+        * boxes touch, and their centres are within one vehicle diagonal.
+
+        Then one of:
+
+        * the union is one vehicle of the size this identity learned from this
+          camera (V040: 88x40 union inside an 87x56 car), or
+        * the union is within 1.85x the larger half in each dimension.
+
+        Appearance is deliberately *not* used: the front half carries the
+        windscreen/headlights, so its histogram differs from the rear half -
+        measured on V040 - and an appearance gate would block exactly the case
+        this exists to rescue.
+        """
+        if not self.split_vehicle_echo:
+            return False
+        first_area = max(1, first.w * first.h)
+        second_area = max(1, second.w * second.h)
+        largest = max(first_area, second_area)
+        smallest = min(first_area, second_area)
+        if (first_area + second_area) > 1.70 * largest:
+            return False
+        if smallest < 0.50 * largest:
+            return False
+        gap_x = max(
+            first.x - (second.x + second.w), second.x - (first.x + first.w), 0.0
+        )
+        gap_y = max(
+            first.y - (second.y + second.h), second.y - (first.y + first.h), 0.0
+        )
+        smallest_diagonal = max(
+            1.0,
+            float(min(np.hypot(first.w, first.h), np.hypot(second.w, second.h))),
+        )
+        if float(np.hypot(gap_x, gap_y)) > 0.28 * smallest_diagonal:
+            return False
+        centre_distance = float(
+            np.linalg.norm(
+                np.subtract((first.cx, first.cy), (second.cx, second.cy))
+            )
+        )
+        largest_diagonal = max(
+            1.0,
+            float(max(np.hypot(first.w, first.h), np.hypot(second.w, second.h))),
+        )
+        if centre_distance > largest_diagonal:
+            return False
+        union_x = min(first.x, second.x)
+        union_y = min(first.y, second.y)
+        union_w = max(first.x + first.w, second.x + second.w) - union_x
+        union_h = max(first.y + first.h, second.y + second.h) - union_y
+        if reference_size is not None:
+            ref_w, ref_h = (float(reference_size[0]), float(reference_size[1]))
+            if (
+                ref_w > 0.0
+                and ref_h > 0.0
+                and union_w <= 1.15 * ref_w
+                and union_h <= 1.15 * ref_h
+            ):
+                # The union is one vehicle of the learned size.
+                return True
+        return (
+            union_w <= 1.85 * max(first.w, second.w)
+            and union_h <= 1.85 * max(first.h, second.h)
+        )
 
     def _same_camera_partial_echo(self, fragment, primary) -> bool:
         """Return whether a small touching bbox is part of a larger track.
@@ -8048,15 +8556,121 @@ class CrossCameraManager:
         frame_idx: int,
     ) -> bool:
         key = (cam_id, *sorted((int(first_local_id), int(second_local_id))))
-        count, last_frame = self._same_camera_duplicate_evidence.get(key, (0, -999999))
-        if int(frame_idx) == last_frame:
+        tick = self._evidence_source_frame_idx or int(frame_idx)
+        count, last_frame, first_frame = self._same_camera_duplicate_evidence.get(
+            key, (0, -999999, -999999)
+        )
+        if tick == last_frame:
             return count >= 3
-        count = count + 1 if int(frame_idx) - last_frame == 1 else 1
-        self._same_camera_duplicate_evidence[key] = (count, int(frame_idx))
+        window = self._evidence_window_frames(cam_id)
+        if 1 <= tick - last_frame <= window and tick - first_frame <= window:
+            count += 1
+        else:
+            count, first_frame = 1, tick
+        self._same_camera_duplicate_evidence[key] = (count, tick, first_frame)
         return count >= 3
+
+    def _match_same_camera_split_vehicle(
+        self, cam_id: str, local_track_id: int, track, all_tracks: Dict[str, dict], frame_idx: int
+    ) -> Optional[int]:
+        """P29 (V040 toi_5p): bind the second half of one split vehicle.
+
+        Returns the sibling's Global ID on success, or ``None`` when this is
+        not a split pair (the caller then continues with the pre-existing
+        gates, so the small motion-tail ``partial_echo`` path is unchanged).
+
+        Runs before the occlusion veto on purpose: the frame in which one half
+        goes unmeasured is exactly the frame in which the other half used to be
+        minted a duplicate Global ID.
+        """
+        if not self.split_vehicle_echo:
+            return None
+        # ``all_tracks`` is either the camera map (allocation pass) or already
+        # this camera's local-id map (echo pass); accept both.
+        if cam_id in all_tracks and isinstance(all_tracks[cam_id], dict):
+            cam_tracks = all_tracks[cam_id]
+        else:
+            cam_tracks = all_tracks
+        fragment_area = max(1, track.w * track.h)
+        candidate_siblings = list(cam_tracks.items())
+        # Bound tracks of this camera that already dropped out of the observable
+        # set (V040 at f684: the half holding GID 1 had just aged into LOST).
+        for (sib_cam, sib_local), sib_box in self._last_local_boxes.items():
+            if sib_cam != cam_id or sib_local in cam_tracks:
+                continue
+            last_frame = self._last_local_box_frames.get(
+                (cam_id, sib_local), frame_idx
+            )
+            if int(frame_idx) - int(last_frame) > self.handoff_ttl:
+                continue
+            candidate_siblings.append((sib_local, _CachedBox(sib_box)))
+        for other_local_id, other_track in candidate_siblings:
+            if int(other_local_id) == int(local_track_id):
+                continue
+            split_global_id = self._local_to_global.get((cam_id, other_local_id))
+            if split_global_id is None:
+                continue
+            split_global_id = self._canonical_id(split_global_id)
+            if split_global_id in self._provisional_identity_holds:
+                continue
+            # The classic partial echo (<= 45 % of the primary) has its own
+            # established handling; leave it alone.
+            primary_area = max(1, other_track.w * other_track.h)
+            if fragment_area / primary_area <= 0.45:
+                continue
+            if not self._same_camera_split_vehicle_echo(
+                track,
+                other_track,
+                reference_size=_max_size(
+                    self._identity_camera_size(
+                        split_global_id, cam_id, other_track
+                    ),
+                    (track.w, track.h),
+                    (other_track.w, other_track.h),
+                ),
+            ):
+                continue
+            # The occlusion guard may have recorded these two as independent
+            # vehicles because both were once seen with clean pixels - but a
+            # union that fits inside one vehicle is stronger geometric proof.
+            # ``_independent_local_pairs`` is therefore only consulted when the
+            # union is clearly two vehicles (handled by the test above).
+            self._bind(cam_id, local_track_id, split_global_id)
+            self._event(
+                "same_camera_split_vehicle_merged",
+                frame_idx,
+                split_global_id,
+                camera=cam_id,
+                kept_local_id=int(other_local_id),
+                merged_local_id=int(local_track_id),
+                fragment_area=int(fragment_area),
+                sibling_area=int(primary_area),
+            )
+            return split_global_id
+        return None
+
+    def _identity_camera_size(
+        self, global_id: int, cam_id: str, fallback_track
+    ) -> Tuple[int, int]:
+        """Size this identity has learned for ``cam_id`` (P29 split halves).
+
+        Falls back to the sibling's own box when the registry has no
+        measurement for that camera yet.
+        """
+        identity = self._identities.get(self._canonical_id(global_id))
+        if identity is not None:
+            size = identity.camera_bbox_sizes.get(cam_id)
+            if size is not None and size[0] > 0 and size[1] > 0:
+                return (int(size[0]), int(size[1]))
+        return (int(fallback_track.w), int(fallback_track.h))
 
     def _match_same_camera_duplicate(self, cam_id: str, local_track_id: int, track, all_tracks: Dict[str, dict], frame_idx: int) -> Optional[int]:
         """Attach a second motion-echo local track to the existing global ID."""
+        split_global_id = self._match_same_camera_split_vehicle(
+            cam_id, local_track_id, track, all_tracks, frame_idx
+        )
+        if split_global_id is not None:
+            return split_global_id
         for other_local_id, other_track in all_tracks.get(cam_id, {}).items():
             if other_local_id == local_track_id:
                 continue
@@ -8140,6 +8754,15 @@ class CrossCameraManager:
                     right_global_id = self._local_to_global.get((cam_id, right_local_id))
                     if right_global_id is None:
                         continue
+                    # P35/T2: cheap geometry pre-filter.  ``_same_camera_motion_
+                    # duplicate`` already rejects any pair whose centre distance
+                    # exceeds ``max(28, 1.10 * largest_dimension)``, so testing
+                    # that bound first cannot change the outcome - it only skips
+                    # the expensive appearance/history/velocity work for the
+                    # overwhelming majority of pairs.  This loop is O(n^2) every
+                    # frame, so the saving grows with the number of tracks.
+                    if not self._boxes_within_echo_range(left_track, right_track):
+                        continue
                     left_global_id = self._canonical_id(left_global_id)
                     right_global_id = self._canonical_id(right_global_id)
                     if left_global_id == right_global_id:
@@ -8154,6 +8777,20 @@ class CrossCameraManager:
                     merge_result = self._merge_global_ids(kept_id, retired_id, frame_idx, "nearby_boxes_same_camera")
                     if merge_result.accepted:
                         left_global_id = kept_id
+
+    @staticmethod
+    def _boxes_within_echo_range(first, second) -> bool:
+        """P35/T2: the distance bound `_same_camera_motion_duplicate` applies.
+
+        Mirrors that gate exactly (``distance > max(28, 1.10 * largest)`` means
+        "not an echo"), so a False here can never hide a pair the full test
+        would have accepted.  Pure Python floats only - no numpy, no histograms.
+        """
+        dx = float(first.cx) - float(second.cx)
+        dy = float(first.cy) - float(second.cy)
+        largest_dimension = max(first.w, first.h, second.w, second.h)
+        limit = max(28.0, 1.10 * float(largest_dimension))
+        return (dx * dx + dy * dy) <= limit * limit
 
     def _merge_unique_cross_camera_duplicates(
         self,
@@ -8319,7 +8956,8 @@ class CrossCameraManager:
             evidence_count = self._advance_consecutive_evidence(
                 self._cross_camera_duplicate_evidence,
                 evidence_key,
-                frame_idx,
+                self._evidence_source_frame_idx,
+                self._evidence_window_frames(),
             )
             # Unique one-to-one overlap pairs have already passed distance,
             # appearance and size gates. Keep one-frame coincidences deferred,
@@ -8411,7 +9049,7 @@ class CrossCameraManager:
         self._cross_camera_duplicate_evidence = {
             key: value
             for key, value in self._cross_camera_duplicate_evidence.items()
-            if frame_idx - value[1] <= 1
+            if self._evidence_source_frame_idx - value[1] <= self._evidence_window_frames()
         }
 
     def _record_simultaneous_conflicts(self, frame_idx: int) -> None:
@@ -8556,12 +9194,12 @@ class CrossCameraManager:
                     # Compare the same viewpoint: cross-view galleries of
                     # one vehicle naturally diverge, so matching cam-to-cam
                     # is the honest evidence that these are the same car.
-                    appearance_match = compare_tracklets(
+                    appearance_match = compare_tracklets_cached(
                         left.camera_appearance_samples[shared_cameras[0]],
                         right.camera_appearance_samples[shared_cameras[0]],
                     )
                 else:
-                    appearance_match = compare_tracklets(
+                    appearance_match = compare_tracklets_cached(
                         left.appearance_samples, right.appearance_samples
                     )
                 if (
@@ -8619,7 +9257,8 @@ class CrossCameraManager:
             evidence_count = self._advance_consecutive_evidence(
                 self._dormant_duplicate_evidence,
                 evidence_key,
-                frame_idx,
+                self._evidence_source_frame_idx,
+                self._evidence_window_frames(),
             )
             if evidence_count < 2:
                 self._event(
@@ -8662,7 +9301,7 @@ class CrossCameraManager:
         self._dormant_duplicate_evidence = {
             key: value
             for key, value in self._dormant_duplicate_evidence.items()
-            if frame_idx - value[1] <= 1
+            if self._evidence_source_frame_idx - value[1] <= self._evidence_window_frames()
         }
 
     def _refresh_identity_states(
@@ -8683,7 +9322,11 @@ class CrossCameraManager:
                 observations.setdefault(global_id, []).append((cam_id, local_id, track))
 
         seen_ids = set()
+        _t_observe = 0.0
+        _t_other = 0.0
+        _t_agg = 0.0
         for global_id, candidates in observations.items():
+            _ts = time.perf_counter() if _PROFILE_ENABLED else 0.0
             previous = self._identities.get(global_id)
             cam_id, local_id, track = max(
                 candidates,
@@ -8697,11 +9340,22 @@ class CrossCameraManager:
             identity = self._observe_identity(
                 global_id, cam_id, local_id, track, frame_idx, timestamp_s
             )
+            if _PROFILE_ENABLED:
+                _t_observe += time.perf_counter() - _ts
+                _ts = time.perf_counter()
             # Overlap can expose the same Global ID in multiple cameras. Keep
             # all views as graph-like appearance nodes even though only the
             # strongest observation supplies position and velocity.
+            #
+            # P35/T2b: ``_observe_identity`` already merged the *chosen* member
+            # into both ``camera_appearance_samples[cam_id]`` and
+            # ``appearance_samples``.  The old loop re-merged that same track
+            # here, paying a second O(n^2) sweep per identity per frame for a
+            # result it had just computed.  Only the additional cameras are new
+            # work; skipping the chosen member is output-identical because the
+            # merge is idempotent for a gallery that already contains it.
             for other_cam_id, other_local_id, other_track in candidates:
-                if other_cam_id == cam_id and other_local_id == local_id:
+                if other_cam_id == cam_id:
                     continue
                 identity.camera_appearance_samples[other_cam_id] = (
                     merge_appearance_samples(
@@ -8719,8 +9373,27 @@ class CrossCameraManager:
                     other_track,
                     self.tracklet_gallery_size,
                 )
-            identity.appearance = aggregate_appearance(identity.appearance_samples)
+            _cached_agg = self._gallery_merge_cache.get((global_id, cam_id))
+            if (
+                _cached_agg is not None
+                and len(_cached_agg) > 3
+                and _cached_agg[0]
+                == self._track_gallery_signature(track)
+            ):
+                # P35/T2: same local gallery as this frame's observe step, so
+                # the median aggregation already computed there still applies.
+                identity.appearance = _cached_agg[3]
+            else:
+                identity.appearance = aggregate_appearance(
+                    identity.appearance_samples
+                )
             seen_ids.add(global_id)
+            if _PROFILE_ENABLED:
+                _t_other += time.perf_counter() - _ts
+        if _PROFILE_ENABLED:
+            _profile_add("refresh_observe", _t_observe)
+            _profile_add("refresh_views", _t_other)
+            _t_agg = time.perf_counter()
 
         pending_ids = {
             self._canonical_id(entry.global_id) for entry in self._handoffs
@@ -8744,6 +9417,8 @@ class CrossCameraManager:
                 identity.dormant_since_frame = frame_idx
                 identity.dormant_since_time = current_time_s
             identity.state = "handoff" if global_id in pending_ids else "dormant"
+        if _PROFILE_ENABLED:
+            _profile_add("refresh_states", time.perf_counter() - _t_agg)
 
     def update_all_tracks(
         self,
@@ -8771,15 +9446,20 @@ class CrossCameraManager:
         """
         self._processing_frame_idx = int(frame_idx)
         self._ownership_tracks = all_tracks
+        self._evidence_source_frame_idx = self._source_evidence_tick(frame_idx)
         self._provisional_identity_holds = {
             self._canonical_id(int(global_id))
             for global_id in (protected_global_ids or ())
         }
         self._update_camera_timing(camera_timestamps_s)
+        _pt = time.perf_counter() if _PROFILE_ENABLED else 0.0
         self._cleanup_world_trajectory_deferrals(all_tracks)
         self.observe_trajectories(
             all_tracks, frame_idx, camera_timestamps_s
         )
+        if _PROFILE_ENABLED:
+            _profile_add("observe_trajectories", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         self._cleanup_direction_reid_claims(all_tracks)
         self._ambiguous_local_identities = {
             key: value
@@ -8865,6 +9545,9 @@ class CrossCameraManager:
         deferred_dormant = self._match_dormant_identities(
             post_handoff_tracks, frame_idx, camera_timestamps_s
         )
+        if _PROFILE_ENABLED:
+            _profile_add("match_dormant", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         # A strong near-stationary fragment can be deliberately held by the
         # dormant pass while still tentative (V049/local60). Give the guarded
         # stationary pass the original unprotected observations, including
@@ -8908,6 +9591,9 @@ class CrossCameraManager:
             if self.enable_stationary_reacquire and stationary_keys
             else set()
         )
+        if _PROFILE_ENABLED:
+            _profile_add("match_stationary", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         post_dormant_tracks = {
             cam_id: {
                 local_track_id: track
@@ -8923,6 +9609,9 @@ class CrossCameraManager:
         deferred_world_trajectory = self._match_world_trajectory_identities(
             post_dormant_tracks, frame_idx
         )
+        if _PROFILE_ENABLED:
+            _profile_add("match_world_trajectory", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         post_world_trajectory_tracks = {
             cam_id: {
                 local_track_id: track
@@ -8955,6 +9644,9 @@ class CrossCameraManager:
             post_world_trajectory_tracks,
             frame_idx,
         )
+        if _PROFILE_ENABLED:
+            _profile_add("match_unique_cross_camera", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
 
         # Last resort before minting: a stationary fragment re-firing on a
         # parked car's dead track can still re-acquire its retained identity
@@ -8971,6 +9663,7 @@ class CrossCameraManager:
         )
 
         # Tentative tracks remain ID-less unless they consumed a handoff.
+        _pt_alloc = time.perf_counter() if _PROFILE_ENABLED else 0.0
         for cam_id, tracks in post_world_trajectory_tracks.items():
             for local_track_id, track in tracks.items():
                 if (
@@ -9081,6 +9774,16 @@ class CrossCameraManager:
                             ),
                         )
                     continue
+                # P29 (V040 toi_5p): before minting anything, ask whether this
+                # fragment is the second half of a vehicle whose identity is
+                # momentarily unmeasured.  That state gates out every other
+                # pass, so without this the half gets a duplicate Global ID.
+                if self.split_vehicle_echo:
+                    split_result = self._match_same_camera_split_vehicle(
+                        cam_id, local_track_id, track, tracks, frame_idx
+                    )
+                    if split_result is not None:
+                        continue
                 # Same-camera near-duplicate dedup: a fragment sitting on
                 # top of a *bound* sibling with compatible appearance is
                 # one car's split fragment -- two physical cars cannot be
@@ -9205,7 +9908,13 @@ class CrossCameraManager:
 
         for camera_id, pairs in self._independent_local_pairs.items():
             self.register_independent_tracks(camera_id, pairs)
+        if _PROFILE_ENABLED:
+            _profile_add("allocate_loop", time.perf_counter() - _pt_alloc)
+            _pt = time.perf_counter()
         self._merge_all_nearby_active_duplicates(all_tracks, frame_idx)
+        if _PROFILE_ENABLED:
+            _profile_add("merge_same_camera_dups", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         # Do not irreversibly merge an already-issued ID merely because it is
         # near a recently lost one. Two real vehicles commonly pass side by
         # side in a parking aisle. Unbound fragments are handled earlier by
@@ -9213,20 +9922,54 @@ class CrossCameraManager:
         # explicit same-camera echo or calibrated cross-camera proof succeeds.
         self._merge_unique_cross_camera_duplicates(all_tracks, frame_idx)
         self._reconcile_dormant_duplicates(frame_idx)
+        if _PROFILE_ENABLED:
+            _profile_add("reconcile_dormant", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         self._resolve_same_camera_global_conflicts(all_tracks, frame_idx)
         self._resolve_cross_camera_global_conflicts(all_tracks, frame_idx)
+        if _PROFILE_ENABLED:
+            _profile_add("resolve_same_camera", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         self._refresh_identity_states(
             all_tracks, frame_idx, camera_timestamps_s
         )
+        if _PROFILE_ENABLED:
+            _profile_add("refresh_identity_states", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
         # P16e: capture "these two were seen apart at the same instant" while
         # both tracks are still alive; the merge check runs long after they go
         # dormant and can no longer collect that evidence itself.  Must run
         # *after* ``_refresh_identity_states`` - that call records this frame's
         # measured positions.
         self._record_simultaneous_conflicts(frame_idx)
+        if _PROFILE_ENABLED:
+            _profile_add("record_conflicts", time.perf_counter() - _pt)
+            _pt = time.perf_counter()
 
         current_time_s = max((camera_timestamps_s or {}).values(), default=None)
         self.cleanup(frame_idx, current_time_s)
+        if _PROFILE_ENABLED:
+            _profile_add("cleanup", time.perf_counter() - _pt)
+            _profile_report()
+        # P29 (V040 toi_5p): remember each local track's box *after* this
+        # frame's binds, so a half that ages into LOST is still comparable.
+        for _cam_id, _cam_tracks in all_tracks.items():
+            for _local_id, _cam_track in _cam_tracks.items():
+                try:
+                    box = (
+                        int(_cam_track.x),
+                        int(_cam_track.y),
+                        int(_cam_track.w),
+                        int(_cam_track.h),
+                    )
+                except (AttributeError, TypeError, ValueError):
+                    continue
+                if box[2] <= 0 or box[3] <= 0:
+                    continue
+                self._last_local_boxes[(_cam_id, int(_local_id))] = box
+                self._last_local_box_frames[(_cam_id, int(_local_id))] = int(
+                    frame_idx
+                )
         result = {
             cam_id: {local_id: self._local_to_global[(cam_id, local_id)] for local_id in tracks if (cam_id, local_id) in self._local_to_global}
             for cam_id, tracks in all_tracks.items()
@@ -9252,6 +9995,7 @@ class CrossCameraManager:
         """Remove a local mapping while retaining its cross-camera identity."""
         key = (cam_id, local_track_id)
         global_id = self._local_to_global.pop(key, None)
+        self._invalidate_member_index()
         self._local_binding_frames.pop(key, None)
         if global_id is not None:
             global_id = self._canonical_id(global_id)

@@ -33,3 +33,8 @@ _quarantine_*/
 
 # Local code snapshots for replay verification
 _snap/
+
+# Local analysis / publish artifacts & orca workspace (kept out of agent search)
+.analysis/
+.publish/
+.orca/

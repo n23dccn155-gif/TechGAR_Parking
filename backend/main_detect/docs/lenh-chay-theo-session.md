@@ -232,3 +232,138 @@ npm run dev
 cd D:\TechGar2\backend\main_detect
 .\.venv\Scripts\python.exe .\tools\assemble_session_configs.py
 ```
+
+## 10. Các cờ legacy cho xe dừng (stationary) và giải cứu màu sắc (`--legacy-*`)
+
+Mặc định các cải tiến từ P25 – P26 đều được **bật sẵn** trong `two_camera.py`. Khi cần đo A/B hoặc quay về hành vi cũ, truyền thêm các cờ dòng lệnh sau:
+
+| Cờ legacy | Mặc định | Tác dụng khi truyền cờ (bật legacy) |
+|---|---|---|
+| `--legacy-stationary-reacquire` | Tắt (thuật toán mới BẬT) | Tắt việc tìm và nối lại GID cho fragment đang dừng/đỗ bị trì hoãn (P25). |
+| `--legacy-stationary-ttl` | Tắt (thuật toán mới BẬT) | Tắt việc giữ fragment đứng yên qua TTL đếm frame và đếm giây (P26). |
+| `--legacy-stationary-frozen` | Tắt (thuật toán mới BẬT) | Tắt việc cho fragment đóng băng/coasting phục hồi lại GID cũ (P26). |
+| `--legacy-stationary-reserve` | Tắt (thuật toán mới BẬT) | Tắt việc tạo reservation giữ chỗ cho identity của xe đứng yên tuyệt đối (P26). |
+| `--legacy-static-color-rescue` | Tắt (thuật toán mới BẬT) | Tắt bộ giải cứu xe tĩnh ít đặc trưng chuyển động dựa trên phân tích mảng màu và độ tương phản ổn định (P25). |
+
+Ví dụ chạy A/B gate controller với cờ legacy:
+```powershell
+$env:GATE_RUNTIME_EXTRA = '--legacy-stationary-reacquire --legacy-stationary-ttl'
+.\.venv\Scripts\python.exe sim3d\tools\m1_gate_eval.py sim3d\data\runs\20261103-123426_K2-P15a --api-port 8095 --gate-port 8094
+```
+
+## 11. Chạy debug replay với `run_techgar_debug.bat`
+
+Công cụ `sim3d\tools\run_techgar_debug.bat` hỗ trợ chạy nhanh replay TechGAR trên một thư mục run sim3d với toàn bộ cấu hình chuẩn (`techgar_config`).
+
+### Cú pháp:
+```cmd
+sim3d\tools\run_techgar_debug.bat [<duong_dan_run>] [pred|predictions]
+```
+
+### Các chế độ chạy:
+1. **Chế độ chỉ ghi video debug (mặc định):**
+   - Chỉ xuất 2 video `debug_cam1.mp4` và `debug_cam2.mp4` trong thư mục session (nhanh, nhẹ, không ghi predictions).
+   ```cmd
+   sim3d\tools\run_techgar_debug.bat sim3d\data\runs\20261106-130217_sang_5p
+   ```
+   Hoặc chạy không truyền tham số để chọn run từ danh sách menu tương tác:
+   ```cmd
+   sim3d\tools\run_techgar_debug.bat
+   ```
+
+2. **Chế độ ghi cả predictions (`pred` hoặc `predictions`):**
+   - Bỏ cờ `--debug-video-only`, ghi đầy đủ `predictions.jsonl` cùng video debug vào thư mục session để phục vụ đánh giá downstream (`m1_track_eval.py`, `p28_entry_exit_gid.py`...).
+   ```cmd
+   sim3d\tools\run_techgar_debug.bat sim3d\data\runs\20261106-130217_sang_5p pred
+   ```
+   Hoặc bật qua biến môi trường trước khi chạy:
+   ```cmd
+   set TECHGAR_WRITE_PREDICTIONS=1
+   sim3d\tools\run_techgar_debug.bat sim3d\data\runs\20261106-130217_sang_5p
+   ```
+
+## 12. Chạy xem trực tiếp 1:1 như live với `run_techgar_live.bat`
+
+Công cụ `sim3d\tools\run_techgar_live.bat` cho phép chạy TechGAR runtime trên tài nguyên video đã ghi của run sim3d (`raw_cam1/2.mp4`, `frame_timestamps.csv`, `techgar_config`), mở cửa sổ hiển thị trực tiếp (`cv2.imshow`), tốc độ thực tế 1:1 theo thời gian thật và tự động bỏ qua (drop) frame trễ tương tự camera live:
+
+### Cú pháp:
+```cmd
+sim3d\tools\run_techgar_live.bat [<duong_dan_run>] [save] [prof] [cac_co_bo_sung...]
+```
+
+### Đặc điểm:
+- **Hiển thị cửa sổ trực tiếp**: Không dùng cờ `--no-display`, hiển thị khung hình ghép 2 camera cùng trạng thái đỗ và tracking theo thời gian thực.
+- **Tốc độ 1:1 (Realtime pacing & frame drop)**: Sử dụng tổ hợp cờ chuẩn live:
+  `--live-mode --display-scale 0.5 --replay-realtime --replay-drop-frames --replay-async-vision`
+  
+  **T21 (chất lượng box):** Mặc định motion giữ độ phân giải gốc trong ROI crop cho cả live và non-live. Chỉ thêm `--fast-motion` khi chủ động chấp nhận chế độ 0.5 (không đạt kiểm định IoU trên cảnh đông: active 69%, stationary 41,6%). ROI crop vẫn luôn bật. Khi so sánh IoU live/non-live theo cùng video, dùng `--no-replay-drop-frames` để hai phiên xử lý đúng cùng frame nguồn; chế độ live thông thường vẫn tự bỏ frame trễ.
+  Thời gian chạy tương đương thời lượng thực tế của video (video 5 phút chạy đúng ~5 phút). Khi xử lý chậm hơn thời gian thực quá 300 ms, luồng sẽ tự động bỏ qua (drop) frame trễ để bắt kịp camera.
+- **Tối ưu hiển thị (`--display-scale 0.5`)**: Mặc định thu nhỏ 50% kích thước cửa sổ hiển thị (960x540 thay vì 1920x1080) để giảm tải GPU/CPU render và cv2.imshow.
+- **Bộ đọc frame nền (Prefetch Reader)**: Sử dụng thread nền nạp trước khung hình (`--replay-prefetch-frames 16`), giải phóng thời gian giải mã video MP4 khỏi luồng xử lý chính (giảm chi phí đọc frame từ ~5 ms xuống ~0.3 ms).
+- **Thoát nhanh**: Nhấn phím `q` hoặc `Esc` trong cửa sổ video OpenCV để dừng.
+- **Menu tương tác**: Nếu không truyền đường dẫn run, script sẽ liệt kê các run trong `sim3d\data\runs` để người dùng chọn.
+
+### Lưu ý quan trọng về Frame Drop:
+> [!IMPORTANT]
+> **Cơ chế Frame Drop (`--replay-drop-frames` / `--live-mode`) CHỈ kích hoạt ở chế độ Live.**
+> - Khi chạy offline (replay phân tích, trích xuất dữ liệu, eval, benchmark, test): runtime luôn chạy tuần tự và **deterministic 100%**, không bỏ qua (drop) bất kỳ frame nào.
+> - Khi chạy live (`--live-mode --replay-drop-frames` qua `run_techgar_live.bat`): runtime giữ nhịp theo đồng hồ thời gian thực; nếu máy bận hoặc vẽ chậm trễ > 300 ms thì tự động bỏ frame trễ để bắt kịp luồng camera trực tiếp.
+
+### Đo kiểm hiệu năng và Profiling (`prof` hoặc `TECHGAR_PROFILE=1`):
+Có thể bật nhanh profiling bằng tham số `prof` hoặc đặt biến môi trường `TECHGAR_PROFILE=1`:
+```cmd
+# Cách 1: Thêm tham số "prof" trực tiếp
+sim3d\tools\run_techgar_live.bat sim3d\data\runs\20261106-130217_sang_5p prof
+
+# Cách 2: Đặt biến môi trường trước khi chạy
+set TECHGAR_PROFILE=1
+sim3d\tools\run_techgar_live.bat sim3d\data\runs\20261106-130217_sang_5p --max-frames 200
+```
+Dòng log hiển thị thống kê profiling mỗi 100 frame dạng `[P35_PROFILE]` (kèm profiling chuyên sâu của `CrossCameraManager` mỗi 600 frame dạng `[p35-profile]`):
+`[P35_PROFILE] frames=101-200 avg/max read_pace=21.1/33.8ms motion=2.0/3.3ms cross=1.7/6.1ms total=26.0/42.8ms`
+
+### Chạy chuỗi video liên tục với `run_techgar_chain.bat`:
+Công cụ `sim3d\tools\run_techgar_chain.bat` cho phép chạy live tuần tự các video theo chuỗi (5p $\rightarrow$ 10p $\rightarrow$ 20p) để kiểm tra độ ổn định dài hạn:
+```cmd
+# Chạy chuỗi ban ngày (sang_5p -> sang_10p -> sang_20p):
+sim3d\tools\run_techgar_chain.bat
+
+# Chạy chuỗi ban tối (toi_5p -> toi_10p):
+sim3d\tools\run_techgar_chain.bat toi
+
+# Hỗ trợ bật kèm lưu video debug (save) hoặc profiling (prof):
+sim3d\tools\run_techgar_chain.bat toi prof
+sim3d\tools\run_techgar_chain.bat sang save prof
+```
+
+### Đo benchmark độ mượt và FPS với `p35_bench.sh`:
+Script chuẩn benchmark runtime (chỉ chạy 1 runtime tại 1 thời điểm):
+```bash
+# Cú pháp: bash .orca/sim3d/p35_bench.sh <ten_benchmark> [co_phu...]
+bash .orca/sim3d/p35_bench.sh test1
+```
+- Tự động chạy `runtime_server.py` ngầm trên `sang_5p` trong 4 phút (mặc định 240s, hoặc cấu hình `TECHGAR_BENCH_SECONDS=60 TECHGAR_BENCH_STEP=20`).
+- Ghi số frame tăng thêm (delta) mỗi 20s vào `.orca/sim3d/p35_<ten>.log`.
+- Tự động gọi `p35_smooth.py` ở cuối để phân tích độ ổn định FPS và phát hiện giật cục/stall (hỗ trợ `TECHGAR_SMOOTH_POLL=1` để poll file status mỗi 100ms).
+
+### Ví dụ:
+Chạy xem trực tiếp run `sang_5p`:
+```cmd
+sim3d\tools\run_techgar_live.bat sim3d\data\runs\20261106-130217_sang_5p
+```
+
+Chạy thử giới hạn số frame rồi tự dừng (run này 25 fps, nên 500 frame tương đương ~20 giây video):
+```cmd
+sim3d\tools\run_techgar_live.bat sim3d\data\runs\20261106-130217_sang_5p --max-frames 500
+```
+
+Lưu ý khi kiểm tra nhanh:
+- Tham số truyền thêm sau đường dẫn run được chuyển nguyên vẹn vào `two_camera.py`
+  (biến `EXTRA` trong `.bat`), nên `--max-frames N` hay `--no-parking-debug` đều dùng được.
+- **Chế độ 1:1 giữ nhịp theo thời gian thật, không đếm frame**: máy yếu sẽ bỏ (drop)
+  frame đúng như camera live, nên `--max-frames 500` có thể lâu hơn 20 giây, và số frame
+  xử lý được trong 20 giây thực tế sẽ ít hơn 500 nếu máy không theo kịp.
+  Muốn xem đủ thì cứ nhấn `q`/`Esc` khi đã xem xong.
+
+
+

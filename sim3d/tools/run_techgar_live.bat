@@ -10,9 +10,21 @@ set "EXTRA="
 set "SAVE="
 set "PROF="
 set "RUN="
+set "IDENTITY_FLAGS=--identity-kernel world"
+set "DRYRUN="
 
 :parse_args
 if "%~1"=="" goto check_run_defined
+if /i "%~1"=="legacy" (
+    set "IDENTITY_FLAGS="
+    shift
+    goto parse_args
+)
+if /i "%~1"=="--print-command" (
+    set "DRYRUN=1"
+    shift
+    goto parse_args
+)
 if /i "%~1"=="save" (
     set "SAVE=1"
     shift
@@ -66,12 +78,15 @@ if not defined run[!choice!] (echo So run khong ton tai. & exit /b 1)
 for %%I in ("!run[%choice%]!") do endlocal & set "RUN=%%~fI"
 
 :check_files
+if defined DRYRUN set "STAMP=PRINT_ONLY"
+if defined DRYRUN goto build_command
 if not exist "%PYTHON%" (echo Khong tim thay "%PYTHON%" & exit /b 1)
 for %%F in (raw_cam1.mp4 raw_cam2.mp4 frame_timestamps.csv techgar_config\calibration.json techgar_config\roi_mask_cam1.json techgar_config\roi_mask_cam2.json techgar_config\parking_slots_cam1.json techgar_config\parking_slots_cam2.json) do (
     if not exist "%RUN%\%%F" (echo Thieu "%RUN%\%%F" & exit /b 1)
 )
 for /f %%T in ('powershell.exe -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmssfff"') do set "STAMP=%%T"
 if not defined STAMP (echo Khong tao duoc timestamp. & exit /b 1)
+:build_command
 set "RUNTIME=%RUN%\techgar_live_%STAMP%_runtime"
 set "SAVEFLAGS="
 if defined SAVE set SAVEFLAGS=--session-dir "%RUN%\techgar_live_%STAMP%" --debug-video-only
@@ -89,16 +104,11 @@ echo Cau hinh: --live-mode (drop frame ^>300ms), --display-scale 1.0, pipeline m
 echo Nhan phim 'q' hoac 'Esc' trong cua so video de thoat.
 echo ===============================================================================
 
+set "LIVE_COMMAND="%PYTHON%" two_camera.py --replay-session "%RUN%" --live-mode --display-scale 1.0 --replay-realtime --replay-drop-frames --replay-async-vision %IDENTITY_FLAGS% --slots-cam1 "%RUN%\techgar_config\parking_slots_cam1.json" --slots-cam2 "%RUN%\techgar_config\parking_slots_cam2.json" --calibration "%RUN%\techgar_config\calibration.json" --mask-cam1 "%RUN%\techgar_config\roi_mask_cam1.json" --mask-cam2 "%RUN%\techgar_config\roi_mask_cam2.json" --detector-profile "config\two_camera.detector.json" --output-dir "%RUNTIME%" %SAVEFLAGS% %EXTRA% %TECHGAR_LIVE_EXTRA%"
+echo %LIVE_COMMAND%
+if defined DRYRUN exit /b 0
 pushd "%MAIN%" || exit /b 1
-"%PYTHON%" two_camera.py --replay-session "%RUN%" ^
-    --live-mode --display-scale 1.0 --replay-realtime --replay-drop-frames --replay-async-vision ^
-    --slots-cam1 "%RUN%\techgar_config\parking_slots_cam1.json" ^
-    --slots-cam2 "%RUN%\techgar_config\parking_slots_cam2.json" ^
-    --calibration "%RUN%\techgar_config\calibration.json" ^
-    --mask-cam1 "%RUN%\techgar_config\roi_mask_cam1.json" ^
-    --mask-cam2 "%RUN%\techgar_config\roi_mask_cam2.json" ^
-    --detector-profile "config\two_camera.detector.json" ^
-    --output-dir "%RUNTIME%" %SAVEFLAGS% %EXTRA% %TECHGAR_LIVE_EXTRA%
+%LIVE_COMMAND%
 set "RESULT=%ERRORLEVEL%"
 popd
 if not "%RESULT%"=="0" (echo TechGAR that bai voi ma %RESULT%. & exit /b %RESULT%)
